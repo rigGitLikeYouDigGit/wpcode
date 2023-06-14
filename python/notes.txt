@@ -1,0 +1,2 @@
+this python folder should be prepended to system python path - 
+takes priority in import statements

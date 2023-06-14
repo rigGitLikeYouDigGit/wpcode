@@ -1,0 +1,169 @@
+#usda 1.0
+(
+    defaultPrim = "export_grp"
+    metersPerUnit = 0.01
+    upAxis = "Y"
+)
+
+def Xform "export_grp" (
+    kind = "component"
+)
+{
+    def NurbsCurves "curve1"
+    {
+        int[] curveVertexCounts = [6]
+        float3[] extent = [(-6.557016, -0.5, -7.438453), (6.8866253, 0.5, 5.2215853)]
+        double[] knots = [0, 0, 0, 0, 1, 2, 3, 3, 3, 3]
+        int[] order = [4]
+        point3f[] points = [(5.732779, 0, 4.7215853), (6.3866253, 0, 0.14002568), (0.11525321, 0, -2.7333443), (-6.057016, 0, -1.7803513), (-0.4994277, 0, 4.5058413), (4.1805315, 0, -6.938453)]
+        double2[] ranges = [(0, 3)]
+        float[] widths = [1] (
+            interpolation = "constant"
+        )
+    }
+
+    def Xform "parent_cube"
+    {
+        float3 xformOp:rotateXYZ = (-5.952216, 30.547615, -23.977524)
+        double3 xformOp:translate = (2.509655666223214, 4.305875886268872, -5.739062580924866)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+
+        def Mesh "parent_cubeShape" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            uniform bool doubleSided = 1
+            float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
+            int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+            int[] faceVertexIndices = [0, 1, 3, 2, 2, 3, 5, 4, 4, 5, 7, 6, 6, 7, 1, 0, 1, 7, 5, 3, 6, 0, 2, 4]
+            rel material:binding = </export_grp/mtl/initialShadingGroup>
+            point3f[] points = [(-0.5, -0.5, 0.5), (0.5, -0.5, 0.5), (-0.5, 0.5, 0.5), (0.5, 0.5, 0.5), (-0.5, 0.5, -0.5), (0.5, 0.5, -0.5), (-0.5, -0.5, -0.5), (0.5, -0.5, -0.5)]
+            texCoord2f[] primvars:st = [(0.375, 0), (0.625, 0), (0.375, 0.25), (0.625, 0.25), (0.375, 0.5), (0.625, 0.5), (0.375, 0.75), (0.625, 0.75), (0.375, 1), (0.625, 1), (0.875, 0), (0.875, 0.25), (0.125, 0), (0.125, 0.25)] (
+                customData = {
+                    dictionary Maya = {
+                        token name = "map1"
+                    }
+                }
+                interpolation = "faceVarying"
+            )
+            int[] primvars:st:indices = [0, 1, 3, 2, 2, 3, 5, 4, 4, 5, 7, 6, 6, 7, 9, 8, 1, 10, 11, 3, 12, 0, 2, 13]
+
+            def GeomSubset "back"
+            {
+                uniform token elementType = "face"
+                uniform token familyName = "componentTag"
+                int[] indices = [2]
+            }
+
+            def GeomSubset "bottom"
+            {
+                uniform token elementType = "face"
+                uniform token familyName = "componentTag"
+                int[] indices = [3]
+            }
+
+            def GeomSubset "front"
+            {
+                uniform token elementType = "face"
+                uniform token familyName = "componentTag"
+                int[] indices = [0]
+            }
+
+            def GeomSubset "left"
+            {
+                uniform token elementType = "face"
+                uniform token familyName = "componentTag"
+                int[] indices = [5]
+            }
+
+            def GeomSubset "right"
+            {
+                uniform token elementType = "face"
+                uniform token familyName = "componentTag"
+                int[] indices = [4]
+            }
+
+            def GeomSubset "top"
+            {
+                uniform token elementType = "face"
+                uniform token familyName = "componentTag"
+                int[] indices = [1]
+            }
+        }
+
+        def Mesh "child_cube" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            uniform bool doubleSided = 1
+            float3[] extent = [(-0.5000005, -0.5, -3.5177758), (0.5, 0.50000006, 0.50000095)]
+            int[] faceVertexCounts = [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
+            int[] faceVertexIndices = [0, 1, 11, 8, 2, 3, 5, 4, 9, 10, 7, 6, 6, 7, 1, 0, 1, 7, 10, 11, 6, 0, 8, 9, 12, 13, 2, 4, 4, 5, 15, 12, 14, 15, 5, 3, 13, 14, 3, 2, 9, 8, 13, 12, 8, 11, 14, 13, 11, 10, 15, 14, 17, 16, 18, 19, 12, 15, 16, 17, 15, 10, 18, 16, 10, 9, 19, 18, 9, 12, 17, 19]
+            rel material:binding = </export_grp/mtl/initialShadingGroup>
+            point3f[] points = [(-0.50000024, -0.5, 0.5), (0.49999952, -0.5, 0.5), (-0.50000036, 0.50000006, 0.5), (0.49999928, 0.49999994, 0.5), (-0.5000005, 0.49999994, -0.5), (0.49999905, 0.50000006, -0.5), (-0.5, -0.5, -0.49999905), (0.5, -0.49999994, -0.5), (-0.50000024, -0.07436702, 0.5), (-0.50000024, -0.07436693, -0.49999905), (0.49999928, -0.07436696, -0.49999905), (0.49999928, -0.07436696, 0.5), (-0.5000005, 0.21331567, -0.5), (-0.50000024, 0.21331567, 0.5), (0.49999952, 0.21331567, 0.50000095), (0.49999928, 0.21331567, -0.5), (0.49999928, 0.21331567, -3.5177758), (-0.5000005, 0.21331567, -3.5177758), (0.49999928, -0.07436696, -3.5177748), (-0.50000024, -0.07436693, -3.5177748)]
+            texCoord2f[] primvars:st = [(0.375, 0), (0.625, 0), (0.375, 0.25), (0.625, 0.25), (0.375, 0.5), (0.625, 0.5), (0.375, 0.75), (0.625, 0.75), (0.375, 1), (0.625, 1), (0.875, 0), (0.875, 0.25), (0.125, 0), (0.125, 0.25), (0.375, 0.10640825), (0.125, 0.10640825), (0.375, 0.64359176), (0.625, 0.64359176), (0.875, 0.10640825), (0.625, 0.10640825), (0.125, 0.17832892), (0.375, 0.5716711), (0.375, 0.1783289), (0.625, 0.1783289), (0.625, 0.5716711), (0.875, 0.17832892), (0.375, 0.5716711), (0.625, 0.5716711), (0.625, 0.64359176), (0.375, 0.64359176)] (
+                customData = {
+                    dictionary Maya = {
+                        token name = "map1"
+                    }
+                }
+                interpolation = "faceVarying"
+            )
+            int[] primvars:st:indices = [0, 1, 19, 14, 2, 3, 5, 4, 16, 17, 7, 6, 6, 7, 9, 8, 1, 10, 18, 19, 12, 0, 14, 15, 20, 22, 2, 13, 4, 5, 24, 21, 23, 25, 11, 3, 22, 23, 3, 2, 15, 14, 22, 20, 14, 19, 23, 22, 19, 18, 25, 23, 26, 27, 28, 29, 21, 24, 27, 26, 24, 17, 28, 27, 17, 16, 29, 28, 16, 21, 26, 29]
+            float3 xformOp:rotateXYZ = (57.552776, 0, 0)
+            float3 xformOp:scale = (1, 8.621235, 1)
+            double3 xformOp:translate = (-1.8603043780280761, 6.973697210746062, 2.0072249015764534)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+
+            def GeomSubset "back"
+            {
+                uniform token elementType = "face"
+                uniform token familyName = "componentTag"
+                int[] indices = [2, 7, 13, 14, 15, 16, 17]
+            }
+
+            def GeomSubset "bottom"
+            {
+                uniform token elementType = "face"
+                uniform token familyName = "componentTag"
+                int[] indices = [3]
+            }
+
+            def GeomSubset "front"
+            {
+                uniform token elementType = "face"
+                uniform token familyName = "componentTag"
+                int[] indices = [0, 9, 11]
+            }
+
+            def GeomSubset "left"
+            {
+                uniform token elementType = "face"
+                uniform token familyName = "componentTag"
+                int[] indices = [5, 6, 10]
+            }
+
+            def GeomSubset "right"
+            {
+                uniform token elementType = "face"
+                uniform token familyName = "componentTag"
+                int[] indices = [4, 8, 12]
+            }
+
+            def GeomSubset "top"
+            {
+                uniform token elementType = "face"
+                uniform token familyName = "componentTag"
+                int[] indices = [1]
+            }
+        }
+    }
+
+    def Scope "mtl"
+    {
+        def Material "initialShadingGroup"
+        {
+        }
+    }
+}
+

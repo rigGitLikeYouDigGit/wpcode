@@ -1,0 +1,28 @@
+#usda 1.0
+(
+    doc = """Generated from Composed Stage of root layer 
+"""
+)
+
+def Xform "export_grp"
+{
+    def Xform "curve1"
+    {
+    }
+
+    def Xform "parent_cube"
+    {
+        float3 xformOp:rotateXYZ = (-0.10388576, 0.53315645, -0.4184867)
+        double3 xformOp:translate = (2.509655666223214, 4.305875886268872, -5.739062580924866)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+
+        def Xform "child_cube"
+        {
+            float3 xformOp:rotateXYZ = (1.0044855, 0, 0)
+            float3 xformOp:scale = (1, 8.621235, 1)
+            double3 xformOp:translate = (-1.8603043780280761, 6.973697210746062, 2.0072249015764534)
+            uniform token[] xformOpOrder = ["xformOp:scale", "xformOp:translate", "xformOp:rotateXYZ"]
+        }
+    }
+}
+
