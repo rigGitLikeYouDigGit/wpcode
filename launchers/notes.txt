@@ -1,0 +1,2 @@
+instead of messing round with each programs env file, 
+use uniform launcher scripts to set up environments, plugin paths, python paths, etc, consistently.

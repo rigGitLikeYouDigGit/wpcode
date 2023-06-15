@@ -1,0 +1,9 @@
+
+
+python scripts run on DCC startup,
+but not importable as modules -
+
+use these to set up the environment for the user,
+keep actual launcher bash scripts as simple as possible
+
+
