@@ -17,7 +17,14 @@ lib : anonymous library functions, may depend on objects
 tool : discrete tools, may depend on lib
 
 """
-
+import sys
+def reloadWPM():
+	"""reloads the wpm module and all submodules"""
+	for i in tuple(sys.modules.keys()):
+		if i.startswith("wpm"):
+			del sys.modules[i]
+	import wpm
+	return wpm
 
 from .core import om, oma, cmds, getCache
 

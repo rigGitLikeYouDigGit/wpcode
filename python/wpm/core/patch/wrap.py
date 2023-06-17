@@ -15,21 +15,10 @@ from pathlib import Path
 # import the node base / mixin for instance checking
 #from . import bases as mod
 #reload(mod)
-from .bases import NodeBase
-
-def directModuleImport(modulePath:str)->types.ModuleType:
-	"""directly loads a module without running init"""
-
-	"""Import a module from the given path."""
-	module_path = pathlib.Path(modulePath).resolve()
-	module_name = module_path.stem  # 'path/x.py' -> 'x'
-	spec = importlib.util.spec_from_file_location(module_name, module_path)
-	module = importlib.util.module_from_spec(spec)
-	sys.modules[module_name] = module
-	spec.loader.exec_module(module)
-	return module
+from wpm.core.bases import NodeBase
 
 
+# let sets be hashable
 import forbiddenfruit
 hashLambda = lambda obj: id(obj)
 forbiddenfruit.curse(set, "__hash__", hashLambda)
@@ -45,7 +34,7 @@ def addHashFnToCls(cls):
 
 
 
-def patchMObjectWeakrefs():
+def patchMObjectWeakrefs(omModule:types.ModuleType):
 	"""you need to pull my specific fork of forbiddenfruit for this to work,
 	the base package doesn't handle __hash__ properly
 
@@ -54,14 +43,11 @@ def patchMObjectWeakrefs():
 	"""
 
 	import forbiddenfruit
-	from edRig import om
-	objHash = lambda obj: om.MObjectHandle(obj).hashCode()
-	forbiddenfruit.curse(om.MObject, "__hash__", objHash)
-
+	#from edRig import om
+	objHash = lambda obj: omModule.MObjectHandle(obj).hashCode()
+	forbiddenfruit.curse(omModule.MObject, "__hash__", objHash)
 
 	pass
-
-
 
 
 
@@ -72,7 +58,7 @@ def returnList(wrapFn):
 	def _innerFn(*args, **kwargs):
 		result = wrapFn(*args, **kwargs)
 		if result is None:
-			print("returned None, changing to list")
+			#print("returned None, changing to list")
 			return []
 		return result
 
@@ -140,6 +126,8 @@ def typeSwitchInPlace(obj, typeMap:Dict[type, Callable], copy=False):
 
 # actual function to wrap arbitrary functinos
 def typeSwitchParamsPatch(fn, typeMap):
+	"""probably not consistent to have functions return the
+	same type as passed in - would need more complex logic"""
 	#@wraps(fn)
 	def wrapper(*fnArgs, **fnKwargs):
 		"""convert argument types"""
@@ -153,9 +141,14 @@ def wrapCmdFn(fn):
 	"""wrap single cmd to flatten NodeBases (AbsoluteNodes)
 	to strings when passed as params"""
 	# print("wrapping cmd", fn.__name__)
+	fnName = fn.__name__
 	typeMap = {NodeBase : str,
 	           set : list} # can add entries for pm nodes, cmdx etc
 	fn = typeSwitchParamsPatch(fn, typeMap)
+
+	# add list return patch
+	if fnName in listFunctions:
+		fn = returnList(fn)
 	return fn
 
 wrappedCache = {}
@@ -189,12 +182,6 @@ def _cmdsGetAttribute_(module, name):
 
 
 
-def patchCmdsGetAttr():
-	""" patch __getattribute__ on cmds module
-	to function above """
-	setattr(cmds, "__getattribute__", _cmdsGetAttribute_)
-
-
 # whitelist any problematic cmds
 
 
@@ -225,33 +212,32 @@ def patchMObjectHash(mod):
 	#setattr(mod.MObject, "__hash__", MObjectHash)
 
 
-def wrapCmds():
+def wrapCmds(targetModule:types.ModuleType,
+             baseMemberName:str,
+             resultMemberName:str):
+	"""pass in target host module,
+	with existing reference to normal god-fearing cmds module
+	corrupt it with our degeneracy
+	"""
 	# wrap list functions to return lists
 	# implement lazy lookup cache to flatten suitable arguments to strings
 	print("wrapping cmds")
-	#from edRig import cmds
 
-	from edRig.host import cmds # normal maya cmds module
+	cmds = getattr(targetModule, baseMemberName)
 	descriptor = CmdsDescriptor(cmds)
-
-	import edRig
-	setattr(edRig, "cmds", descriptor)
+	setattr(targetModule, resultMemberName, descriptor)
 
 
-	try:
-		import edRig.host
-		setattr(edRig.host, "cmds", descriptor)
-	except:
-		dccModulePath = Path(edRig.__file__).parent / "dcc.py"
-		dccModule = directModuleImport(dccModulePath)
-		setattr(edRig, "dcc", dccModule)
+def wrapOm(targetModule:types.ModuleType,
+            baseMemberName:str,
+           resultMemberName:str):
+	"""pass in target host module,
+	patch up openmaya module"""
 
-		import edRig.host
-		setattr(edRig.dcc, "cmds", descriptor)
+	baseOm = getattr(targetModule, baseMemberName)
+	patchMObjectWeakrefs(baseOm)
 
-	#wrapListFns()
-
-	patchMObjectWeakrefs()
+	setattr(targetModule, resultMemberName, baseOm)
 
 
 

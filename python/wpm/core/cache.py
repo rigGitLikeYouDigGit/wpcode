@@ -12,8 +12,9 @@ import inspect, pprint
 import typing as T
 from dataclasses import dataclass
 
-from maya.api import OpenMaya as om, OpenMayaAnim as oma
-from maya import cmds
+#from maya.api import OpenMaya as om, OpenMayaAnim as oma
+#from maya import cmds
+from .patch import cmds, om, oma, omr, omui
 
 @dataclass
 class MFnTypeData:
@@ -183,8 +184,6 @@ class APICache:
 			mfnCodeClassMap[classId] = v
 
 		# naively, we might assume that earlier class constants are more likely to be wide
-		#print("classMap")
-		#pprint.pprint(sorted(mfnCodeClassMap.items(), key=lambda x:x[0]))
 
 		# build map of hasType() compatibility for available classes
 		# this will likely be slow
@@ -217,12 +216,7 @@ class APICache:
 			compatPools.append((mfnCode, pool))
 
 		sortedMFnWidths = [i[0] for i in sorted(mfnWidthMap.items(), key=lambda x: x[1], reverse=True)] # list of class constants sorted by number of compatible constants
-		#print("sortedMFnWidths", sortedMFnWidths)
 
-		# check for any missing constants
-		# for k, v in constantToClassCompatMap.items():
-		# 	if not v:
-		# 		print("missing constant", k, codeNameMap[k])
 		"""for now remove them - these are things like kBirailSrf,
 		kManip, kFilter - internals, edge cases, contexts, etc
 		"""
@@ -235,25 +229,6 @@ class APICache:
 			constantToTargetClassMap[constant] = \
 				mfnCodeClassMap[sorted(clsCodes, key=lambda x: mfnWidthMap[x])[0]]
 			constantToTargetConstantMap[constant] = sorted(clsCodes, key=lambda x: mfnWidthMap[x])[0]
-		#print("SORTED")
-
-		# DONEZO
-
-		#pprint.pprint(constantToTargetClassMap)
-
-		# build nice-name map
-		# niceNameMap = {
-		# 	codeNameMap[constant] : targetClass for constant, targetClass in constantToTargetClassMap.items()
-		# }
-		# pprint.pprint(niceNameMap)
-
-
-		# for code, trimmedPool in compatPools:
-		# 	for poolCode in trimmedPool:
-		# 		apiCodeMap[poolCode] = code
-		# apiCodeMap = dict(sorted(apiCodeMap.items()))
-		# compatMap = {typeId : mfnCodeClassMap[ typeCompatId ]["cls"]
-		# 	for typeId, typeCompatId in apiCodeMap.items()}
 
 		return constantToTargetClassMap, constantToTargetConstantMap, codeNameMap
 

@@ -1,7 +1,11 @@
 
 """essential code for maya workflows - should not be lightly edited"""
 
-from .cache import om, oma, cmds, getCache
+import sys
+
+
+# import wrapped maya modules
+from .patch import cmds, om, omr, oma, omui
 
 from .api import (
 	MObjectRegister, apiTypeMap, apiTypeCodeMap, apiCodeNameMap, apiTypeDataMap,
