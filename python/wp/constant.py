@@ -9,6 +9,17 @@ from pathlib import Path
 from tree.lib.object import TypeNamespace
 
 
+"""
+all files on disk should have consistent orientation and scale
+
+SCALE : 1 unit = 1 decimetre
+ORIENTATION : X left, Y up, Z forward
+
+
+
+"""
+
+
 # path constants
 WP_ROOT = Path(__file__).parent.parent.parent.parent
 TEMPEST_ROOT = WP_ROOT / "tempest"

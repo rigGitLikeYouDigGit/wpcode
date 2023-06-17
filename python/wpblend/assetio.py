@@ -1,14 +1,11 @@
 
 from __future__ import annotations
-import typing as T
-
-from pxr import Usd
 
 import bpy
 
 from pathlib import Path
 from tree.lib.object import TypeNamespace
-
+from wpblend.lib import listDescendents, selection, select, clearSelection
 
 """create new io-collection with given name
 each has import and export path, and import and export button"""
@@ -51,29 +48,6 @@ def deleteCollectionAndChildren(name:str):
 	# remove collection
 	bpy.data.collections.remove(collection)
 
-def listDescendents(obj:bpy.types.Object, l:list)->list[bpy.types.Object]:
-	"""returns a list of all descendents of the given object,
-	including original object"""
-	l.append(obj)
-	for child in obj.children:
-		listDescendents(child, l)
-	return l
-
-def selection()->list[bpy.types.Object]:
-	"""returns a list of all selected objects"""
-	return bpy.context.selected_objects
-
-def select(obj:(bpy.types.Object, T.Sequence[bpy.types.Object]), state=True):
-	"""selects the given object"""
-	if not isinstance(obj, (tuple, list, set)):
-		obj = [obj]
-	for i in obj:
-		i.select_set(state)
-
-def clearSelection():
-	"""deselects all objects"""
-	for i in selection():
-		select(i, False)
 
 def makeIoNull(name:str):
 	"""creates a new io null with the given name,
@@ -101,15 +75,23 @@ def makeIoNull(name:str):
 	topNull["importPath"] = defaultInPath
 
 EXPORT_PATH_PROP_NAME = "exportPath"
+IMPORT_PATH_PROP_NAME = "importPath"
+
 
 def exportUsdFromNull(null:bpy.types.Object, toPath:Path=None):
 	"""if path not specified, look up from exportPath property"""
 	if toPath is None:
-		toPath = Path(null[EXPORT_PATH_PROP_NAME])
+		try:
+			toPath = Path(null[EXPORT_PATH_PROP_NAME])
+		except KeyError as k:
+			k.args = (*k.args, f"must supply either explicit export path or set {EXPORT_PATH_PROP_NAME} property on null f{null}")
+			raise k
 	#print("toPath", toPath, toPath.is_absolute())
 	if not toPath.is_absolute():
 		scenePath = Path(bpy.data.filepath)
 		toPath = scenePath.parent / toPath
+		if toPath.resolve() == scenePath.resolve():
+			raise ValueError(f"export path {toPath} is same as scene path {scenePath}")
 
 	# check we're exporting to usda
 	if not toPath.suffix == ".usda":
@@ -138,6 +120,24 @@ def exportUsdFromNull(null:bpy.types.Object, toPath:Path=None):
 	select(baseSelection)
 
 
+def importUsdToNull( null:bpy.types.Object, fromPath:Path=None ):
+	"""if path not specified, look up from importPath property"""
+	if fromPath is None:
+		try:
+			fromPath = Path(null[IMPORT_PATH_PROP_NAME])
+		except KeyError:
+			raise KeyError(f"must supply either explicit import path or set {IMPORT_PATH_PROP_NAME} property on null")
+	#print("fromPath", fromPath, fromPath.is_absolute())
+	if not fromPath.is_absolute():
+		scenePath = Path(bpy.data.filepath)
+		fromPath = scenePath.parent / fromPath
 
+	# check we're importing from usda
+	if not fromPath.suffix == ".usda":
+		fromPath = (fromPath.parent / fromPath.stem).with_suffix(".usda")
 
+	# import from path
+	bpy.ops.wm.usd_import(
+		filepath=str(fromPath)
+	)
 
