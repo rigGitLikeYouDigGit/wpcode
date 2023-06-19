@@ -1,7 +1,7 @@
 
 from __future__ import annotations
-from edRig.palette import *
-from edRig import cmds, om
+import typing as T
+from ..patch import cmds, om
 
 from .main import WN
 

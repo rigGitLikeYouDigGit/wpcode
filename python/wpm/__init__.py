@@ -26,6 +26,10 @@ def reloadWPM():
 	import wpm
 	return wpm
 
-from .core import om, oma, cmds, getCache
+from .core import (
+	cmds, om, oma, omui, omr, # wrapped maya modules
+	getCache, # api cache
+	WN, createWN, # node wrappers
 
+)
 

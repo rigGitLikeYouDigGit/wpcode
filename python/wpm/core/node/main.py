@@ -1,34 +1,26 @@
 """EdNode wrapper """
 
 from __future__ import annotations
+import typing as T
 import ast
-from typing_extensions import Self
 
+# tree libs for core behaviour
 from tree import Tree
 from tree.lib.inheritance import iterSubClasses
-
 from tree.lib.string import camelJoin
-from tree.lib.object import UnHashableDict, Composite, ObjectComponent
+from tree.lib.object import UnHashableDict, ObjectComponent, StringLike
 from tree.lib.treecomponent import TreeBranchLookupComponent
-from tree.lib.sequence import toSeq, flatten, firstOrNone
+from tree.lib.sequence import toSeq, firstOrNone
 
-from edRig import cmds, om
-#print("node import cmds", cmds)
+# maya infrastructure
+from wpm.core.constant import GraphTraversal, GraphDirection, GraphLevel
+from ..bases import NodeBase
+from ..patch import cmds, om
+from ..api import toMObject, getMFnType
+from .. import api, attr
 
-from edRig.cross.lib import python
-from edRig.cross.lib.python import StringLike, Tree
-from edRig.palette import *
-
-from edRig.maya.constant import GraphTraversal, GraphDirection, GraphLevel
-from edRig.maya.core.api import getMObject, getMFnType
-
-from edRig.maya.core.bases import NodeBase
-from edRig.maya.core import api
-from edRig.maya.core import attr
-
-from edRig.maya.core.plug import PlugTree
+from ..plug import PlugTree
 from ..namespace import NamespaceTree, getNamespaceTree
-
 
 
 """
@@ -78,7 +70,7 @@ class NodeMeta(type):
 			return node
 
 		if isinstance(node, str):
-			mobj = getMObject(node)
+			mobj = toMObject(node)
 			if mobj is None:
 				raise RuntimeError("No MObject found for {}".format(mobj))
 		elif isinstance(node, om.MObject):
@@ -114,9 +106,9 @@ class AttrDescriptor:
 		return instance(self.name)
 
 
-class WN(StringLike,
+class WN(StringLike, # short for WePresentNode
          NodeBase,
-         Composite,
+         #Composite,
          # metaclass=Singleton
          metaclass=NodeMeta
          ):
@@ -158,7 +150,7 @@ class WN(StringLike,
 		}
 	}
 
-	NODE_DATA_ATTR = "_nodeData"
+	NODE_DATA_ATTR = "_nodeAuxData"
 	NODE_PROXY_ATTR = "_proxyDrivers"
 
 	# persistent dict of uid : absoluteNode, used as cache
@@ -196,7 +188,7 @@ class WN(StringLike,
 	def __init__(self, mobj:om.MObject):
 		"""init here is never called directly, always filtered to an MObject
 		through metaclass"""
-		Composite.__init__(self)
+		#Composite.__init__(self)
 		self.value = ""
 		self.MObject = None
 		self._MFn = None
@@ -234,12 +226,6 @@ class WN(StringLike,
 			                     self.childMap
 			                     )
 
-	# @property
-	# def plugTree(self)->PlugTree:
-	# 	if self._plugTree is None:
-	# 		self._plugTree = PlugTree(plug=None, _nodeMFn=self.MFn)
-	# 	return self._plugTree
-
 
 	@property
 	def dagPath(self)->om.MDagPath:
@@ -268,11 +254,10 @@ class WN(StringLike,
 		self.value = self.MFn.name()
 		return self.value
 
-	@property
 	def name(self):
 		return str(self).split("|")[-1]
-	@name.setter
-	def name(self, value):
+
+	def setName(self, value):
 		"""atomic setter, does not trigger checks for shapes etc"""
 		self.MFn.setName(value)
 
@@ -360,12 +345,9 @@ class WN(StringLike,
 		if plug:
 			return plug(tokens[1:])
 
+		# if no plug found, return child node
 		childNode = self.getChild(tokens[0])
 		return childNode(tokens[1:])
-
-
-		#return PlugTree.fromCall(self.MFn, args)
-		#return self.plugTree(*args, **kwargs)
 
 	# region convenience properties
 
@@ -710,38 +692,48 @@ class WN(StringLike,
 
 
 	# -- node data
-	def getNodeData(self):
+	def hasAuxData(self):
+		return self.NODE_DATA_ATTR in self.attrs()
+	def addAuxDataAttr(self):
+		self.addAttr(keyable=False, ln=self.NODE_DATA_ATTR, dt="string")
+		self.set(self.NODE_DATA_ATTR, "{}")
+	def auxDataPlug(self)->PlugTree:
+		return self.getPlug(self.NODE_DATA_ATTR)
+	def getAuxData(self)->dict:
 		""" returns dict from node data"""
 		if not self.NODE_DATA_ATTR in self.attrs():
-			self.addAttr(keyable=False, ln=self.NODE_DATA_ATTR, dt="string")
-			self.set(self.NODE_DATA_ATTR, "{}")
+			return {}
 
 		data = self.get(self.NODE_DATA_ATTR)
 		return ast.literal_eval(data)
-
-	def setNodeData(self, dataDict):
+	def setAuxData(self, dataDict):
 		""" serialise given dictionary to string attribute ._nodeData """
+		if not self.hasAuxData():
+			self.addAuxDataAttr()
 		self.set(self.NODE_DATA_ATTR, str(dataDict))
 
+	@classmethod
+	def templateAuxTree(cls)->Tree:
+		return Tree("root")
 
-	@property
-	def dataTree(self):
-		""" initialise data tree object and return it
-		connect value changed signal to serialise method
-		given EdNode register, there SHOULD be no way this will ever
-		desync from node, as any AbsNode call should return
-		 the correct wrapper, and so the correct tree """
+	def getAuxTree(self)->Tree:
+		""" initialise data tree object and return it.
+		connect value changed signal to serialise method.
+		"""
 		if self._dataTree:
 			return self._dataTree
-		elif self.getNodeData():
-			return Tree.fromDict(self.getNodeData())
-		self._dataTree = Tree()
+		elif self.getAuxData():
+			return Tree.fromDict(self.getAuxData())
+		self._dataTree = self.templateAuxTree()
 
-		#saveTree = lambda : self.setNodeData(self._dataTree.serialise())
+		# don't mess around with automatic signals for now
+		return self._dataTree
+
+		#saveTree = lambda : self.setAuxData(self._dataTree.serialise())
 		def saveTree(*args, **kwargs):
-			self.setNodeData( self._dataTree.serialise())
+			self.setAuxData(self._dataTree.serialise())
 
-		self._dataTree.valueChanged.connect( saveTree )
+		self._dataTree.getSignalComponent().valueChanged.connect(saveTree)
 		self._dataTree.structureChanged.connect( saveTree )
 		return self._dataTree
 
@@ -750,13 +742,20 @@ class WN(StringLike,
 			data[etc]
 		but this is even cleaner"""
 
+	def saveAuxTree(self, tree=None):
+		if not tree and not self._dataTree:
+			raise RuntimeError("no tree passed or already created to save")
+		tree = tree or self._dataTree
+		self.setAuxData(tree.serialise())
 
 
 	# -- other random stuff -----
 	def setColour(self, *colour):
 		""" applies override RGB colour """
-		colour = python.flatten(colour)
-		#beauty.setColour(self(), colour)
+
+		self("overrideEnabled").set(1)
+		self("overrideRGBColors").set(1)
+		self("overrideColorRGB").set(colour)
 
 	def showCVs(self, state=1):
 		""" shows cvs of nurbs curves and surfaces """
@@ -830,15 +829,15 @@ class WN(StringLike,
 		existing = tree("proxyData", index)
 		existing.default = []
 		existing.value.append( (driverAttr, proxyAttr))
-		self.setNodeData(tree.serialise())
+		self.setAuxData(tree.serialise())
 
-		# data = self.getNodeData()
+		# data = self.getAuxData()
 		# proxyData = data.get("proxyData") or {}
 		# existing = proxyData.get(index) or {}
 		# existing[driverAttr] = proxyAttr
 		# proxyData[index] = existing
 		# data["proxyData"] = proxyData
-		# self.setNodeData(data)
+		# self.setAuxData(data)
 
 
 

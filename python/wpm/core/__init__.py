@@ -14,3 +14,8 @@ from .api import (
 	toMFnCurve, toMFnSurface, toMFnTransform,
 	isDag, isShape, isTransform,
 	MObjectSet, listMObjects)
+
+
+from .node import (
+	WN, createWN
+)

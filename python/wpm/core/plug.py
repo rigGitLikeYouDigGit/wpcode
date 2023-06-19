@@ -11,7 +11,7 @@ from .cache import om
 from . import bases, attr, api
 
 if T.TYPE_CHECKING:
-	from edRig import EdNode
+	from wpm import WN
 
 from typing_extensions import Self
 
@@ -21,7 +21,7 @@ class PlugMeta(type):
 	or from string"""
 	objMap = UnHashableDict()
 
-	def __call__(cls, plug:T.Union[str, om.MObject, EdNode])->EdNode:
+	def __call__(cls, plug:T.Union[str, om.MObject, WN])->WN:
 		"""check if existing plug object exists
 		"""
 
@@ -63,7 +63,7 @@ class PlugMeta(type):
 		# 	# return node object associated with this MObject
 		# 	return NodeMeta.objMap[mobj]
 		#
-		# # get specialised EdNode subclass if it exists
+		# # get specialised WN subclass if it exists
 		# wrapCls = NodeMeta.wrapperClassForMObject(mobj)
 		#
 		# # create instance
@@ -121,13 +121,13 @@ class PlugTree(
 		return self._MPlug
 
 	@property
-	def node(self)->EdNode:
-		"""EdNode is imported within function to avoid dependency loop
+	def node(self)->WN:
+		"""WN is imported within function to avoid dependency loop
 		should top node should also be plug root?
 		No - it is more useful to have each top-level plug be its own root
 		"""
-		from edRig.maya.core import EdNode
-		return EdNode(self.MPlug.node())
+		from edRig.maya.core import WN
+		return WN(self.MPlug.node())
 
 
 	#region tree integration
@@ -351,7 +351,7 @@ class PlugTree(
 	# region networking
 	def driver(self)->("PlugTree", None):
 		"""looks at only this specific plug, no children
-		returns """
+		returns PlugTree or None"""
 		driverMPlug = self.MPlug.connectedTo(True,  # as Dst
 		                       False  # as Src
 		                       )

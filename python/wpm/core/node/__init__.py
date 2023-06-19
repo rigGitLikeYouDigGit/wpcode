@@ -15,8 +15,8 @@ many small files are better than a few big ones"""
 
 from ..cache import cmds, om, oma
 
-def ECA(nodeType, name="", n="", parent=None, existOk=False,
-        returnTransform=True)->WN:
+def createWN(nodeType, name="", n="", parent=None, existOk=False,
+             returnTransform=True)->WN:
 	"""create node and wrap as EdNode
 	if findExisting, existing node of same name will be returned,
 	else name will be incremented as per normal maya
@@ -56,7 +56,7 @@ def ECA(nodeType, name="", n="", parent=None, existOk=False,
 
 def invokeNode(name="", nodeType="", parent=""):
 	# print "core invokeNode looking for {}".format(name)
-	return ECA(nodeType, name=name, parent=parent, existOk=True)
+	return createWN(nodeType, name=name, parent=parent, existOk=True)
 
 
 

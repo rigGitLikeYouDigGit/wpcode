@@ -1,5 +1,5 @@
 
-from edRig import cmds, om
+from ..patch import cmds, om
 from .main import WN
 
 
