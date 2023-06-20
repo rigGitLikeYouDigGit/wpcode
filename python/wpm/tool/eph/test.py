@@ -3,8 +3,18 @@ from __future__ import annotations
 import typing as T
 
 import numpy as np
+from collections import namedtuple
 
 from wpm import cmds, om, WN, createWN
+
+"""shelving until we have a proper character to test on - 
+at first glance this works, but needs proper integration
+
+also not sure yet how to structure constraints and iterations
+
+"""
+
+NamedMatrix : type[tuple[str, np.ndarray]] = namedtuple("NamedMatrix", ["name", "matrix"])
 
 # basic IK triangle for now
 jointPositions = np.array([
@@ -19,6 +29,23 @@ def addMessageAttr(node:WN, attrName:str):
 	attrFn = om.MFnMessageAttribute()
 	attrObj = attrFn.create(attrName, attrName)
 	nodeFn.addAttribute(attrObj)
+
+
+class EphState:
+	"""holds static array of matrices - acts as input and output
+	to eph operations"""
+
+	def __init__(self, matrixArr:np.ndarray, nameList:list[str]):
+		self.matrices = matrixArr
+		self.nameMap = {name:idx for idx, name in enumerate(nameList)}
+
+class EphControlScheme:
+	"""holds overall graph structure for single eph evaluation -
+	different rig settings generate new ControlScheme objects"""
+
+class EphConstraint:
+	"""base class for eph constraints,
+	connecting 2 or more EphNodes"""
 
 class EphCallbackData:
 

@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import typing as T
 from enum import Enum
 
-from PySide2 import QtWidgets, QtCore, QtGui
+from PySide2 import QtWidgets
 
 from wp.treefield import TreeField, TreeFieldParams
-from wp import option, constant
-
-
+from wp import option
+from wp.ui.treefieldwidget.base import TreeFieldWidgetBase
 
 """
 simple selector to choose between options
@@ -19,27 +17,6 @@ class OptionWidgetMode(Enum):
 	Combo = "combo"
 	Radio = "radio"
 
-class TreeFieldWidgetBase:
-	"""base class for generating UI elements from tree fields"""
-	def __init__(self, tree:TreeField, parent=None):
-		self.tree : TreeField = tree
-		#super(TreeFieldWidgetBase, self).__init__(parent)
-
-		# connect immediate signal to update UI value
-		self.tree.valueChanged.connect(self._matchUiToValue)
-
-	def fieldParams(self)->TreeFieldParams:
-		return self.tree.params
-
-	def _onUserInput(self, *args, **kwargs):
-		"""User input has changed the value in the widget-
-		update the tree value to match and fire signal to propagate"""
-
-		pass
-
-	def _matchUiToValue(self, *args, **kwargs):
-		"""set the ui to match the current value"""
-		pass
 
 class OptionWidgetBase(TreeFieldWidgetBase):
 	"""Any shared abstract processing of enum widgets"""
@@ -50,6 +27,9 @@ class OptionWidgetBase(TreeFieldWidgetBase):
 		self.optionItems = option.optionItemsFromOptions(
 			self.fieldParams().options)
 
+	def _optionMap(self)->dict:
+		"""map enum values to option items"""
+		return {item.name: item for item in self.optionItems}
 
 #
 # # todo: processing to split enum value name by camelcase
@@ -116,36 +96,37 @@ class OptionWidgetBase(TreeFieldWidgetBase):
 # 		key = optionKeyFromValue(value, self.optionMap)
 # 		self.buttons[key].click()
 
-class OptionComboWidget(QtWidgets.QComboBox, OptionWidgetBase):
+class OptionComboWidget(OptionWidgetBase):
 	"""same as above but in combo box form
 	no label directly included"""
 
 
 	def __init__(self, tree:TreeField, parent=None):
-		QtWidgets.QComboBox.__init__(self, parent)
+		#QtWidgets.QComboBox.__init__(self, parent)
 		OptionWidgetBase.__init__(self, tree, parent)
 
+		self.activeWidget = QtWidgets.QComboBox(self)
+		self.layout().addWidget(self.activeWidget)
+
 		for i in self.optionItems:
-			self.addItem(i.name)
-		self.currentIndexChanged.connect(self._onWidgetChanged)
+			self.activeWidget.addItem(i.name)
+		self.activeWidget.currentIndexChanged.connect(self._onWidgetChanged)
 
 
 	def _onWidgetChanged(self, *args, **kwargs):
-		member : option.OptionItem = self.optionMap[self.currentText()]
-		self.setAtomValue(member)
+		member : option.OptionItem = self._optionMap()[self.activeWidget.currentText()]
+		self.tree.setValue(member.value)
 
 	def _matchUiToValue(self, value:option.optionType):
-		print("match ui to value", value)
-		key = option.optionKeyFromValue(optionValue=value, optionMap=self.optionMap)
-		itemIndex = self.findText(key)
-		self.setCurrentIndex(itemIndex)
+		#print("match ui to value", value)
+		key = option.optionKeyFromValue(optionValue=value, optionMap=self._optionMap())
+		itemIndex = self.activeWidget.findText(key)
+		self.activeWidget.setCurrentIndex(itemIndex)
 
 
 
 
 if __name__ == '__main__':
-
-	from tree.lib.object import TypeNamespace
 
 	class TestEnum(Enum):
 		One = 1

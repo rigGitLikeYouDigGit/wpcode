@@ -19,3 +19,5 @@ from .api import (
 from .node import (
 	WN, createWN
 )
+
+from .scene import getSceneGlobals, setupGlobals

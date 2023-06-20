@@ -30,6 +30,8 @@ from .core import (
 	cmds, om, oma, omui, omr, # wrapped maya modules
 	getCache, # api cache
 	WN, createWN, # node wrappers
+	getSceneGlobals, # scene wrappers
 
 )
+
 

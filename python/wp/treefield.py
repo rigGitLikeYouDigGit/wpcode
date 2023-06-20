@@ -25,8 +25,17 @@ class TreeFieldParams:
 
 	populate attributes you need, we'll figure it out from there
 	"""
+	showLabel : bool = True # MAYBE ui directions are fine here
+
+	# options
 	options: optionType = None
 	optionFilterFn : optionFilterFnType = None
+
+	# strings
+	isPath : bool = False
+	placeholderText : str = None # greyed out text
+
+
 
 class TreeField(Tree):
 	"""
@@ -48,7 +57,7 @@ class TreeField(Tree):
 
 		self.valueChanged = Signal()
 		self.valueChangedPropagate = Signal()
-		self.params = params or TreeFieldParams()
+		self.params : TreeFieldParams = params or TreeFieldParams()
 
 
 	def setValuePropagate(self, value):
