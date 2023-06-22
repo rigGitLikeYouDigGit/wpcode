@@ -8,7 +8,9 @@ from PySide2 import QtWidgets, QtCore, QtGui
 
 from wpm import cmds, om, oma, WN, createWN, getSceneGlobals
 
+from wpm.lib.ui import window
 from .. import lib
+
 
 """rebuild with chimaera, when it's working"""
 
@@ -115,7 +117,6 @@ class IoManagerWidget(QtWidgets.QWidget):
 		self.refreshOutputs()
 
 
-
 	def refreshOutputs(self):
 		"""refresh output list"""
 		self.outputList.clear()
@@ -124,13 +125,12 @@ class IoManagerWidget(QtWidgets.QWidget):
 			widget.setNode(node)
 			self.outputList.addWidget(widget)
 
+	def syncFromScene(self):
+		"""sync inputs from scene"""
+		self.refreshOutputs()
 
-	@classmethod
-	def showUnique(cls, targetParent:QtWidgets.QWidget)->IoManagerWidget:
-		"""show widget - if already exists, delete it"""
-		if targetParent.findChild(IoManagerWidget, cls.widgetName):
-			targetParent.findChild(IoManagerWidget, cls.widgetName).deleteLater()
-		widg = cls(parent=targetParent)
-		widg.show()
-
+def showTool():
+	widg = IoManagerWidget()
+	widg._onSceneSelectionChanged()
+	return window.showToolWindow(widg, deleteExisting=True, floating=True)
 

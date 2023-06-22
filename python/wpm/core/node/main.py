@@ -323,7 +323,11 @@ class WN(StringLike, # short for WePresentNode
 		"""return plugtree directly from lookup
 		returns None if no plug found"""
 		if lookup not in self._namePlugMap:
-			plugTree = PlugTree(self.MFn.findPlug(lookup, False))
+			try:
+				mplug = self.MFn.findPlug(lookup, False)
+			except RuntimeError: # invalid plug name
+				return None
+			plugTree = PlugTree(mplug)
 			self._namePlugMap[lookup] = plugTree
 		return self._namePlugMap[lookup]
 
@@ -494,10 +498,10 @@ class WN(StringLike, # short for WePresentNode
 	def show(self):
 		self.transform("visibility").set(1)
 
-	def lock(self, attrs=None, locked=True):
-		attrs = attrs or self.attrs(keyable=True)
-		for i in attrs:
-			attr.setLocked(self + "." + i, state=locked)
+	# def lock(self, attrs=None, locked=True):
+	# 	attrs = attrs or self.attrs(keyable=True)
+	# 	for i in attrs:
+	# 		attr.setLocked(self + "." + i, state=locked)
 
 
 	def rename(self, name, andShape=True):
@@ -616,11 +620,14 @@ class WN(StringLike, # short for WePresentNode
 
 	# ---- attribute and plug methods
 
-	def attrs(self, **kwargs)->T.List[PlugTree]:
-		"""return all the attributes of the node"""
-		attrNames = cmds.listAttr(self, **kwargs)
-		print("attrNames", attrNames)
-		return [self(i) for i in attrNames]
+	# def attrs(self, **kwargs)->T.List[PlugTree]:
+	# 	"""return all the attributes of the node
+	# 	rarely useful, since attributes don't show current plug structure -
+	# 	prefer getPlug() to check if attribute exists"""
+	# 	print("attrs")
+	# 	for i in range(self.MFn.attributeCount()):
+	# 		plug = self.MFn.findPlug(self.MFn.attribute(i), False)
+	# 		print(plug.name())
 
 	def parseAttrArgs(self, args=None):
 		""" process args given to various attr commands
@@ -693,7 +700,8 @@ class WN(StringLike, # short for WePresentNode
 
 	# -- node data
 	def hasAuxData(self):
-		return self.NODE_DATA_ATTR in self.attrs()
+		return self.getPlug(self.NODE_DATA_ATTR) is not None
+		#return self.NODE_DATA_ATTR in self.attrs()
 	def addAuxDataAttr(self):
 		self.addAttr(keyable=False, ln=self.NODE_DATA_ATTR, dt="string")
 		self.set(self.NODE_DATA_ATTR, "{}")
@@ -701,9 +709,8 @@ class WN(StringLike, # short for WePresentNode
 		return self.getPlug(self.NODE_DATA_ATTR)
 	def getAuxData(self)->dict:
 		""" returns dict from node data"""
-		if not self.NODE_DATA_ATTR in self.attrs():
+		if not self.hasAuxData():
 			return {}
-
 		data = self.get(self.NODE_DATA_ATTR)
 		return ast.literal_eval(data)
 	def setAuxData(self, dataDict):
@@ -787,57 +794,57 @@ class WN(StringLike, # short for WePresentNode
 		elif clean:
 			self.set("overrideDisplayType", 0)
 
-	def connectProxyPlug(self, driverPlug=None, proxyAttr=None):
-		"""connects plugs and keeps a record of it
-		OBVIOUSLY move this to a lib"""
-		"""check for proxy attribute register - arrays of message attributes
-		on destination node, with names of 'driverPlug_<<driverPlugAttr>>_proxy_<<proxyAttr>>
-		will look disgusting but it's clear"""
-		# create compound message attribute
-		if not self.NODE_PROXY_ATTR in self.attrs():
-			messageFn = om.MFnMessageAttribute()
-			messageObj = messageFn.create(self.NODE_PROXY_ATTR, self.NODE_PROXY_ATTR)
-			messageFn.array = True
-			self.MFnDependency.addAttribute(messageObj)
-
-		# connect actual proxy relationship
-		self.con(driverPlug, proxyAttr)
-		proxyObj = self.MFnDependency.attribute(proxyAttr)
-		attrFn = om.MFnAttribute(proxyObj)
-		attrFn.isProxyAttribute = True
-
-		# connect driver's message to proxy array
-		pointIndex = driverPlug.index(".")
-		driverNode, driverAttr = driverPlug[:pointIndex], driverPlug[pointIndex + 1:]
-
-		print(driverNode)
-		print(cmds.listConnections(self + "." + self.NODE_PROXY_ATTR))
-
-
-		if not driverNode in cmds.listConnections(self + "." + self.NODE_PROXY_ATTR):
-			index = attr.getNextAvailableIndex(self + "." + self.NODE_PROXY_ATTR)
-			self.con(driverNode + ".message",
-			         self + ".{}[{}]".format(self.NODE_PROXY_ATTR, index))
-		else:
-			index = cmds.listConnections(self + "." + self.NODE_PROXY_ATTR).index(driverNode)
-
-		# set proxy connections in node data
-		# proxyData = {1 : [ (driverA, proxyB), (driverC, proxyD) ] } etc
-
-		tree = self.dataTree
-		index = str(index)
-		existing = tree("proxyData", index)
-		existing.default = []
-		existing.value.append( (driverAttr, proxyAttr))
-		self.setAuxData(tree.serialise())
-
-		# data = self.getAuxData()
-		# proxyData = data.get("proxyData") or {}
-		# existing = proxyData.get(index) or {}
-		# existing[driverAttr] = proxyAttr
-		# proxyData[index] = existing
-		# data["proxyData"] = proxyData
-		# self.setAuxData(data)
+	# def connectProxyPlug(self, driverPlug=None, proxyAttr=None):
+	# 	"""connects plugs and keeps a record of it
+	# 	OBVIOUSLY move this to a lib"""
+	# 	"""check for proxy attribute register - arrays of message attributes
+	# 	on destination node, with names of 'driverPlug_<<driverPlugAttr>>_proxy_<<proxyAttr>>
+	# 	will look disgusting but it's clear"""
+	# 	# create compound message attribute
+	# 	if not self.NODE_PROXY_ATTR in self.attrs():
+	# 		messageFn = om.MFnMessageAttribute()
+	# 		messageObj = messageFn.create(self.NODE_PROXY_ATTR, self.NODE_PROXY_ATTR)
+	# 		messageFn.array = True
+	# 		self.MFnDependency.addAttribute(messageObj)
+	#
+	# 	# connect actual proxy relationship
+	# 	self.con(driverPlug, proxyAttr)
+	# 	proxyObj = self.MFnDependency.attribute(proxyAttr)
+	# 	attrFn = om.MFnAttribute(proxyObj)
+	# 	attrFn.isProxyAttribute = True
+	#
+	# 	# connect driver's message to proxy array
+	# 	pointIndex = driverPlug.index(".")
+	# 	driverNode, driverAttr = driverPlug[:pointIndex], driverPlug[pointIndex + 1:]
+	#
+	# 	print(driverNode)
+	# 	print(cmds.listConnections(self + "." + self.NODE_PROXY_ATTR))
+	#
+	#
+	# 	if not driverNode in cmds.listConnections(self + "." + self.NODE_PROXY_ATTR):
+	# 		index = attr.getNextAvailableIndex(self + "." + self.NODE_PROXY_ATTR)
+	# 		self.con(driverNode + ".message",
+	# 		         self + ".{}[{}]".format(self.NODE_PROXY_ATTR, index))
+	# 	else:
+	# 		index = cmds.listConnections(self + "." + self.NODE_PROXY_ATTR).index(driverNode)
+	#
+	# 	# set proxy connections in node data
+	# 	# proxyData = {1 : [ (driverA, proxyB), (driverC, proxyD) ] } etc
+	#
+	# 	tree = self.dataTree
+	# 	index = str(index)
+	# 	existing = tree("proxyData", index)
+	# 	existing.default = []
+	# 	existing.value.append( (driverAttr, proxyAttr))
+	# 	self.setAuxData(tree.serialise())
+	#
+	# 	# data = self.getAuxData()
+	# 	# proxyData = data.get("proxyData") or {}
+	# 	# existing = proxyData.get(index) or {}
+	# 	# existing[driverAttr] = proxyAttr
+	# 	# proxyData[index] = existing
+	# 	# data["proxyData"] = proxyData
+	# 	# self.setAuxData(data)
 
 
 
