@@ -3,7 +3,7 @@ import typing as T
 
 from tree import Signal
 
-from wpm import cmds, om, oma, WN, createWN
+from .cache import cmds, om, oma
 
 
 """scene-level objects and operations
@@ -34,7 +34,7 @@ class CallbackOwner:
 	def __del__(self):
 		self.removeAllOwnedCallbacks()
 
-class SceneListener(CallbackOwner, ):
+class SceneListener(CallbackOwner ):
 
 	def __init__(self):
 		super(SceneListener, self).__init__()

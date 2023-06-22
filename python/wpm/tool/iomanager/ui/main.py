@@ -55,6 +55,9 @@ class ChildListWidget(QtWidgets.QWidget):
 class IoManagerWidget(QtWidgets.QWidget):
 	"""widget to manage importing and exporting to consistent paths
 	one list for input, one for output"""
+
+	widgetName = "ioManagerWidget"
+
 	def __init__(self, parent=None):
 		super(IoManagerWidget, self).__init__(parent=parent)
 		# self.syncInputsBtn = QtWidgets.QPushButton("Sync Inputs", self)
@@ -67,6 +70,8 @@ class IoManagerWidget(QtWidgets.QWidget):
 		self.refreshOutputsBtn = QtWidgets.QPushButton("Refresh Outputs", self)
 		self.outputList = ChildListWidget(self)
 		self.exportBtn = QtWidgets.QPushButton("Export Outputs", self)
+
+		self.setObjectName(self.widgetName)
 
 		self.makeLayout()
 
@@ -118,3 +123,14 @@ class IoManagerWidget(QtWidgets.QWidget):
 			widget = IoNodeWidget(self)
 			widget.setNode(node)
 			self.outputList.addWidget(widget)
+
+
+	@classmethod
+	def showUnique(cls, targetParent:QtWidgets.QWidget)->IoManagerWidget:
+		"""show widget - if already exists, delete it"""
+		if targetParent.findChild(IoManagerWidget, cls.widgetName):
+			targetParent.findChild(IoManagerWidget, cls.widgetName).deleteLater()
+		widg = cls(parent=targetParent)
+		widg.show()
+
+
