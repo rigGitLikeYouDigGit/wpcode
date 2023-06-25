@@ -40,3 +40,14 @@ wpOm = baseOm
 wpOmr = baseOmr
 wpOma = baseOma
 wpOmui = baseOmui
+
+
+if T.TYPE_CHECKING:
+	from maya.api import OpenMaya as om, OpenMayaAnim as oma, OpenMayaUI as omui, OpenMayaRender as omr
+	from maya import cmds
+	wpCmds = cmds
+	wpOm = om
+	wpOmr = omr
+	wpOma = oma
+	wpOmui = omui
+

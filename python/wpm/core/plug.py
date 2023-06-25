@@ -126,7 +126,7 @@ class PlugTree(
 		should top node should also be plug root?
 		No - it is more useful to have each top-level plug be its own root
 		"""
-		from edRig.maya.core import WN
+		from wpm.core import WN
 		return WN(self.MPlug.node())
 
 

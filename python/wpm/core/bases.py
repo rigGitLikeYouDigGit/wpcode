@@ -27,3 +27,28 @@ class PlugBase(object):
 	def MPlug(self):
 		raise NotImplementedError
 	pass
+
+
+class CleanupResource:
+	"""very very temp test to stop old uis, functions etc
+	from hanging around when WPM is reloaded"""
+
+	instances = []
+
+	def __init__(self):
+		self.instances.append(self)
+
+	def _cleanup(self):
+		"""override this in subclasses"""
+		pass
+
+	@classmethod
+	def cleanupAll(cls):
+		"""cleanup all instances"""
+		for i in cls.instances:
+			i._cleanup()
+			del i
+		cls.instances = []
+
+
+

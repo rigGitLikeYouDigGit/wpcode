@@ -17,14 +17,21 @@ lib : anonymous library functions, may depend on objects
 tool : discrete tools, may depend on lib
 
 """
-import sys
-def reloadWPM():
-	"""reloads the wpm module and all submodules"""
+import sys, gc
+def reloadWPM(andWp=True):
+	"""reloads the wpm module and all submodules
+	optionally also reload all of wp"""
+	from wp import reloadWP
+	if andWp:
+		wp = reloadWP()
 	for i in tuple(sys.modules.keys()):
 		if i.startswith("wpm"):
 			del sys.modules[i]
+	gc.collect(2)
 	import wpm
 	return wpm
+
+import typing as T
 
 from .core import (
 	cmds, om, oma, omui, omr, # wrapped maya modules
@@ -33,5 +40,6 @@ from .core import (
 	getSceneGlobals, # scene wrappers
 
 )
+
 
 

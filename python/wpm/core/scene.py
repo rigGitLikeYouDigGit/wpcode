@@ -15,23 +15,26 @@ class CallbackOwner:
 	delete callbacks when object is deleted"""
 
 	def __init__(self):
-		self._callbacks = []
+		self._callbackIds = []
 
 	def addOwnedCallback(self, callback):
 		"""add callback to list"""
-		self._callbacks.append(callback)
+		self._callbackIds.append(callback)
 
 	def removeOwnedCallback(self, id:int):
 		"""remove callback from list"""
 		om.MMessage.removeCallback(id)
-		self._callbacks.remove(id)
+		self._callbackIds.remove(id)
 
 	def removeAllOwnedCallbacks(self):
 		"""remove all callbacks owned by this object"""
-		om.MMesssage.removeCallbacks(self._callbacks)
-		self._callbacks = []
+		print("removing callbacks", self._callbackIds)
+		om.MMessage.removeCallbacks(self._callbackIds)
+		self._callbackIds = []
 
 	def __del__(self):
+		print("del deleting", self)
+
 		self.removeAllOwnedCallbacks()
 
 class SceneListener(CallbackOwner ):
@@ -50,6 +53,7 @@ class SceneListener(CallbackOwner ):
 		self.addOwnedCallback(om.MSceneMessage.addCallback(om.MSceneMessage.kAfterNew, self.sceneNameChanged.emit))
 		self.addOwnedCallback(om.MSceneMessage.addCallback(om.MSceneMessage.kAfterOpen, self.sceneNameChanged.emit))
 		self.addOwnedCallback(om.MSceneMessage.addCallback(om.MSceneMessage.kSceneUpdate, self.sceneNameChanged.emit))
+		print("scene listener setup done")
 
 
 class SceneGlobals:
@@ -75,6 +79,7 @@ def setupGlobals():
 def getSceneGlobals()->SceneGlobals:
 	"""return global object"""
 	global obj
+	print("getSceneGlobals", obj)
 	if obj is None:
 		setupGlobals()
 	return obj

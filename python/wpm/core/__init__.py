@@ -21,3 +21,5 @@ from .node import (
 )
 
 from .scene import getSceneGlobals, setupGlobals
+
+from . import attr

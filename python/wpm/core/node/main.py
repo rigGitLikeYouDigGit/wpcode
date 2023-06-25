@@ -198,7 +198,7 @@ class WN(StringLike, # short for WePresentNode
 		self.setMObject(mobj)
 
 		# slot to hold live data tree object
-		self._dataTree = None
+		self._liveDataTree = None
 
 		# callbacks attached to node, to delete on node deletion
 		self.callbacks = []
@@ -280,14 +280,17 @@ class WN(StringLike, # short for WePresentNode
 	def isDag(self):
 		return isinstance(self.MFn, om.MFnDagNode)
 
+	def isShapeTransform(self)->bool:
+		"""return true if this is a transform directly over a shape"""
+		if not self.isTransform():
+			return False
+		return len(self.children()) == 1 and self.children()[0].isShape()
+
 	# i've got no strings, so i have fn
-	@property
 	def isCurve(self):
 		return isinstance(self.MFn, om.MFnNurbsCurve)
-	@property
 	def isMesh(self):
 		return isinstance(self.MFn, om.MFnMesh)
-	@property
 	def isSurface(self):
 		return isinstance(self.MFn, om.MFnNurbsSurface)
 
@@ -697,27 +700,40 @@ class WN(StringLike, # short for WePresentNode
 	# def addAttr(self, name, **kwargs):
 	# 	return attr.addAttr(self(), name, **kwargs)
 
+	# region attribute methods
+	AttrData = attr.AttrData
+	AttrSpec = attr.AttrSpec
+	AttrType = attr.AttrType
+	def addAttrFromSpec(self, spec:AttrSpec):
+		"""add attribute to node"""
+		return attr.addAttrFromSpec(self.MFn, spec)
+
 
 	# -- node data
 	def hasAuxData(self):
 		return self.getPlug(self.NODE_DATA_ATTR) is not None
 		#return self.NODE_DATA_ATTR in self.attrs()
 	def addAuxDataAttr(self):
-		self.addAttr(keyable=False, ln=self.NODE_DATA_ATTR, dt="string")
-		self.set(self.NODE_DATA_ATTR, "{}")
+		#self.addAttr(keyable=False, ln=self.NODE_DATA_ATTR, dt="string")
+		spec = self.AttrSpec(name=self.NODE_DATA_ATTR)
+		spec.data = self.AttrData(self.AttrType.String)
+		self.addAttrFromSpec(spec)
+		self(self.NODE_DATA_ATTR).set("{}")
+		#self.set(self.NODE_DATA_ATTR, "{}")
+
 	def auxDataPlug(self)->PlugTree:
 		return self.getPlug(self.NODE_DATA_ATTR)
 	def getAuxData(self)->dict:
 		""" returns dict from node data"""
 		if not self.hasAuxData():
 			return {}
-		data = self.get(self.NODE_DATA_ATTR)
+		data = self(self.NODE_DATA_ATTR).get()
 		return ast.literal_eval(data)
 	def setAuxData(self, dataDict):
 		""" serialise given dictionary to string attribute ._nodeData """
 		if not self.hasAuxData():
 			self.addAuxDataAttr()
-		self.set(self.NODE_DATA_ATTR, str(dataDict))
+		self(self.NODE_DATA_ATTR).set(str(dataDict))
 
 	@classmethod
 	def templateAuxTree(cls)->Tree:
@@ -727,22 +743,22 @@ class WN(StringLike, # short for WePresentNode
 		""" initialise data tree object and return it.
 		connect value changed signal to serialise method.
 		"""
-		if self._dataTree:
-			return self._dataTree
+		if self._liveDataTree:
+			return self._liveDataTree
 		elif self.getAuxData():
 			return Tree.fromDict(self.getAuxData())
-		self._dataTree = self.templateAuxTree()
+		self._liveDataTree = self.templateAuxTree()
 
 		# don't mess around with automatic signals for now
-		return self._dataTree
+		return self._liveDataTree
 
 		#saveTree = lambda : self.setAuxData(self._dataTree.serialise())
 		def saveTree(*args, **kwargs):
-			self.setAuxData(self._dataTree.serialise())
+			self.setAuxData(self._liveDataTree.serialise())
 
-		self._dataTree.getSignalComponent().valueChanged.connect(saveTree)
-		self._dataTree.structureChanged.connect( saveTree )
-		return self._dataTree
+		self._liveDataTree.getSignalComponent().valueChanged.connect(saveTree)
+		self._liveDataTree.structureChanged.connect(saveTree)
+		return self._liveDataTree
 
 		"""the alternative is to use a context handler, like
 		with self.dataTree() as data:
@@ -750,9 +766,9 @@ class WN(StringLike, # short for WePresentNode
 		but this is even cleaner"""
 
 	def saveAuxTree(self, tree=None):
-		if not tree and not self._dataTree:
+		if not tree and not self._liveDataTree:
 			raise RuntimeError("no tree passed or already created to save")
-		tree = tree or self._dataTree
+		tree = tree or self._liveDataTree
 		self.setAuxData(tree.serialise())
 
 

@@ -10,8 +10,12 @@ from enum import Enum
 
 import copy, fnmatch, re
 
+from dataclasses import dataclass
+
 from tree.lib.string import sliceFromString
 from tree.lib.sequence import flatten
+from tree.lib.object import TypeNamespace
+from tree import Tree
 
 from .bases import PlugBase
 from .api import toMFn, mfnDataConstantTypeMap
@@ -227,6 +231,10 @@ def leafPlugValue(plug:om.MPlug,
 	elif attrFnType is om.MFnNumericAttribute:
 		getMethod = getCache().numericAttrPlugMethodMap[attrFn.numericType()][0]
 		data = getMethod(plug)
+	elif attrFnType is om.MFnTypedAttribute:
+		if attrFn.attrType() == om.MFnData.kString:
+			data = plug.asString()
+
 
 	# raise error on missing value
 	if data is None:
@@ -259,11 +267,13 @@ def setLeafPlugValue(plug:om.MPlug, data,
                      toRadians=False):
 	# populate plug if needed
 	ensurePlugHasMObject(plug)
+	print("set leaf plug value", plug, data)
 	try:
 		obj = plug.asMObject()
-		data = _dataFromPlugMObject(obj)
-		return data
+		oldData = _dataFromPlugMObject(obj)
+		#return data
 	except RuntimeError:  # "unexpected internal failure"
+
 		pass
 	# we now need to check the attribute type of the plug
 	attribute = plug.attribute()
@@ -278,6 +288,16 @@ def setLeafPlugValue(plug:om.MPlug, data,
 	elif attrFnType is om.MFnNumericAttribute:
 		setMethod = getCache().numericAttrPlugMethodMap[attrFn.numericType()][1]
 		data = setMethod(plug, data)
+
+	elif attrFnType is om.MFnTypedAttribute:
+		# for a typed attribute, we need to create a new data MObject
+
+		if attrFn.attrType() == om.MFnData.kString:
+			dataMObject = om.MFnStringData().create(data)
+		else:
+			raise RuntimeError("unsupported typed attribute type {}".format(attrFn.attrType()))
+		plug.setMObject(dataMObject)
+		return
 
 
 def setPlugValue(plug:om.MPlug, data:T.Union[T.List, object],
@@ -564,3 +584,141 @@ def con(srcPlug:om.MPlug, dstPlug:om.MPlug, _dgMod:om.MDGModifier=None):
 
 
 #endregion
+
+#region AttrSpec helper
+class AttrType(TypeNamespace):
+	class _Base(TypeNamespace.base()):
+		args = []
+		pass
+
+	class Float(_Base):
+		"""default for any new attribute"""
+		args = [om.MFnNumericAttribute,
+		        om.MFnNumericData.kDouble]
+		pass
+	class Int(_Base):
+		args = [om.MFnNumericAttribute,
+		        om.MFnNumericData.kInt]
+		pass
+	class Bool(_Base):
+		args = [om.MFnNumericAttribute,
+		        om.MFnNumericData.kBoolean]
+		pass
+	class String(_Base):
+		args = [om.MFnTypedAttribute,
+		        om.MFnData.kString]
+		pass
+	class Enum(_Base):
+		args = [om.MFnEnumAttribute]
+		pass
+	class Message(_Base):
+		args = [om.MFnMessageAttribute]
+		pass
+	class Matrix(_Base):
+		args = [om.MFnMatrixAttribute]
+		pass
+	class Vector(_Base):
+		"""creates 3 float attributes"""
+		args = [om.MFnNumericAttribute,
+		        om.MFnNumericData.k3Double]
+		pass
+
+	# arrays
+	class FloatArray(_Base):
+		args = [om.MFnTypedAttribute,
+		        om.MFnData.kDoubleArray]
+		pass
+	class IntArray(_Base):
+		args = [om.MFnTypedAttribute,
+		        om.MFnData.kIntArray]
+		pass
+	class MatrixArray(_Base):
+		args = [om.MFnTypedAttribute,
+		        om.MFnData.kMatrixArray]
+		pass
+
+	# geo
+	class Mesh(_Base):
+		args = [om.MFnTypedAttribute,
+		        om.MFnData.kMesh]
+		pass
+	class NurbsCurve(_Base):
+		args = [om.MFnTypedAttribute,
+		        om.MFnData.kNurbsCurve]
+		pass
+	class NurbsSurface(_Base):
+		args = [om.MFnTypedAttribute,
+		        om.MFnData.kNurbsSurface]
+		pass
+
+	# other
+	class Time(_Base):
+		args = [om.MFnUnitAttribute,
+		        om.MFnUnitAttribute.kTime]
+		pass
+	class Untyped(_Base):
+		args = [om.MFnAttribute]
+		pass
+
+"""test for a more consistent (wordy) way to specify new attributes - 
+full object wrapper.
+and of course it's a tree"""
+
+@dataclass
+class AttrData:
+	type : type[AttrType._Base] = AttrType.Float
+	keyable : bool = False
+	array: bool = False
+	min: float = None
+	max: float = None
+	default: float = 0.0
+	channelBox: bool = False
+	# enum options - order of dict is preserved
+	options : dict[str, int] = None
+	readable : bool = True
+	writable : bool = True
+
+
+class AttrSpec(Tree):
+	"""tree layout for defining new attributes
+	does NOT map directly to actual plugs on real nodes
+
+	can probably unify this closer with MFns but it's a decent start
+	"""
+
+	data : AttrData = Tree.TreePropertyDescriptor("data", AttrData())
+
+def addAttrFromSpec(node, spec:AttrSpec, parentAttrFn=None):
+	"""add a new attribute hierarchy to a node based on the given spec"""
+	mfn = toMFn(node)
+	if spec.branches:
+		attrFn = om.MFnCompoundAttribute()
+		obj = attrFn.create(spec.name, spec.name)
+
+	else:
+		attrFn = spec.data.type.args[0]()
+		obj = attrFn.create(
+			spec.name, spec.name, *spec.data.type.args[1:])
+	attrFn.array = spec.data.array
+	attrFn.keyable = spec.data.keyable
+	attrFn.readable = spec.data.readable
+	attrFn.writable = spec.data.writable
+
+	for i in spec.branches:
+		addAttrFromSpec(node, i, attrFn)
+
+	# if parent is given, add to it - else to node
+	if parentAttrFn:
+		parentAttrFn.addChild(obj)
+	else:
+		mfn.addAttribute(obj)
+
+	return attrFn
+
+
+
+
+
+
+
+

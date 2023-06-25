@@ -20,16 +20,16 @@ class IoMode(TypeNamespace):
 	define some constants for whenever this concept appears in
 	pipeline"""
 	class _Base(TypeNamespace.base()):
-		modeStr = "base"
+		#modeStr = "base"
 		colour = (0, 0, 0)
 		pass
 	class Import(_Base):
 		colour = (0.5, 0.5, 1) # blue input
-		modeStr = "import"
+		#modeStr = "import"
 
 	class Export(_Base):
 		colour = (1, 0.7, 0.5) # orange output
-		modeStr = "export"
+		#modeStr = "export"
 
 
 MODE_KEY = "mode"
@@ -40,13 +40,13 @@ IO_KEY = "ioPath"
 def isExportNode(node:WN)->bool:
 	"""return True if node is a valid export node"""
 	if IO_KEY in node.getAuxTree().keys():
-		return node.getAuxTree()[MODE_KEY] == IoMode.Export.modeStr
+		return node.getAuxTree()[MODE_KEY] == IoMode.Export.clsName()
 	return False
 
 def isImportNode(node:WN)->bool:
 	"""return True if node is a valid import node"""
 	if IO_KEY in node.getAuxTree().keys():
-		return node.getAuxTree()[MODE_KEY] == IoMode.Import.modeStr
+		return node.getAuxTree()[MODE_KEY] == IoMode.Import.clsName()
 	return False
 
 def isIoNode(node:WN)->bool:
@@ -57,14 +57,15 @@ def nodeIoPath(node:WN)->Path:
 	"""return path to io folder for this node"""
 	return Path(node.getAuxTree()[IO_KEY])
 
-def setIoNode(node:WN, path:Path, mode:str):
+def setIoNode(node:WN, path:Path, mode:IoMode.T()):
 	"""set node to be io node"""
-	node.getAuxTree()[IO_KEY] = str(path)
-	node.getAuxTree()[MODE_KEY] = mode
+	node.getAuxTree()(IO_KEY, create=True).setValue(str(path))
+	node.getAuxTree()(MODE_KEY, create=True).setValue(mode.clsName())
+	node.saveAuxTree()
 
 def listIoNodes()->T.List[WN]:
 	"""return all io nodes in scene"""
-	return [n for n in cmds.ls("*", type="transform")
+	return [WN(n) for n in cmds.ls("*", type="transform")
 	        if isIoNode(WN(n))]
 
 def listExportNodes()->T.List[WN]:
@@ -72,6 +73,10 @@ def listExportNodes()->T.List[WN]:
 	return [n for n in listIoNodes()
 	        if isExportNode(n)]
 
+def removeIoNode(node:WN):
+	"""remove io data from node"""
+	node.getAuxTree().remove(IO_KEY)
+	node.getAuxTree().remove(MODE_KEY)
 
 
 

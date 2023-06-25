@@ -4,7 +4,7 @@ Maya modules - cmds, om, etc
 
 all WP Maya code should import these (from core, or wpm)
 """
-
+import typing as T
 from . import hosttarget
 from . import wrap
 
@@ -19,3 +19,8 @@ from .hosttarget import (
 	wpOma as oma,
 	wpOmui as omui
 )
+
+
+if T.TYPE_CHECKING:
+	from maya.api import OpenMaya as om, OpenMayaAnim as oma, OpenMayaUI as omui, OpenMayaRender as omr
+	from maya import cmds
