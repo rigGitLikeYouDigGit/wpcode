@@ -5,7 +5,7 @@ import typing as T
 import ast
 
 # tree libs for core behaviour
-from tree import Tree
+from tree import Tree, Signal
 from tree.lib.inheritance import iterSubClasses
 from tree.lib.string import camelJoin
 from tree.lib.object import UnHashableDict, ObjectComponent, StringLike
@@ -15,6 +15,7 @@ from tree.lib.sequence import toSeq, firstOrNone
 # maya infrastructure
 from wpm.core.constant import GraphTraversal, GraphDirection, GraphLevel
 from ..bases import NodeBase
+from ..callbackowner import CallbackOwner
 from ..patch import cmds, om
 from ..api import toMObject, getMFnType
 from .. import api, attr
@@ -109,7 +110,8 @@ class AttrDescriptor:
 class WN(StringLike, # short for WePresentNode
          NodeBase,
          #Composite,
-         # metaclass=Singleton
+         # metaclass=Singleton,
+         CallbackOwner,
          metaclass=NodeMeta
          ):
 	# DON'T LOSE YOUR WAAAAY
@@ -189,6 +191,7 @@ class WN(StringLike, # short for WePresentNode
 		"""init here is never called directly, always filtered to an MObject
 		through metaclass"""
 		#Composite.__init__(self)
+		CallbackOwner.__init__(self)
 		self.value = ""
 		self.MObject = None
 		self._MFn = None
@@ -200,15 +203,76 @@ class WN(StringLike, # short for WePresentNode
 		# slot to hold live data tree object
 		self._liveDataTree = None
 
-		# callbacks attached to node, to delete on node deletion
-		self.callbacks = []
 		self.con = self._instanceCon
 		self.conOrSet = self._instanceConOrSet
 		self.nodeType = self._instanceNodeType
 
 		# add plugs for lookup
 		self._namePlugMap = {}
-		#self._plugTree:PlugTree = None
+
+		# signals for callbacks
+		# lazy creation for performance
+		self._nodeNameChangedSignal = None
+		self._nodePreRemovalSignal = None
+		self._nodeAboutToDeleteSignal = None
+		self._nodeDestroyedSignal = None
+		# we do NOT remove signals immediately when
+		# node is deleted, as it could be undone while preserving python wrapper
+
+	def getNodeNameChangedSignal(self):
+		""" creates a signal for node name changed callback and
+		attaches it to the callback unit
+
+		signature: mobject, old name, user data
+		could always make this more complex, allow dynamically
+		creating user data every call - not needed for now"""
+		if self._nodeNameChangedSignal is None:
+			self._nodeNameChangedSignal = Signal()
+			self.addOwnedCallback(
+				om.MNodeMessage.addNameChangedCallback(
+					self.MObject, self._nodeNameChangedSignal)
+			)
+		return self._nodeNameChangedSignal
+	def getNodePreRemovalSignal(self):
+		""" fires whenever node is about to be removed, including from undos/redos
+		signature : MObject, user data
+
+		"""
+		if self._nodePreRemovalSignal is None:
+			self._nodePreRemovalSignal = Signal()
+			self.addOwnedCallback(
+				om.MNodeMessage.addNodePreRemovalCallback(
+					self.MObject, self._nodePreRemovalSignal)
+			)
+		return self._nodePreRemovalSignal
+	def getNodeAboutToDeleteSignal(self):
+		""" fires whenever node is about to be delete FOR THE FIRST TIME -
+		when the MDGModifier object that effects the undo operation is first created.
+
+		While the modifier object can be undone/redone, this signal will not fire again -
+		use PreRemovalSignal for that.
+
+		Honestly if you're messing with this you should just read the Maya docs
+		"""
+		if self._nodeAboutToDeleteSignal is None:
+			self._nodeAboutToDeleteSignal = Signal()
+			self.addOwnedCallback(
+				om.MNodeMessage.addNodeAboutToDeleteCallback(
+					self.MObject, self._nodeAboutToDeleteSignal)
+			)
+		return self._nodeAboutToDeleteSignal
+	def getNodeDestroyedSignal(self):
+		""" called when node destructor is called -
+		usually when undo queue is cleared or scene is closed"""
+		if self._nodeDestroyedSignal is None:
+			self._nodeDestroyedSignal = Signal()
+			self.addOwnedCallback(
+				om.MNodeMessage.addNodeDestroyedCallback(
+					self.MObject, self._nodeDestroyedSignal)
+			)
+		return self._nodeDestroyedSignal
+
+
 
 	def object(self)->om.MObject:
 		"""same interface as MFnBase"""
@@ -746,7 +810,7 @@ class WN(StringLike, # short for WePresentNode
 		if self._liveDataTree:
 			return self._liveDataTree
 		elif self.getAuxData():
-			return Tree.fromDict(self.getAuxData())
+			return Tree.deserialise(self.getAuxData())
 		self._liveDataTree = self.templateAuxTree()
 
 		# don't mess around with automatic signals for now
@@ -810,60 +874,6 @@ class WN(StringLike, # short for WePresentNode
 		elif clean:
 			self.set("overrideDisplayType", 0)
 
-	# def connectProxyPlug(self, driverPlug=None, proxyAttr=None):
-	# 	"""connects plugs and keeps a record of it
-	# 	OBVIOUSLY move this to a lib"""
-	# 	"""check for proxy attribute register - arrays of message attributes
-	# 	on destination node, with names of 'driverPlug_<<driverPlugAttr>>_proxy_<<proxyAttr>>
-	# 	will look disgusting but it's clear"""
-	# 	# create compound message attribute
-	# 	if not self.NODE_PROXY_ATTR in self.attrs():
-	# 		messageFn = om.MFnMessageAttribute()
-	# 		messageObj = messageFn.create(self.NODE_PROXY_ATTR, self.NODE_PROXY_ATTR)
-	# 		messageFn.array = True
-	# 		self.MFnDependency.addAttribute(messageObj)
-	#
-	# 	# connect actual proxy relationship
-	# 	self.con(driverPlug, proxyAttr)
-	# 	proxyObj = self.MFnDependency.attribute(proxyAttr)
-	# 	attrFn = om.MFnAttribute(proxyObj)
-	# 	attrFn.isProxyAttribute = True
-	#
-	# 	# connect driver's message to proxy array
-	# 	pointIndex = driverPlug.index(".")
-	# 	driverNode, driverAttr = driverPlug[:pointIndex], driverPlug[pointIndex + 1:]
-	#
-	# 	print(driverNode)
-	# 	print(cmds.listConnections(self + "." + self.NODE_PROXY_ATTR))
-	#
-	#
-	# 	if not driverNode in cmds.listConnections(self + "." + self.NODE_PROXY_ATTR):
-	# 		index = attr.getNextAvailableIndex(self + "." + self.NODE_PROXY_ATTR)
-	# 		self.con(driverNode + ".message",
-	# 		         self + ".{}[{}]".format(self.NODE_PROXY_ATTR, index))
-	# 	else:
-	# 		index = cmds.listConnections(self + "." + self.NODE_PROXY_ATTR).index(driverNode)
-	#
-	# 	# set proxy connections in node data
-	# 	# proxyData = {1 : [ (driverA, proxyB), (driverC, proxyD) ] } etc
-	#
-	# 	tree = self.dataTree
-	# 	index = str(index)
-	# 	existing = tree("proxyData", index)
-	# 	existing.default = []
-	# 	existing.value.append( (driverAttr, proxyAttr))
-	# 	self.setAuxData(tree.serialise())
-	#
-	# 	# data = self.getAuxData()
-	# 	# proxyData = data.get("proxyData") or {}
-	# 	# existing = proxyData.get(index) or {}
-	# 	# existing[driverAttr] = proxyAttr
-	# 	# proxyData[index] = existing
-	# 	# data["proxyData"] = proxyData
-	# 	# self.setAuxData(data)
-
-
-
 
 	def setDefaults(self):
 		"""called when node is created"""
@@ -887,4 +897,6 @@ class WN(StringLike, # short for WePresentNode
 		return node
 
 
+
+	#endregion
 

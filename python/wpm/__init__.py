@@ -27,6 +27,8 @@ def reloadWPM(andWp=True):
 	for i in tuple(sys.modules.keys()):
 		if i.startswith("wpm"):
 			del sys.modules[i]
+		if i.startswith("tree"):
+			del sys.modules[i]
 	gc.collect(2)
 	import wpm
 	return wpm

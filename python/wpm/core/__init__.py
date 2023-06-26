@@ -21,5 +21,6 @@ from .node import (
 )
 
 from .scene import getSceneGlobals, setupGlobals
+from wpm.core.callbackowner import CallbackOwner
 
 from . import attr

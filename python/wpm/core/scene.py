@@ -1,43 +1,16 @@
 from __future__ import annotations
-import typing as T
+
+
 
 from tree import Signal
 
-from .cache import cmds, om, oma
-
-
+from .cache import om
+from .callbackowner import CallbackOwner
 """scene-level objects and operations
 for now use tree signals, upgrade to Qt if needed"""
 
 
-class CallbackOwner:
-	"""Mixin for any objects creating Maya callbacks -
-	delete callbacks when object is deleted"""
-
-	def __init__(self):
-		self._callbackIds = []
-
-	def addOwnedCallback(self, callback):
-		"""add callback to list"""
-		self._callbackIds.append(callback)
-
-	def removeOwnedCallback(self, id:int):
-		"""remove callback from list"""
-		om.MMessage.removeCallback(id)
-		self._callbackIds.remove(id)
-
-	def removeAllOwnedCallbacks(self):
-		"""remove all callbacks owned by this object"""
-		print("removing callbacks", self._callbackIds)
-		om.MMessage.removeCallbacks(self._callbackIds)
-		self._callbackIds = []
-
-	def __del__(self):
-		print("del deleting", self)
-
-		self.removeAllOwnedCallbacks()
-
-class SceneListener(CallbackOwner ):
+class SceneListener(CallbackOwner):
 
 	def __init__(self):
 		super(SceneListener, self).__init__()

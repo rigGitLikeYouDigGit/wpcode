@@ -53,10 +53,11 @@ def getAssetRoot()->Path:
 	return ASSET_ROOT
 
 print("wp init")
-print("ROOT_PATH", WP_ROOT)
-print("ASSET_ROOT_PATH", ASSET_ROOT)
+# print("ROOT_PATH", WP_ROOT)
+# print("ASSET_ROOT_PATH", ASSET_ROOT)
 
 class CurrentAssetProject(TypeNamespace):
+	"""eventually load from a config"""
 
 	class _Base(TypeNamespace.base()):
 		"""base class for asset project"""
@@ -70,3 +71,27 @@ class CurrentAssetProject(TypeNamespace):
 		"""tempest asset project"""
 		root = ASSET_ROOT
 
+# enum constants common across all tools
+class Status(TypeNamespace):
+	"""abstract status of a tool or variable -
+	is everything fine, or are there issues?
+
+	This could form some kind of StatusObject base class too,
+	stay with enum for now, define some common pastel colours
+	"""
+	class _Base(TypeNamespace.base()):
+		"""base class for status"""
+		colour = (0, 0, 0)
+		pass
+	class Success(_Base):
+		"""everything is fine"""
+		colour = (0.5, 1, 0.5)
+		pass
+	class Warning(_Base):
+		"""something is not quite right"""
+		colour = (1, 1, 0.5)
+		pass
+	class Error(_Base):
+		"""something is wrong"""
+		colour = (1, 0.5, 0.5)
+		pass

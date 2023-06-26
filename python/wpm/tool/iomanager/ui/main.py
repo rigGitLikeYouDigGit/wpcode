@@ -17,6 +17,7 @@ from wp.ui.treefieldwidget import TreeFieldParams, StringWidget
 from wpm import cmds, om, oma, WN, createWN, getSceneGlobals
 
 from wpm.lib.ui import window
+from wpm.lib.ui.nodetracker import NodeTracker
 from .. import lib
 
 
@@ -41,13 +42,14 @@ class ModeButton(QtWidgets.QWidget):
 
 
 class IoNodeWidget(QtWidgets.QWidget):
-	"""represent a single scene io node"""
+	"""represent a single scene io node -
+	also allow altering its output path"""
 
 	def __init__(self, parent=None):
 		super(IoNodeWidget, self).__init__(parent=parent)
 
 		self.node : WN = None
-		self.label = QtWidgets.QLabel(self)
+		self.tracker = NodeTracker(self)
 		strParams = TreeFieldParams(
 			showLabel=True,
 			isPath=True,
@@ -65,7 +67,7 @@ class IoNodeWidget(QtWidgets.QWidget):
 	def makeLayout(self):
 		vl = QtWidgets.QVBoxLayout(self)
 		hl = QtWidgets.QHBoxLayout()
-		hl.addWidget(self.label)
+		hl.addWidget(self.tracker)
 		hl.addWidget(self.pathWidget)
 		vl.addLayout(hl)
 		vl.addWidget(self.ioBtn)
@@ -77,8 +79,9 @@ class IoNodeWidget(QtWidgets.QWidget):
 		"""set node to display
 		node will already be set up as IO node with aux tree"""
 		assert lib.isIoNode(node), "node must be io node"
+		self.tracker.setNode(node)
 		self.node = node
-		self.label.setText(node.name())
+		#self.tracker.setText(node.name())
 		self.palette().setColor(QtGui.QPalette.WindowText, QtGui.QColor(
 			*lib.IoMode[node.getAuxTree()[lib.MODE_KEY]].colour
 		))
