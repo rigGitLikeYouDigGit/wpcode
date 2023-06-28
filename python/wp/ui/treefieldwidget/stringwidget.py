@@ -17,7 +17,7 @@ string widget for string entry
 """
 
 
-class StringWidget(QtWidgets.QLineEdit, TreeFieldWidgetBase):
+class StringWidget(TreeFieldWidgetBase):
 	"""simple line edit
 	if params define options, turn string widget into search widget
 

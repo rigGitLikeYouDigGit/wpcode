@@ -71,9 +71,15 @@ class IoNodeWidget(QtWidgets.QWidget):
 		hl.addWidget(self.pathWidget)
 		vl.addLayout(hl)
 		vl.addWidget(self.ioBtn)
+		self.setLayout(vl)
+
 
 	def makeConnections(self):
 		pass
+
+	def testRenamed(self, *args, **kwargs):
+		print("test renamed", args, kwargs)
+		self.update()
 
 	def setNode(self, node:WN):
 		"""set node to display
@@ -82,6 +88,7 @@ class IoNodeWidget(QtWidgets.QWidget):
 		self.tracker.setNode(node)
 		self.node = node
 		#self.tracker.setText(node.name())
+		self.node.getNodeNameChangedSignal().connect(self.testRenamed)
 		self.palette().setColor(QtGui.QPalette.WindowText, QtGui.QColor(
 			*lib.IoMode[node.getAuxTree()[lib.MODE_KEY]].colour
 		))
@@ -102,8 +109,15 @@ class ChildListWidget(QtWidgets.QWidget):
 		self.layout().addWidget(widget)
 
 	def clear(self):
+		"""clear all widgets"""
+		print("clearing list")
 		while self.layout().count():
-			self.layout().takeAt(0).widget().deleteLater()
+			w = self.layout().takeAt(0).widget()
+			print("clear widget", w)
+			w.setParent(None)
+			#w.deleteLater()
+			#del w
+
 
 	def widgetList(self)->T.List[QtWidgets.QWidget]:
 		"""return list of widgets"""
@@ -149,6 +163,7 @@ class IoManagerWidget(QtWidgets.QWidget):
 		self.makeOutputGrpBtn.clicked.connect(self._onMakeOutputGrpBtnPressed)
 		self.resetAsOutputGrpBtn.clicked.connect(self._onResetAsOutputGrpBtnPressed)
 		self.removeIoGrpBtn.clicked.connect(self._onRemoveIoGrpBtnPressed)
+		self.refreshOutputsBtn.clicked.connect(self._onRefreshOutputsBtnPressed)
 
 	def _newIoGrp(self, mode:lib.IoMode.T()):
 		tf = createWN("transform", "newIO_GRP")
@@ -206,6 +221,9 @@ class IoManagerWidget(QtWidgets.QWidget):
 		self._refreshOutputList()
 		self._refreshButtonLabels()
 
+	def _onRefreshOutputsBtnPressed(self, *args, **kwargs):
+		"""refresh output list"""
+		self.syncFromScene()
 
 	def _refreshOutputList(self):
 		"""refresh output list"""
@@ -222,7 +240,8 @@ class IoManagerWidget(QtWidgets.QWidget):
 
 	def closeEvent(self, event:PySide2.QtGui.QCloseEvent) -> None:
 		print("close event")
-		return super(IoManagerWidget, self).closeEvent(event)
+		super(IoManagerWidget, self).closeEvent(event)
+		del self
 
 	def close(self) -> bool:
 		"""called when widget is closed

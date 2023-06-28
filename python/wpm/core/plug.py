@@ -64,10 +64,10 @@ class PlugMeta(type):
 		# 	return NodeMeta.objMap[mobj]
 		#
 		# # get specialised WN subclass if it exists
-		# wrapCls = NodeMeta.wrapperClassForMObject(mobj)
+		# postInitWrap = NodeMeta.wrapperClassForMObject(mobj)
 		#
 		# # create instance
-		# ins = super(NodeMeta, wrapCls).__call__(mobj)
+		# ins = super(NodeMeta, postInitWrap).__call__(mobj)
 		# # add to MObject register
 		# NodeMeta.objMap[mobj] = ins
 		# return ins

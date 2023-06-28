@@ -95,3 +95,21 @@ class Status(TypeNamespace):
 		"""something is wrong"""
 		colour = (1, 0.5, 0.5)
 		pass
+
+
+class UiResponsiveness(TypeNamespace):
+	"""should ui send updates immediately as user changes values,
+	only when "enter" or "accept" is pressed,
+	or not at all?"""
+	class _Base(TypeNamespace.base()):
+		pass
+	class Immediate(_Base):
+		"""send updates immediately as user changes values"""
+		pass
+	class OnAccept(_Base):
+		"""send updates when "enter" or "accept" is pressed"""
+		pass
+	class NoAction(_Base):
+		"""do not send updates (wait for rest of tool to read this value)"""
+		pass
+

@@ -24,7 +24,7 @@ class IoMode(TypeNamespace):
 		colour = (0, 0, 0)
 		pass
 	class Import(_Base):
-		colour = (0.5, 0.5, 1) # blue input
+		colour = (0, 0.5, 1) # blue input
 		#modeStr = "import"
 
 	class Export(_Base):
