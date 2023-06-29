@@ -575,7 +575,7 @@ class WN(StringLike, # short for WePresentNode
 		""" allows renaming transform and shape as unit,
 		ensuring names are kept in sync """
 		if not self.isDag():
-			self.name = name
+			self.setName( name)
 			return
 		self.shape.name = name + "Shape"
 		self.transform.name = name

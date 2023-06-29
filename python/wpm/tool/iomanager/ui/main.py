@@ -13,6 +13,7 @@ from tree import Tree
 
 from wp.treefield import TreeField
 from wp.ui.layout import autoLayout
+from wp.ui import delete
 from wp.ui.treefieldwidget import TreeFieldParams, StringWidget
 from wpm import cmds, om, oma, WN, createWN, getSceneGlobals
 
@@ -112,11 +113,7 @@ class ChildListWidget(QtWidgets.QWidget):
 		"""clear all widgets"""
 		print("clearing list")
 		while self.layout().count():
-			w = self.layout().takeAt(0).widget()
-			print("clear widget", w)
-			w.setParent(None)
-			#w.deleteLater()
-			#del w
+			delete.deleteObjectTree(self.layout().takeAt(0).widget())
 
 
 	def widgetList(self)->T.List[QtWidgets.QWidget]:
