@@ -89,7 +89,7 @@ class IoNodeWidget(QtWidgets.QWidget):
 		self.tracker.setNode(node)
 		self.node = node
 		#self.tracker.setText(node.name())
-		self.node.getNodeNameChangedSignal().connect(self.testRenamed)
+		#self.node.getNodeNameChangedSignal().connect(self.testRenamed)
 		self.palette().setColor(QtGui.QPalette.WindowText, QtGui.QColor(
 			*lib.IoMode[node.getAuxTree()[lib.MODE_KEY]].colour
 		))
@@ -108,6 +108,9 @@ class ChildListWidget(QtWidgets.QWidget):
 		"""add widget to list"""
 		widget.setParent(self)
 		self.layout().addWidget(widget)
+
+	def widgets(self):
+		return [self.layout().itemAt(i).widget() for i in range(self.layout().count())]
 
 	def clear(self):
 		"""clear all widgets"""
@@ -201,7 +204,6 @@ class IoManagerWidget(QtWidgets.QWidget):
 			return
 
 		sel = WN(sel[0])
-		print("is shape tf", sel.isShapeTransform(), sel.nodeType())
 
 		if lib.isIoNode(sel):
 			self.resetAsOutputGrpBtn.setEnabled(True)
@@ -215,8 +217,8 @@ class IoManagerWidget(QtWidgets.QWidget):
 
 	def _onSceneSelectionChanged(self, *args, **kwargs):
 		"""called when scene selection changes"""
-		self._refreshOutputList()
-		self._refreshButtonLabels()
+		#self._refreshOutputList()
+		#self._refreshButtonLabels()
 
 	def _onRefreshOutputsBtnPressed(self, *args, **kwargs):
 		"""refresh output list"""
@@ -230,6 +232,7 @@ class IoManagerWidget(QtWidgets.QWidget):
 			self.outputList.addWidget(widget)
 			widget.setNode(node)
 
+
 	def syncFromScene(self):
 		"""sync inputs from scene"""
 		self._refreshOutputList()
@@ -238,7 +241,7 @@ class IoManagerWidget(QtWidgets.QWidget):
 	def closeEvent(self, event:PySide2.QtGui.QCloseEvent) -> None:
 		print("close event")
 		super(IoManagerWidget, self).closeEvent(event)
-		del self
+		#del self
 
 	def close(self) -> bool:
 		"""called when widget is closed
@@ -253,6 +256,6 @@ class IoManagerWidget(QtWidgets.QWidget):
 
 def showTool():
 	widg = IoManagerWidget()
-	widg._onSceneSelectionChanged()
+	widg.syncFromScene()
 	return window.showToolWindow(widg, deleteExisting=True, floating=True)
 

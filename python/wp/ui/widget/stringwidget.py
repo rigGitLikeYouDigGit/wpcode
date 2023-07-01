@@ -24,6 +24,7 @@ class StringWidget(QtWidgets.QWidget, PostInitBase):
 		self._textValue = "" # actual value of widget
 		self._ruleSet : RuleSet = None # validation ruleset
 		self.lineEdit = QtWidgets.QLineEdit(self)
+		self._isEditing = False # whether user is currently editing widget
 
 
 
@@ -46,7 +47,9 @@ class StringWidget(QtWidgets.QWidget, PostInitBase):
 	def _makeConnections(self):
 		self.lineEdit.textChanged.connect(self._onUserInput)
 		self.textChanged.connect(self._onValueChanged)
+		#self.lineEdit.
 		self.lineEdit.editingFinished.connect(self._onWidgetEditingFinished)
+
 
 
 	def setValidationRuleSet(self, ruleset:RuleSet):
@@ -68,7 +71,8 @@ class StringWidget(QtWidgets.QWidget, PostInitBase):
 		if oldValue == text:
 			return
 		self._textValue = text
-		self._setWidgetText(text)
+		if not self.isEditing():
+			self._setWidgetText(text)
 		if emit:
 			self.textChanged.emit(text)
 
@@ -109,11 +113,19 @@ class StringWidget(QtWidgets.QWidget, PostInitBase):
 			self._setVisualState(Status.Success)
 		self.setValue(self.widgetText(), emit=True)
 
+	def _onWidgetEditingBegan(self, *args, **kwargs):
+		self._isEditing = True
+
 	def _onWidgetEditingFinished(self):
 		"""coerce displayed text to this widget's value -
 		if widget is left with invalid text, overwrite with last valid value"""
+		self._isEditing = False
 		self._setVisualState(Status.Success)
 		self._setWidgetText(self.value())
+
+	def isEditing(self):
+		print("editing?", self.lineEdit.hasFocus(), self.lineEdit.isActiveWindow())
+		return self.lineEdit.hasFocus() and self.lineEdit.isActiveWindow()
 
 	def _onValueChanged(self, text:str):
 		"""override for any actions to occur when text value changes"""
