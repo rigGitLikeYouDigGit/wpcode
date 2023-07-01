@@ -103,10 +103,10 @@ class StringWidget(QtWidgets.QWidget, PostInitBase):
 	def _onUserInput(self):
 		"""check any text input to widget against validation ruleset -
 		if accepted, update widget value"""
-		print("user input", self.widgetText())
+		#print("user input", self.widgetText())
 		if self.validationRuleSet() is not None:
 			result = self.checkWidgetText()
-			print("result", result)
+			#print("result", result)
 			if not result:
 				self._setVisualState(Status.Error)
 				return
@@ -124,7 +124,7 @@ class StringWidget(QtWidgets.QWidget, PostInitBase):
 		self._setWidgetText(self.value())
 
 	def isEditing(self):
-		print("editing?", self.lineEdit.hasFocus(), self.lineEdit.isActiveWindow())
+		#print("editing?", self.lineEdit.hasFocus(), self.lineEdit.isActiveWindow())
 		return self.lineEdit.hasFocus() and self.lineEdit.isActiveWindow()
 
 	def _onValueChanged(self, text:str):

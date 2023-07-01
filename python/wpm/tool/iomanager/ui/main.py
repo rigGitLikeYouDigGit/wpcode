@@ -78,9 +78,6 @@ class IoNodeWidget(QtWidgets.QWidget):
 	def makeConnections(self):
 		pass
 
-	def testRenamed(self, *args, **kwargs):
-		print("test renamed", args, kwargs)
-		self.update()
 
 	def setNode(self, node:WN):
 		"""set node to display
@@ -88,8 +85,7 @@ class IoNodeWidget(QtWidgets.QWidget):
 		assert lib.isIoNode(node), "node must be io node"
 		self.tracker.setNode(node)
 		self.node = node
-		#self.tracker.setText(node.name())
-		#self.node.getNodeNameChangedSignal().connect(self.testRenamed)
+
 		self.palette().setColor(QtGui.QPalette.WindowText, QtGui.QColor(
 			*lib.IoMode[node.getAuxTree()[lib.MODE_KEY]].colour
 		))
@@ -114,7 +110,7 @@ class ChildListWidget(QtWidgets.QWidget):
 
 	def clear(self):
 		"""clear all widgets"""
-		print("clearing list")
+		#print("clearing list")
 		while self.layout().count():
 			delete.deleteObjectTree(self.layout().takeAt(0).widget())
 
@@ -239,7 +235,7 @@ class IoManagerWidget(QtWidgets.QWidget):
 		self._refreshButtonLabels()
 
 	def closeEvent(self, event:PySide2.QtGui.QCloseEvent) -> None:
-		print("close event")
+		#print("close event")
 		super(IoManagerWidget, self).closeEvent(event)
 		#del self
 
@@ -247,7 +243,7 @@ class IoManagerWidget(QtWidgets.QWidget):
 		"""called when widget is closed
 		:return: True if closed, False if not
 		"""
-		print("closing io manager widget")
+		#print("closing io manager widget")
 		for i in self._signalsToClean:
 			i[0].disconnect(i[1])
 		return super(IoManagerWidget, self).close()
