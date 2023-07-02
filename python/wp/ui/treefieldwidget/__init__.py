@@ -1,5 +1,5 @@
 
 
 from .base import TreeFieldParams
-from .stringwidget import StringWidget
+from .stringtreewidget import StringTreeWidget
 from .optionwidget import OptionComboWidget, OptionWidgetMode

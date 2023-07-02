@@ -3,62 +3,88 @@ from __future__ import annotations
 import typing as T
 import json
 
-from pathlib import Path
+from pathlib import Path, PurePath
+from dataclasses import dataclass
 
 from tree import Tree
 from tree.lib.object import UidElement, TypeNamespace
 
+from wp.constant import IoMode, getAssetRoot
+from wp.validation import ValidationError, ValidationResult, Rule, RuleSet, ErrorReport
+
 from wpm import cmds, om, oma, WN, createWN
 from wpm.lib import io
+from wpm.lib.usd import bridge
 
 """small libs to interface with tree data on nodes
-for now we say that a group is only input or output, not both
+for now we say that a group is only input or output, not both.
+
+leaving function names with "import" and "export" rather than
+"input" and "output" for now, since this lib is explicitly focused
+on shipping data into and out of maya
+
 """
 
-class IoMode(TypeNamespace):
-	"""either import or export
-	define some constants for whenever this concept appears in
-	pipeline"""
-	class _Base(TypeNamespace.base()):
-		#modeStr = "base"
-		colour = (0, 0, 0)
-		pass
-	class Import(_Base):
-		colour = (0, 0.5, 1) # blue input
-		#modeStr = "import"
-
-	class Export(_Base):
-		colour = (1, 0.7, 0.5) # orange output
-		#modeStr = "export"
-
-
-MODE_KEY = "mode"
+# we need a proper way of prefixing / namespacing tool-specific data in nodes
+MODE_KEY = "ioMode"
 IO_KEY = "ioPath"
 
-# probably ok to have exportPath be a global key here,
+defaultPathMap = {
+	IoMode.Input: "_in/geo",
+	IoMode.Output: "_out/geo",
+}
+
+def defaultPathForMode(mode:IoMode.T())->Path:
+	"""return default path for mode"""
+	return Path(defaultPathMap[mode])
+
+@dataclass
+class NodeIoData:
+	"""dataclass to hold io data for a node"""
+	path: Path
+	mode: IoMode.T() = IoMode.Input
+
+def nodeIoData(node:WN)->NodeIoData:
+	"""return NodeIoData for node"""
+	try:
+		return NodeIoData(
+		path=nodeIoPath(node),
+		mode=IoMode[node.getAuxTree()[MODE_KEY]]
+		)
+	except LookupError:
+		return None
+
+def setNodeIoData(node:WN, data:NodeIoData):
+	"""set NodeIoData for node"""
+	setIoNode(node, data.mode, data.path)
+
 # single maya nodes should only export to _out folders anyway
-def isExportNode(node:WN)->bool:
-	"""return True if node is a valid export node"""
-	if IO_KEY in node.getAuxTree().keys():
-		return node.getAuxTree()[MODE_KEY] == IoMode.Export.clsName()
-	return False
-
-def isImportNode(node:WN)->bool:
-	"""return True if node is a valid import node"""
-	if IO_KEY in node.getAuxTree().keys():
-		return node.getAuxTree()[MODE_KEY] == IoMode.Import.clsName()
-	return False
-
-def isIoNode(node:WN)->bool:
-	"""return True if node is a valid io node"""
-	return IO_KEY in node.getAuxTree().keys()
 
 def nodeIoPath(node:WN)->Path:
 	"""return path to io folder for this node"""
 	return Path(node.getAuxTree()[IO_KEY])
 
-def setIoNode(node:WN, path:Path, mode:IoMode.T()):
+def isIoNode(node:WN, mode:IoMode.T()=None)->bool:
+	"""return True if node is a valid io node"""
+	data = nodeIoData(node)
+	if data is None:
+		return False
+	if mode is None:
+		return True
+	return mode == data.mode
+
+def isExportNode(node:WN)->bool:
+	"""return True if node is a valid export node"""
+	return isIoNode(node, IoMode.Output)
+
+def isImportNode(node:WN)->bool:
+	"""return True if node is a valid import node"""
+	return isIoNode(node, IoMode.Input)
+
+
+def setIoNode(node:WN, mode:IoMode.T(), path:Path=None):
 	"""set node to be io node"""
+	path = path if path is not None else defaultPathForMode(mode)
 	node.getAuxTree()(IO_KEY, create=True).setValue(str(path))
 	node.getAuxTree()(MODE_KEY, create=True).setValue(mode.clsName())
 	node.saveAuxTree()
@@ -73,10 +99,64 @@ def listExportNodes()->T.List[WN]:
 	return [n for n in listIoNodes()
 	        if isExportNode(n)]
 
+def listImportNodes()->T.List[WN]:
+	"""return all export nodes in scene"""
+	return [n for n in listIoNodes()
+	        if isImportNode(n)]
+
 def removeIoNode(node:WN):
 	"""remove io data from node"""
 	node.getAuxTree().remove(IO_KEY)
 	node.getAuxTree().remove(MODE_KEY)
+	node.saveAuxTree()
+
+def createIoNode(mode:IoMode.T()=IoMode.Input, name=f"newIO_GRP")->WN:
+	"""create new io node"""
+	tf = createWN("transform", name)
+	setIoNode(tf, mode, defaultPathForMode(mode))
+	return tf
+
+def getScenePath()->Path:
+	"""return path to current maya scene"""
+	if not cmds.file(q=True, sn=True):
+		return None
+	return Path(cmds.file(q=True, sn=True))
+
+def runInput(node:WN, targetPath:Path=None):
+	"""run input on node"""
+	targetPath = targetPath if targetPath is not None else nodeIoPath(node)
+
+def runOutput(node:WN, targetPath:Path=None):
+	"""run output on node"""
+	targetPath = Path(targetPath if targetPath is not None else nodeIoPath(node))
+	assert cmds.file(q=True, sn=True), "Maya scene has no path on disk"
+	# check that we output to a usda file
+	if targetPath.suffix != ".usda":
+		targetPath = targetPath.with_suffix(".usda")
+	bridge.saveMayaNodeToUsd(node.MFn, stage=None, filePath=targetPath)
+	print("output done")
+
+# validation systems to check io paths
+class PathIsRelativeRule(Rule):
+	"""check that path is relative to asset root"""
+	def checkInput(self, data: str) -> bool:
+		if Path(data).is_absolute():
+			raise ValidationError(f"Path {data} is not relative to asset root")
+		return True
+
+class MayaHasScenePathRule(Rule):
+	"""Check that the current maya scene has a path on disk"""
+	def checkInput(self, data: str) -> bool:
+		if not cmds.file(q=True, sn=True):
+			raise ValidationError(f"Maya scene has no path on disk")
+		return True
+
+ioPathValidationRuleSet = RuleSet(
+	[PathIsRelativeRule(), MayaHasScenePathRule()]
+)
+
+
+
 
 
 

@@ -810,19 +810,21 @@ class WN(StringLike, # short for WePresentNode
 		if self._liveDataTree:
 			return self._liveDataTree
 		elif self.getAuxData():
-			return Tree.deserialise(self.getAuxData())
+			tree = Tree.deserialise(self.getAuxData())
+			self._liveDataTree = tree
+			return self._liveDataTree
 		self._liveDataTree = self.templateAuxTree()
 
 		# don't mess around with automatic signals for now
 		return self._liveDataTree
 
-		#saveTree = lambda : self.setAuxData(self._dataTree.serialise())
-		def saveTree(*args, **kwargs):
-			self.setAuxData(self._liveDataTree.serialise())
-
-		self._liveDataTree.getSignalComponent().valueChanged.connect(saveTree)
-		self._liveDataTree.structureChanged.connect(saveTree)
-		return self._liveDataTree
+		# #saveTree = lambda : self.setAuxData(self._dataTree.serialise())
+		# def saveTree(*args, **kwargs):
+		# 	self.setAuxData(self._liveDataTree.serialise())
+		#
+		# self._liveDataTree.getSignalComponent().valueChanged.connect(saveTree)
+		# self._liveDataTree.structureChanged.connect(saveTree)
+		# return self._liveDataTree
 
 		"""the alternative is to use a context handler, like
 		with self.dataTree() as data:
@@ -830,7 +832,7 @@ class WN(StringLike, # short for WePresentNode
 		but this is even cleaner"""
 
 	def saveAuxTree(self, tree=None):
-		if not tree and not self._liveDataTree:
+		if not tree and (self._liveDataTree is None):
 			raise RuntimeError("no tree passed or already created to save")
 		tree = tree or self._liveDataTree
 		self.setAuxData(tree.serialise())

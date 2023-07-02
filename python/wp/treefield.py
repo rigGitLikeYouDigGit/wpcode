@@ -55,7 +55,7 @@ class TreeField(Tree):
 	             params:TreeFieldParams=None):
 		super(TreeField, self).__init__(name, value, uid)
 
-		self.valueChanged = Signal()
+		# self.valueChanged = Signal()
 		self.valueChangedPropagate = Signal()
 		self.params : TreeFieldParams = params or TreeFieldParams()
 

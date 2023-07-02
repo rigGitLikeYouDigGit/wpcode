@@ -7,10 +7,25 @@ from PySide2 import QtWidgets, QtCore, QtGui
 
 from wp.constant import Status
 from wp.object import StatusObject, ErrorReport, PostInitBase, postInitWrap
+from wp.ui.widget.base import WpWidgetBase
 from wp.validation import Rule, RuleSet, ValidationResult, ValidationError
 
+class StringTranslator:
+	"""in future we could use this to pass rich path objects
+	back and forth from ui -
+	Probably better to defer to the calling code in question though,
+	this is a bit obscure"""
+
+	@classmethod
+	def fromUiString(cls, uiString:str)->object:
+		"""translate from ui string to internal string"""
+		return uiString
+
+	
+
+
 @postInitWrap
-class StringWidget(QtWidgets.QWidget, PostInitBase):
+class StringWidget(QtWidgets.QWidget, PostInitBase, WpWidgetBase):
 	"""test for more open / versatile string entry widget.
 	Incorporates validation checking on user input.
 	Later provide support for searching, completion, etc.
@@ -20,13 +35,12 @@ class StringWidget(QtWidgets.QWidget, PostInitBase):
 
 	def __init__(self, parent=None):
 		super(StringWidget, self).__init__(parent)
+		WpWidgetBase.__init__(self)
 
 		self._textValue = "" # actual value of widget
 		self._ruleSet : RuleSet = None # validation ruleset
 		self.lineEdit = QtWidgets.QLineEdit(self)
 		self._isEditing = False # whether user is currently editing widget
-
-
 
 	def __postInit__(self):
 		"""layout and connection functions are run after any subclasses
@@ -50,7 +64,18 @@ class StringWidget(QtWidgets.QWidget, PostInitBase):
 		#self.lineEdit.
 		self.lineEdit.editingFinished.connect(self._onWidgetEditingFinished)
 
-
+	# def setPlaceholderText(self, text:str):
+	# 	"""set placeholder text for widget"""
+	# 	self.lineEdit.setPlaceholderText(text)
+	#
+	# def text(self):
+	# 	"""return the current text value of the widget"""
+	# 	return self._textValue
+	#
+	# def setText(self, text):
+	# 	"""set the text value of the widget - does not check against validation ruleset
+	# 	also does not propagate if text is the same as current value"""
+	# 	self.setValue(text, emit=False)
 
 	def setValidationRuleSet(self, ruleset:RuleSet):
 		"""set the validation ruleset for this widget"""
@@ -72,7 +97,7 @@ class StringWidget(QtWidgets.QWidget, PostInitBase):
 			return
 		self._textValue = text
 		if not self.isEditing():
-			self._setWidgetText(text)
+			self._setWidgetText(str(text))
 		if emit:
 			self.textChanged.emit(text)
 

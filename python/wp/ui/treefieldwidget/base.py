@@ -4,15 +4,21 @@ from enum import Enum
 
 from PySide2 import QtWidgets
 
+from wp.ui.widget import WpWidgetBase, BorderFrame
 from wp.treefield import TreeField, TreeFieldParams
 
 
-class TreeFieldWidgetBase(QtWidgets.QWidget):
+class TreeFieldWidgetBase(QtWidgets.QWidget, WpWidgetBase, BorderFrame):
 	"""base class for generating UI elements from tree fields
-	base class is outer holder widget"""
+	base class is outer holder widget
+
+	TODO: clean this up with a post-init method for signals
+	"""
+	_baseCls = QtWidgets.QWidget
 	def __init__(self, tree:TreeField, parent=None):
+		self._baseCls.__init__(self, parent)
+		WpWidgetBase.__init__(self)
 		self.tree : TreeField = tree
-		super(TreeFieldWidgetBase, self).__init__(parent)
 
 		self.labelWidget : QtWidgets.QLabel = None
 		self.activeWidget : QtWidgets.QWidget = None
@@ -24,7 +30,12 @@ class TreeFieldWidgetBase(QtWidgets.QWidget):
 			self.layout().addWidget(self.labelWidget)
 
 		# connect immediate signal to update UI value
-		self.tree.valueChanged.connect(self._matchUiToValue)
+		self.tree.getSignalComponent().valueChanged.connect(self._matchUiToValue)
+
+	def paintEvent(self, event:PySide2.QtGui.QPaintEvent) -> None:
+		"""draw border"""
+		self._baseCls.paintEvent(self, event)
+		BorderFrame.paintEvent(self, event)
 
 	def _labelTooltip(self)->str:
 		"""return tooltip for label"""

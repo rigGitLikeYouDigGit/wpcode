@@ -3,6 +3,8 @@ import typing as T
 
 from PySide2 import QtWidgets, QtCore, QtGui
 
+from wp.object import CleanupMixin
+
 
 """ deleting widgets has always been a little weird - 
 some conditions create self-sustaining references in python
@@ -44,13 +46,19 @@ def deleteObjectTree(obj:(QtWidgets.QWidget, QtCore.QObject)):
 	if isinstance(obj, QtWidgets.QWidget):
 		if obj.layout() is not None:
 			emptyLayoutTree(obj.layout())
-	children = list(obj.children())
-	for child in children:
+	#children = list(obj.children())
+	i = 0
+	while obj.children():
+		deleteObjectTree(obj.children()[0])
 
-		deleteObjectTree(child)
+		if i > 100:
+			raise RuntimeError("too many children")
 
 	#obj.setParent(None)
-	obj.deleteLater()
+	if isinstance(obj, CleanupMixin):
+		obj.cleanup() # cleanup should internally call deleteLater
+	else:
+		obj.deleteLater()
 
 
 

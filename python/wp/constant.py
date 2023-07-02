@@ -72,6 +72,27 @@ class CurrentAssetProject(TypeNamespace):
 		root = ASSET_ROOT
 
 # enum constants common across all tools
+# sort alphabetically
+
+class IoMode(TypeNamespace):
+	"""Input, Output, None or Both -
+	wherever we have nodes, processes, tools etc
+	"""
+	class _Base(TypeNamespace.base()):
+
+		colour = (0, 0, 0)
+		pass
+	class Input(_Base):
+		colour = (0, 0.5, 1) # blue input
+	class Output(_Base):
+		colour = (1, 0.7, 0.5) # orange output
+	class Neither(_Base):
+		colour = (0.5, 0.5, 0.5)
+	class Both(_Base):
+		colour = (0.8, 0.2, 0.8) # purple
+
+
+
 class Status(TypeNamespace):
 	"""abstract status of a tool or variable -
 	is everything fine, or are there issues?

@@ -24,7 +24,6 @@ class CallbackOwner:
 
 	def removeAllOwnedCallbacks(self):
 		"""remove all callbacks owned by this object"""
-		print("removing callbacks", self._callbackIds)
 		om.MMessage.removeCallbacks(self._callbackIds)
 		self._callbackIds = []
 
