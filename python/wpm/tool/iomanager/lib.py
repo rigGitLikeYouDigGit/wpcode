@@ -133,6 +133,10 @@ def runOutput(node:WN, targetPath:Path=None):
 	# check that we output to a usda file
 	if targetPath.suffix != ".usda":
 		targetPath = targetPath.with_suffix(".usda")
+
+	# make path relative to scene
+	targetPath = getScenePath().parent / targetPath
+	print("outputting to", targetPath)
 	bridge.saveMayaNodeToUsd(node.MFn, stage=None, filePath=targetPath)
 	print("output done")
 

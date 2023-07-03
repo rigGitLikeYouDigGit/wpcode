@@ -24,7 +24,7 @@ from wpm.lib.ui import window
 from wpm.lib.ui.nodetracker import NodeTracker
 from .. import lib
 
-
+om.MFn
 """rebuild with chimaera, when it's working.
 
 FOR NOW, loaded node paths will show backslashes instead of forward slashes.
