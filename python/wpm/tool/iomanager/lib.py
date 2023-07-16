@@ -11,6 +11,7 @@ from tree.lib.object import UidElement, TypeNamespace
 
 from wp.constant import IoMode, getAssetRoot
 from wp.validation import ValidationError, ValidationResult, Rule, RuleSet, ErrorReport
+from wp.treefield import TreeField, TreeFieldParams
 
 from wpm import cmds, om, oma, WN, createWN
 from wpm.lib import io
@@ -25,9 +26,13 @@ on shipping data into and out of maya
 
 """
 
+NODE_IO_KEY = "nodeIo"
+
+
 # we need a proper way of prefixing / namespacing tool-specific data in nodes
 MODE_KEY = "ioMode"
 IO_KEY = "ioPath"
+LIVE_KEY = "ioLive"
 
 defaultPathMap = {
 	IoMode.Input: "_in/geo",
@@ -38,25 +43,45 @@ def defaultPathForMode(mode:IoMode.T())->Path:
 	"""return default path for mode"""
 	return Path(defaultPathMap[mode])
 
+
+defaultMode = IoMode.Output
+
+# tree field template for io data
+ioTreeField = TreeField(NODE_IO_KEY)
+ioTreeField.lookupCreate = True
+ioTreeField("ioMode").value = defaultMode
+ioTreeField("ioPath").value = defaultPathForMode(defaultMode)
+ioTreeField("ioLive").value = False
+
+
+def updateNodeAuxDataFromIoTree(node:WN, ioTree:Tree):
+	"""update node aux data from io tree"""
+	ioBranch : Tree = node.getAuxTree()(NODE_IO_KEY, create=True)
+	ioBranch.update(ioTree)
+	node.saveAuxTree()
+
+
 @dataclass
 class NodeIoData:
 	"""dataclass to hold io data for a node"""
 	path: Path
 	mode: IoMode.T() = IoMode.Input
+	live : bool = False
 
 def nodeIoData(node:WN)->NodeIoData:
 	"""return NodeIoData for node"""
 	try:
 		return NodeIoData(
-		path=nodeIoPath(node),
-		mode=IoMode[node.getAuxTree()[MODE_KEY]]
+			path=nodeIoPath(node),
+			mode=IoMode[node.getAuxTree()[MODE_KEY]],
+			live=node.getAuxTree().get(LIVE_KEY, False)
 		)
 	except LookupError:
 		return None
 
 def setNodeIoData(node:WN, data:NodeIoData):
 	"""set NodeIoData for node"""
-	setIoNode(node, data.mode, data.path)
+	setIoNode(node, data.mode, data.path, data.live)
 
 # single maya nodes should only export to _out folders anyway
 
@@ -82,11 +107,12 @@ def isImportNode(node:WN)->bool:
 	return isIoNode(node, IoMode.Input)
 
 
-def setIoNode(node:WN, mode:IoMode.T(), path:Path=None):
+def setIoNode(node:WN, mode:IoMode.T(), path:Path=None, live=False):
 	"""set node to be io node"""
 	path = path if path is not None else defaultPathForMode(mode)
 	node.getAuxTree()(IO_KEY, create=True).setValue(str(path))
 	node.getAuxTree()(MODE_KEY, create=True).setValue(mode.clsName())
+	node.getAuxTree()(LIVE_KEY, create=True).setValue(live)
 	node.saveAuxTree()
 
 def listIoNodes()->T.List[WN]:

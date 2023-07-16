@@ -12,8 +12,8 @@ import copy, fnmatch, re
 
 from dataclasses import dataclass
 
-from tree.lib.string import sliceFromString
-from tree.lib.sequence import flatten
+from wplib.string import sliceFromString
+from wplib.sequence import flatten
 from tree.lib.object import TypeNamespace
 from tree import Tree
 

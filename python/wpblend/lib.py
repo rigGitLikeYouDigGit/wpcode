@@ -4,7 +4,7 @@ import typing as T
 
 from pathlib import Path
 
-from tree.lib import sequence
+from wplib import sequence
 
 import bpy
 

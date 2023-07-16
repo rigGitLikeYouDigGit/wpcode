@@ -4,11 +4,9 @@ import typing as T
 
 from PySide2 import QtWidgets, QtCore, QtGui
 
-from tree.lib.string import lowFirst
+from wplib.string import lowFirst
 
-from wp.object import CleanupMixin, PostInitBase
-from wp.ui.delete import deleteObjectTree, emptyLayoutTree
-
+from wp.object import CleanupMixin
 
 """test for master base class for any widget
 adds on cleanup methods, and allows hierarchy

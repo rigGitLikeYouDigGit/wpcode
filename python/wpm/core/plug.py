@@ -2,18 +2,16 @@ from __future__ import annotations
 
 import typing as T
 
-from tree import Tree, TreeInterface
-from tree.lib.sequence import flatten
+from tree import TreeInterface
+from wplib.sequence import flatten
 from tree.lib.object import UnHashableDict
 
 #from setFnMap
 from .cache import om
-from . import bases, attr, api
+from . import bases, attr
 
 if T.TYPE_CHECKING:
 	from wpm import WN
-
-from typing_extensions import Self
 
 
 class PlugMeta(type):

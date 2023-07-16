@@ -2,8 +2,6 @@
 from __future__ import annotations
 """constants across all of wp"""
 
-import typing as T
-
 from pathlib import Path
 
 from tree.lib.object import TypeNamespace
@@ -52,7 +50,7 @@ def getAssetRoot()->Path:
 		return TEST_ASSET_ROOT
 	return ASSET_ROOT
 
-print("wp init")
+#print("wp init")
 # print("ROOT_PATH", WP_ROOT)
 # print("ASSET_ROOT_PATH", ASSET_ROOT)
 
@@ -71,8 +69,45 @@ class CurrentAssetProject(TypeNamespace):
 		"""tempest asset project"""
 		root = ASSET_ROOT
 
+#region enums
 # enum constants common across all tools
 # sort alphabetically
+
+class GeoElement(TypeNamespace):
+	"""enum for geo elements"""
+
+	class _Base(TypeNamespace.base()):
+		"""base class for geo element"""
+		pass
+
+	class Point(_Base):
+		"""point"""
+		pass
+
+	class Vertex(_Base):
+		"""vertex"""
+		pass
+
+	class Edge(_Base):
+		"""edge"""
+		pass
+
+	class Primitive(_Base):
+		"""primitive"""
+		pass
+
+	class Detail(_Base):
+		"""detail"""
+		pass
+
+	class HalfEdge(_Base):
+		"""half edge"""
+		pass
+
+	class Cell(_Base):
+		"""voxel or pixel"""
+		pass
+
 
 class IoMode(TypeNamespace):
 	"""Input, Output, None or Both -
@@ -91,6 +126,19 @@ class IoMode(TypeNamespace):
 	class Both(_Base):
 		colour = (0.8, 0.2, 0.8) # purple
 
+class Orient(TypeNamespace):
+	"""horizontal or vertical orientation - may rename this
+	if it ends up colliding with XYZ directions"""
+
+	class _Base(TypeNamespace.base()):
+		"""base class for orient"""
+		pass
+	class Horizontal(_Base):
+		"""horizontal orientation"""
+		pass
+	class Vertical(_Base):
+		"""vertical orientation"""
+		pass
 
 
 class Status(TypeNamespace):
@@ -133,4 +181,6 @@ class UiResponsiveness(TypeNamespace):
 	class NoAction(_Base):
 		"""do not send updates (wait for rest of tool to read this value)"""
 		pass
+
+#endregion enums
 

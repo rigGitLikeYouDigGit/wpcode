@@ -7778,7 +7778,7 @@ class parameterInterfaceTabType(object):
 
         UsdProperties
             The USD Properties tab which lists the current USD stage, all
-            concrete USD schemas, and custom properties for every supported
+            concrete USD schemas, and custom auxProperties for every supported
             USD property data type.
 
 
@@ -21915,8 +21915,8 @@ class ParmTemplateGroup(object):
             additional header elements depends on where this dialog script is
             being used. When used to provide the parameter definitions for an
             HDA, these elements are ignored. But when using the dialog script as
-            a source of render properties, these additional elements will be
-            used to filter and categorize the properties in the Edit Parameter
+            a source of render auxProperties, these additional elements will be
+            used to filter and categorize the auxProperties in the Edit Parameter
             Interface window.
 
 
@@ -25119,7 +25119,7 @@ class AgentRig(object):
         addChannel(self, name, default_value=0.0, transform=-1)
 
             Adds a new channel to the rig. If a channel already exists with the
-            same name, properties such as the default value will be overwritten.
+            same name, auxProperties such as the default value will be overwritten.
 
             Raises hou.GeometryPermissionError if the rig is not modifiable.
 
@@ -32296,7 +32296,7 @@ class DopObject(DopData):
     A type of DOP data that contains an object in the simulation.
 
     This object might be a rigid body, a fluid, cloth, etc. The type and
-    properties of the DOP object are determined by the subdata attached to
+    auxProperties of the DOP object are determined by the subdata attached to
     the object.
 
 
@@ -35559,7 +35559,7 @@ class FolderParmTemplate(ParmTemplate):
 
             Returns the set of conditionals that affect the folder tab generated
             by this parameter template. The conditionals correspond to the Tab
-            disable when and Tab hide when properties that appear Edit Parameter
+            disable when and Tab hide when auxProperties that appear Edit Parameter
             Interface window for folder parameters.
 
             See the Conditionals section of the <Operator Type Properties
@@ -50055,7 +50055,7 @@ class HDADefinition(object):
             string if no embedded help exists.
 
             Embedded help typically comes from the Help tab of the operator type
-            properties window, but it may also come from a dialog script.
+            auxProperties window, but it may also come from a dialog script.
 
 
         """
@@ -50229,7 +50229,7 @@ class HDADefinition(object):
             See hou.HDASection for more information on sections. To remove a
             section, use hou.HDASection.destroy.
 
-            Sections can have associated properties stored in the
+            Sections can have associated auxProperties stored in the
             hou.HDADefinition.extraFileOptions.
 
           > def addSectionFromFile(hda_definition, section_name, file_name):
@@ -51210,7 +51210,7 @@ class HDAOptions(object):
 
             Return whether the Get Properties from VEX Code option is on.
 
-            When this option is set, most properties and parameters of the
+            When this option is set, most auxProperties and parameters of the
             operator come from pragma statements in the VEX source code.
 
 
@@ -54383,7 +54383,7 @@ class IndexPairPropertyTable(object):
 
     hou.IndexPairPropertyTable
 
-    Describes properties of an index pair attribute.
+    Describes auxProperties of an index pair attribute.
 
 
     """
@@ -66711,7 +66711,7 @@ class Parm(object):
         function_name=None) -> str
 
             Returns a script of Python statements that can be executed to set
-            the parameter tuple's values, flags and other properties. To run the
+            the parameter tuple's values, flags and other auxProperties. To run the
             script, use either Python's exec or execfile functions.
 
 
@@ -66770,7 +66770,7 @@ class Parm(object):
           > f.close()
           > 
           > # Execute the script.  This will set the values, flag values
-          > # and other properties on /obj/geo1's t parameter tuple.  It will
+          > # and other auxProperties on /obj/geo1's t parameter tuple.  It will
           > # also store a reference to the t parameter tuple into a variable
           > # named 'hou_parm_tuple'.
           > execfile(\"set_parm_tuple_properties.py\")
@@ -66787,7 +66787,7 @@ class Parm(object):
           > f.write(func)
           > f.close()
           > 
-          > # Call the function definition to set the properties on another
+          > # Call the function definition to set the auxProperties on another
           > # parameter tuple.
           > import parmtuplelib
           > hou_parm_tuple = parmtuplelib.setParmTupleProperties(node.parm(\"t\"))
@@ -71388,14 +71388,14 @@ _hou.PrimGroup_swigregister(PrimGroup)
 class properties(object):
     r"""
 
-    hou.properties
+    hou.auxProperties
 
-    A module for accessing standard render properties.
+    A module for accessing standard render auxProperties.
 
     This module provides functions for querying the set of standard
-    properties that appear under the Render Properties tab when editing the
+    auxProperties that appear under the Render Properties tab when editing the
     parameters of a node or node type. This can make it easier to add these
-    render properties programmatically to your nodes or assets.
+    render auxProperties programmatically to your nodes or assets.
 
 
     """
@@ -71471,7 +71471,7 @@ class properties(object):
         """
         return _hou.properties_parmTemplate(self, class_name, parm_name)
 
-# Register properties in _hou:
+# Register auxProperties in _hou:
 _hou.properties_swigregister(properties)
 
 class PythonPanel(PathBasedPaneTab):
@@ -78765,7 +78765,7 @@ class ShopNode(Node):
                 You can use hou.ShopNodeType.renderMask to determine the render
                 types supported by this SHOP's type. You can also use
                 hou.shopNodeTypeCategory.renderers to get all the possible
-                render types. Note that some SHOP types, like the properties
+                render types. Note that some SHOP types, like the auxProperties
                 SHOP or the switch SHOP, have a render mask of \"*\" to indicate
                 that they will work with any shader type.
 
@@ -97953,8 +97953,8 @@ def preferredNodeType(name: "char const *", parent_node: "Node"=None) -> "HOM_No
     name
         The internal name of a node type including the category. To get the
         internal name of any node type in Houdini, right-click a node of
-        that type and choose Type properties. The internal name is listed at
-        the top of the type properties window beside Operator type. For
+        that type and choose Type auxProperties. The internal name is listed at
+        the top of the type auxProperties window beside Operator type. For
         example, the internal name of the Geometry object is geo.
 
     parent_node

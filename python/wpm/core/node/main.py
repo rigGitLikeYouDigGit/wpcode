@@ -6,11 +6,11 @@ import ast
 
 # tree libs for core behaviour
 from tree import Tree, Signal
-from tree.lib.inheritance import iterSubClasses
-from tree.lib.string import camelJoin
+from wplib.inheritance import iterSubClasses
+from wplib.string import camelJoin
 from tree.lib.object import UnHashableDict, ObjectComponent, StringLike
 from tree.lib.treecomponent import TreeBranchLookupComponent
-from tree.lib.sequence import toSeq, firstOrNone
+from wplib.sequence import toSeq, firstOrNone
 
 # maya infrastructure
 from wpm.core.constant import GraphTraversal, GraphDirection, GraphLevel
@@ -420,7 +420,7 @@ class WN(StringLike, # short for WePresentNode
 		childNode = self.getChild(tokens[0])
 		return childNode(tokens[1:])
 
-	# region convenience properties
+	# region convenience auxProperties
 
 	@property
 	def shapes(self)->tuple[WN]:

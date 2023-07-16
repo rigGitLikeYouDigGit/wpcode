@@ -173,4 +173,15 @@ class AssetBank:
 		return asset
 
 
+	def refreshFromAssetDir(self):
+		"""rescan the asset directory and load all assets -
+		this is fine until stuff has to be cached"""
+		self.assets.clear()
+		for i in constant.getAssetRoot().iterdir():
+			if i.is_dir():
+				try:
+					asset = self.loadAssetFromDir(i)
+					self.assets[asset.uid] = asset
+				except FileNotFoundError:
+					pass
 

@@ -50,13 +50,16 @@ def makeNewWatcher(node:hou.Node, kwargs:dict):
 		"""press all given buttons, but only once each"""
 		pressed = set()
 		for parmPath in buttonParmPaths:
-			parm = node.parm(node.parm(parmPath).eval())
+			try:
+				parm = node.parm(node.parm(parmPath).eval())
+			except hou.ObjectWasDeleted:
+				continue
 			#print("parm", parm)
 			if parm is None:
-				print(f"no parm {parmPath} on {node.path()}")
+				#print(f"no parm {parmPath} on {node.path()}")
 				continue
 			if parm in pressed:
-				print(f"already pressed {parmPath} on {node.path()}")
+				#print(f"already pressed {parmPath} on {node.path()}")
 				continue
 			parm.pressButton()
 			#print("pressed button")
@@ -97,13 +100,11 @@ def setNodeTrackerActive(node:hou.Node, kwargs, state=True):
 	#print("setNodeTrackerActive", node.path(), state)
 	watcher = fileWatcherForNode(node)
 	if watcher:
-		if state:
-			nodeWatcherMap[node].start()
-		else:
+		if not state:
 			nodeWatcherMap[node].stop()
-	else:
-		if state:
-			makeNewWatcher(node, kwargs).start()
+			return
+	if state:
+		makeNewWatcher(node, kwargs).start()
 
 
 

@@ -64,7 +64,7 @@ def makeIoNull(name:str):
 	# ioColl = bpy.data.collections.new(name)
 	# # add to scene
 	# bpy.context.scene.collection.children.link(ioColl)
-	# # create import and export path properties
+	# # create import and export path auxProperties
 	defaultInPath = "../in/sculpt_in.usda"
 	importPathProp = bpy.props.StringProperty(
 		name="importPath", default=defaultInPath,

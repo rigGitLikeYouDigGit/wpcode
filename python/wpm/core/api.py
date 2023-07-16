@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import typing as T
 
-from tree.lib import sequence
+from wplib import sequence
 from tree.lib.object import UserSet
 
 
@@ -95,7 +95,7 @@ class MObjectSet(UserSet):
 	def filterObjs(self, mfnTypes:T.Iterable[int], toType=None)->(MObjectSet, set[EdNode]):
 		"""if toType, given type is mapped across filter results, and
 		a normal set of these items is returned"""
-		filtered = MObjectSet(filter(lambda x: any(x.hasFn(i) for i in sequence.toSeq( mfnTypes)), self))
+		filtered = MObjectSet(filter(lambda x: any(x.hasFn(i) for i in sequence.toSeq(mfnTypes)), self))
 		if toType:
 			return set(map(toType, filtered))
 		return filtered

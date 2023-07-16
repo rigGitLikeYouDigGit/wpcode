@@ -30,7 +30,7 @@ class BorderFrame(#QtWidgets.QFrame
 
 	def getBorderData(self) -> borderDataCls:
 		"""return border data to use in painting border"""
-		return BorderData()
+		return self.borderDataCls()
 
 	def paintEvent(self, arg__1:PySide2.QtGui.QPaintEvent) -> None:
 		"""reimplement paint event to draw a border"""

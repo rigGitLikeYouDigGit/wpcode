@@ -11,11 +11,13 @@ from wp.option import OptionItem, optionType, optionMapFromOptions, FilteredOpti
 """test for a new way of building tools - using a tree structure,
 addressing signals and events by strings.
 
-Here we define a typed section for entering information
+Here we define a typed section for entering information at a specific
+location in a tree hierarchy.
 
 
 inspired partially by blueprints, partially by general despair
 """
+
 
 
 @dataclass
@@ -39,10 +41,10 @@ class TreeFieldParams:
 
 class TreeField(Tree):
 	"""
-	Add new signal to check if change of state should propagate
-	to other events -
-	when updating field to a new value, sometimes just want to update
-	the value without triggering a chain of events.
+	TreeField is a tree node that holds a value and some auxiliary
+	typing data for that value.
+
+	Will serve as a base for programmatic tool construction
 
 	Use Params object to flag which tree branches to process
 	in which way
@@ -51,18 +53,18 @@ class TreeField(Tree):
 
 	options = None
 
+	@classmethod
+	def defaultBranchCls(cls):
+		return TreeField
+
 	def __init__(self, name:str, value=None, uid=None,
 	             params:TreeFieldParams=None):
 		super(TreeField, self).__init__(name, value, uid)
 
-		# self.valueChanged = Signal()
-		self.valueChangedPropagate = Signal()
+		# might have to make params a property
+		# for now allowing them not to be serialised
 		self.params : TreeFieldParams = params or TreeFieldParams()
 
 
-	def setValuePropagate(self, value):
-		"""set value, and trigger propagate signal"""
-		self.setValue(value)
-		self.valueChangedPropagate.emit(value)
 
 

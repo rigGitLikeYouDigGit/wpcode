@@ -64,18 +64,6 @@ class StringWidget(QtWidgets.QWidget, PostInitBase, WpWidgetBase):
 		#self.lineEdit.
 		self.lineEdit.editingFinished.connect(self._onWidgetEditingFinished)
 
-	# def setPlaceholderText(self, text:str):
-	# 	"""set placeholder text for widget"""
-	# 	self.lineEdit.setPlaceholderText(text)
-	#
-	# def text(self):
-	# 	"""return the current text value of the widget"""
-	# 	return self._textValue
-	#
-	# def setText(self, text):
-	# 	"""set the text value of the widget - does not check against validation ruleset
-	# 	also does not propagate if text is the same as current value"""
-	# 	self.setValue(text, emit=False)
 
 	def setValidationRuleSet(self, ruleset:RuleSet):
 		"""set the validation ruleset for this widget"""

@@ -8,7 +8,7 @@ from .cleanup import CleanupMixin
 
 from .errorreport import ErrorReport
 
-from .postinit import PostInitBase, postInitWrap
+from .node import DepNode
 
 from .statusobject import StatusObject
 

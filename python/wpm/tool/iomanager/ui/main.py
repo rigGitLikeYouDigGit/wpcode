@@ -1,30 +1,24 @@
 from __future__ import annotations
 import typing as T
 
-import os, sys
+import os
 
-from pathlib import Path
-
-from PySide2 import QtWidgets, QtCore, QtGui
+from PySide2 import QtWidgets, QtGui
 
 from dataclasses import dataclass
-
-from tree.lib.object import TypeNamespace
-from tree import Tree
 
 from wp import constant as const
 from wp.treefield import TreeField
 from wp.ui.layout import autoLayout
-from wp.ui import delete
 from wp.ui.widget import WpWidgetBase, BorderFrame
 from wp.ui.treefieldwidget import TreeFieldParams, StringTreeWidget
-from wpm import cmds, om, oma, WN, createWN, getSceneGlobals
+from wp.ui.widget.childlist import ChildListWidget
+from wpm import cmds, WN, createWN, getSceneGlobals
 
 from wpm.lib.ui import window
 from wpm.lib.ui.nodetracker import NodeTracker
 from .. import lib
 
-om.MFn
 """rebuild with chimaera, when it's working.
 
 FOR NOW, loaded node paths will show backslashes instead of forward slashes.
@@ -62,7 +56,6 @@ class IoNodeWidget(QtWidgets.QWidget, BorderFrame, WpWidgetBase):
 		self._baseCls.__init__(self, parent=parent)
 		WpWidgetBase.__init__(self)
 
-
 		self.mode : const.IoMode.T() = mode
 		self.node : WN = None
 		self.tracker = NodeTracker(self)
@@ -74,6 +67,9 @@ class IoNodeWidget(QtWidgets.QWidget, BorderFrame, WpWidgetBase):
 		)
 		field = TreeField("ioPath", params=strParams)
 		self.pathWidget = StringTreeWidget(field, parent=self)
+
+		# field = TreeField("ioLive", params=TreeFieldParams(showLabel=True))
+		# self.liveWidget = BoolTreeWidget(field, parent=self)
 
 		self.ioBtn = QtWidgets.QPushButton(f"Run {self.mode}", self)
 
@@ -108,6 +104,14 @@ class IoNodeWidget(QtWidgets.QWidget, BorderFrame, WpWidgetBase):
 		self.ioBtn.pressed.connect(self._onIoBtnPressed)
 		pass
 
+	def _onTreeLiveChanged(self, *args, **kwargs):
+		"""triggers whenever tree field value changes for any reason -
+		save path change back to tree"""
+		data = lib.nodeIoData(self.node)
+		data.path = self.pathWidget.tree.value
+		lib.setNodeIoData(self.node, data)
+		self.node.saveAuxTree()
+
 	def _onTreePathChanged(self, *args, **kwargs):
 		"""triggers whenever tree field value changes for any reason -
 		save path change back to tree"""
@@ -127,49 +131,12 @@ class IoNodeWidget(QtWidgets.QWidget, BorderFrame, WpWidgetBase):
 			*self.mode.colour
 		))
 		#print("set node path", lib.nodeIoPath(node))
-		self.pathWidget.tree.setValuePropagate(lib.nodeIoPath(node))
+		#self.pathWidget.tree.setValuePropagate(lib.nodeIoPath(node))
+		self.pathWidget.tree.setValue(lib.nodeIoPath(node))
 		self.connectToOwnedSlot(
 			self.pathWidget.tree.getSignalComponent().valueChanged,
 			self._onTreePathChanged)
 
-
-class ChildListWidget(QtWidgets.QWidget, WpWidgetBase):
-	"""widget holding list of child widgets, instead of items"""
-	def __init__(self, parent=None):
-		super(ChildListWidget, self).__init__(parent=parent)
-		WpWidgetBase.__init__(self)
-
-		vl = QtWidgets.QVBoxLayout(self)
-		vl.setContentsMargins(0, 0, 0, 0)
-		vl.setSpacing(0)
-		self.setLayout(vl)
-
-	def addWidget(self, widget:QtWidgets.QWidget):
-		"""add widget to list"""
-		widget.setParent(self)
-		self.layout().addWidget(widget)
-
-	def widgets(self):
-		return [self.layout().itemAt(i).widget() for i in range(self.layout().count())]
-
-	def clear(self):
-		"""clear all widgets"""
-		#print("clearing list")
-		while self.layout().count():
-			self.layout().takeAt(0).widget().deleteWp()
-		self.adjustSize()
-
-	def widgetList(self)->T.List[QtWidgets.QWidget]:
-		"""return list of widgets"""
-		return [self.layout().itemAt(i).widget() for i in range(self.layout().count())]
-
-	def sizeHint(self) -> PySide2.QtCore.QSize:
-		"""expand to all list items"""
-		return self.minimumSizeHint()
-
-	def minimumSizeHint(self) -> PySide2.QtCore.QSize:
-		"""expand to all list items"""
-		return self.layout().minimumSize()
 
 def getSingleSel()->WN:
 	return WN(cmds.ls(sl=True, l=True)[0])
