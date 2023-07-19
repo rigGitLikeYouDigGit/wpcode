@@ -34,4 +34,23 @@ multiple versions at once, or break back-compatibility.
 (could investigate more hardcore ways to enforce this, like pickling and reloading
 encoders themselves - actually an interesting idea, but for now against my 
 better judgement, we trust the programmer)
+
+Should we meaningfully separate version of data format, and version of loader?
+Version of data format is all that matters, loader versions can change freely
+as long as they remain compatible.
+
+Serial data must always be a dict.
+
+We DO still need a type reference system, unless we make an entirely new adaptor
+for every possible custom class, dataclass, enum, etc. that we want to serialise.
+balls.
+
 """
+
+from .encoder import EncoderBase, version
+from .adaptor import SerialAdaptor
+from .register import SerialRegister
+
+# import and register all default types
+from .applied import *
+

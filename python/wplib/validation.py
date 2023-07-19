@@ -4,7 +4,7 @@ import typing as T
 
 from dataclasses import dataclass
 
-from wp.object import ErrorReport
+from wplib.errorreport import ErrorReport
 
 class ValidationError(Exception):
 	pass

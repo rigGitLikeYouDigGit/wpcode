@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import typing as T
 from dataclasses import dataclass
-from wplib.constant import mapTypes, seqTypes
+from wplib.constant import MAP_TYPES, SEQ_TYPES
 
 DEBUG = 0
 
@@ -132,12 +132,12 @@ class Visitor(object):
 				self.visitRecursive,
 				visitArgsKwargs=((obj, visitData ), {})
 			)
-		elif type(obj) in mapTypes:
+		elif type(obj) in MAP_TYPES:
 			result = type(obj)({ self.visitRecursive(k, obj, visitData) :
 				                  self.visitRecursive(v, obj, visitData)
 			                  for k, v in obj.items()})
 
-		elif type(obj) in seqTypes:
+		elif type(obj) in SEQ_TYPES:
 			result = [self.visitRecursive(i, obj, visitData) for i in obj]
 			result = type(obj)(result)
 

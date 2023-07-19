@@ -5,7 +5,11 @@ import typing as T
 from traceback import format_exc
 
 """more rich error class, containing traceback and
-a more descriptive message to show user"""
+a more descriptive message to show user.
+
+This MIGHT be completely redundant, we can probably recover all
+this information from a normal raised exception
+"""
 
 class ErrorReport:
 

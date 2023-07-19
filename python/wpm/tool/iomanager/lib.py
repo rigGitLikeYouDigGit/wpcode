@@ -1,20 +1,17 @@
 
 from __future__ import annotations
 import typing as T
-import json
 
-from pathlib import Path, PurePath
+from pathlib import Path
 from dataclasses import dataclass
 
 from tree import Tree
-from tree.lib.object import UidElement, TypeNamespace
 
-from wp.constant import IoMode, getAssetRoot
-from wp.validation import ValidationError, ValidationResult, Rule, RuleSet, ErrorReport
-from wp.treefield import TreeField, TreeFieldParams
+from wp.constant import IoMode
+from wplib.validation import ValidationError, Rule, RuleSet
+from wp.treefield import TreeField
 
-from wpm import cmds, om, oma, WN, createWN
-from wpm.lib import io
+from wpm import cmds, WN, createWN
 from wpm.lib.usd import bridge
 
 """small libs to interface with tree data on nodes

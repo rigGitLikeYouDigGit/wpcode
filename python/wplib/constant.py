@@ -3,12 +3,12 @@ from __future__ import annotations
 import typing as T
 
 # standardising type checking forstrings vs lists vs maps
-strTypes = (str, ) # check first
-mapTypes = (dict, )
-seqTypes = (list, tuple, set, )
+STR_TYPES = (str,) # check first
+MAP_TYPES = (dict,)
+SEQ_TYPES = (list, tuple, set,)
 
 # types that can be literally evaluated from strings
-literalTypes = (
+LITERAL_TYPES = (
 	str, bytes, bool, int, float, complex
 )
 

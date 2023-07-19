@@ -6,7 +6,7 @@ from tree import Signal
 from wp.constant import Status
 
 if T.TYPE_CHECKING:
-	from .errorreport import ErrorReport
+	from wplib.errorreport import ErrorReport
 
 class StatusObject:
 	"""object holding a Status constant, providing

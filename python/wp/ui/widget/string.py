@@ -1,14 +1,12 @@
 from __future__ import annotations
 import typing as T
 
-from PySide2 import QtWidgets, QtCore, QtGui
-
-
+from PySide2 import QtWidgets, QtCore
 
 from wp.constant import Status
-from wp.object import StatusObject, ErrorReport, PostInitBase, postInitWrap
+from wp.object import PostInitBase, postInitWrap
 from wp.ui.widget.base import WpWidgetBase
-from wp.validation import Rule, RuleSet, ValidationResult, ValidationError
+from wplib.validation import Rule, RuleSet, ValidationError
 
 class StringTranslator:
 	"""in future we could use this to pass rich path objects

@@ -4,10 +4,7 @@ import typing as T
 
 from enum import Enum
 
-def _enumSerialData(obj:Enum):
-	return obj.value
-def _enumDeserialise(cls:T.Type[Enum], serialData):
-	return cls._value2member_map_[serialData]
+from wplib.validation import ValidationError
 
 class EncoderBase:
 	"""Base class for encoding and decoding types.
@@ -28,57 +25,34 @@ class EncoderBase:
 		raise NotImplementedError
 
 	@classmethod
-	def decode(cls, serialData:dict)->encodeType:
+	def decode(cls, serialCls:encodeType, serialData:dict)->encodeType:
 		raise NotImplementedError
 
+
 	@classmethod
-	def _defineVersion(cls:T.Type, index:int):
-		"""Decorator for classes - adjusts class name,
-		sets class attribute.
+	def checkIsValid(cls)->bool:
+		"""Check that the class has been defined correctly.
+		:raises ValidationError: if invalid
 		"""
-		assert index not in cls._versionMap, f"Duplicate version defined for index index {index} for {cls}"
-		cls.__name__ = f"{cls.__name__}_V{index}"
-		cls.versionIndex = index
+		if cls._versionIndex == -1: # not properly versioned
+			raise ValidationError(f"Encoder {cls} is not properly versioned")
+		return True
+
+	@classmethod
+	def getVersion(cls)->int:
+		return cls._versionIndex
 
 def version(index:int):
 	"""Decorator for classes - adjusts class name,
 	sets class attribute.
 	"""
-	def _inner(cls):
+	assert index > 0, f"Version index must be greater than 0, not {index}"
+	def _inner(cls:type[EncoderBase]):
 		cls.__name__ = f"{cls.__name__}_V{index}"
-		cls.versionIndex = index
+		cls._versionIndex = index
 		return cls
 	return _inner
 
 
 """version of an encoder class should know its type, and that's it"""
 
-class SerialAdapter:
-	"""Helper class to be used with external types,
-	defining our own rules for saving and loading.
-
-	This outer type should also define the type's serial-UID,
-	and hold all versioned encoders.
-	"""
-
-
-
-class EnumEncoderBase(EncoderBase):
-	"""Base class for encoding and decoding Enum types.
-	Subclass this and define the enum type to encode.
-	"""
-	cls:T.Type[Enum] = Enum
-
-@version(1)
-class EnumEncoder:
-	@classmethod
-	def encode(cls, obj:Enum):
-		return _enumSerialData(obj)
-	@classmethod
-	def decode(cls, serialData):
-		return _enumDeserialise(cls.cls, serialData)
-
-
-print(EnumEncoder.versionIndex)
-print(EnumEncoder.__name__)
-print(EnumEncoder)

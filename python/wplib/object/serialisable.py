@@ -17,9 +17,9 @@ import pickle # hate to do it, but for lower-level objects it's way easier
 from wplib.object.reference import TypeReference
 # type references should be replaced with a better overall system
 from wplib.inheritance import superClassLookup
-from wplib.object.visit import Visitor, seqTypes, mapTypes
+from wplib.object.visit import Visitor, SEQ_TYPES, MAP_TYPES
 
-from wplib.constant import literalTypes
+from wplib.constant import LITERAL_TYPES
 
 """Formalising serialise / deserialise interfaces.
 converts live python object to dict,
@@ -303,7 +303,7 @@ SerialRegister.registerSerialiseFnsForType(PurePath,
 toStringTypes = (BaseException, traceback.TracebackException, traceback.StackSummary, traceback.FrameSummary)
 
 
-allPrimTypes = (*mapTypes, *seqTypes)
+allPrimTypes = (*MAP_TYPES, *SEQ_TYPES)
 
 # testing duck typing for "serialise", "deserialise" object methods instead of instance checking
 # like a real python
@@ -482,7 +482,7 @@ def deserialise(data:(dict, list, str))->object:
 
 
 # lemma to skip visiting literal types - just saves time
-literalSkipLemma = lambda x: isinstance(x, literalTypes) or x is None
+literalSkipLemma = lambda x: isinstance(x, LITERAL_TYPES) or x is None
 
 class SerialiseVisitor(Visitor):
 	"""holder object for the two serialisation functions"""
