@@ -2,7 +2,7 @@ from __future__ import annotations
 
 """functions helping with maya namespaces"""
 
-from tree import Tree, TreeType, TreeInterface
+from wptree import Tree, TreeType, TreeInterface
 
 
 from .cache import om, cmds, getCache

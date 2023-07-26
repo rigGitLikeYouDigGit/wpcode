@@ -5,7 +5,7 @@ import typing as T
 from dataclasses import dataclass
 
 import wplib.sentinel
-from tree import Tree
+from wptree import Tree
 
 from wp import constant
 from wp.object.node import DepNode

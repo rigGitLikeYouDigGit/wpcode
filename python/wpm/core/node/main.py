@@ -5,15 +5,16 @@ import typing as T
 import ast
 
 # tree libs for core behaviour
-from tree import Tree, Signal
+from wptree import Tree
+from wplib.object import Signal
 from wplib.inheritance import iterSubClasses
 from wplib.string import camelJoin
-from tree.lib.object import UnHashableDict, ObjectComponent, StringLike
-from tree.lib.treecomponent import TreeBranchLookupComponent
+from wplib.object import UnHashableDict, StringLike
+#from tree.lib.treecomponent import TreeBranchLookupComponent
 from wplib.sequence import toSeq, firstOrNone
 
 # maya infrastructure
-from wpm.core.constant import GraphTraversal, GraphDirection, GraphLevel
+from wpm.constant import GraphTraversal, GraphDirection, GraphLevel
 from ..bases import NodeBase
 from ..callbackowner import CallbackOwner
 from ..patch import cmds, om
@@ -282,15 +283,6 @@ class WN(StringLike, # short for WePresentNode
 		"""check MObject is valid"""
 		return not self.MObject.isNull()
 
-	def createComponent(self, componentType:T.Type[ObjectComponent]) ->ObjectComponent:
-		"""initialise components and pass in interface functions"""
-		if issubclass(componentType, TreeBranchLookupComponent):
-			return componentType(self,
-			                     self.getParent,
-			                     self.childMap
-			                     )
-
-
 	@property
 	def dagPath(self)->om.MDagPath:
 		return om.MDagPath.getAPathTo(self.MObject)
@@ -477,8 +469,8 @@ class WN(StringLike, # short for WePresentNode
 	def childMap(self)->T.Dict[str, WN]:
 		return {c.name: c for c in self.children()}
 
-	def getBranch(self, *args:(str, tuple[str]))->WN:
-		return self.getComponent(TreeBranchLookupComponent).getBranch(args)
+	# def getBranch(self, *args:(str, tuple[str]))->WN:
+	# 	return self.getComponent(TreeBranchLookupComponent).getBranch(args)
 
 	@property
 	def nodeInfo(self):

@@ -7,10 +7,7 @@ any format
 
 """
 from dataclasses import dataclass
-from tree.lib.object import EventBase
-
-
-
+from wplib.object.eventdispatcher import EventBase
 
 @dataclass
 class TreeEvent(EventBase):

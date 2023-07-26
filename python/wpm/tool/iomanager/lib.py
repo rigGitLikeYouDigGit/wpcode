@@ -5,7 +5,7 @@ import typing as T
 from pathlib import Path
 from dataclasses import dataclass
 
-from tree import Tree
+from wptree import Tree
 
 from wp.constant import IoMode
 from wplib.validation import ValidationError, Rule, RuleSet

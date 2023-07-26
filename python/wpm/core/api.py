@@ -7,7 +7,7 @@ from __future__ import annotations
 import typing as T
 
 from wplib import sequence
-from tree.lib.object import UserSet
+from wplib.object import UserSet
 
 
 # small class representing each MFn type constant

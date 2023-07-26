@@ -102,7 +102,8 @@ class SerialAdaptor:
 		encoder = cls.getEncoder(versionIndex=encoderVersion)
 		return {
 			**encoder.encode(obj),
-			FORMAT_DATA_KEY : cls.getFormatData(encoder.getVersion())
+			FORMAT_DATA_KEY : cls.getFormatData(encoder.getVersion(),
+			                                    obj)
 		}
 
 	@classmethod

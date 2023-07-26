@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import typing as T
 
-from tree import TreeInterface
+from wptree import TreeInterface
 from wplib.sequence import flatten
-from tree.lib.object import UnHashableDict
+from wplib.object import UnHashableDict
 
 #from setFnMap
 from .cache import om

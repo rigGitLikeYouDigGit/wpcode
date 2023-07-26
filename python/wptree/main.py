@@ -15,7 +15,7 @@ from wptree.reference import TreeReference
 
 
 from wptree.interface import TreeInterface, TreeType
-
+from .treedescriptor import TreeBranchDescriptor, TreePropertyDescriptor
 
 
 class Tree(TreeInterface,
@@ -26,6 +26,9 @@ class Tree(TreeInterface,
 
 	No complex integration beyond basic signals.
 	"""
+
+	TreePropertyDescriptor = TreePropertyDescriptor
+	TreeBranchDescriptor = TreeBranchDescriptor
 
 	# separate master dict of uids to branches
 	indexInstanceMap = {} # type: T.Dict[str, Tree]
@@ -234,7 +237,7 @@ class Tree(TreeInterface,
 	#endregion
 
 # set up global root namespace
-Tree.globalTree = Tree("globalRoots")
+#Tree.globalTree = Tree("globalRoots")
 
 if __name__ == '__main__':
 	t = Tree("a")

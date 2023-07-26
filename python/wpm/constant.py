@@ -1,6 +1,6 @@
 
-from tree.lib.object import TypeNamespace
-from .cache import cmds, om, oma
+from wplib.object import TypeNamespace
+from wpm.core.cache import cmds, om, oma
 
 
 ONE_VECTOR = om.MVector(1, 1, 1)
@@ -11,6 +11,19 @@ Z_AXIS = om.MVector(0, 0, 1)
 
 OBJ_SPACE = om.MSpace.kObject
 WORLD_SPACE = om.MSpace.kWorld
+
+
+# in preparation for getting a plugin namespace from AD
+WP_PLUGIN_NAMESPACE = 0x80040
+# we have 256 nodes in this namespace ready for allocation
+# we assume we might create at most 200 c++ nodes (which will be already registered)
+CPP_PLUGIN_MAX_ID = 200
+# first start id for our python nodes
+PY_PLUGIN_START_ID = WP_PLUGIN_NAMESPACE + CPP_PLUGIN_MAX_ID + 1
+# this does make ids ore volatile to assign them in code - maybe this will be an issue
+
+
+
 
 class ImportMode(TypeNamespace):
 	"""gathering data either from scene or from a linked file"""

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 
 
-from tree import Signal
+from wplib.object import Signal
 
 from .cache import om
 from .callbackowner import CallbackOwner

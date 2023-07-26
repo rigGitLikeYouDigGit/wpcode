@@ -14,8 +14,8 @@ from dataclasses import dataclass
 
 from wplib.string import sliceFromString
 from wplib.sequence import flatten
-from tree.lib.object import TypeNamespace
-from tree import Tree
+from wplib.object import TypeNamespace
+from wptree import Tree
 
 from .bases import PlugBase
 from .api import toMFn, mfnDataConstantTypeMap
