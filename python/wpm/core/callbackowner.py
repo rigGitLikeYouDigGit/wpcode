@@ -29,3 +29,8 @@ class CallbackOwner:
 
 	def __del__(self):
 		self.removeAllOwnedCallbacks()
+
+
+class NodeCallbackListener:
+	"""may be too specific but just a test for now -
+	Object listening to scene callbacks, tied to lifespan of specific node"""

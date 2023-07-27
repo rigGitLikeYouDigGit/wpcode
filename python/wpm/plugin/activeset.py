@@ -9,7 +9,11 @@ as it's the only place that MPxObjectSet is exposed to python.
 We do no direct computation with it, only setting up callbacks
 when the node is constructed.
 
-This file should be self-contained as the entire plugin
+This file should be self-contained as the entire plugin.
+
+For the actual processing, we mix in some new api as well -
+be very clear where the two interact
+
 """
 import maya.OpenMayaMPx as ompx
 import maya.OpenMaya as omOld
@@ -24,8 +28,49 @@ class ActiveSetNode(ompx.MPxObjectSet, PluginNodeTemplate):
 	kNodeClassify = "utility/general"
 	#kNodeTypeId = omOld.MTypeId(0x00000001)
 	kNodeLocalId = 0
+	kNodeType = ompx.MPxNode.kObjectSet
 
-	pass
+	aExpression = omOld.MObject()
+	aSetMsgArr = omOld.MObject()
+
+	@classmethod
+	def nodeCreator(cls):
+		return ompx.asMPxPtr(ActiveSetNode())
+
+	@classmethod
+	def initialiseNode(cls):
+		"""add message array attr for local references to other sets
+		string attr for expression to be evaluated
+		"""
+		aExpressionFn = omOld.MFnTypedAttribute()
+		cls.aExpression = aExpressionFn.create("expression", "expression", omOld.MFnData.kString)
+		aExpressionFn.setStorable(True)
+		aExpressionFn.setWritable(True)
+		aExpressionFn.setReadable(True)
+		aExpressionFn.setKeyable(True)
+
+
+		aSetMsgArrFn = omOld.MFnMessageAttribute()
+		cls.aSetMsgArr = aSetMsgArrFn.create("setMsgArr", "setMsgArr")
+		aSetMsgArrFn.setArray(True)
+		#aSetMsgArrFn.setIndexMatters(True)
+		aSetMsgArrFn.setUsesArrayDataBuilder(True)
+		aSetMsgArrFn.setStorable(True)
+		aSetMsgArrFn.setWritable(True)
+		aSetMsgArrFn.setReadable(True)
+		aSetMsgArrFn.setDisconnectBehavior(omOld.MFnAttribute.kNothing)
+
+		drivers = [cls.aExpression, cls.aSetMsgArr]
+		for i in drivers:
+			cls.addAttribute(i)
+
+	def postConstructor(self, *args: Any, **kwargs: Any) -> Any:
+		"""set up callbacks"""
+		print("postConstructor for", self, self.thisMObject(), omOld.MFnDependencyNode(self.thisMObject()).name())
+
+		print("unique path", self.thisNodeUniquePath())
+
+
 
 
 # set up wrappers for plugin registration
@@ -45,13 +90,14 @@ pluginAid = MayaPluginAid(
 	pluginPath=getThisFilePath(),
 	nodeClasses=(ActiveSetNode,),
 	drawOverrideClasses={},
+	useOldApi=True
 )
 
 def initializePlugin(mobject):
-	pluginAid.initialisePlugin(mobject, ompx.MFnPlugin)
+	pluginAid.initialisePluginOldApi(mobject)
 
 def uninitializePlugin(mobject):
-	pluginAid.uninitialisePlugin(mobject, ompx.MFnPlugin)
+	pluginAid.uninitialisePluginOldApi(mobject)
 
 
 
