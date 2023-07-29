@@ -131,7 +131,6 @@ class PluginNodeTemplate:
 				return om2.MFnDependencyNode(self.thisMObject()).name()
 
 		except ValueError: # not api2
-			# woah, the maya api giving valid errors? this is weird
 			try:
 				return om1.MFnDagNode(self.thisMObject()).fullPathName()
 			except RuntimeError: # not dag

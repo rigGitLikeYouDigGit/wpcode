@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections import defaultdict
+
 from .cache import om
 
 class CallbackOwner:
@@ -10,27 +12,30 @@ class CallbackOwner:
 
 	"""
 
+	defaultCallbackKey = "main"
+
 	def __init__(self):
-		self._callbackIds = []
+		self._callbackIds : dict[str, list[int]] = defaultdict(list)
 
-	def addOwnedCallback(self, callback):
+	def addOwnedCallback(self, callback, key=defaultCallbackKey):
 		"""add callback to list"""
-		self._callbackIds.append(callback)
+		self._callbackIds[key].append(callback)
 
-	def removeOwnedCallback(self, id:int):
+	def removeOwnedCallback(self, id:int, key=defaultCallbackKey):
 		"""remove callback from list"""
 		om.MMessage.removeCallback(id)
-		self._callbackIds.remove(id)
+		self._callbackIds[key].remove(id)
+
+	def removeAllCallbacksWithKey(self, key:str):
+		"""remove all callbacks with key"""
+		for i in self._callbackIds[key]:
+			self.removeOwnedCallback(i, key)
 
 	def removeAllOwnedCallbacks(self):
 		"""remove all callbacks owned by this object"""
-		om.MMessage.removeCallbacks(self._callbackIds)
-		self._callbackIds = []
+		for k in self._callbackIds:
+			self.removeAllCallbacksWithKey(k)
 
 	def __del__(self):
 		self.removeAllOwnedCallbacks()
 
-
-class NodeCallbackListener:
-	"""may be too specific but just a test for now -
-	Object listening to scene callbacks, tied to lifespan of specific node"""
