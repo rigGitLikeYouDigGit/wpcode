@@ -46,7 +46,7 @@ class NodeLifespanTracker(CallbackOwner):
 		self._nodeHandle = om.MObjectHandle(node)
 
 		self._linkLifespanCallbacks(node)
-		# self.onAttach()
+		self.onAttach()
 
 	def _onNodeAddedToSceneCheck(self, *args, **kwargs):
 		"""check if node added is this node -

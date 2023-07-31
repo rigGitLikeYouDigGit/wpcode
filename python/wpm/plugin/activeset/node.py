@@ -98,7 +98,7 @@ class ActiveSetNode(ompx.MPxObjectSet, PluginNodeTemplate):
 		print("mfn2", mfn2, mfn2.name(), mfn2.uniqueName())
 
 		print("adding tracker")
-		self._nodeTracker = NodeLifespanTracker(om2Obj)
+		self._nodeTracker = ActiveSetLifespanTracker(om2Obj)
 
 		#om2Obj = self.thisApi2MObject()
 		#self._nodeTracker = ActiveSetLifespanTracker(om2Obj)

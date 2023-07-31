@@ -28,13 +28,17 @@ class CallbackOwner:
 
 	def removeAllCallbacksWithKey(self, key:str):
 		"""remove all callbacks with key"""
-		for i in self._callbackIds[key]:
+		for i in tuple(self._callbackIds[key]):
 			self.removeOwnedCallback(i, key)
 
 	def removeAllOwnedCallbacks(self):
 		"""remove all callbacks owned by this object"""
+		#print("remove all owned callbacks", self._callbackIds)
 		for k in self._callbackIds:
 			self.removeAllCallbacksWithKey(k)
+
+		#print("done")
+		#print(self._callbackIds)
 
 	def __del__(self):
 		self.removeAllOwnedCallbacks()

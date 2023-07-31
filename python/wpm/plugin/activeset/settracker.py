@@ -7,6 +7,7 @@ from pathlib import Path
 
 from wpm import om
 from wpm.lib.lifespan import NodeLifespanTracker
+from wplib.expression import Expression
 
 """lifespan watcher to keep set updated,
 listening to scene messages and checking set expression results
@@ -24,14 +25,27 @@ class ActiveSetLifespanTracker(NodeLifespanTracker):
 
 	SET_KEY = "activeSet"
 
-
+	def __init__(self, node):
+		super(ActiveSetLifespanTracker, self).__init__(node)
+		self._setExpression : Expression = Expression(name="activeSetExpression")
 
 	def updateSet(self, *args, **kwargs):
 		"""update set membership"""
 		if self.isPaused():
-			print("updateSet paused, skipping")
+			#print("updateSet paused, skipping")
 			return
-		print("updateSet", args, kwargs)
+
+		# get set expression string
+		mfn = om.MFnDependencyNode(self.node())
+		setExpressionStr = mfn.findPlug("setExpression").asString()
+
+		# check if it's changed - if so, recompile expression
+		if self._setExpression.getText() != setExpressionStr:
+			self._setExpression.setSourceText(setExpressionStr)
+
+
+
+
 		pass
 
 	def filterSetPlugConnectionFromCallback(
@@ -41,7 +55,7 @@ class ActiveSetLifespanTracker(NodeLifespanTracker):
 		only process if the other plug is a set plug,
 		or if it directly involves activeSet
 		"""
-		print("filterSetPlugConnectionFromCallback", plug, otherPlug, args, kwargs)
+		#print("filterSetPlugConnectionFromCallback", plug, otherPlug, args, kwargs)
 		if "SetMembers" in otherPlug.name() or otherPlug.node() == self.node():
 			self.updateSet(plug, otherPlug, *args, **kwargs)
 
@@ -64,7 +78,7 @@ class ActiveSetLifespanTracker(NodeLifespanTracker):
 		# passing empty object listens to all node name changes
 		self.addOwnedCallback(
 			om.MNodeMessage.addNameChangedCallback(
-				self.updateSet, om.MObject()),
+				om.MObject(), self.updateSet),
 			key=self.SET_KEY
 		)
 

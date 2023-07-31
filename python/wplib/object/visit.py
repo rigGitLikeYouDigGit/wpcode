@@ -127,12 +127,12 @@ class Visitor(object):
 		# check if exact type is in primitive type sets -
 		# inherited types need to be saved
 		result = None
-		if isinstance(obj, Visitable):
-			result = obj._visitTraverse(
-				self.visitRecursive,
-				visitArgsKwargs=((obj, visitData ), {})
-			)
-		elif type(obj) in MAP_TYPES:
+		# if isinstance(obj, Visitable):
+		# 	result = obj._visitTraverse(
+		# 		self.visitRecursive,
+		# 		visitArgsKwargs=((obj, visitData ), {})
+		# 	)
+		if type(obj) in MAP_TYPES:
 			result = type(obj)({ self.visitRecursive(k, obj, visitData) :
 				                  self.visitRecursive(v, obj, visitData)
 			                  for k, v in obj.items()})

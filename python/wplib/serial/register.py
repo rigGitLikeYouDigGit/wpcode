@@ -16,7 +16,7 @@ class SerialRegister:
 	typeAdaptorMap = {} # type: T.Dict[T.Type, SerialAdaptor]
 
 	@classmethod
-	def register(cls, adaptor:SerialAdaptor):
+	def register(cls, adaptor:T.Type[SerialAdaptor]):
 		adaptor.checkIsValid(), f"Adaptor {adaptor} is not valid"
 
 		items = set(cls.typeAdaptorMap.items())
