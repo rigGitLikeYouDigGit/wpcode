@@ -1,6 +1,7 @@
 
 from __future__ import annotations
 
+import ast
 from types import FunctionType, LambdaType
 import inspect
 
@@ -87,6 +88,12 @@ def loadFnFromSource(source:str, fnName:str="")->FunctionType:
 	fn = compileFunctionFromString(source, fnName)
 	fn.__sourcetext__ = source
 	return fn
+
+def ensureASTIsFunction(ast:ast.AST)->ast.Lambda:
+	"""ensure that an ast is a function, if it is a string, load it as a function"""
+	if isinstance(ast, str):
+		return loadFnFromSource(ast)
+	return ast
 
 if __name__ == '__main__':
 

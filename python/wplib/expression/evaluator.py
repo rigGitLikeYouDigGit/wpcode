@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from wplib.ast import astModuleToExpression, parseStrToASTModule, evalASTExpression
 from wplib.expression.constant import MASTER_GLOBALS_EVALUATOR_KEY
-from wplib.expression.syntax import ExpressionToken
+#from wplib.expression.syntax import ExpressionToken
 
 
 class ExpEvaluator:

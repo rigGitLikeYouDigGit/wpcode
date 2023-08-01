@@ -9,12 +9,14 @@ from wplib.function import addToFunctionGlobals
 to be evaluated"""
 import typing as T
 import ast
-from types import FunctionType
+from types import FunctionType, ModuleType
 from dataclasses import dataclass
 
+from wplib import ast as wpast
 from wplib.object.serialisable import Serialisable, compileFunctionFromString, serialise
 from wplib.object import Visitor
-from wplib.expression import syntax, function as libfn
+
+from wplib.expression import syntax, function as libfn, constant as expconstant
 from wplib.expression.error import CompilationError
 from wplib.expression.evaluator import ExpEvaluator
 from wplib.expression.syntax import ExpSyntaxError, ExpSyntaxProcessor,CustomSyntaxPass
@@ -71,13 +73,16 @@ class ExpressionPolicy:
 	"""general shared object defining behaviour of expression
 	"""
 
-	syntaxProcessor : ExpSyntaxProcessor
-	evaluator : ExpEvaluator = None # object to resolve tokens, manage syntax passes, etc
+	# object to resolve tokens, manage syntax passes, etc
+	syntaxProcessor : ExpSyntaxProcessor = ExpSyntaxProcessor([], [])
+
+	# object to evaluate expression in wider context
+	# use list of these too to add functionality for different tokens
+	evaluator : ExpEvaluator = None
 #
 
 
 VT = T.TypeVar("VT")
-
 
 
 class Expression(Serialisable, T.Generic[VT]):
@@ -111,6 +116,7 @@ class Expression(Serialisable, T.Generic[VT]):
 	currentExpression : Expression = None # current expression being evaluated
 	# when expression is set directly with a function, no way to modify its globals
 
+	defaultModule = ModuleType("expModule") # copy over all baseline globals keys from this
 
 	def __init__(self,
 	             value:[T.Callable, VT, str]=None,
@@ -125,12 +131,16 @@ class Expression(Serialisable, T.Generic[VT]):
 		self.name = name # nice name for identifying source of expressions, do not rely on this
 
 		self._cachedValue = None
-		self._text = "" # text of expression
-		self._ast : ast.AST = None # ast tree of text
+		self._rawText = "" # text of expression
+		self._processedText = "" # text of expression after syntax passes
+		self._parsedAST : ast.AST = None # ast tree of parsed syntax text
+		self._finalAst : ast.AST = None # ast tree of text after transform passes
 		self._isStatic = False
 		self._compiledFn : FunctionType = None
 
 		self.setExp(value)
+
+
 
 	@classmethod
 	def _textFromStatic(cls, static:object)->str:
@@ -141,6 +151,15 @@ class Expression(Serialisable, T.Generic[VT]):
 		"""
 		return str(serialise(static))
 
+	def reset(self):
+		self._cachedValue = None
+		self._rawText = "" # text of expression
+		self._processedText = "" # text of expression after syntax passes
+		self._parsedAST : ast.AST = None # ast tree of parsed syntax text
+		self._finalAst : ast.AST = None # ast tree of text after transform passes
+		self._isStatic = False
+		self._compiledFn : FunctionType = None
+
 
 	def setStatic(self, value:T.Any):
 		"""set expression to a static value -
@@ -150,25 +169,70 @@ class Expression(Serialisable, T.Generic[VT]):
 		"""
 		self._cachedValue = value
 		self._isStatic = True
-		self._text = self._textFromStatic(value)
+		self._rawText = self._textFromStatic(value)
 		try:
-			self._ast = wplib.ast.parseStrToASTExpression(self._text)
+			self._finalAst = wplib.ast.parseStrToASTExpression(self._rawText)
 		except SyntaxError:
-			self._ast = None
+			self._finalAst = None
 		self._compiledFn = None # not sure if this should be compiled ast expression
 
 
 
+	def _compileFinalASTToFunction(
+			self,
+			finalAst:ast.Module,
+			expGlobals:dict)->FunctionType:
+		"""compile final ast to function"""
+		c = compile(finalAst, "<expCompile>", "exec")
+
+		expDict = dict(self.defaultModule.__dict__)
+		# update exp globals dict here
+		expDict.update(expGlobals)
+
+		exec(c, expDict
+		     )
+		return expDict[expconstant.EXP_LAMBDA_NAME]
+
+
 	def setSourceText(self, text:str):
 		"""set expression to text
-		First check if text defines a function, or if it contains any dynamic variables -
-		if so, run syntax passes and compile function, otherwise set as static value
+		-process text
+		-parse text to ast
+		-process ast
+		-compile ast to function
+
+		assume that all expressions hold a function, even if it's just a static value
+
+		retrieving a full function rather than just running 'eval' all the time
+		costs more in compilation, but it's way faster once compiled
+
+		maybe there's some world where we use eval first and compile in the background
+
 		"""
-		self._cachedValue = None
-		self._isStatic = False
-		self._text = text
-		self._ast = wplib.ast.parseStrToASTExpression(self._text)
-		self._compiledFn = None
+		self.reset()
+		self._rawText = text
+		try:
+			self._processedText = self.policy.syntaxProcessor.parseRawExpString(text)
+		except ExpSyntaxError as e:
+			raise e
+
+		self._parsedAST = self.policy.syntaxProcessor.parseStringToAST(self._processedText)
+
+		try:
+			self._finalAst = self.policy.syntaxProcessor.processAST(self._parsedAST)
+		except Exception as e:
+			raise e
+
+		print("parsedAST")
+		print(self._parsedAST)
+		print(ast.dump(self._finalAst))
+		#self._compiledFn = wpast.compileASTExpression(self._finalAst)
+		self._compiledFn = self._compileFinalASTToFunction(
+			self._finalAst, {})
+		print("compiledFn")
+		print(self._compiledFn, self._compiledFn())
+
+
 
 	def setFunction(self, fn:FunctionType):
 		"""set expression to callable function"""
@@ -176,8 +240,8 @@ class Expression(Serialisable, T.Generic[VT]):
 		self._compiledFn = fn
 		self._isStatic = False
 		#self._text = serialiseFunction(fn)["code"]
-		self._text = libfn.getFnSource(fn)
-		self._ast = wplib.ast.parseStrToASTExpression(self._text)
+		self._rawText = libfn.getFnSource(fn)
+		self._finalAst = wplib.ast.parseStrToASTExpression(self._rawText)
 
 	def setExp(self, exp:(T.Callable, str, VT)):
 		"""set expression
@@ -194,28 +258,9 @@ class Expression(Serialisable, T.Generic[VT]):
 
 		# if string is passed, run all syntax passes on it
 		elif isinstance(exp, str):
+			self.setSourceText(exp)
 
-
-			# if text defines a function, compile it and use it
-			if syntax.textDefinesExpFunction(exp):
-				# add any missing keywords to get back to normal python syntax
-				formattedText = self._expressionTextToPyFunctionText(exp)
-				try:
-					compiledFn = self._compileFunctionText("\n" + formattedText + "\n")
-				except Exception as e:
-					raise CompilationError(f"failed to compile function: {formattedText}\n\t from raw: {exp} \n\t{e}")
-				self.setFunction(compiledFn)
-				return
-
-			# first see if it can be compiled as a literal
-			try:
-				result = ast.literal_eval(exp)
-				self.setStatic(result)
-				return
-			except (ValueError, SyntaxError):
-				pass
-
-		# set expression value to literal string value passed in
+		# set expression value to literal value passed in
 		self.setStatic(exp)
 
 	def isStatic(self) ->bool:
@@ -235,24 +280,10 @@ class Expression(Serialisable, T.Generic[VT]):
 		}
 
 
-
-	def _compileFunctionText(self, text:str) ->T.Callable:
-		"""compile function text"""
-		fnName = text.strip().split("(")[0].split("def")[1].strip()
-		return compileFunctionFromString(text, fnName,
-		                                 fnGlobals={"TESTGLOBAL" : 69}
-		                                 #fnGlobals=self._getExpScope()
-		                                 )
-
-	def _textDefinesLiteral(self, text:str) ->bool:
-		"""check if text defines a literal value"""
-		return not syntax.textDefinesExpFunction(text)
-
-
 	def getText(self) ->str:
 		"""get text representation of expression
 		if function, return decompiled function text"""
-		return self._text
+		return self._rawText
 
 	def _compute(self):
 		"""compute expression value and store in cache"""
@@ -290,11 +321,11 @@ class Expression(Serialisable, T.Generic[VT]):
 	def copy(self) ->Expression:
 		"""copy expression"""
 		newExp = Expression(name=self.name, graph=self.dGraph)
-		newExp._text = self._text
+		newExp._rawText = self._rawText
 		newExp._cachedValue = self._cachedValue
 		newExp._compiledFn = self._compiledFn
 		newExp._isStatic = self._isStatic
-		newExp._ast = self._ast
+		newExp._finalAst = self._finalAst
 		return newExp
 
 
@@ -324,8 +355,10 @@ if __name__ == '__main__':
 
 	pass
 
-	# exp = Expression()
-	# #print(exp)
+	exp = Expression()
+	print(exp)
+	#exp.setSourceText("a + b + c")
+	exp.setSourceText(expconstant.EXP_LAMBDA_NAME + " = lambda : 'a' + 'b' ")
 	#
 	# exp.set(" (): 'a' + 'b' + 'c' ")
 	# exp.set(" ( gg:str ): 'a' + 'b' + 'c' ")

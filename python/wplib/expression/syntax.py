@@ -484,6 +484,14 @@ class SyntaxShorthandFunctionPass(CustomSyntaxPass):
 
 		return f"{signature}:\n\t{body}"
 
+class SyntaxEnsureLambdaPass(CustomSyntaxPass):
+
+	def preProcessRawString(self, s:str) ->str:
+		"""check that string starts with
+		'lambda' keyword, and add if not"""
+		if s.startswith("lambda :"):
+			return s
+		return "lambda :" + s
 
 @dataclass
 class ExpSyntaxProcessor:
@@ -498,23 +506,34 @@ class ExpSyntaxProcessor:
 	syntaxAstPasses:list[CustomSyntaxPass]
 
 
-	def processExpString(self, s:str) ->str:
+	def parseRawExpString(self, s:str) ->str:
 		"""process string expression -
 		first raw string, then parse to AST,
 		then visit AST
 		"""
 		for syntaxPass in self.syntaxStringPasses:
 			s = syntaxPass.preProcessRawString(s)
+		return s
+
+	@classmethod
+	def parseStringToAST(cls, s:str) ->ast.Module:
+		"""parse string to AST-
+		run this after processing raw string,
+		and before AST transform passes"""
 		# parse to AST
 		inputASTModule = parseStrToASTModule(s)
-		inputASTExt = astModuleToExpression(inputASTModule)
+		#inputASTExt = astModuleToExpression(inputASTModule)
+		return inputASTModule
+
+	def processAST(self, expAst:ast.AST) ->ast.AST:
+		"""Run AST transform passes"""
 
 		# process AST
 		for syntaxPass in self.syntaxAstPasses:
-			processedAST = syntaxPass.visit(inputASTExt)
+			expAst = syntaxPass.visit(expAst)
 
 		# I think you only need to run this once
-		ast.fix_missing_locations(processedAST)
-		return s
+		ast.fix_missing_locations(expAst)
+		return expAst
 
 
