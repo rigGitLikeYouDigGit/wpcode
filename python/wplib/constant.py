@@ -12,6 +12,11 @@ LITERAL_TYPES = (
 	str, bytes, bool, int, float, complex
 )
 
+# types that can't be changed after creation
+IMMUTABLE_TYPES = (
+	str, bytes, bool, int, float, complex, tuple, frozenset
+)
+
 # for packing function arguments in tuple
 argsKwargsType = T.Tuple[T.Tuple, T.Dict[str, object]]
 

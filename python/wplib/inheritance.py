@@ -67,3 +67,9 @@ def mroMergedDict(cls):
 	for i in cls.__mro__:
 		merged.update(i.__dict__)
 	return merged
+
+# annotation decorators
+def overrideThis(fn:T.Callable)->T.Callable:
+	"""decorator to mark a method as needing to be overridden
+	"""
+	return fn

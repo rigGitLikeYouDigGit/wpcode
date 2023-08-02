@@ -12,9 +12,11 @@ import ast
 from types import FunctionType, ModuleType
 from dataclasses import dataclass
 
+from wplib.constant import IMMUTABLE_TYPES, LITERAL_TYPES, MAP_TYPES, SEQ_TYPES
 from wplib import ast as wpast
 from wplib.object.serialisable import Serialisable, compileFunctionFromString, serialise
 from wplib.object import Visitor
+from wplib.object.visit import Visitable, getVisitDestinations, Visitor
 
 from wplib.expression import syntax, function as libfn, constant as expconstant
 from wplib.expression.error import CompilationError
@@ -23,23 +25,6 @@ from wplib.expression.syntax import ExpSyntaxError, ExpSyntaxProcessor,CustomSyn
 
 if T.TYPE_CHECKING:
 	pass
-
-class LiteralVisitor(Visitor):
-	"""where possible, converts references to classes and objects into
-	eval-able literal strings.
-
-	Not used yet - use this to let complex objects persist in string representation -
-	map their representative strings back to real objects"""
-
-	def visit(self, obj, visitData:Visitor.VisitData):
-		"""convert object to literal string"""
-		if isinstance(obj, type):
-			return ".".join((obj.__module__, obj.__name__))
-		elif hasattr(obj, "__class__"):
-			return ".".join((obj.__class__.__module__, obj.__class__.__name__)) + "()"
-		else:
-			return repr(obj)
-
 
 
 
@@ -69,7 +54,7 @@ class ExpressionScope:
 
 
 @dataclass
-class ExpressionPolicy:
+class ExpPolicy:
 	"""general shared object defining behaviour of expression
 	"""
 
@@ -82,9 +67,66 @@ class ExpressionPolicy:
 #
 
 
+def recursiveVisitParseExpStructure(
+		obj:object,
+		#policy:ExpPolicy, # expPolicy to use if any syntax appears
+		parentExp:Expression,
+		_objIsStatic=False
+):
+	"""Given any random object, check if it contains any latent expression
+	syntax. If so, parse it to a lambda and embed it in structure.
+
+	This does mean we need a second recursive pass to evaluate the full expression -
+	could we add "expression stream" objects to a register and only evaluate
+	them when requested?
+	Cleaner to just return a new copy.
+
+	If not, mark it as static.
+
+	In both cases return a deep copy.
+
+	Inherit expression settings from parent
+	"""
+
+	# if obj is string, check if it contains expression syntax
+	if isinstance(obj, str):
+		if not parentExp.policy.syntaxProcessor.stringDefinesExpressionFn(obj):
+			return obj
+		processor = parentExp.policy.syntaxProcessor
+		# parse string to frozen lambda
+		parsedStr = processor.parseRawExpString(obj)
+		parsedAst = processor.parseStringToAST(parsedStr)
+		processedAst = processor.processAST(parsedAst)
+		compiledFn = processor.compileFinalASTToFunction(
+			processedAst, {})
+		# create expression object with function
+		"""TODO: duplication here - probably delegate to expression on actual compilation"""
+		expression = Expression(compiledFn, parentExp.policy)
+		return expression
+
+
+def recursiveVisitEvaluateExpStructure(
+		parsedObj:object,
+		parentExp:Expression
+):
+	"""if it's an expression, eval the expression
+	and visit the result"""
+
+	# if obj is string, check if it contains expression syntax
+	if isinstance(parsedObj, Expression):
+		# evaluate expression
+		result = parsedObj.eval()
+		# visit result - excessive, but only way to account
+		# for expressions returning other expressions
+		parsedResult = recursiveVisitParseExpStructure(result, parsedObj)
+		return recursiveVisitEvaluateExpStructure(parsedResult, parsedObj)
+
+
+
+
+
+
 VT = T.TypeVar("VT")
-
-
 class Expression(Serialisable, T.Generic[VT]):
 	"""core of refgraph - stores either static value, or function
 
@@ -110,6 +152,16 @@ class Expression(Serialisable, T.Generic[VT]):
 
 	don't directly detect expressions in text here, leave that to syntax passes
 
+
+	expression may be set with constant value, string or object - recursively parse input
+	to detect expression strings.
+
+	Try to return a lambda with frozen function calls to evaluate embedded expressions -
+	if an expression returns a token or expression?
+	recursively evaluate and visit result of function calls again.
+
+
+
 	"""
 
 	# hack here to allow anonymous exp syntax to know the scope it's being run in
@@ -120,13 +172,13 @@ class Expression(Serialisable, T.Generic[VT]):
 
 	def __init__(self,
 	             value:[T.Callable, VT, str]=None,
-	             policy:ExpressionPolicy=None,
+	             policy:ExpPolicy=None,
 	             name="exp",
 	             ):
 		"""unsure how best to pass in graph stuff
 		for now default to singleton if not specified"""
 
-		self.policy = policy or ExpressionPolicy()
+		self.policy = policy or ExpPolicy()
 
 		self.name = name # nice name for identifying source of expressions, do not rely on this
 
@@ -140,6 +192,32 @@ class Expression(Serialisable, T.Generic[VT]):
 
 		self.setExp(value)
 
+	def eval(self):
+		"""evaluate expression and return result -
+		update globals with references to evaluator and self.
+
+		There are edge cases here where an inner expression may update globals,
+		then remove the keys,
+		in the midst of an outer expression trying to run
+		"""
+		oldGlobals = dict(globals())
+		expGlobalsMap = {
+			# __exp__
+			expconstant.MASTER_GLOBALS_EXP_KEY : self,
+			# __evaluator__
+			expconstant.MASTER_GLOBALS_EVALUATOR_KEY : self.policy.evaluator,
+		}
+		globals().update(expGlobalsMap)
+
+		# execute expression lambda
+		result = self._compiledFn()
+
+		# restore globals
+		for k in expGlobalsMap:
+			globals().pop(k)
+
+		# return result
+		return result
 
 
 	@classmethod
@@ -344,7 +422,7 @@ class Expression(Serialisable, T.Generic[VT]):
 
 class ExpTools:
 	"""namespace for collecting a load of expression tools"""
-	ExpressionPolicy = ExpressionPolicy
+	ExpressionPolicy = ExpPolicy
 	ExpressionEvaluator = ExpEvaluator
 	#class SyntaxPasses:
 

@@ -6,10 +6,12 @@ import ast
 import re
 from dataclasses import dataclass
 from ast import unparse
+from types import ModuleType, FunctionType
+
 
 from wplib.ast import parseStrToASTModule, astModuleToExpression
 from wplib.object import TypeNamespace
-from wplib.expression.constant import MASTER_GLOBALS_EVALUATOR_KEY
+from wplib.expression.constant import MASTER_GLOBALS_EVALUATOR_KEY, EXP_LAMBDA_NAME
 from wplib.expression.error import CompilationError, ExpSyntaxError
 
 """functions checking expression syntax for user input
@@ -104,6 +106,13 @@ class CustomSyntaxPass(ast.NodeTransformer):
 	def __init__(self):
 		super(CustomSyntaxPass, self).__init__()
 		self.currentExpGlobals = {}
+
+	def stringDefinesExpression(self, s:str)->bool:
+		"""return True if string defines an expression
+		recognised by this pass,
+		False if this pass has or would have no interaction with string
+		"""
+		return False
 
 	def _getSyntaxLocalMap(self)->dict:
 		"""return a map of any custom syntax to be replaced
@@ -307,6 +316,13 @@ class SyntaxTokenReplacerPass(CustomSyntaxPass):
 		"""return dict of {name : value} to update expression globals"""
 		return {"_" + i.__name__ : i for i in self.tokenTypes}
 
+	def stringDefinesExpression(self, s:str) ->bool:
+		"""return True if string contains any token characters"""
+		for tokenType in self.tokenTypes:
+			if tokenType.head in s or tokenType.tail in s:
+				return True
+		return False
+
 	def preProcessRawString(self, s:str) ->str:
 		"""look up any token characters in string - replace them with
 		function calls to resolve those strings with evaluator.
@@ -501,9 +517,17 @@ class ExpSyntaxProcessor:
 
 	A single SyntaxPass object may appear in both string and AST
 	lists - this is just to be totally explicit on what runs when.
+
+	DefinesExpressionFn is a function that takes a string and returns
+	true if it is a valid expression for this context.
+
+	This seems more controllable, but more prone to user error than
+	delegating to individual SyntaxPass objects.
+
 	"""
 	syntaxStringPasses:list[CustomSyntaxPass]
 	syntaxAstPasses:list[CustomSyntaxPass]
+	stringDefinesExpressionFn:T.Callable[[str], bool] = lambda s: False
 
 
 	def parseRawExpString(self, s:str) ->str:
@@ -514,6 +538,9 @@ class ExpSyntaxProcessor:
 		for syntaxPass in self.syntaxStringPasses:
 			s = syntaxPass.preProcessRawString(s)
 		return s
+
+	defaultModule = ModuleType("expModule") # copy over all baseline globals keys from this
+
 
 	@classmethod
 	def parseStringToAST(cls, s:str) ->ast.Module:
@@ -536,4 +563,18 @@ class ExpSyntaxProcessor:
 		ast.fix_missing_locations(expAst)
 		return expAst
 
+	def compileFinalASTToFunction(
+			self,
+			finalAst:ast.AST,
+			expGlobals:dict)->FunctionType:
+		"""compile final ast to function
+		this should live somewhere else"""
+		c = compile(finalAst, "<expCompile>", "exec")
 
+		expDict = dict(self.defaultModule.__dict__)
+		# update exp globals dict here
+		expDict.update(expGlobals)
+
+		exec(c, expDict
+		     )
+		return expDict[EXP_LAMBDA_NAME]

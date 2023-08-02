@@ -5,45 +5,69 @@ modifying them in place
 
 inspired by the ast node visitor
 
-references to internals will almost certainly not be preserved
+reworking this into smaller component functions - any purpose for recursive
+visiting may want bottom-up, top-down, copying, modifying, etc.
+
 """
 
 from __future__ import annotations
 
 import typing as T
 from dataclasses import dataclass
-from wplib.constant import MAP_TYPES, SEQ_TYPES
+from wplib.constant import MAP_TYPES, SEQ_TYPES, LITERAL_TYPES
+from wplib.inheritance import overrideThis
 
 DEBUG = 0
-
-class RecLog:
-	depth = 0
-	pass
 
 def log(*msg:str):
 	if DEBUG:
 		print(*msg)
-
 
 class Visitable:
 	"""base class for types defining custom 'visitation'
 	logic -
 	this is only structural, how the visitor should traverse
 	the object,
-	and does not define the actual transformation run
-	by visitor"""
 
-	def _visitTraverse(self, masterVisitRecursiveFn,
-	                   visitArgsKwargs=((), {})):
-		"""return new copy of this object, with transformed
-		result of the master visit function
+	may overlap with Traversable base class used for tree and
+	path objects
 
-		so for a list:
-		- return [ masterVisitRecursiveFn(
-			i, *visitArgsKwargs[0], **visitArgsKwargs[1]
-				) ]
-		"""
-		raise NotImplementedError
+	"""
+
+	def nextObjectsToVisit(self)->tuple:
+		"""return a tuple of objects to be visited
+		from this object"""
+		return ()
+
+	#@overrideThis
+	def copyFromVisitedObjects(self, *visitedObjs)->Visitable:
+		"""return new copy of this object, using
+		visited objects as arguments -
+		visited objects should match those returned
+		by nextObjectsToVisit()"""
+		return type(self)(*visitedObjs)
+
+
+
+def getVisitDestinations(obj:T.Any)->tuple:
+	"""return a list of objects to be visited
+	from the given object"""
+
+	result = None
+
+	if isinstance(obj, LITERAL_TYPES):
+		return ()
+
+	elif isinstance(obj, Visitable):
+		return obj.nextObjectsToVisit()
+
+	elif isinstance(obj, MAP_TYPES):
+		return tuple(obj.items())
+
+	elif isinstance(obj, SEQ_TYPES):
+		return tuple(obj)
+
+	raise TypeError(f"cannot visit object of type {type(obj)}")
 
 
 
@@ -61,15 +85,15 @@ class Visitor(object):
 		objectPath : tuple = ()
 
 	def __init__(self,
-	             skipLemmaSet:set[function]=None,
-	             visitFn:T.Callable=None,
+	             skipLemma:T.Callable[[object], bool]=None,
+	             visitFn:T.Callable[[Visitor, object, object], None]=None,
 	             followRecursive=False,
 
 	             ):
 
 		# lemmas skipping object if any return true -
 		# not sure if this is the best way, rather than a set of types
-		self.skipLemmaSet = skipLemmaSet or set()
+		self.skipLemmaSet = skipLemma or set()
 
 		# an instance may be passed a custom visit() function,
 		# saves having to redeclare new class
@@ -87,7 +111,7 @@ class Visitor(object):
 
 
 	def log(self, *msg):
-		log("  " * RecLog.depth, *msg)
+		log(*msg)
 
 
 
@@ -121,8 +145,8 @@ class Visitor(object):
 			self.log("skipping by lemma")
 			return obj
 
-		RecLog.depth += 1
-		if RecLog.depth == 50: raise
+		# RecLog.depth += 1
+		# if RecLog.depth == 50: raise
 
 		# check if exact type is in primitive type sets -
 		# inherited types need to be saved
@@ -155,7 +179,7 @@ class Visitor(object):
 		self._visitedObjects.add(id(result))
 
 		#self.log("result", result)
-		RecLog.depth -= 1
+		#RecLog.depth -= 1
 		return result
 
 	def visit(self, obj, visitData:VisitData):
