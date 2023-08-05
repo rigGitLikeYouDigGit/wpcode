@@ -13,6 +13,7 @@ visiting may want bottom-up, top-down, copying, modifying, etc.
 from __future__ import annotations
 
 import typing as T
+from typing import TypedDict
 from dataclasses import dataclass
 from wplib.constant import MAP_TYPES, SEQ_TYPES, LITERAL_TYPES
 from wplib.inheritance import overrideThis
@@ -51,7 +52,10 @@ class Visitable:
 
 def getVisitDestinations(obj:T.Any)->tuple:
 	"""return a list of objects to be visited
-	from the given object"""
+	from the given object
+
+	might be worth unifying with Traversable
+	"""
 
 	result = None
 
@@ -68,6 +72,52 @@ def getVisitDestinations(obj:T.Any)->tuple:
 		return tuple(obj)
 
 	raise TypeError(f"cannot visit object of type {type(obj)}")
+
+
+
+def recursiveVisitCopy(obj:T.Any,
+                       transformFn:T.Callable[[object, TypedDict], object],
+                       visitData:(TypedDict, dict))->T.Any:
+	"""return a deep copy of the given object, recursively
+	visiting any objects that are Visitable.
+
+	visitData will be copied into child items
+
+	"""
+	if isinstance(obj, Visitable):
+		# get list of objects to visit
+		# visit them
+		# copy them
+		# return new copy of this object
+
+		results = []
+		for i in obj.nextObjectsToVisit():
+			newData = visitData.copy()
+			results.append(recursiveVisitCopy(
+				transformFn(i, newData), transformFn, newData))
+		return obj.copyFromVisitedObjects(*results)
+
+	elif isinstance(obj, MAP_TYPES):
+		results = []
+		for k, v in obj.items():
+			kData = visitData.copy()
+			vData = visitData.copy()
+			results.append((
+				recursiveVisitCopy(transformFn(k, kData), transformFn, kData),
+				recursiveVisitCopy(transformFn(v, vData), transformFn, vData)
+			))
+		return type(obj)({k: v for k, v in results})
+
+	elif isinstance(obj, SEQ_TYPES):
+		results = list(obj)
+		for i, v in enumerate(obj):
+			newData = visitData.copy()
+			results[i] = (recursiveVisitCopy(
+				transformFn(v, newData), transformFn, newData))
+
+		return type(obj)(results)
+	# if object not complex, just return it
+	return obj
 
 
 

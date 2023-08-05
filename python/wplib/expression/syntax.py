@@ -2,20 +2,225 @@
 from __future__ import annotations
 import typing as T
 
-import ast
-import re
+import ast, re, pprint
 from dataclasses import dataclass
 from ast import unparse
 from types import ModuleType, FunctionType
+from collections import namedtuple
 
+import lark
 
+from wplib import sequence
 from wplib.ast import parseStrToASTModule, astModuleToExpression
 from wplib.object import TypeNamespace
 from wplib.expression.constant import MASTER_GLOBALS_EVALUATOR_KEY, EXP_LAMBDA_NAME
 from wplib.expression.error import CompilationError, ExpSyntaxError
 
+if T.TYPE_CHECKING:
+	from .evaluator import ExpEvaluator
+	from .new import Expression, ExpPolicy
+
 """functions checking expression syntax for user input
+
+a pass may split string into multiple parts, each to be parsed recursively
+
+THIS IS NOT PERFECT YET, and probably never will be.
+Nested strings, brackets in strings, expressions constructing other expressions, etc -
+these are all allowed conceptually, but the parsing systems here will
+not support them.
 """
+
+
+flatStr = "a + b + c"
+testStr = """(): ('a' + ( 'b(' + <time>) + b )"""
+testQuoteStr = """(): ('a' + ('b(' + <time>) ) + "'" + '''"''')"""
+
+"""
+compile as 
+def _expLambda():
+	return ("a" + ("b" + __exp__.eval(
+		__exp__.resolveToken("<time>")
+		)))
+"""
+
+EXP_ACCESS_TOKEN = "@EXP" # token to access expression object, and from there evaluation
+# replaced with __exp__ in final expression
+
+invalidStr = """(): ('a' + (('b' + 'c'))"""
+
+expParseFrame = namedtuple("expFrame", ["boundchars", "contentStr", "contentFrames"])
+
+def getBreakCharsInStr(s:str,
+allStartChars=(
+						 "(", "[", "{", "<",
+                      ),
+                      allEndChars=(
+						")", "]", "}", ">",
+						),
+                      allSymmetricChars=(
+						'"""', "'''", "\'", "\"",
+                      ),
+					  )->list[tuple[int, str]]:
+	# first find all occurrences of start and end chars
+	breakChars = []
+	scanStr : str = s
+	for i in allStartChars + allEndChars + allSymmetricChars:
+		#print("look for i", i)
+
+		# escape special regex chars
+		lookup = "\\" + i if i in ("(", ")", "[", "]", "{", "}") else i
+
+		for m in re.finditer(lookup, scanStr):
+			if i in allStartChars:
+				flag = 0
+			elif i in allEndChars:
+				flag = 1
+			elif i in allSymmetricChars:
+				flag = 2
+			breakChars.append([m.start(), i, flag])
+			scanStr = scanStr[:m.start()] + "w" * len(i) + scanStr[m.end():]
+		#print("scanStr", scanStr)
+
+	breakChars.sort(key=lambda x: x[0])
+	return breakChars
+
+
+def getExpParseFrames(s:str,
+allStartChars=(
+	 "(", "[", "{", "<",
+	),
+	allEndChars=(
+	")", "]", "}", ">",
+	),
+	allSymmetricChars=(
+	'"""', "'''", "\'", "\"",
+	),
+	neutraliseChars=( # characters that neutralise other markers in them
+	'"""', "'''", "\'", "\"",
+	)
+                      )->list[expParseFrame]:
+	"""get frames of expression syntax
+	"""
+
+	breakChars = getBreakCharsInStr(s)
+	print("breakChars", breakChars)
+	print(s)
+
+	result = []
+	charStack = []
+	openIndexStack = []
+	openStrIndex = 0
+	closeIndex = 0
+	# result = []
+	frameTree = []
+	frameStack = []
+	currentFrame = []
+	frameStack.append(frameTree)
+
+	def _openNewFrame():
+		#currentFrame = []
+		newFrame = []
+		frameStack.append(newFrame)
+		return newFrame
+
+	def _closeFrame():
+		frameStack[-2].append(frameStack.pop())
+		oldFrame = frameStack[-1]
+		return oldFrame
+
+	def _frameIsNeutral():
+		if not currentFrame:
+			return False
+		return currentFrame[0] in neutraliseChars
+
+	for i, breakChar in enumerate(breakChars):
+
+		if breakChar[2] == 0:
+			if _frameIsNeutral():
+				continue
+			# open new frame
+			currentFrame = _openNewFrame()
+			currentFrame.append(breakChar[1])
+
+		if breakChar[2] == 1:
+			if _frameIsNeutral():
+				continue
+			# close current frame - add it to previous frame in stack
+			currentFrame.append(breakChar[1])
+			currentFrame = _closeFrame()
+		if breakChar[2] == 2: # need to check before and ahead
+			if currentFrame[0] == breakChar[1]:
+				currentFrame.append(breakChar[1])
+				currentFrame = _closeFrame()
+			else:
+				currentFrame = _openNewFrame()
+				currentFrame.append(breakChar[1])
+			#
+			# if not currentFrame:
+			# 	currentFrame = _openNewFrame()
+			# 	currentFrame.append(breakChar[1])
+			# else:
+			# 	if currentFrame[0] == breakChar[1]:
+			# 		currentFrame.append(breakChar[1])
+			# 		currentFrame = _closeFrame()
+			# 		continue
+				# else:
+				# 	currentFrame = _openNewFrame()
+				# 	currentFrame.append(breakChar[1])
+
+
+
+
+	pprint.pprint(frameStack, depth=10, indent=2, compact=False)
+
+# for i, char in enumerate(s):
+	# 	if char in allStartChars:
+	# 		charStack.append(char)
+	# 		openIndexStack.append(i)
+	# 		frameStack.append( (char, "", []))
+	# 	if not charStack:
+	# 		continue
+	# 	#matchEndChar =
+	# 	if char == allEndChars[allStartChars.index(charStack[-1])]:
+	# 		frameStack[-2][2].append(
+	# 			frameStack.pop()
+	# 		)
+	# 		# frame = expParseFrame(
+	# 		# 	charStack[-1] + char, s[openIndexStack[-1]:i], [])
+	# 		# result.append(frame)
+	# 		# charStack.pop()
+	# 		# openIndexStack.pop()
+	# return frameStack
+
+def getSingleExpParseFrame(s,
+                      allStartChars="([{\'\"<",
+                      allEndChars=")]}\'\">"
+                      )->list[expParseFrame]:
+	"""get outer frames of expression syntax
+	"""
+
+	result = []
+	startChar = ""
+	openIndex = 0
+	for i, char in enumerate(s):
+		if char in allStartChars:
+			startChar = char
+			openIndex = i
+		if not startChar:
+			continue
+
+		if char == allEndChars[allStartChars.index(startChar)]:
+			frame = expParseFrame(
+				startChar + char, s[openIndex:i],
+				getSingleExpParseFrame(s[openIndex + 1:i - 1])
+			)
+
+
+	return s
+
+
+
+pprint.pp(getExpParseFrames(testStr), indent=4, depth=10)
 
 def getBracketContents(s:str, encloseChars="()")->tuple[tuple, str]:
 	"""recursively get items contained in outer brackets
@@ -40,8 +245,8 @@ def getBracketContents(s:str, encloseChars="()")->tuple[tuple, str]:
 	#return tuple(filter(None, result))
 	return tuple(i for i in result if not (i == ""))
 
-# print(getBracketContents(testStr))
-# print(getBracketContents(invalidStr))
+#print(getBracketContents(testStr))
+#print(getBracketContents(invalidStr))
 
 def bracketContentsAreFunction(expBracketContents:tuple[tuple, str]) ->bool:
 	"""check if expression is a function
@@ -472,7 +677,7 @@ class SyntaxShorthandFunctionPass(CustomSyntaxPass):
 		"""check syntax of text
 		:raises SyntaxError: if syntax is invalid"""
 		# check for unbalanced brackets
-		contents = syntax.getBracketContents(text)
+		contents = getBracketContents(text)
 		flatContents = sequence.flatten(contents)
 		if any("(" in i for i in flatContents) or any(")" in i for i in flatContents):
 			raise SyntaxError(f"unbalanced brackets: {text}")

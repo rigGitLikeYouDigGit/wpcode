@@ -8,7 +8,7 @@ from wplib.function import addToFunctionGlobals
 """core of refgraph - stores either static value, or function
 to be evaluated"""
 import typing as T
-import ast
+import ast, pprint
 from types import FunctionType, ModuleType
 from dataclasses import dataclass
 
@@ -16,7 +16,7 @@ from wplib.constant import IMMUTABLE_TYPES, LITERAL_TYPES, MAP_TYPES, SEQ_TYPES
 from wplib import ast as wpast
 from wplib.object.serialisable import Serialisable, compileFunctionFromString, serialise
 from wplib.object import Visitor
-from wplib.object.visit import Visitable, getVisitDestinations, Visitor
+from wplib.object.visit import Visitable, getVisitDestinations, Visitor, recursiveVisitCopy
 
 from wplib.expression import syntax, function as libfn, constant as expconstant
 from wplib.expression.error import CompilationError
@@ -27,10 +27,6 @@ if T.TYPE_CHECKING:
 	pass
 
 
-
-flatStr = "a + b + c"
-testStr = """(): ('a' + ('b' + 'c'))"""
-invalidStr = """(): ('a' + (('b' + 'c'))"""
 
 @dataclass
 class ExpressionScope:
@@ -67,12 +63,17 @@ class ExpPolicy:
 #
 
 
-def recursiveVisitParseExpStructure(
+class ExpVisitDict(T.TypedDict):
+	"""status dict passed into visit functions -
+	no way to read back the isStatic flag yet"""
+	parentExp : Expression
+	isStatic : bool
+
+
+def transformParseExpStructure(
 		obj:object,
-		#policy:ExpPolicy, # expPolicy to use if any syntax appears
-		parentExp:Expression,
-		_objIsStatic=False
-):
+		visitData:ExpVisitDict,
+)->(object, Expression):
 	"""Given any random object, check if it contains any latent expression
 	syntax. If so, parse it to a lambda and embed it in structure.
 
@@ -86,7 +87,10 @@ def recursiveVisitParseExpStructure(
 	In both cases return a deep copy.
 
 	Inherit expression settings from parent
+
+	Output false if no transform done, true if transform done
 	"""
+	parentExp = visitData["parentExp"]
 
 	# if obj is string, check if it contains expression syntax
 	if isinstance(obj, str):
@@ -103,12 +107,13 @@ def recursiveVisitParseExpStructure(
 		"""TODO: duplication here - probably delegate to expression on actual compilation"""
 		expression = Expression(compiledFn, parentExp.policy)
 		return expression
+	return obj
 
 
-def recursiveVisitEvaluateExpStructure(
+def transformEvaluateExpStructure(
 		parsedObj:object,
-		parentExp:Expression
-):
+		visitData:ExpVisitDict,
+)->(object, Expression):
 	"""if it's an expression, eval the expression
 	and visit the result"""
 
@@ -116,12 +121,16 @@ def recursiveVisitEvaluateExpStructure(
 	if isinstance(parsedObj, Expression):
 		# evaluate expression
 		result = parsedObj.eval()
+		visitData["parentExp"] = parsedObj
 		# visit result - excessive, but only way to account
 		# for expressions returning other expressions
-		parsedResult = recursiveVisitParseExpStructure(result, parsedObj)
-		return recursiveVisitEvaluateExpStructure(parsedResult, parsedObj)
+		parsedResult = transformParseExpStructure(result, visitData)
+		#return recursiveVisitEvaluateExpStructure(parsedResult, parsedObj)
 
-
+		# don't need to manually recurse here to eval - outer visit will
+		# run this eval function over parsed result
+		return parsedResult
+	return parsedObj
 
 
 
@@ -182,42 +191,14 @@ class Expression(Serialisable, T.Generic[VT]):
 
 		self.name = name # nice name for identifying source of expressions, do not rely on this
 
-		self._cachedValue = None
-		self._rawText = "" # text of expression
+		self._rawValue = "" # text of expression
 		self._processedText = "" # text of expression after syntax passes
 		self._parsedAST : ast.AST = None # ast tree of parsed syntax text
 		self._finalAst : ast.AST = None # ast tree of text after transform passes
 		self._isStatic = False
 		self._compiledFn : FunctionType = None
 
-		self.setExp(value)
-
-	def eval(self):
-		"""evaluate expression and return result -
-		update globals with references to evaluator and self.
-
-		There are edge cases here where an inner expression may update globals,
-		then remove the keys,
-		in the midst of an outer expression trying to run
-		"""
-		oldGlobals = dict(globals())
-		expGlobalsMap = {
-			# __exp__
-			expconstant.MASTER_GLOBALS_EXP_KEY : self,
-			# __evaluator__
-			expconstant.MASTER_GLOBALS_EVALUATOR_KEY : self.policy.evaluator,
-		}
-		globals().update(expGlobalsMap)
-
-		# execute expression lambda
-		result = self._compiledFn()
-
-		# restore globals
-		for k in expGlobalsMap:
-			globals().pop(k)
-
-		# return result
-		return result
+		self.setStructure(value)
 
 
 	@classmethod
@@ -231,7 +212,7 @@ class Expression(Serialisable, T.Generic[VT]):
 
 	def reset(self):
 		self._cachedValue = None
-		self._rawText = "" # text of expression
+		self._rawValue = "" # text of expression
 		self._processedText = "" # text of expression after syntax passes
 		self._parsedAST : ast.AST = None # ast tree of parsed syntax text
 		self._finalAst : ast.AST = None # ast tree of text after transform passes
@@ -247,9 +228,9 @@ class Expression(Serialisable, T.Generic[VT]):
 		"""
 		self._cachedValue = value
 		self._isStatic = True
-		self._rawText = self._textFromStatic(value)
+		self._rawValue = self._textFromStatic(value)
 		try:
-			self._finalAst = wplib.ast.parseStrToASTExpression(self._rawText)
+			self._finalAst = wplib.ast.parseStrToASTExpression(self._rawValue)
 		except SyntaxError:
 			self._finalAst = None
 		self._compiledFn = None # not sure if this should be compiled ast expression
@@ -288,7 +269,7 @@ class Expression(Serialisable, T.Generic[VT]):
 
 		"""
 		self.reset()
-		self._rawText = text
+		self._rawValue = text
 		try:
 			self._processedText = self.policy.syntaxProcessor.parseRawExpString(text)
 		except ExpSyntaxError as e:
@@ -318,31 +299,51 @@ class Expression(Serialisable, T.Generic[VT]):
 		self._compiledFn = fn
 		self._isStatic = False
 		#self._text = serialiseFunction(fn)["code"]
-		self._rawText = libfn.getFnSource(fn)
-		self._finalAst = wplib.ast.parseStrToASTExpression(self._rawText)
+		self._rawValue = libfn.getFnSource(fn)
+		self._finalAst = wplib.ast.parseStrToASTExpression(self._rawValue)
 
-	def setExp(self, exp:(T.Callable, str, VT)):
-		"""set expression
-		if function, decompile function text
-		if string, check syntax, then check if defines function
-
-		:raises SyntaxError: if syntax is invalid
-		:raises CompilationError: if function cannot be compiled
+	def setStructure(self, structure:object):
+		"""set expression to structure - recursively parse structure to find any embedded functions
 		"""
-		# pass in a function and use it directly
-		if isinstance(exp, FunctionType):
-			self.setFunction(exp)
-			return
+		self._cachedValue = None
+		self._compiledFn = None
+		self._rawValue = structure
+		self._parsedStructure = recursiveVisitCopy(
+			structure, transformParseExpStructure,
+			ExpVisitDict(parentExp=self, isStatic=False)
+		                                           )
 
-		# if string is passed, run all syntax passes on it
-		elif isinstance(exp, str):
-			self.setSourceText(exp)
 
-		# set expression value to literal value passed in
-		self.setStatic(exp)
+	def eval(self):
+		"""evaluate expression and return result -
+		update globals with references to evaluator and self.
 
-	def isStatic(self) ->bool:
-		return self._isStatic
+		There are edge cases here where an inner expression may update globals,
+		then remove the keys,
+		in the midst of an outer expression trying to run
+		"""
+		oldGlobals = dict(globals())
+		expGlobalsMap = {
+			# __exp__
+			expconstant.MASTER_GLOBALS_EXP_KEY : self,
+			# __evaluator__
+			expconstant.MASTER_GLOBALS_EVALUATOR_KEY : self.policy.evaluator,
+		}
+		globals().update(expGlobalsMap)
+
+		# recursively evaluate any sub-expressions
+		result = recursiveVisitCopy(
+			self._parsedStructure, transformEvaluateExpStructure,
+			ExpVisitDict(parentExp=self, isStatic=False)
+		)
+
+		# restore globals
+		for k in expGlobalsMap:
+			globals().pop(k)
+
+		# return result
+		return result
+
 
 	def functionName(self) ->str:
 		"""get function name"""
@@ -361,7 +362,7 @@ class Expression(Serialisable, T.Generic[VT]):
 	def getText(self) ->str:
 		"""get text representation of expression
 		if function, return decompiled function text"""
-		return self._rawText
+		return self._rawValue
 
 	def _compute(self):
 		"""compute expression value and store in cache"""
@@ -399,7 +400,7 @@ class Expression(Serialisable, T.Generic[VT]):
 	def copy(self) ->Expression:
 		"""copy expression"""
 		newExp = Expression(name=self.name, graph=self.dGraph)
-		newExp._rawText = self._rawText
+		newExp._rawValue = self._rawValue
 		newExp._cachedValue = self._cachedValue
 		newExp._compiledFn = self._compiledFn
 		newExp._isStatic = self._isStatic
@@ -420,6 +421,14 @@ class Expression(Serialisable, T.Generic[VT]):
 		exp = cls(name=data["name"])
 		exp.set(data["text"])
 
+	def printRaw(self):
+		"""print raw expression text"""
+		pprint.pprint(self._rawValue)
+
+	def printParsed(self):
+		"""print parsed expression"""
+		pprint.pprint(self._parsedStructure)
+
 class ExpTools:
 	"""namespace for collecting a load of expression tools"""
 	ExpressionPolicy = ExpPolicy
@@ -433,13 +442,42 @@ if __name__ == '__main__':
 
 	pass
 
-	exp = Expression()
-	print(exp)
+	#exp = Expression()
+	#print(exp)
 	#exp.setSourceText("a + b + c")
-	exp.setSourceText(expconstant.EXP_LAMBDA_NAME + " = lambda : 'a' + 'b' ")
-	#
-	# exp.set(" (): 'a' + 'b' + 'c' ")
-	# exp.set(" ( gg:str ): 'a' + 'b' + 'c' ")
-	# exp.set(" 'a' + 'b' + 'c' ")
+	#exp.setSourceText(expconstant.EXP_LAMBDA_NAME + " = lambda : 'a' + 'b' ")
+
+	def embedFn():
+		"""embed function in expression"""
+		print("embed hello")
+
+	def recursiveFn():
+		print("recursive hello")
+		return "$recursiveExp"
+
+	expStructure = [
+		("a", "$time"),
+		2,
+		{
+			"b": recursiveFn,
+			"c": "(): print('hello')",
+			"$asset": False
+		},
+
+		("d", embedFn),
+	]
+
+	tokenRule = Sy
+
+	processor = ExpSyntaxProcessor()
+
+	exp = Expression()
+
+	exp.setStructure(expStructure)
+
+	exp.printRaw()
+	exp.printParsed()
+
+
 
 
