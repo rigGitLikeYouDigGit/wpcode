@@ -48,7 +48,7 @@ EXP_ACCESS_TOKEN = "@EXP" # token to access expression object, and from there ev
 
 invalidStr = """(): ('a' + (('b' + 'c'))"""
 
-expParseFrame = namedtuple("expFrame", ["boundchars", "contentStr", "contentFrames"])
+ExpParseFrame = namedtuple("expFrame", ["startChar", "contents", "endChar"])
 
 def getBreakCharsInStr(s:str,
 allStartChars=(
@@ -60,7 +60,7 @@ allStartChars=(
                       allSymmetricChars=(
 						'"""', "'''", "\'", "\"",
                       ),
-					  )->list[tuple[int, str]]:
+					  )->list[tuple[int, str, int]]:
 	# first find all occurrences of start and end chars
 	breakChars = []
 	scanStr : str = s
@@ -77,7 +77,7 @@ allStartChars=(
 				flag = 1
 			elif i in allSymmetricChars:
 				flag = 2
-			breakChars.append([m.start(), i, flag])
+			breakChars.append((m.start(), i, flag))
 			scanStr = scanStr[:m.start()] + "w" * len(i) + scanStr[m.end():]
 		#print("scanStr", scanStr)
 
@@ -112,9 +112,10 @@ allStartChars=(
 	openStrIndex = 0
 	closeIndex = 0
 	# result = []
-	frameTree = []
+
 	frameStack = []
 	currentFrame = []
+	frameTree = currentFrame
 	frameStack.append(frameTree)
 
 	def _openNewFrame():
@@ -138,85 +139,41 @@ allStartChars=(
 		if breakChar[2] == 0:
 			if _frameIsNeutral():
 				continue
+
+			# add the string before the break char to the current frame
+			currentFrame.append(s[closeIndex:breakChar[0]])
+			closeIndex = breakChar[0] + len(breakChar[1])
 			# open new frame
 			currentFrame = _openNewFrame()
 			currentFrame.append(breakChar[1])
 
+
 		if breakChar[2] == 1:
 			if _frameIsNeutral():
 				continue
+
+			# add the string before the break char to the current frame
+			currentFrame.append(s[closeIndex:breakChar[0]])
+			closeIndex = breakChar[0] + len(breakChar[1])
 			# close current frame - add it to previous frame in stack
 			currentFrame.append(breakChar[1])
 			currentFrame = _closeFrame()
 		if breakChar[2] == 2: # need to check before and ahead
 			if currentFrame[0] == breakChar[1]:
+				# add the string before the break char to the current frame
+				currentFrame.append(s[closeIndex:breakChar[0]])
+				closeIndex = breakChar[0] + len(breakChar[1])
 				currentFrame.append(breakChar[1])
 				currentFrame = _closeFrame()
 			else:
+				# add the string before the break char to the current frame
+				currentFrame.append(s[closeIndex:breakChar[0]])
+				closeIndex = breakChar[0] + len(breakChar[1])
 				currentFrame = _openNewFrame()
 				currentFrame.append(breakChar[1])
-			#
-			# if not currentFrame:
-			# 	currentFrame = _openNewFrame()
-			# 	currentFrame.append(breakChar[1])
-			# else:
-			# 	if currentFrame[0] == breakChar[1]:
-			# 		currentFrame.append(breakChar[1])
-			# 		currentFrame = _closeFrame()
-			# 		continue
-				# else:
-				# 	currentFrame = _openNewFrame()
-				# 	currentFrame.append(breakChar[1])
-
-
 
 
 	pprint.pprint(frameStack, depth=10, indent=2, compact=False)
-
-# for i, char in enumerate(s):
-	# 	if char in allStartChars:
-	# 		charStack.append(char)
-	# 		openIndexStack.append(i)
-	# 		frameStack.append( (char, "", []))
-	# 	if not charStack:
-	# 		continue
-	# 	#matchEndChar =
-	# 	if char == allEndChars[allStartChars.index(charStack[-1])]:
-	# 		frameStack[-2][2].append(
-	# 			frameStack.pop()
-	# 		)
-	# 		# frame = expParseFrame(
-	# 		# 	charStack[-1] + char, s[openIndexStack[-1]:i], [])
-	# 		# result.append(frame)
-	# 		# charStack.pop()
-	# 		# openIndexStack.pop()
-	# return frameStack
-
-def getSingleExpParseFrame(s,
-                      allStartChars="([{\'\"<",
-                      allEndChars=")]}\'\">"
-                      )->list[expParseFrame]:
-	"""get outer frames of expression syntax
-	"""
-
-	result = []
-	startChar = ""
-	openIndex = 0
-	for i, char in enumerate(s):
-		if char in allStartChars:
-			startChar = char
-			openIndex = i
-		if not startChar:
-			continue
-
-		if char == allEndChars[allStartChars.index(startChar)]:
-			frame = expParseFrame(
-				startChar + char, s[openIndex:i],
-				getSingleExpParseFrame(s[openIndex + 1:i - 1])
-			)
-
-
-	return s
 
 
 
