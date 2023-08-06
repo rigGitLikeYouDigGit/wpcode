@@ -34,6 +34,11 @@ class ExpEvaluator:
 		"""called on any constants remaining in expression"""
 		return constant
 
+	def resolveName(self, name:str):
+		"""called on any names remaining in expression"""
+		print("resolveName", name)
+		return self.resolveConstant(name)
+
 	def evalExpression(self, expInput:str, expGlobals:dict, inputData:dict=None, frameName="<expression>")->any:
 		"""evaluate an expression string, using custom syntax
 		and resolve functions

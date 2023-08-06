@@ -116,8 +116,9 @@ def recursiveVisitCopy(obj:T.Any,
 				transformFn(v, newData), transformFn, newData))
 
 		return type(obj)(results)
+
 	# if object not complex, just return it
-	return obj
+	return transformFn(obj, visitData)
 
 
 

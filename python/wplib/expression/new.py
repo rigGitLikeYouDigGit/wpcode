@@ -8,7 +8,7 @@ from wplib.function import addToFunctionGlobals
 """core of refgraph - stores either static value, or function
 to be evaluated"""
 import typing as T
-import ast, pprint
+import ast, pprint, re
 from types import FunctionType, ModuleType
 from dataclasses import dataclass
 
@@ -19,9 +19,10 @@ from wplib.object import Visitor
 from wplib.object.visit import Visitable, getVisitDestinations, Visitor, recursiveVisitCopy
 
 from wplib.expression import syntax, function as libfn, constant as expconstant
-from wplib.expression.error import CompilationError
+from wplib.expression.error import CompilationError, EvaluationError, ExpSyntaxError
 from wplib.expression.evaluator import ExpEvaluator
-from wplib.expression.syntax import ExpSyntaxError, ExpSyntaxProcessor,CustomSyntaxPass
+from wplib.expression.syntax import ExpSyntaxProcessor, SyntaxPasses
+
 
 if T.TYPE_CHECKING:
 	pass
@@ -60,6 +61,12 @@ class ExpPolicy:
 	# object to evaluate expression in wider context
 	# use list of these too to add functionality for different tokens
 	evaluator : ExpEvaluator = None
+
+	def expGlobalMap(self)->dict:
+		"""map of globals to update expression with"""
+		return {
+			expconstant.MASTER_GLOBALS_EVALUATOR_KEY : self.evaluator,
+		}
 #
 
 
@@ -93,7 +100,9 @@ def transformParseExpStructure(
 	parentExp = visitData["parentExp"]
 
 	# if obj is string, check if it contains expression syntax
+	print("transformParseExpStructure", obj)
 	if isinstance(obj, str):
+		print("defines", parentExp.policy.syntaxProcessor.stringDefinesExpressionFn(obj))
 		if not parentExp.policy.syntaxProcessor.stringDefinesExpressionFn(obj):
 			return obj
 		processor = parentExp.policy.syntaxProcessor
@@ -101,12 +110,15 @@ def transformParseExpStructure(
 		parsedStr = processor.parseRawExpString(obj)
 		parsedAst = processor.parseStringToAST(parsedStr)
 		processedAst = processor.processAST(parsedAst)
+		# print("processed AST:")
+		# print(ast.dump(processedAst))
 		compiledFn = processor.compileFinalASTToFunction(
-			processedAst, {})
+			processedAst, parentExp.getExpGlobals())
 		# create expression object with function
+		return compiledFn
 		"""TODO: duplication here - probably delegate to expression on actual compilation"""
-		expression = Expression(compiledFn, parentExp.policy)
-		return expression
+		# expression = Expression(compiledFn, parentExp.policy)
+		# return expression
 	return obj
 
 
@@ -116,20 +128,23 @@ def transformEvaluateExpStructure(
 )->(object, Expression):
 	"""if it's an expression, eval the expression
 	and visit the result"""
+	print("transformEvaluateExpStructure", parsedObj, type(parsedObj), callable(parsedObj))
+	if callable(parsedObj):
+		return parsedObj()
 
 	# if obj is string, check if it contains expression syntax
-	if isinstance(parsedObj, Expression):
-		# evaluate expression
-		result = parsedObj.eval()
-		visitData["parentExp"] = parsedObj
-		# visit result - excessive, but only way to account
-		# for expressions returning other expressions
-		parsedResult = transformParseExpStructure(result, visitData)
-		#return recursiveVisitEvaluateExpStructure(parsedResult, parsedObj)
-
-		# don't need to manually recurse here to eval - outer visit will
-		# run this eval function over parsed result
-		return parsedResult
+	# if isinstance(parsedObj, Expression):
+	# 	# evaluate expression
+	# 	result = parsedObj.eval()
+	# 	visitData["parentExp"] = parsedObj
+	# 	# visit result - excessive, but only way to account
+	# 	# for expressions returning other expressions
+	# 	parsedResult = transformParseExpStructure(result, visitData)
+	# 	#return recursiveVisitEvaluateExpStructure(parsedResult, parsedObj)
+	#
+	# 	# don't need to manually recurse here to eval - outer visit will
+	# 	# run this eval function over parsed result
+	# 	return parsedResult
 	return parsedObj
 
 
@@ -200,6 +215,12 @@ class Expression(Serialisable, T.Generic[VT]):
 
 		self.setStructure(value)
 
+	def getExpGlobals(self)->dict:
+		"""return dict of globals to pass to expression"""
+		globalsMap = self.policy.expGlobalMap()
+		# add in reference to self
+		globalsMap[expconstant.MASTER_GLOBALS_EXP_KEY] = self
+		return globalsMap
 
 	@classmethod
 	def _textFromStatic(cls, static:object)->str:
@@ -220,79 +241,6 @@ class Expression(Serialisable, T.Generic[VT]):
 		self._compiledFn : FunctionType = None
 
 
-	def setStatic(self, value:T.Any):
-		"""set expression to a static value -
-		any complex functions inside are evaluated and result stored.
-
-		to get live value, set expression as lambda
-		"""
-		self._cachedValue = value
-		self._isStatic = True
-		self._rawValue = self._textFromStatic(value)
-		try:
-			self._finalAst = wplib.ast.parseStrToASTExpression(self._rawValue)
-		except SyntaxError:
-			self._finalAst = None
-		self._compiledFn = None # not sure if this should be compiled ast expression
-
-
-
-	def _compileFinalASTToFunction(
-			self,
-			finalAst:ast.Module,
-			expGlobals:dict)->FunctionType:
-		"""compile final ast to function"""
-		c = compile(finalAst, "<expCompile>", "exec")
-
-		expDict = dict(self.defaultModule.__dict__)
-		# update exp globals dict here
-		expDict.update(expGlobals)
-
-		exec(c, expDict
-		     )
-		return expDict[expconstant.EXP_LAMBDA_NAME]
-
-
-	def setSourceText(self, text:str):
-		"""set expression to text
-		-process text
-		-parse text to ast
-		-process ast
-		-compile ast to function
-
-		assume that all expressions hold a function, even if it's just a static value
-
-		retrieving a full function rather than just running 'eval' all the time
-		costs more in compilation, but it's way faster once compiled
-
-		maybe there's some world where we use eval first and compile in the background
-
-		"""
-		self.reset()
-		self._rawValue = text
-		try:
-			self._processedText = self.policy.syntaxProcessor.parseRawExpString(text)
-		except ExpSyntaxError as e:
-			raise e
-
-		self._parsedAST = self.policy.syntaxProcessor.parseStringToAST(self._processedText)
-
-		try:
-			self._finalAst = self.policy.syntaxProcessor.processAST(self._parsedAST)
-		except Exception as e:
-			raise e
-
-		print("parsedAST")
-		print(self._parsedAST)
-		print(ast.dump(self._finalAst))
-		#self._compiledFn = wpast.compileASTExpression(self._finalAst)
-		self._compiledFn = self._compileFinalASTToFunction(
-			self._finalAst, {})
-		print("compiledFn")
-		print(self._compiledFn, self._compiledFn())
-
-
-
 	def setFunction(self, fn:FunctionType):
 		"""set expression to callable function"""
 		self._cachedValue = None
@@ -308,10 +256,13 @@ class Expression(Serialisable, T.Generic[VT]):
 		self._cachedValue = None
 		self._compiledFn = None
 		self._rawValue = structure
-		self._parsedStructure = recursiveVisitCopy(
+		parsed = recursiveVisitCopy(
 			structure, transformParseExpStructure,
 			ExpVisitDict(parentExp=self, isStatic=False)
 		                                           )
+		print("parsed result", parsed, type(parsed))
+		self._parsedStructure = parsed
+		print("parsedStructure", self._parsedStructure)
 
 
 	def eval(self):
@@ -338,8 +289,8 @@ class Expression(Serialisable, T.Generic[VT]):
 		)
 
 		# restore globals
-		for k in expGlobalsMap:
-			globals().pop(k)
+		# for k in expGlobalsMap:
+		# 	globals().pop(k)
 
 		# return result
 		return result
@@ -442,41 +393,136 @@ if __name__ == '__main__':
 
 	pass
 
+	# test maya set expressions
+	setExpStr = "root_GRP/mid/* + *_PLY"
+
+	class ElementSet(set):
+
+		def __init__(self, filterStr:str):
+			super().__init__()
+			self.filterStr = filterStr
+
+		def populate(self):
+			"""populate set with elements matching filter string -
+			clears set first"""
+			raise NotImplementedError
+
+
+
+	class MayaSetSyntaxPass(SyntaxPasses._Base):
+		"""a star directly adjoined to a string is considered a wildcard match
+		a star separated by a space is considered a set intersection
+		"""
+		STAR_CHAR = "__STX_STAR__"
+		DOUBLE_STAR_CHAR = "__STX_DOUBLE_STAR__"
+		SLASH_CHAR = "__STX_SLASH__"
+
+		def preProcessRawString(self, s: str) -> str:
+
+			for char, replace in [
+				("\*", self.STAR_CHAR),
+				("\*\*", self.DOUBLE_STAR_CHAR),
+			]:
+
+				for m in reversed(tuple(re.finditer(char, s))):
+					# try:
+					# 	if s[m.start() - 1] == " ":
+					# 		# is space, skip
+					# 		continue
+					# except IndexError:
+					# 	pass
+					s = s[:m.start()] + replace + s[m.end():]
+
+			# replace slashes - only space-separated are retained as divisions
+			for m in reversed(tuple(re.finditer("\/", s))):
+				if m.start() - 1 != " " and m.end() + 1 != " ":
+					s = s[:m.start()] + self.SLASH_CHAR + s[m.end():]
+
+			print("preProcessRawString", s)
+			return s
+
+		def visit_Name(self, node: Name) -> Any:
+			"""visit name node - any raw names converted to
+			maya list operations that match that string"""
+
+			restoreId = node.id.replace(self.STAR_CHAR, "*").replace(
+				self.DOUBLE_STAR_CHAR, "**").replace(self.SLASH_CHAR, "/")
+
+			node.id = restoreId
+			return node
+
+
+	mayaPass = MayaSetSyntaxPass()
+	resolveNamePass = SyntaxPasses.ResolveConstantPass()
+	ensureLambdaPass = SyntaxPasses.EnsureLambdaPass()
+
+	mayaSetSyntaxProcessor = ExpSyntaxProcessor(
+		[mayaPass, ensureLambdaPass
+		 ],
+		syntaxAstPasses=[mayaPass, resolveNamePass],
+		stringDefinesExpressionFn=lambda s : True
+	)
+
+	class MayaSetEvaluator(ExpEvaluator):
+
+		def resolveName(self, name:str):
+			print("resolveName", name)
+			return name
+		pass
+
+
+
+		# def resolveConstant(self, constant:(str, int, float, bool, tuple, list, dict)):
+		# pass
+
+	mayaEvaluator = MayaSetEvaluator()
+
+	mayaSetPolicy = ExpPolicy(
+		mayaSetSyntaxProcessor,
+		mayaEvaluator
+	)
+
+	exp = Expression(policy=mayaSetPolicy)
+	exp.setStructure(setExpStr)
+	exp.printParsed()
+
+	print("result", exp, exp.eval())
+
 	#exp = Expression()
 	#print(exp)
 	#exp.setSourceText("a + b + c")
 	#exp.setSourceText(expconstant.EXP_LAMBDA_NAME + " = lambda : 'a' + 'b' ")
 
-	def embedFn():
-		"""embed function in expression"""
-		print("embed hello")
-
-	def recursiveFn():
-		print("recursive hello")
-		return "$recursiveExp"
-
-	expStructure = [
-		("a", "$time"),
-		2,
-		{
-			"b": recursiveFn,
-			"c": "(): print('hello')",
-			"$asset": False
-		},
-
-		("d", embedFn),
-	]
-
-	tokenRule = Sy
-
-	processor = ExpSyntaxProcessor()
-
-	exp = Expression()
-
-	exp.setStructure(expStructure)
-
-	exp.printRaw()
-	exp.printParsed()
+	# def embedFn():
+	# 	"""embed function in expression"""
+	# 	print("embed hello")
+	#
+	# def recursiveFn():
+	# 	print("recursive hello")
+	# 	return "$recursiveExp"
+	#
+	# expStructure = [
+	# 	("a", "$time"),
+	# 	2,
+	# 	{
+	# 		"b": recursiveFn,
+	# 		"c": "(): print('hello')",
+	# 		"$asset": False
+	# 	},
+	#
+	# 	("d", embedFn),
+	# ]
+	#
+	# tokenRule = Sy
+	#
+	# processor = ExpSyntaxProcessor()
+	#
+	# exp = Expression()
+	#
+	# exp.setStructure(expStructure)
+	#
+	# exp.printRaw()
+	# exp.printParsed()
 
 
 

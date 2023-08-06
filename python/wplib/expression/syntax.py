@@ -4,21 +4,18 @@ import typing as T
 
 import ast, re, pprint
 from dataclasses import dataclass
-from ast import unparse
 from types import ModuleType, FunctionType
 from collections import namedtuple
 
-import lark
-
 from wplib import sequence
-from wplib.ast import parseStrToASTModule, astModuleToExpression
+from wplib.ast import parseStrToASTModule
 from wplib.object import TypeNamespace
 from wplib.expression.constant import MASTER_GLOBALS_EVALUATOR_KEY, EXP_LAMBDA_NAME
-from wplib.expression.error import CompilationError, ExpSyntaxError
+from wplib.expression.error import CompilationError, EvaluationError, ExpSyntaxError
+from wplib.expression.parse import getExpParseFrames, getBracketContents
 
 if T.TYPE_CHECKING:
-	from .evaluator import ExpEvaluator
-	from .new import Expression, ExpPolicy
+	pass
 
 """functions checking expression syntax for user input
 
@@ -32,7 +29,7 @@ not support them.
 
 
 flatStr = "a + b + c"
-testStr = """(): ('a' + ( 'b(' + <time>) + b )"""
+testStr = """(): ('a' + ( 'b(' + <time>) + b  )"""
 testQuoteStr = """(): ('a' + ('b(' + <time>) ) + "'" + '''"''')"""
 
 """
@@ -46,201 +43,19 @@ def _expLambda():
 EXP_ACCESS_TOKEN = "@EXP" # token to access expression object, and from there evaluation
 # replaced with __exp__ in final expression
 
-invalidStr = """(): ('a' + (('b' + 'c'))"""
+#invalidStr = """(): ('a' + (('b' + 'c')) + """
 
 ExpParseFrame = namedtuple("expFrame", ["startChar", "contents", "endChar"])
 
-def getBreakCharsInStr(s:str,
-allStartChars=(
-						 "(", "[", "{", "<",
-                      ),
-                      allEndChars=(
-						")", "]", "}", ">",
-						),
-                      allSymmetricChars=(
-						'"""', "'''", "\'", "\"",
-                      ),
-					  )->list[tuple[int, str, int]]:
-	# first find all occurrences of start and end chars
-	breakChars = []
-	scanStr : str = s
-	for i in allStartChars + allEndChars + allSymmetricChars:
-		#print("look for i", i)
-
-		# escape special regex chars
-		lookup = "\\" + i if i in ("(", ")", "[", "]", "{", "}") else i
-
-		for m in re.finditer(lookup, scanStr):
-			if i in allStartChars:
-				flag = 0
-			elif i in allEndChars:
-				flag = 1
-			elif i in allSymmetricChars:
-				flag = 2
-			breakChars.append((m.start(), i, flag))
-			scanStr = scanStr[:m.start()] + "w" * len(i) + scanStr[m.end():]
-		#print("scanStr", scanStr)
-
-	breakChars.sort(key=lambda x: x[0])
-	return breakChars
-
-
-def getExpParseFrames(s:str,
-allStartChars=(
-	 "(", "[", "{", "<",
-	),
-	allEndChars=(
-	")", "]", "}", ">",
-	),
-	allSymmetricChars=(
-	'"""', "'''", "\'", "\"",
-	),
-	neutraliseChars=( # characters that neutralise other markers in them
-	'"""', "'''", "\'", "\"",
-	)
-                      )->list[expParseFrame]:
-	"""get frames of expression syntax
-	"""
-
-	breakChars = getBreakCharsInStr(s)
-	print("breakChars", breakChars)
-	print(s)
-
-	result = []
-	charStack = []
-	openIndexStack = []
-	openStrIndex = 0
-	closeIndex = 0
-	# result = []
-
-	frameStack = []
-	currentFrame = []
-	frameTree = currentFrame
-	frameStack.append(frameTree)
-
-	def _openNewFrame():
-		#currentFrame = []
-		newFrame = []
-		frameStack.append(newFrame)
-		return newFrame
-
-	def _closeFrame():
-		frameStack[-2].append(frameStack.pop())
-		oldFrame = frameStack[-1]
-		return oldFrame
-
-	def _frameIsNeutral():
-		if not currentFrame:
-			return False
-		return currentFrame[0] in neutraliseChars
-
-	for i, breakChar in enumerate(breakChars):
-
-		if breakChar[2] == 0:
-			if _frameIsNeutral():
-				continue
-
-			# add the string before the break char to the current frame
-			currentFrame.append(s[closeIndex:breakChar[0]])
-			closeIndex = breakChar[0] + len(breakChar[1])
-			# open new frame
-			currentFrame = _openNewFrame()
-			currentFrame.append(breakChar[1])
-
-
-		if breakChar[2] == 1:
-			if _frameIsNeutral():
-				continue
-
-			# add the string before the break char to the current frame
-			currentFrame.append(s[closeIndex:breakChar[0]])
-			closeIndex = breakChar[0] + len(breakChar[1])
-			# close current frame - add it to previous frame in stack
-			currentFrame.append(breakChar[1])
-			currentFrame = _closeFrame()
-		if breakChar[2] == 2: # need to check before and ahead
-			if currentFrame[0] == breakChar[1]:
-				# add the string before the break char to the current frame
-				currentFrame.append(s[closeIndex:breakChar[0]])
-				closeIndex = breakChar[0] + len(breakChar[1])
-				currentFrame.append(breakChar[1])
-				currentFrame = _closeFrame()
-			else:
-				# add the string before the break char to the current frame
-				currentFrame.append(s[closeIndex:breakChar[0]])
-				closeIndex = breakChar[0] + len(breakChar[1])
-				currentFrame = _openNewFrame()
-				currentFrame.append(breakChar[1])
-
-
-	pprint.pprint(frameStack, depth=10, indent=2, compact=False)
-
-
+# each frame list has opening and closing characters as first and last entries
+# and the contents in between
+#TODO: optimise if needed
 
 pprint.pp(getExpParseFrames(testStr), indent=4, depth=10)
-
-def getBracketContents(s:str, encloseChars="()")->tuple[tuple, str]:
-	"""recursively get items contained in outer brackets
-	couldn't find a flexible way online so doing it raw
-	"""
-	stack = 0
-	openIndex = 0
-	closeIndex = 0
-	result = []
-	for i, char in enumerate(s):
-		if char == encloseChars[0]:
-			if stack == 0:
-				openIndex = i
-			stack += 1
-		elif char == encloseChars[1]:
-			stack -= 1
-			if stack == 0:
-				result.append(s[closeIndex:openIndex])
-				result.append(getBracketContents(s[ openIndex + 1 : i ], encloseChars))
-				closeIndex = i + 1
-	result.append(s[closeIndex:])
-	#return tuple(filter(None, result))
-	return tuple(i for i in result if not (i == ""))
+#pprint.pp(getExpParseFrames(testStr[:-1]), indent=4, depth=10)
 
 #print(getBracketContents(testStr))
 #print(getBracketContents(invalidStr))
-
-def bracketContentsAreFunction(expBracketContents:tuple[tuple, str]) ->bool:
-	"""check if expression is a function
-	- does expression start with brackets?
-	- does first bracket group precede a colon?
-	"""
-	if not isinstance(expBracketContents[0], tuple): # flat string
-		return False
-	if expBracketContents[1][0] != ":": # no colon after first bracket group
-		return False
-	return True
-
-def restoreBracketContents(expBracketContents:tuple[tuple, str], encloseChars="()")->str:
-	"""restore bracket contents to original string"""
-	result = ""
-	for i, item in enumerate(expBracketContents):
-		if isinstance(item, tuple):
-			result += encloseChars[0] + restoreBracketContents(item, encloseChars) + encloseChars[1]
-		else:
-			result += item
-	return result
-
-
-def textDefinesExpFunction(text: str) -> bool:
-	"""check if text defines a function
-	- does expression start with brackets?
-	- does first bracket group precede a colon?
-	"""
-	return bracketContentsAreFunction(getBracketContents(text.strip()))
-
-
-def splitTextBodySignature(text: str) -> tuple[str, str]:
-	"""split function text into body and signature"""
-	bracketParts = getBracketContents(text.strip())
-	signature = bracketParts[0]
-	body = bracketParts[1:]
-	return restoreBracketContents(signature), restoreBracketContents(body)[1:]
 
 
 # framework for declaring sequence of passes run over expression string -
@@ -248,66 +63,15 @@ def splitTextBodySignature(text: str) -> tuple[str, str]:
 # I've been struggling with this system for so long, getting something
 # on the board is good enough for now
 
-class CustomSyntaxPass(ast.NodeTransformer):
-	""" ABSTRACT
-
-	run any custom rules over a raw expression string -
-	favour defining and running multiple of these objects
-	as separate passes over expression, for separate rules
-	of syntax.
-
-	Raise ExpSyntaxError to indicate a syntax error in this pass -
-	give as much information as possible, since the order of passes
-	may be important.
-
-	A pass may plausibly operate only on a raw string, on an AST,
-	or even the reparsed version of it.
-
-	"""
-
-	def __init__(self):
-		super(CustomSyntaxPass, self).__init__()
-		self.currentExpGlobals = {}
-
-	def stringDefinesExpression(self, s:str)->bool:
-		"""return True if string defines an expression
-		recognised by this pass,
-		False if this pass has or would have no interaction with string
-		"""
-		return False
-
-	def _getSyntaxLocalMap(self)->dict:
-		"""return a map of any custom syntax to be replaced
-		before parsing to ast"""
-		return {}
-
-	def preProcessRawString(self, s:str)->str:
-		"""run any operations on the raw expression string before parsing to ast
-		like converting illegal characters and tokens
-		override here"""
-		return s
-
-
-	# def processExpression(self, expInput:str, expGlobals:dict, returnAST=True)->(ast.Expr, str):
-	# 	"""run any syntax operations on string,
-	# 	then parse it to an ast tree using custom syntax converter
-	# 	inputGlobals will be modified
-	# 	"""
-	# 	print("process exp", expInput, self)
-	# 	self.currentExpGlobals = dict(expGlobals)
-	# 	# modify raw string if needed, removing illegal characters
-	# 	processedString = self.preProcessRawString(expInput)
-	#
-	# 	# parse to AST
-	# 	inputASTModule = parseStrToASTModule(processedString)
-	# 	inputASTExt = astModuleToExpression(inputASTModule)
-	#
-	# 	# process AST
-	# 	processedAST = self.visit(inputASTExt)
-	# 	ast.fix_missing_locations(processedAST)
-
-
-
+def visitStringParsedFrames(parsedFrames: list[list[str]],
+                            transformFn=lambda x : x) -> list[list[str]]:
+	"""visit each frame in parsedFrames with transformFn.
+	Works from leaves up"""
+	for i, s in tuple(enumerate(parsedFrames)):
+		if isinstance(s, list):
+			parsedFrames[i] = visitStringParsedFrames(s, transformFn)
+	parsedFrames = transformFn(parsedFrames)
+	return parsedFrames
 
 
 def _not_fn(element):
@@ -343,60 +107,6 @@ def _in_fn(element, container):
 		return container.__contains__(element)
 	except AttributeError: # fall back if __contains__ has not been defined
 		return element in container
-
-class SyntaxKeywordFunctionPass(CustomSyntaxPass):
-	"""forces 'and', 'or' etc keywords to explicitly call their
-	corresponding magic methods on objects involved -
-	otherwise some object derived behaviour can kick in first
-
-	eg :
-
-	"a" and "b" -> __and__fn("a", "b")
-
-	"""
-
-	fnMap = {ast.In : _in_fn,
-			 ast.And : _and_fn,
-			 ast.Or : _or_fn,
-			 ast.Not : _not_fn
-			 }
-	def _getSyntaxLocalMap(self)->dict:
-		"""return map of {function name : function} to
-		update expression locals """
-		fnMap = {i.__name__ : i for i in self.fnMap.values()}
-		return fnMap
-
-	def visit_UnaryOp(self, node: T.UnaryOp) -> T.Any:
-		if type(node.op) in self.fnMap:
-			newFnTree = ast.Call(
-				func=ast.Name(id=self.fnMap[type(node.op)].__name__, ctx=ast.Load()),
-				args=[node.operand],
-				keywords=[])
-			return newFnTree
-		return node
-	def visit_Compare(self, node: ast.Compare):
-		if type(node.ops[0]) in self.fnMap:
-			newFnTree = ast.Call(
-				func=ast.Name(id=self.fnMap[type(node.ops[0])].__name__, ctx=ast.Load()),
-				args=[
-					self.visit(node.left),
-					self.visit(node.comparators[0])],
-					keywords=[])
-			return newFnTree
-		return node
-	def visit_BoolOp(self, node: T.BoolOp) -> T.Any:
-		if type(node.op) in self.fnMap:
-			newFnTree = ast.Call(
-				func=ast.Name(id=self.fnMap[type(node.op)].__name__, ctx=ast.Load()),
-				args=[
-					self.visit(node.values[0]),
-					self.visit(node.values[1])],
-					keywords=[])
-			return newFnTree
-		return node
-	#endregion
-	pass
-
 
 
 nullExpChar = "####"
@@ -458,218 +168,339 @@ class ExpTokens(TypeNamespace):
 		tail = "`"
 
 
-class SyntaxTokenReplacerPass(CustomSyntaxPass):
-	"""transformer to replace custom tokens with functions to resolve them
+class SyntaxPasses(TypeNamespace):
+	"""namespace for syntax passes -
+	this was the easiest way to organise them all.
+
+	Extend this to define more passes for specific purposes.
 	"""
 
-	splitChar = "_eyye_"
+	class _Base(ast.NodeTransformer, TypeNamespace.base()):
+		""" ABSTRACT
 
-	def __init__(self,
-	             tokenTypes=(ExpTokens.At,
-	                         ExpTokens.Dollar,
-	                         ExpTokens.PointyBracket)
-				 ):
-		super(SyntaxTokenReplacerPass, self).__init__()
-		self.tokenTypes = tokenTypes
-		self.tokenBaseCharMap = {}
-		self.tokenLegalCharMap = {}
+		run any custom rules over a raw expression string -
+		favour defining and running multiple of these objects
+		as separate passes over expression, for separate rules
+		of syntax.
 
-	def _getSyntaxLocalMap(self)->dict:
-		"""return dict of {name : value} to update expression globals"""
-		return {"_" + i.__name__ : i for i in self.tokenTypes}
+		Raise ExpSyntaxError to indicate a syntax error in this pass -
+		give as much information as possible, since the order of passes
+		may be important.
 
-	def stringDefinesExpression(self, s:str) ->bool:
-		"""return True if string contains any token characters"""
-		for tokenType in self.tokenTypes:
-			if tokenType.head in s or tokenType.tail in s:
-				return True
-		return False
+		A pass may plausibly operate only on a raw string, on an AST,
+		or even the reparsed version of it.
 
-	def preProcessRawString(self, s:str) ->str:
-		"""look up any token characters in string - replace them with
-		function calls to resolve those strings with evaluator.
 
-		eg:
-		@p + $p -> __evaluator__.resolveToken(_AtToken_("p")) + __evaluator__.resolveToken(_DollarToken_("p"))
+		Passes also need to contribute their own separator characters
+		for the intermediate frame parsing stage - for now keep it simple
 
 		"""
 
-		# build local token map
-		for tokenType in self.tokenTypes:
-			self.tokenBaseCharMap[(tokenType.head, tokenType.tail)] = tokenType
-			legalChars = (f"{tokenType.__name__}_HEAD" + self.splitChar,
-						  self.splitChar + f"{tokenType.__name__}_TAIL")
-			self.tokenLegalCharMap[tokenType] = legalChars
+		@classmethod
+		def expressionStringRef(cls)->str:
+			"""return a string that will look up the current Expression
+			object when evaluated in the expression string's globals"""
+			return "__exp__"
 
-		# replace chars
-		for tokenType, replaceChars in self.tokenLegalCharMap.items():
-			# this is a really simplistic approach, but maybe it's ok
-			s = s.replace(tokenType.head, replaceChars[0])
-			s = s.replace(tokenType.tail, replaceChars[1])
-		splitStr = re.findall(reSearchMasterPattern, s, )
-		# now iterate over all of the split strings, and replace any that match
-		for segment in splitStr:
-			newSegment = segment
+		@classmethod
+		def evaluatorStringRef(cls)->str:
+			return f"{cls.expressionStringRef()}.policy.evaluator"
+
+		def preProcessRawString(self, s: str) -> str:
+			"""run any operations on the raw expression string before parsing to ast
+			like converting illegal characters and tokens
+			override here"""
+			return s
+
+		visitStringParsedFrames = visitStringParsedFrames
+
+		def preProcessFrameParsedString(self, stringFrames: list[list[str]]) -> list[list[str]]:
+			"""run any operations on the list of string frames,
+			intermediate parsed state.
+			This will be rejoined into a string before parsing to ast.
+			Roll your own visiting logic here for now."""
+			return stringFrames
+
+
+	class KeywordFunctionPass(_Base):
+		"""forces 'and', 'or' etc keywords to explicitly call their
+		corresponding magic methods on objects involved -
+		otherwise some object derived behaviour can kick in first
+
+		eg :
+
+		"a" and "b" -> __and__fn("a", "b")
+
+		"""
+
+		fnMap = {ast.In : _in_fn,
+				 ast.And : _and_fn,
+				 ast.Or : _or_fn,
+				 ast.Not : _not_fn
+				 }
+		def _getSyntaxLocalMap(self)->dict:
+			"""return map of {function name : function} to
+			update expression locals """
+			fnMap = {i.__name__ : i for i in self.fnMap.values()}
+			return fnMap
+
+		def visit_UnaryOp(self, node: T.UnaryOp) -> T.Any:
+			if type(node.op) in self.fnMap:
+				newFnTree = ast.Call(
+					func=ast.Name(id=self.fnMap[type(node.op)].__name__, ctx=ast.Load()),
+					args=[node.operand],
+					keywords=[])
+				return newFnTree
+			return node
+		def visit_Compare(self, node: ast.Compare):
+			if type(node.ops[0]) in self.fnMap:
+				newFnTree = ast.Call(
+					func=ast.Name(id=self.fnMap[type(node.ops[0])].__name__, ctx=ast.Load()),
+					args=[
+						self.visit(node.left),
+						self.visit(node.comparators[0])],
+						keywords=[])
+				return newFnTree
+			return node
+		def visit_BoolOp(self, node: T.BoolOp) -> T.Any:
+			if type(node.op) in self.fnMap:
+				newFnTree = ast.Call(
+					func=ast.Name(id=self.fnMap[type(node.op)].__name__, ctx=ast.Load()),
+					args=[
+						self.visit(node.values[0]),
+						self.visit(node.values[1])],
+						keywords=[])
+				return newFnTree
+			return node
+		#endregion
+		pass
+
+
+	class CharReplacerPass(_Base):
+		def __init__(self, charMap:dict[str, str]):
+			super().__init__()
+			self.charMap = charMap
+
+		def preProcessRawString(self, s: str) -> str:
+			"""run any operations on the raw expression string before parsing to ast
+			like converting illegal characters and tokens
+			override here"""
+			for k, v in self.charMap.items():
+				s = s.replace(k, v)
+			return s
+
+
+	class TokenReplacerPass(_Base):
+		"""transformer to replace custom tokens with functions to resolve them
+		"""
+
+		splitChar = "_eyye_"
+
+		def __init__(self,
+		             tokenTypes=(ExpTokens.At,
+		                         ExpTokens.Dollar,
+		                         ExpTokens.PointyBracket)
+					 ):
+			super().__init__()
+			self.tokenTypes = tokenTypes
+			self.tokenBaseCharMap = {}
+			self.tokenLegalCharMap = {}
+
+		def _getSyntaxLocalMap(self)->dict:
+			"""return dict of {name : value} to update expression globals"""
+			return {"_" + i.__name__ : i for i in self.tokenTypes}
+
+		def stringDefinesExpression(self, s:str) ->bool:
+			"""return True if string contains any token characters"""
+			for tokenType in self.tokenTypes:
+				if tokenType.head in s or tokenType.tail in s:
+					return True
+			return False
+
+		def preProcessRawString(self, s:str) ->str:
+			"""look up any token characters in string - replace them with
+			function calls to resolve those strings with evaluator.
+
+			eg:
+			@p + $p -> __evaluator__.resolveToken(_AtToken_("p")) + __evaluator__.resolveToken(_DollarToken_("p"))
+
+			"""
+
+			# build local token map
+			for tokenType in self.tokenTypes:
+				self.tokenBaseCharMap[(tokenType.head, tokenType.tail)] = tokenType
+				legalChars = (f"{tokenType.__name__}_HEAD" + self.splitChar,
+							  self.splitChar + f"{tokenType.__name__}_TAIL")
+				self.tokenLegalCharMap[tokenType] = legalChars
+
+			# replace chars
 			for tokenType, replaceChars in self.tokenLegalCharMap.items():
-				if not (newSegment.startswith(replaceChars[0]) or newSegment.endswith(replaceChars[1])):
-					continue
-				newHead = MASTER_GLOBALS_EVALUATOR_KEY + ".resolveToken(_" + tokenType.__name__ + "("
-				newTail = f"))"
+				# this is a really simplistic approach, but maybe it's ok
+				s = s.replace(tokenType.head, replaceChars[0])
+				s = s.replace(tokenType.tail, replaceChars[1])
+			splitStr = re.findall(reSearchMasterPattern, s, )
+			# now iterate over all of the split strings, and replace any that match
+			for segment in splitStr:
+				newSegment = segment
+				for tokenType, replaceChars in self.tokenLegalCharMap.items():
+					if not (newSegment.startswith(replaceChars[0]) or newSegment.endswith(replaceChars[1])):
+						continue
+					newHead = MASTER_GLOBALS_EVALUATOR_KEY + ".resolveToken(_" + tokenType.__name__ + "("
+					newTail = f"))"
 
-				newSegment = newSegment.replace(replaceChars[0], newHead)
-				newSegment = newSegment.replace(replaceChars[1], newTail)
-				if tokenType.tail == nullExpChar:
-					newSegment += newTail
-				s = s.replace(segment, newSegment)
-				break
+					newSegment = newSegment.replace(replaceChars[0], newHead)
+					newSegment = newSegment.replace(replaceChars[1], newTail)
+					if tokenType.tail == nullExpChar:
+						newSegment += newTail
+					s = s.replace(segment, newSegment)
+					break
 
-		return s
-
-
-class SyntaxNameToStrPass(CustomSyntaxPass):
-	"""transformer to replace names with their string values
-	NB unchecked, this will convert EVERYTHING, often resulting
-	in illegal python code -
-	use blacklist and globals diligently
-	"""
-
-	def __init__(self, fallbackOnly=True, blacklist:tuple[str]=()):
-		"""if fallbackOnly, only replace names that are not already defined in globals
-		any names in blacklist will not be replaced"""
-		super(SyntaxNameToStrPass, self).__init__()
-		self.fallbackOnly = fallbackOnly
-		self.blacklist = blacklist
-
-	def _getSyntaxLocalMap(self)->dict:
-		"""return dict of {name : value} to update expression globals"""
-		return {}
-
-	def visit_Name(self, node: T.Name) -> T.Any:
-		"""would this also trip function calls?"""
-		if node.id in self.blacklist:
-			return node
-		if self.fallbackOnly and node.id in self.currentExpGlobals:
-			return node
-		return ast.Str(s=node.id)
-
-
-class SyntaxResolveConstantPass(CustomSyntaxPass):
-	"""turns any "constant" in expression into
-	__evaluator__.resolveConstant("constant")
-
-	figured out that 'Constant' has only recently become the catch-all
-	node for constant statements - for 3.7 we have to build in
-	a bit of boilerplate
-	"""
-
-	def _getCallNodeTree(self, constant:str) -> ast.Call:
-		"""return ast.Call node to resolve constant"""
-		return ast.Call(
-			func=ast.Attribute(
-				value=ast.Name(id=MASTER_GLOBALS_EVALUATOR_KEY, ctx=ast.Load()),
-				attr="resolveConstant",
-				ctx=ast.Load()
-			),
-			args=[ast.Str(s=constant)],
-			keywords=[]
-		)
-
-	def visit_Constant(self, node: ast.Constant) -> T.Any:
-		return self._getCallNodeTree(node.value)
-
-	def visit_NameConstant(self, node: ast.Constant) -> T.Any:
-		return self._getCallNodeTree(node.value)
-
-	def visit_Str(self, node: ast.Str) -> T.Any:
-		return self._getCallNodeTree(node.s)
-
-	def visit_JoinedStr(self, node: ast.JoinedStr) -> T.Any:
-		return self._getCallNodeTree(node.s)
-
-	def visit_Num(self, node: ast.Num) -> T.Any:
-		return self._getCallNodeTree(node.n)
-
-	def visit_Bytes(self, node: ast.Bytes) -> T.Any:
-		return self._getCallNodeTree(str(node.s))
-
-
-class SyntaxFallbackStringPass(CustomSyntaxPass):
-	"""if an expression can't be evaluated,
-	convert the whole thing to a string
-	a very very overkill try / except"""
-
-	def preProcessRawString(self, s:str) ->str:
-		try:
-			ast.parse(s)
 			return s
-		except SyntaxError:
-			return "\'" + s + "\'"
-
-class SyntaxShorthandFunctionPass(CustomSyntaxPass):
-	"""
-	support for defining multi-line functions in expressions of form
-
-	():
-		<code>
 
 
-	" 'abc' " - static string
-	" (): 'a' + 'b' + 'c' " - function
-	" ():
-		gg = 'a' + 'b' + 'c'\n
-	    return gg + 'wooo' "
-	    - multiline function
+	class NameToStrPass(_Base):
+		"""transformer to replace names with their string values
+		NB unchecked, this will convert EVERYTHING, often resulting
+		in illegal python code -
+		use blacklist and globals diligently
+		"""
 
-	in future, can look into type annotations:
-	" ()->str: 'a' + 'b' + 'c' "
+		def __init__(self, fallbackOnly=True, blacklist:tuple[str]=()):
+			"""if fallbackOnly, only replace names that are not already defined in globals
+			any names in blacklist will not be replaced"""
+			super().__init__()
+			self.fallbackOnly = fallbackOnly
+			self.blacklist = blacklist
 
-	or pulling from a global namespace by args and kwargs:
-	" ( $time, asset=$currentAsset )->str: 'a' + 'b' + 'c' + asset.name() + time() "
+		def _getSyntaxLocalMap(self)->dict:
+			"""return dict of {name : value} to update expression globals"""
+			return {}
+
+		def visit_Name(self, node: T.Name) -> T.Any:
+			"""would this also trip function calls?"""
+			if node.id in self.blacklist:
+				return node
+			if self.fallbackOnly and node.id in self.currentExpGlobals:
+				return node
+			return ast.Str(s=node.id)
 
 
-	"""
+	class ResolveConstantPass(_Base):
+		"""turns any "constant" in expression into
+		__evaluator__.resolveConstant("constant")
 
-	@classmethod
-	def checkSyntax(cls, text:str):
-		"""check syntax of text
-		:raises SyntaxError: if syntax is invalid"""
-		# check for unbalanced brackets
-		contents = getBracketContents(text)
-		flatContents = sequence.flatten(contents)
-		if any("(" in i for i in flatContents) or any(")" in i for i in flatContents):
-			raise SyntaxError(f"unbalanced brackets: {text}")
+		figured out that 'Constant' has only recently become the catch-all
+		node for constant statements - for 3.7 we have to build in
+		a bit of boilerplate
+		"""
+
+		def _getCallNodeTree(self, constant:str, evaluatorFnName="resolveConstant") -> ast.Call:
+			"""return ast.Call node to resolve constant"""
+			return ast.Call(
+				func=ast.Attribute(
+					value=ast.Name(id=MASTER_GLOBALS_EVALUATOR_KEY, ctx=ast.Load()),
+					attr=evaluatorFnName,
+					ctx=ast.Load()
+				),
+				args=[ast.Str(s=constant)],
+				keywords=[]
+			)
 
 
-	def _isMultiLineFunction(self) ->bool:
-		"""check if function is multiline"""
-		return "\n" in self.getText().lstrip().rstrip()
+		def visit_Constant(self, node: ast.Constant) -> T.Any:
+			return self._getCallNodeTree(node.value)
 
-	def _expressionTextToPyFunctionText(self, text:str, fnName="") ->str:
-		"""convert expression text to python function text"""
+		def visit_NameConstant(self, node: ast.Constant) -> T.Any:
+			return self._getCallNodeTree(node.value, "resolveName")
 
-		fnName = fnName or self.functionName()
+		def visit_Name(self, node: ast.Name) -> T.Any:
 
-		# check that 'return' keyword is present in body
-		signature, body = _splitTextBodySignature(text)
+			if node.id == EXP_LAMBDA_NAME:
+				return node
+			return self._getCallNodeTree(node.id, "resolveName")
 
-		if not "\n" in body: # single line
-			if not body.startswith("return"):
-				body = f"return {body}"
+		def visit_Str(self, node: ast.Str) -> T.Any:
+			return self._getCallNodeTree(node.s)
 
-		# signature
-		if not signature.startswith("def"):
-			signature = f"def {fnName}({signature})"
+		def visit_JoinedStr(self, node: ast.JoinedStr) -> T.Any:
+			return self._getCallNodeTree(node.s)
 
-		return f"{signature}:\n\t{body}"
+		def visit_Num(self, node: ast.Num) -> T.Any:
+			return self._getCallNodeTree(node.n)
 
-class SyntaxEnsureLambdaPass(CustomSyntaxPass):
+		def visit_Bytes(self, node: ast.Bytes) -> T.Any:
+			return self._getCallNodeTree(str(node.s))
 
-	def preProcessRawString(self, s:str) ->str:
-		"""check that string starts with
-		'lambda' keyword, and add if not"""
-		if s.startswith("lambda :"):
-			return s
-		return "lambda :" + s
+
+
+	class ShorthandFunctionPass(_Base):
+		"""
+		support for defining multi-line functions in expressions of form
+
+		():
+			<code>
+
+
+		" 'abc' " - static string
+		" (): 'a' + 'b' + 'c' " - function
+		" ():
+			gg = 'a' + 'b' + 'c'\n
+		    return gg + 'wooo' "
+		    - multiline function
+
+		in future, can look into type annotations:
+		" ()->str: 'a' + 'b' + 'c' "
+
+		or pulling from a global namespace by args and kwargs:
+		" ( $time, asset=$currentAsset )->str: 'a' + 'b' + 'c' + asset.name() + time() "
+
+
+		"""
+
+		@classmethod
+		def checkSyntax(cls, text:str):
+			"""check syntax of text
+			:raises SyntaxError: if syntax is invalid"""
+			# check for unbalanced brackets
+			contents = getBracketContents(text)
+			flatContents = sequence.flatten(contents)
+			if any("(" in i for i in flatContents) or any(")" in i for i in flatContents):
+				raise SyntaxError(f"unbalanced brackets: {text}")
+
+
+		def _isMultiLineFunction(self) ->bool:
+			"""check if function is multiline"""
+			return "\n" in self.getText().lstrip().rstrip()
+
+		def _expressionTextToPyFunctionText(self, text:str, fnName="") ->str:
+			"""convert expression text to python function text"""
+
+			fnName = fnName or self.functionName()
+
+			# check that 'return' keyword is present in body
+			signature, body = _splitTextBodySignature(text)
+
+			if not "\n" in body: # single line
+				if not body.startswith("return"):
+					body = f"return {body}"
+
+			# signature
+			if not signature.startswith("def"):
+				signature = f"def {fnName}({signature})"
+
+			return f"{signature}:\n\t{body}"
+
+	class EnsureLambdaPass(_Base):
+
+		def preProcessRawString(self, s:str) ->str:
+			"""check that string starts with
+			'lambda' keyword, and add if not"""
+			if s.startswith("lambda :"):
+				return s
+			return EXP_LAMBDA_NAME + "= lambda :" + s
+			#return "lambda :" + s
+
+
 
 @dataclass
 class ExpSyntaxProcessor:
@@ -687,8 +518,8 @@ class ExpSyntaxProcessor:
 	delegating to individual SyntaxPass objects.
 
 	"""
-	syntaxStringPasses:list[CustomSyntaxPass]
-	syntaxAstPasses:list[CustomSyntaxPass]
+	syntaxStringPasses:list[SyntaxPasses.T()]
+	syntaxAstPasses:list[SyntaxPasses.T()]
 	stringDefinesExpressionFn:T.Callable[[str], bool] = lambda s: False
 
 
@@ -731,7 +562,9 @@ class ExpSyntaxProcessor:
 			expGlobals:dict)->FunctionType:
 		"""compile final ast to function
 		this should live somewhere else"""
-		c = compile(finalAst, "<expCompile>", "exec")
+		print("compile ast", ast.dump(finalAst))
+
+		c = compile(finalAst, "<expCompile>", "exec", )
 
 		expDict = dict(self.defaultModule.__dict__)
 		# update exp globals dict here
@@ -739,4 +572,8 @@ class ExpSyntaxProcessor:
 
 		exec(c, expDict
 		     )
+		print("post exec", expDict.keys())
 		return expDict[EXP_LAMBDA_NAME]
+
+
+
