@@ -45,13 +45,13 @@ EXP_ACCESS_TOKEN = "@EXP" # token to access expression object, and from there ev
 
 #invalidStr = """(): ('a' + (('b' + 'c')) + """
 
-ExpParseFrame = namedtuple("expFrame", ["startChar", "contents", "endChar"])
+#ExpParseFrame = namedtuple("expFrame", ["startChar", "contents", "endChar"])
 
 # each frame list has opening and closing characters as first and last entries
 # and the contents in between
 #TODO: optimise if needed
 
-pprint.pp(getExpParseFrames(testStr), indent=4, depth=10)
+#pprint.pp(getExpParseFrames(testStr), indent=4, depth=10)
 #pprint.pp(getExpParseFrames(testStr[:-1]), indent=4, depth=10)
 
 #print(getBracketContents(testStr))

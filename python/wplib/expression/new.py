@@ -100,9 +100,9 @@ def transformParseExpStructure(
 	parentExp = visitData["parentExp"]
 
 	# if obj is string, check if it contains expression syntax
-	print("transformParseExpStructure", obj)
+	#print("transformParseExpStructure", obj)
 	if isinstance(obj, str):
-		print("defines", parentExp.policy.syntaxProcessor.stringDefinesExpressionFn(obj))
+		#print("defines", parentExp.policy.syntaxProcessor.stringDefinesExpressionFn(obj))
 		if not parentExp.policy.syntaxProcessor.stringDefinesExpressionFn(obj):
 			return obj
 		processor = parentExp.policy.syntaxProcessor
@@ -128,7 +128,7 @@ def transformEvaluateExpStructure(
 )->(object, Expression):
 	"""if it's an expression, eval the expression
 	and visit the result"""
-	print("transformEvaluateExpStructure", parsedObj, type(parsedObj), callable(parsedObj))
+	#print("transformEvaluateExpStructure", parsedObj, type(parsedObj), callable(parsedObj))
 	if callable(parsedObj):
 		return parsedObj()
 
@@ -260,9 +260,8 @@ class Expression(Serialisable, T.Generic[VT]):
 			structure, transformParseExpStructure,
 			ExpVisitDict(parentExp=self, isStatic=False)
 		                                           )
-		print("parsed result", parsed, type(parsed))
+		#print("parsed result", parsed, type(parsed))
 		self._parsedStructure = parsed
-		print("parsedStructure", self._parsedStructure)
 
 
 	def eval(self):
@@ -294,6 +293,9 @@ class Expression(Serialisable, T.Generic[VT]):
 
 		# return result
 		return result
+
+	def __call__(self, *args, **kwargs):
+		return self.eval()
 
 
 	def functionName(self) ->str:
@@ -343,7 +345,7 @@ class Expression(Serialisable, T.Generic[VT]):
 
 	def __str__(self):
 		"""for str, return the text of this expression"""
-		return f"<{self.__class__.__name__} {self.name} : {self.getText()}>"
+		return f"<Exp {self.name} : {self.getText()}>"
 
 	def __repr__(self):
 		return str(self)
