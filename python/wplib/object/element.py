@@ -38,18 +38,20 @@ class IdElementBase:
 		method to actually set it"""
 		self._setElementIdInternal(newId)
 
-	def getIndexInstanceMap(self)->dict[keyT, IdElementBase]:
+	@classmethod
+	def getIndexInstanceMap(cls)->dict[keyT, IdElementBase]:
 		"""return the map of all instances of this class"""
-		return self.indexInstanceMap
+		return cls.indexInstanceMap
 
 	@classmethod
 	def getNewElementId(cls, instance:IdElementBase=None)->keyT:
 		"""return a new element id"""
 		raise NotImplementedError
 
-	def getByIndex(self, index)->IdElementBase:
+	@classmethod
+	def getByIndex(cls, index)->IdElementBase:
 		"""return the element with the given index"""
-		return self.getIndexInstanceMap().get(index)
+		return cls.getIndexInstanceMap().get(index)
 
 	def _elementIndexNiceStr(self)->str:
 		"""return a nicely formatted string for this element's index.

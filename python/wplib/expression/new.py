@@ -263,6 +263,9 @@ class Expression(Serialisable, T.Generic[VT]):
 		#print("parsed result", parsed, type(parsed))
 		self._parsedStructure = parsed
 
+	def rawStructure(self)->object:
+		"""return raw structure of expression"""
+		return self._rawValue
 
 	def eval(self):
 		"""evaluate expression and return result -
@@ -293,6 +296,13 @@ class Expression(Serialisable, T.Generic[VT]):
 
 		# return result
 		return result
+
+	def resultStructure(self)->object:
+		"""return result structure of expression -
+		eval if needed;
+		if not dirty, return cached value"""
+		return self.eval()
+
 
 	def __call__(self, *args, **kwargs):
 		return self.eval()

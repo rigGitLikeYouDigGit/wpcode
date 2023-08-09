@@ -8,6 +8,17 @@ from wplib.object import UidElement
 
 from chimaera.core.node import ChimaeraNode
 
+
+class DataBlock:
+	"""thin object for holding data for a node"""
+	def __init__(self, uid:str, data:dict):
+		self.uid = uid
+		self.data = data
+
+
+
+
+
 class ChimaeraGraph(
 	ChimaeraNode
 ):
@@ -75,4 +86,30 @@ class ChimaeraGraph(
 	def uidDataBlock(self, uid:str)->dict:
 		return self.data["nodes"][uid]
 
+
+	# region node access
+	def nodeByUid(self, uid:str)->ChimaeraNode:
+		return ChimaeraNode.getByIndex(uid)
+
+	# region node referencing and connections
+	def resolveRef(self, ref:str, fromNode:ChimaeraNode)->list[ChimaeraNode]:
+		"""return sequence of nodes matching ref string -
+		consider closer integration between this and node-side expressions.
+
+		For test we only support single uid strings
+		"""
+		if not ref.startswith("uid:"):
+			raise NotImplementedError("only uid: references are supported for now")
+		uid = ref[4:]
+		return [self.nodeByUid(uid)]
+
+	def resolveRefMap(self, refMap:dict, fromNode:ChimaeraNode)->dict:
+		"""return dict of resolved references"""
+		resolved = {}
+		for key, ref in refMap.items():
+			resolved[key] = self.resolveRef(ref, fromNode)
+		return resolved
+
+
+	# endregion
 
