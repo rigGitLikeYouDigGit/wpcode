@@ -2,7 +2,7 @@
 from __future__ import annotations
 import typing as T
 
-from wplib import Expression
+from wplib import Expression, coderef
 from wplib.sentinel import Sentinel
 from wplib.object import UidElement
 
@@ -20,6 +20,10 @@ class ChimaeraNode(UidElement):
 	def __init__(self):
 		UidElement.__init__(self)
 		self._parent : ChimaeraGraph = None
+
+	@classmethod
+	def typeRefStr(cls)->str:
+		return coderef.getCodeRef(cls)
 
 	@classmethod
 	def defaultData(cls)->dict:

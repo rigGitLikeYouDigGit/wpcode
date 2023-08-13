@@ -4,7 +4,8 @@ import typing as T
 import networkx
 import networkx as nx
 
-from wplib.object import UidElement
+from wplib.object import UidElement, DirtyNode, DirtyGraph
+from wplib import Expression
 
 from chimaera.core.node import ChimaeraNode
 
@@ -54,6 +55,8 @@ class ChimaeraGraph(
 		but this object won't know it"""
 		self.data = self.defaultData()
 
+
+
 	@classmethod
 	def defaultData(cls)->dict:
 		baseData = ChimaeraNode.defaultData()
@@ -83,6 +86,12 @@ class ChimaeraGraph(
 	def nodeDataBlock(self, node:ChimaeraNode)->dict:
 		return self.data["nodes"][node.getElementId()]
 
+	def iterDataBlocks(self)->T.Iterator[
+		tuple[str, dict[str, dict[str, Expression]]]]:
+		"""iterate over all node data blocks"""
+		for k, nodeData in self.data["nodes"].items():
+			yield k, nodeData
+
 	def uidDataBlock(self, uid:str)->dict:
 		return self.data["nodes"][uid]
 
@@ -91,6 +100,15 @@ class ChimaeraGraph(
 	def nodeByUid(self, uid:str)->ChimaeraNode:
 		return ChimaeraNode.getByIndex(uid)
 
+	def nodesByName(self, nameStr:str)->list[ChimaeraNode]:
+		"""return list of nodes matching name"""
+		names = nameStr.split(" ")
+		nodes = []
+		for uid, data in self.iterDataBlocks():
+			if data["attrMap"]["name"].resultStructure() in names:
+				nodes.append(self.nodeByUid(uid))
+		return nodes
+
 	# region node referencing and connections
 	def resolveRef(self, ref:str, fromNode:ChimaeraNode)->list[ChimaeraNode]:
 		"""return sequence of nodes matching ref string -
@@ -98,10 +116,12 @@ class ChimaeraGraph(
 
 		For test we only support single uid strings
 		"""
-		if not ref.startswith("uid:"):
-			raise NotImplementedError("only uid: references are supported for now")
-		uid = ref[4:]
-		return [self.nodeByUid(uid)]
+		if ref.startswith("uid:"):
+			uid = ref[4:]
+			return [self.nodeByUid(uid)]
+		if ref.startswith("n:"):
+			name = ref[2:]
+			return self.nodesByName(name)
 
 	def resolveRefMap(self, refMap:dict, fromNode:ChimaeraNode)->dict:
 		"""return dict of resolved references"""

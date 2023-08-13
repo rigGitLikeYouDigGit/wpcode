@@ -9,3 +9,6 @@ Will migrate things from tree.lib.object as needed, if they get used.
 """
 
 from .expression import *
+
+from .object import TypeNamespace
+from .sentinel import Sentinel
