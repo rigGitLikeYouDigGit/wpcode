@@ -22,6 +22,10 @@ class DirtyExp( Expression, DirtyNode):
 		Expression.__init__(self, value=value, policy=policy, name=name)
 		self._prevExpressions : tuple[(DirtyExp, DirtyNode)] = ()
 
+	@classmethod
+	def shortClsTag(cls) ->str:
+		return "DExp"
+
 	def _getDirtyNodeName(self) ->str:
 		return self.getExpName()
 

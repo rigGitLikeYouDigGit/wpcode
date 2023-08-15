@@ -74,14 +74,20 @@ class DirtyNode:
 		#return self.dirtyGraph
 		raise NotImplementedError
 
-	def _computeWhenDirty(self):
-		""" OVERRIDE THIS
+	def computeDirtyNode(self):
+		""" OVERRIDE THIS or set with a lambda
 		compute node logic
 		inheriting from this feels like too tight a coupling
-
-		this is also required to set the node's cached value
+		return the value that will become this node's cached value
 		"""
 		self._cachedValue = None
+
+	def _computeDirtyNodeOuter(self):
+		"""compute node logic, cache result
+		maybe also set clean
+		"""
+		self._cachedValue = self.computeDirtyNode()
+		return self._cachedValue
 
 	def getDirtyNodeAntecedents(self)->tuple[DirtyNode]:
 		"""OVERRIDE THIS
@@ -92,13 +98,13 @@ class DirtyNode:
 		"""
 		return ()
 
-	def getValue(self):
-		"""client-facing function to get a node's semantic value -
-		calls into graph if node is dirty to arrange evaluation path
-		for ancestor nodes"""
-		if not self.dirtyState:
-			return self._cachedValue
-		return self._cachedValue
+	# def getDirtyNodeValue(self):
+	# 	"""client-facing function to get a node's semantic value -
+	# 	calls into graph if node is dirty to arrange evaluation path
+	# 	for ancestor nodes"""
+	# 	if not self.dirtyState:
+	# 		return self._cachedValue
+	# 	return self._cachedValue
 
 
 	def _onSetDirty(self):
@@ -164,18 +170,21 @@ class DirtyGraph(nx.DiGraph):
 			self.add_edges_from((n, i) for n in i.getDirtyNodeAntecedents())
 
 
-	def setNodeDirty(self, node:DirtyNode):
+	def setNodeDirty(self, node:DirtyNode, propagate:bool=True):
 		"""
 		marks given node as dirty and propagates forwards
 		iterate only future nodes only if they are not dirty"""
+		if not propagate:
+			node.setDirty()
+			return
 		nodeSet = {node}
-		adj = self.adj # get single adjacency view
+		succ = self.succ # S U C C
 		while nodeSet:
 			node = nodeSet.pop()
-			if node.dirty:
+			if node.dirty: # exit if node is already dirty
 				continue
 			node.setDirty()
-			nodeSet.update(adj[node])
+			nodeSet.update(succ[node])
 
 	def earliestDirtyNodes(self, nodes:set[DirtyNode])->set[DirtyNode]:
 		"""given pool of nodes, return earliest dirty nodes
@@ -192,11 +201,48 @@ class DirtyGraph(nx.DiGraph):
 			ancestors.update(i for i in nx.ancestors(self, nodes.pop()) if i.dirtyState)
 			nodes -= ancestors
 
-		return {i for i in ancestors if not any(
-			j.dirtyState for j in self.pred[i]
-		)}
+		return {i for i in ancestors if not
+			any(j.dirtyState for j in self.pred[i])
+		        }
+
+if __name__ == '__main__':
+
+	import pprint
+
+	# execution
+	"""
+	consider a node with ref {"vals" : "n:a or n:b or n:c"}
+	
+	"""
+
+	nodeA = DirtyNode("a")
+	nodeB = DirtyNode("b")
+	nodeC = DirtyNode("c")
+
+	dNodes = {nodeA, nodeB, nodeC}
+
+	nodeC.getDirtyNodeAntecedents = lambda: [nodeA, nodeB]
+	nodeB.getDirtyNodeAntecedents = lambda: [nodeA]
 
 
+
+	dGraph = DirtyGraph()
+
+	dGraph.addNodesAndPrecedents(dNodes)
+	print(nodeC.getDirtyNodeAntecedents())
+	print(nodeB.getDirtyNodeAntecedents())
+	pprint.pp(dGraph.nodes())
+
+	# for i in dGraph.nodes:
+	# 	print(i, i.dirtyState)
+
+	print(dGraph.edges)
+
+	print(dGraph.earliestDirtyNodes(dNodes))
+	nodeA.dirtyState = False
+	print(dGraph.earliestDirtyNodes(dNodes))
+
+#
 
 
 

@@ -4,14 +4,13 @@ import typing as T
 
 from wplib import Expression, DirtyExp, coderef
 from wplib.sentinel import Sentinel
-from wplib.object import UidElement
+from wplib.object import UidElement, DirtyNode
 
 from wptree import Tree
 
-if T.TYPE_CHECKING:
-	from chimaera.core.graph import ChimaeraGraph
 
-class ChimaeraNode(UidElement):
+
+class ChimaeraNode(UidElement, DirtyNode):
 	"""smallest unit of computation in chimaera graph
 
 	refmap is key : node filter, not too crazy
@@ -33,11 +32,15 @@ class ChimaeraNode(UidElement):
 
 	Compound nodes hold datablocks for all contained nodes?
 
+	for test, we also inherit from DirtyNode - may separate to an
+	execution-specific wrapper later
+
 	"""
 
 	def __init__(self):
 		UidElement.__init__(self)
-		self._parent : ChimaeraGraph = None
+		DirtyNode.__init__(self, self.clsName())
+		self._parent : ChimaeraNode = None
 
 		"""consider - this .data reference is never REPLACED - 
 		this data dict may be embedded live into another graph,
@@ -47,6 +50,19 @@ class ChimaeraNode(UidElement):
 		both point to the same dict object"""
 		self.data = self.defaultData()
 
+	# def _getDirtyNodeName(self) ->str:
+	# 	return self.data["attrMap"]["name"].value
+
+	def getDirtyNodeAntecedents(self) ->tuple[DirtyNode]:
+		"""return all nodes that this node depends on -
+		return expressions directly connected to this
+		node, parents will handle legitimate edges in graph
+		"""
+		return (
+			self.nameExp(),
+			self.valueExp(),
+			self.refMapExp()
+		)
 
 	@classmethod
 	def typeRefStr(cls)->str:
@@ -57,10 +73,10 @@ class ChimaeraNode(UidElement):
 		"""called when node object is constructed,
 		BEFORE any reference to graph is known"""
 		attrMap : dict[str, Expression] = {
-			"name" : Expression(name="name"),
-			"value": Expression(name="value"),
+			"name" : DirtyExp(name="name"),
+			"value": DirtyExp(name="value"),
 		}
-		refMapExp : T.Callable[[], dict[str, (str, ChimaeraNode)]] = Expression(
+		refMapExp : T.Callable[[], dict[str, (str, ChimaeraNode)]] = DirtyExp(
 			value={},
 			name="refMap")
 		attrMap["name"].setStructure("node")
@@ -74,20 +90,23 @@ class ChimaeraNode(UidElement):
 		}
 
 	@classmethod
-	def setupNode(cls, node:ChimaeraNode, graph:ChimaeraGraph)->None:
+	def setupNode(cls, node:ChimaeraNode, parent:ChimaeraNode)->None:
 		"""default process to set up node when freshly created -
 		used by plug nodes to create plugs, etc
 		"""
 
+	@classmethod
+	def clsName(cls)->str:
+		return cls.__name__
 
 	def __str__(self):
 		try:
-			return f"<{self.__class__.__name__}({self.nameExp()})"
+			return f"<{self.clsName()}({self.nameExp()})"
 		except:
-			return f"<{self.__class__.__name__}(UNABLE TO GET NAME - {self.getElementId()})>"
+			return f"<{self.clsName()}(UNABLE TO GET NAME - {self.getElementId()})>"
 
 
-	def parent(self)->ChimaeraGraph:
+	def parent(self)->ChimaeraNode:
 		return self._parent
 
 	def dataBlock(self)->dict:
@@ -95,13 +114,13 @@ class ChimaeraNode(UidElement):
 		#return self.parent().nodeDataBlock(self)
 		return self.data
 
-	def nameExp(self)->Expression:
+	def nameExp(self)->DirtyExp:
 		return self.dataBlock()["attrMap"]["name"]
 	def setName(self, name:str)->None:
 		self.nameExp().setStructure(name)
 
 	#region value and evaluation
-	def valueExp(self)->Expression:
+	def valueExp(self)->DirtyExp:
 		return self.dataBlock()["attrMap"]["value"]
 	def setValue(self, value)->None:
 		self.valueExp().setStructure(value)
@@ -120,7 +139,7 @@ class ChimaeraNode(UidElement):
 	# endregion
 
 	#region refmap / node connections
-	def refMapExp(self)->Expression:
+	def refMapExp(self)->DirtyExp:
 		return self.dataBlock()["refMap"]
 
 	def setRef(self, key, uid:str="", nodeFilter:str=""):
@@ -151,6 +170,18 @@ class ChimaeraNode(UidElement):
 	def isNetwork(self)->bool:
 		"""return true if this node is a network"""
 		return bool(self.dataBlock()["nodes"])
+
+	def childNodes(self)->dict[str, ChimaeraNode]:
+		"""return dict of child nodes"""
+		return {k : ChimaeraNode.getByIndex(k)
+		        for k, v in self.dataBlock()["nodes"].items()}
+
+	def allChildNodes(self)->dict[str, ChimaeraNode]:
+		"""return dict of child nodes, and their children, etc"""
+		nodes = self.childNodes()
+		for childNode in nodes.values():
+			nodes.update(childNode.allChildNodes())
+		return nodes
 
 	def addNode(self, node:ChimaeraNode,# nodeData:dict
 	            ):

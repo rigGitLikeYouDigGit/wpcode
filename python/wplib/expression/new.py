@@ -219,6 +219,22 @@ class Expression(Serialisable, T.Generic[VT]):
 		"""return name of expression"""
 		return self.name
 
+	def __hash__(self):
+		"""for now removing hashes from expression results -
+		using as dict has to be done through explicit objects"""
+		return id(self)
+
+	@classmethod
+	def shortClsTag(cls)->str:
+		return "Exp"
+
+	def __str__(self):
+		"""for str, return the text of this expression"""
+		return f"<{self.shortClsTag()} {self.name} : {self.getText()}>"
+
+	def __repr__(self):
+		return str(self)
+
 	def getExpGlobals(self)->dict:
 		"""return dict of globals to pass to expression"""
 		globalsMap = self.policy.expGlobalMap()
@@ -352,17 +368,6 @@ class Expression(Serialisable, T.Generic[VT]):
 			self._cachedValue = self._compiledFn()
 		return self._cachedValue
 
-	def __hash__(self):
-		"""for now removing hashes from expression results -
-		using as dict has to be done through explicit objects"""
-		return id(self)
-
-	def __str__(self):
-		"""for str, return the text of this expression"""
-		return f"<Exp {self.name} : {self.getText()}>"
-
-	def __repr__(self):
-		return str(self)
 
 	def copy(self) ->Expression:
 		"""copy expression"""
