@@ -215,6 +215,10 @@ class Expression(Serialisable, T.Generic[VT]):
 
 		self.setStructure(value)
 
+	def getExpName(self)->str:
+		"""return name of expression"""
+		return self.name
+
 	def getExpGlobals(self)->dict:
 		"""return dict of globals to pass to expression"""
 		globalsMap = self.policy.expGlobalMap()

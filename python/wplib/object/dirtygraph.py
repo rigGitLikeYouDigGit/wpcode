@@ -53,8 +53,12 @@ class DirtyNode:
 		# cache value on computation
 		self._cachedValue = Sentinel.FailToFind
 
+	def _getDirtyNodeName(self)->str:
+		"""get node name"""
+		return self._dirtyNodeName
+
 	def __str__(self):
-		return f"<DNode({self._dirtyNodeName})>"
+		return f"<DNode({self._getDirtyNodeName()})>"
 
 	def __repr__(self):
 		return self.__str__()
@@ -64,9 +68,11 @@ class DirtyNode:
 	# 	still don't like node knowing about its graph"""
 	# 	self.dirtyGraph = graph
 
+
 	def getDirtyGraph(self)->DirtyGraph:
 		"""FINE"""
-		return self.dirtyGraph
+		#return self.dirtyGraph
+		raise NotImplementedError
 
 	def _computeWhenDirty(self):
 		""" OVERRIDE THIS
