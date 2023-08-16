@@ -37,10 +37,11 @@ class ChimaeraNode(UidElement, DirtyNode):
 
 	"""
 
-	def __init__(self):
+	def __init__(self, debugName:str=""):
 		UidElement.__init__(self)
-		DirtyNode.__init__(self, self.clsName())
+		DirtyNode.__init__(self, debugName)
 		self._parent : ChimaeraNode = None
+		self._debugName = debugName
 
 		"""consider - this .data reference is never REPLACED - 
 		this data dict may be embedded live into another graph,
@@ -101,9 +102,9 @@ class ChimaeraNode(UidElement, DirtyNode):
 
 	def __str__(self):
 		try:
-			return f"<{self.clsName()}({self.nameExp()})"
+			return f"<{self.clsName()}-{self._debugName}({self.nameExp()})"
 		except:
-			return f"<{self.clsName()}(UNABLE TO GET NAME - {self.getElementId()})>"
+			return f"<{self.clsName()}-{self._debugName}(UNABLE TO GET NAME - {self.getElementId()})>"
 
 
 	def parent(self)->ChimaeraNode:
@@ -118,6 +119,8 @@ class ChimaeraNode(UidElement, DirtyNode):
 		return self.dataBlock()["attrMap"]["name"]
 	def setName(self, name:str)->None:
 		self.nameExp().setStructure(name)
+	def nodeName(self)->str:
+		return self.nameExp().resultStructure()
 
 	#region value and evaluation
 	def valueExp(self)->DirtyExp:

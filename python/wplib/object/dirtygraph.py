@@ -74,7 +74,7 @@ class DirtyNode:
 		#return self.dirtyGraph
 		raise NotImplementedError
 
-	def computeDirtyNode(self):
+	def dirtyCoputeFn(self):
 		""" OVERRIDE THIS or set with a lambda
 		compute node logic
 		inheriting from this feels like too tight a coupling
@@ -86,7 +86,7 @@ class DirtyNode:
 		"""compute node logic, cache result
 		maybe also set clean
 		"""
-		self._cachedValue = self.computeDirtyNode()
+		self._cachedValue = self.dirtyCoputeFn()
 		return self._cachedValue
 
 	def getDirtyNodeAntecedents(self)->tuple[DirtyNode]:
@@ -181,7 +181,7 @@ class DirtyGraph(nx.DiGraph):
 		succ = self.succ # S U C C
 		while nodeSet:
 			node = nodeSet.pop()
-			if node.dirty: # exit if node is already dirty
+			if node.dirtyState: # exit if node is already dirty
 				continue
 			node.setDirty()
 			nodeSet.update(succ[node])

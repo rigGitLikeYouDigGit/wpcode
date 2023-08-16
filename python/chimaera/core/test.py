@@ -24,7 +24,7 @@ pprint.pp(childGraph.dataBlock())
 pprint.pp(graph.data)
 
 
-eGraph = ChimaeraDirtyGraph()
+eGraph = ChimaeraDirtyGraph.create()
 eGraph.addChimaeraNode(graph)
 
 print(eGraph.nodes)
