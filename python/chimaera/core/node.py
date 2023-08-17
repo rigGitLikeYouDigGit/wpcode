@@ -8,7 +8,7 @@ from wplib.object import UidElement, DirtyNode
 
 from wptree import Tree
 
-
+from chimaera.core.construct import NodeConstruct
 
 class ChimaeraNode(UidElement, DirtyNode):
 	"""smallest unit of computation in chimaera graph
@@ -47,12 +47,14 @@ class ChimaeraNode(UidElement, DirtyNode):
 		this data dict may be embedded live into another graph,
 		but this object won't know it.
 		
-		data can be looked up by UID, or from this attribute - 
-		both point to the same dict object"""
-		self.data = self.defaultData()
+		use datablock() getter EVERYWHERE, it does more calls to graph
+		but it's safe to copied or instanced data -
+		only falls back to this object's attribute if no parent is available
+		"""
+		self._data = self.defaultData()
 
 	# def _getDirtyNodeName(self) ->str:
-	# 	return self.data["attrMap"]["name"].value
+	# 	return self._data["attrMap"]["name"].value
 
 	def getDirtyNodeAntecedents(self) ->tuple[DirtyNode]:
 		"""return all nodes that this node depends on -
@@ -91,12 +93,6 @@ class ChimaeraNode(UidElement, DirtyNode):
 		}
 
 	@classmethod
-	def setupNode(cls, node:ChimaeraNode, parent:ChimaeraNode)->None:
-		"""default process to set up node when freshly created -
-		used by plug nodes to create plugs, etc
-		"""
-
-	@classmethod
 	def clsName(cls)->str:
 		return cls.__name__
 
@@ -113,7 +109,7 @@ class ChimaeraNode(UidElement, DirtyNode):
 	def dataBlock(self)->dict:
 		"""should match exact object also tracked by parent graph"""
 		#return self.parent().nodeDataBlock(self)
-		return self.data
+		return self._data
 
 	def nameExp(self)->DirtyExp:
 		return self.dataBlock()["attrMap"]["name"]
@@ -189,29 +185,41 @@ class ChimaeraNode(UidElement, DirtyNode):
 	def addNode(self, node:ChimaeraNode,# nodeData:dict
 	            ):
 		"""add a node to the graph, with data"""
-		#self.data["nodes"][node.getElementId()] = nodeData
-		self.data["nodes"][node.getElementId()] = node.data
+		self._data["nodes"][node.getElementId()] = node.data
 		node._parent = self
 
 	@classmethod
 	def defaultNodeType(cls)->T.Type[ChimaeraNode]:
-		return cls
+		return ChimaeraNode
 
-	def createNode(self, name:str, nodeType=None)->ChimaeraNode:
-		"""create a node of type nodeType, add it to the graph, and return it"""
+	def createNode(self, name:str, nodeType:type[NodeConstruct]=None)->ChimaeraNode:
+		"""create a node of type nodeTypeName, add it to the graph, and return it"""
+
 		nodeType = nodeType or self.defaultNodeType()
-		newNode = nodeType()
+		newNode = ChimaeraNode()
 		#newData = newNode.defaultData()
 		newData = newNode.data
 		self.addNode(newNode,# newData
 		             )
 		newNode.setName(name)
+
+		# if construct class given, run node setup
+		if nodeType:
+			nodeType.setupNode(newNode, parent=self)
+
 		return newNode
 	#endregion
 
 	# region node access
 	def nodeByUid(self, uid:str)->ChimaeraNode:
 		return ChimaeraNode.getByIndex(uid)
+
+	def iterDataBlocks(self)->T.Iterator[tuple[str, dict]]:
+		"""iterate over all data blocks in this node and child nodes"""
+		for uid, data in self.dataBlock()["nodes"].items():
+			yield uid, data
+			# for uid, data in ChimaeraNode.getByIndex(uid).iterDataBlocks():
+			# 	yield uid, data
 
 	def nodesByName(self, nameStr:str)->list[ChimaeraNode]:
 		"""return list of nodes matching name"""

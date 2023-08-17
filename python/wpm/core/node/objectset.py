@@ -25,7 +25,7 @@ class ObjectSetNode(WN):
 		return set([WN(i) for i in items])
 
 	def sets(self)->T.Set[ObjectSetNode]:
-		return set( i for i in self.objects() if cmds.nodeType(i) == "objectSet")
+		return set(i for i in self.objects() if cmds.nodeTypeName(i) == "objectSet")
 
 
 

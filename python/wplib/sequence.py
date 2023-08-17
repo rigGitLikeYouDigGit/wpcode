@@ -24,6 +24,8 @@ def strList(i)->list[str]:
 
 def flatten(l, ltypes=(list, tuple))->(tuple, list):
 	"""after Mike C Fletcher"""
+	if isinstance(l, str):
+		return l
 	if isinstance(l, GeneratorType):
 		l = tuple(l)
 	ltype = type(l)
@@ -54,11 +56,6 @@ def indexByPath(value:NESTED_TYPES, keyIndexPath:list):
 		keyIndexPath = keyIndexPath[1:]
 	return value
 
-def uniformIter(container)->GeneratorType:
-	if isinstance(container, SEQUENCE_TYPES):
-		return enumerate(container)
-	elif isinstance(container, MAP_TYPES):
-		return container.items()
 
 def visitTemplateFunction(element, parent:NESTED_TYPES, keyIndexPath:list):
 	"""example function for recursive visit system below

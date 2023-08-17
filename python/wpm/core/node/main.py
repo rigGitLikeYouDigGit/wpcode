@@ -163,7 +163,7 @@ class WN(StringLike, # short for WePresentNode
 	defaultAttrs = {}
 	# override with {"nodeState" : 1} etc
 
-	# override to explicitly set string maya nodeType
+	# override to explicitly set string maya nodeTypeName
 	_nodeType = None
 
 	inheritStrMethods = True
@@ -360,12 +360,22 @@ class WN(StringLike, # short for WePresentNode
 		return WN(obj)
 
 	@classmethod
-	def create(cls, name=None, n=None, parent="", skipSelect=True, *args, **kwargs):
+	def create(cls, name=None, n=None, parent="", skipSelect=True, dgMod:om.MDGModifier=None):
 		"""any subsequent wrapper class will create its own node type
+		If modifier object is passed, add operation to it but do not execute yet.
+		Otherwise create and execute a separate modifier each time.
 		:rtype cls"""
-		nodeType = cls.nodeType()
+		nodeType = cls.clsApiType or om.MFn.kTransform
+		name = name or n or cls.nodeTypeName()
 
-		name = name or n or nodeType
+		passedDgMod = 0
+		if dgMod is None:
+			dgMod = om.MDagModifier()
+
+		#node
+
+		nodeType = cls.nodeTypeName()
+
 		node = cls(cmds.createNode(nodeType, n=name, parent=parent)) # cheeky
 
 		node.setDefaults()
@@ -601,14 +611,14 @@ class WN(StringLike, # short for WePresentNode
 
 	#@property
 	@classmethod
-	def nodeType(cls):
+	def nodeTypeName(cls):
 		"""returns string name of node type - "joint", "transform", etc"""
 		if cls._nodeType is not None:
 			return cls._nodeType
 		return camelJoin(cls.__name__)
 
 	def _instanceNodeType(self):
-		return cmds.nodeType(self())
+		return cmds.nodeTypeName(self())
 
 
 

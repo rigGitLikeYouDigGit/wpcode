@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 from wplib.sequence import flatten, resolveSeqIndex
 from wplib.object import Signal, Traversable, TraversableParams
+from wplib import TypeNamespace
 from wplib.sentinel import Sentinel
 from wptree.delta import TreeDeltas
 
@@ -45,6 +46,34 @@ class TreeInterface(Traversable
                     ):
 
 
+
+	@classmethod
+	def _serialKeys(cls):
+		class SerialKeys:
+			name = "?NAME"
+			value = "?VALUE"
+			uid = "?UID"
+			children = "?CHILDREN"
+			address = "?ADDRESS"
+			properties = "?PROPERTIES"
+			type = "?TYPE"
+			rootData = "?ROOT_DATA"
+			format = "?FORMAT_VERSION"
+
+			# layout constants
+			layout = "?LAYOUT"
+			nestedMode = 0
+			flatMode = 1
+		return SerialKeys
+
+	class AuxKeys(TypeNamespace):
+		class _Base(TypeNamespace.base()):
+			"""base aux keys for all trees"""
+		class lookupCreate(_Base):
+			"""if True, missing branches will be created when traversing"""
+		class default(_Base):
+			"""default value for branches"""
+
 	@classmethod
 	def defaultBranchCls(cls):
 		"""might be an idea to have an instance version of this,
@@ -55,6 +84,10 @@ class TreeInterface(Traversable
 	@classmethod
 	def defaultSignalCls(cls):
 		return TreeSignalComponent
+
+	@classmethod
+	def defaultAuxProperties(cls)->dict:
+		return {}
 
 	def __init__(self):
 		self._signalComponent : TreeSignalComponent = None
@@ -151,7 +184,7 @@ class TreeInterface(Traversable
 		value on this tree.
 		On the normal Tree, this looks for the aux property "default"
 		"""
-		raise NotImplementedError
+		return self.getAuxProperty(self.AuxKeys.default)
 	def _evalDefault(self):
 		if callable(self._getDefault()):
 			return self._getDefault()(self)
@@ -167,11 +200,11 @@ class TreeInterface(Traversable
 	def getValue(self):
 		"""retrieve value stored in tree, or its default if empty"""
 		raw = self._getRawValue()
-		if raw is None and self.default is not None:
+		if raw is None and self._getDefault() is not None:
 			try:
 				self._setRawValue(self._evalDefault())
 			except Exception as e:
-				print("could not eval default for tree ", self, self.default)
+				print("could not eval default for tree ", self, self._getDefault())
 				raise e
 		return self._getRawValue()
 
@@ -269,7 +302,9 @@ class TreeInterface(Traversable
 		"""return live dict, allowing direct setting of keys"""
 		return self._getRawAuxProperties()
 
-	def getAuxProperty(self, key: str, default=None):
+	def getAuxProperty(self, key: (str, AuxKeys), default=None):
+		if isinstance(key, self.AuxKeys):
+			key = str(key)
 		return self.auxProperties.get(key, default)
 
 	def setAuxProperty(self, key: str, value):
@@ -330,8 +365,9 @@ class TreeInterface(Traversable
 
 		# if create is passed directly, use it -
 		# else use lookupcreate default
-		activeCreate = params.create if params.create is not None \
-			else self.getAuxProperty("lookupCreate", default=False)
+		# activeCreate = params.create if params.create is not None \
+		# 	else self.getAuxProperty("lookupCreate", default=False)
+		activeCreate = params.create
 
 		# if branch should not be created, lookup is invalid
 		if not activeCreate:
@@ -346,15 +382,30 @@ class TreeInterface(Traversable
 		# return it
 		return obj
 
+	def buildTraverseParamsFromRawKwargs(self, **kwargs) ->TraversableParams:
+		"""build traverse params object from raw kwargs"""
+		params : TreeTraversalParams = self.defaultTraverseParamCls()()
+		params.create = kwargs.pop(
+			"create", self.getAuxProperty(
+				self.AuxKeys.lookupCreate, default=None
+			)
+		)
+		return params
+
 	def __call__(self, *path:keyT,
 	             create=None,
-	             _params:defaultTraverseParamCls()=None, **kwargs)->TreeType:
+	             traverseParams:defaultTraverseParamCls()=None,
+	             **kwargs)->TreeType:
 		""" index into tree hierarchy via address sequence,
 		return matching branch"""
-
-		return super(TreeInterface, self).__call__(
-			path, create=create, _params=_params **kwargs
-		)
+		#print("call", self, path)
+		try:
+			return super(TreeInterface, self).__call__(
+				path, create=create, traverseParams=traverseParams, **kwargs
+			)
+		except Exception as e:
+			print("unable to index path", path)
+			raise e
 
 
 	#endregion
@@ -644,6 +695,7 @@ class TreeInterface(Traversable
 		"""called internally when a branch is created on lookup -
 		for now don't support passing args for new branch,
 		but probably wouldn't be tough"""
+		#print("create child branch", name)
 		obj = self.defaultBranchCls()(name=name)
 		return obj
 
@@ -703,7 +755,7 @@ class TreeInterface(Traversable
 		         }
 		#if self.value != self.default:
 		data[self._serialKeys().value] = self._getRawValue()
-		if self.auxProperties != self.defaultProperties():
+		if self.auxProperties != self.defaultAuxProperties():
 			data[self._serialKeys().auxProperties] = self.auxProperties
 
 		# check if type differs from parent - if so define it
@@ -766,7 +818,7 @@ class TreeInterface(Traversable
 			uid=baseData.get(treeCls._serialKeys().uid) if preserveUid else None
 		)
 
-		tree._properties = baseData.get(treeCls._serialKeys().auxProperties, treeCls.defaultProperties())
+		tree._properties = baseData.get(treeCls._serialKeys().properties, treeCls.defaultAuxProperties())
 
 		return tree
 

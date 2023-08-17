@@ -6,7 +6,7 @@ import os, sys
 from pathlib import Path
 
 from wpm import om
-from wpm.lib.lifespan import NodeLifespanTracker
+from wpm.lib.tracker import NodeLifespanTracker
 from wplib.expression import Expression
 
 """lifespan watcher to keep set updated,

@@ -15,7 +15,7 @@ from wptree.reference import TreeReference
 
 
 from wptree.interface import TreeInterface, TreeType
-from .treedescriptor import TreeBranchDescriptor, TreePropertyDescriptor
+from wptree.treedescriptor import TreeBranchDescriptor, TreePropertyDescriptor
 
 
 class Tree(TreeInterface,
@@ -33,27 +33,55 @@ class Tree(TreeInterface,
 	# separate master dict of uids to branches
 	indexInstanceMap = {} # type: T.Dict[str, Tree]
 
+	@classmethod
+	def defaultAuxProperties(cls)->dict:
+		return {}
+
 
 	def __init__(self, name: str, value=None,
 	             uid=None):
 		"""initialise real internal values for interface to affect"""
-		#TreeInterface.__init__(self)
+
 		UidElement.__init__(self, uid)
+		TreeInterface.__init__(self)
 		#self._frameContextEnabled = False
 		self._name = name
 		self._value = value
 		self._parent: TreeInterface = None
 		self._branches: T.List[TreeType] = []  # direct list of child branch objects, main target for overriding
-		self._properties = self.defaultProperties()
+		self._properties = self.defaultAuxProperties()
 
+	def _getRawParent(self) ->TreeType:
+		"""return raw parent object, without any wrapping"""
+		return self._parent
 
-	def uidTie(self):
-		return (self.uidRepr(), self._coreDataUid[:4] + "-", self.coreData().uidRepr())
+	def _getRawValue(self):
+		"""return raw value, without any wrapping"""
+		return self._value
 
-	def uidView(self):
-		return pprint.pformat([i.uidTie() for i in self.allBranches()])
+	def _getRawBranches(self):
+		"""return raw branches, without any wrapping"""
+		return self._branches
 
+	def _getRawName(self) ->str:
+		"""return raw name, without any wrapping"""
+		return self._name
 
+	def _setParent(self, parentBranch:TreeInterface):
+		"""set parent branch"""
+		self._parent = parentBranch
+
+	def _setRawValue(self, value):
+		"""set raw value, without any wrapping"""
+		self._value = value
+
+	def _setRawName(self, name:str):
+		"""set raw name, without any wrapping"""
+		self._name = name
+
+	def _getRawAuxProperties(self) ->dict:
+		"""return raw aux properties, without any wrapping"""
+		return self._properties
 
 
 
@@ -240,5 +268,16 @@ class Tree(TreeInterface,
 #Tree.globalTree = Tree("globalRoots")
 
 if __name__ == '__main__':
-	t = Tree("a")
+	t = Tree("tt")
 	print(t)
+
+	baseTree = Tree("basicRoot")
+	print(baseTree)
+	# self.assertEqual(baseTree._uidBranchMap(), {})
+
+	baseBranch = baseTree("basicBranch", create=True)
+	print(baseBranch)
+
+	result = baseTree("aa", "bb", "cc", "dd", create=True)
+	print("result", result)
+	baseTree.display()

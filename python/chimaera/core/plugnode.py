@@ -5,8 +5,10 @@ from wplib import Expression
 from wptree import Tree
 
 from chimaera.core.node import ChimaeraNode
+from chimaera.core.construct import NodeConstruct
 if T.TYPE_CHECKING:
-	from chimaera.core.graph import ChimaeraGraph
+	#from chimaera.core.graph import ChimaeraGraph
+	pass
 
 """not sure if we should have a type disconnect between base nodes
 and plug nodes - we could probably combine them if needed.
@@ -42,10 +44,9 @@ perfectly, and can access refMap and other node attributes directly
 
 
 
-
-
-class PlugNode(ChimaeraNode):
+class PlugNode(NodeConstruct):
 	"""Plug node is really just a few ChimaeraNodes in a trenchcoat
+
 
 	PLUG: chimaera node acting as single socket interface to graph
 	PLUG NODE CENTRE: chimaera node that owns plug nodes
@@ -53,6 +54,7 @@ class PlugNode(ChimaeraNode):
 	IN_PLUG_KEY = "_in"
 	OUT_PLUG_KEY = "_out"
 	PLUG_SOURCE_KEY = "_src"
+	PLUG_PARENT_KEY = "_parent"
 
 	# region plug node support
 	@classmethod
@@ -66,7 +68,7 @@ class PlugNode(ChimaeraNode):
 		sourceNodeFilter = plugNode.getRef(cls.PLUG_SOURCE_KEY, raw=False)
 		if raw:
 			return sourceNodeFilter
-		return plugNode.graph().resolveRef(sourceNodeFilter, fromNode=plugNode)
+		return plugNode.parent().resolveRef(sourceNodeFilter, fromNode=plugNode)
 
 	@classmethod
 	def nodeIsPlug(cls, node:ChimaeraNode):
@@ -75,33 +77,39 @@ class PlugNode(ChimaeraNode):
 		return cls.PLUG_SOURCE_KEY in node.refMapRaw()
 
 	@classmethod
+	def plugIsInput(cls, plug:ChimaeraNode)->bool:
+		"""return true if plug is root input,
+		or child of root input
+		"""
+		# return plug.name() == cls.IN_PLUG_KEY
+
+	@classmethod
 	def plugChildren(cls, plug:ChimaeraNode)->dict[str, list[ChimaeraNode]]:
 		"""get immediate children of plug node"""
-		fullMap = plug.graph().resolveRefMap(plug.refMap(), plug)
+		fullMap = plug.parent().resolveRefMap(plug.refMap(), plug)
 		fullMap.pop(cls.PLUG_SOURCE_KEY, None)
 		return fullMap
 
 	#endregion
 
 	@classmethod
-	def makeRootPlugNodes(cls, node:ChimaeraNode, graph:ChimaeraGraph)->None:
+	def _makeRootPlugNodes(cls, mainNode:ChimaeraNode, graph:ChimaeraNode)->None:
 		"""create root plug nodes for this node and link to refmap
 		"""
-		inRoot = graph.createNode("_in", ChimaeraNode)
-		node.setRef(cls.IN_PLUG_KEY, uid=inRoot.uid)
+		inRoot = graph.createNode(cls.IN_PLUG_KEY)
+		mainNode.setRef(cls.IN_PLUG_KEY, uid=inRoot.uid)
 		#set value input of plug node to be empty
 		cls.setPlugSource(inRoot, None)
 
-
-
-		# outRoot = graph.createNode("_out", ChimaeraNode)
-		# node.setRef("_out", uid=outRoot.uid)
-
+		outRoot = graph.createNode(cls.OUT_PLUG_KEY)
+		mainNode.setRef(cls.OUT_PLUG_KEY, uid=outRoot.uid)
+		cls.setPlugSource(outRoot, mainNode)
 
 
 	@classmethod
 	def makePlugs(cls, inRoot:Tree, outRoot:Tree)->None:
-		"""create plugs for this node - work with trees, not plug nodes.
+		"""OVERRIDE :
+		create default plugs for this node - work with trees, not plug nodes.
 		"""
 
 	@classmethod
@@ -111,10 +119,54 @@ class PlugNode(ChimaeraNode):
 		"""
 
 	@classmethod
-	def setupNode(cls, node:ChimaeraNode, graph:ChimaeraGraph) ->None:
+	def _makePlugNodesFromTree(cls, rootNode:ChimaeraNode, plugTree:Tree):
+		for i in plugTree.allBranches(includeSelf=True, depthFirst=False):
+			if not i.parent:
+				i.node = rootNode
+				continue
+			#make plug node
+			plugNode = rootNode.parent().createNode(i.name)
+			i.node = plugNode
+			#set plug node parent
+			plugNode.setRef(cls.PLUG_PARENT_KEY, uid=i.parent.node.uid)
+
+
+	@classmethod
+	def _setupAllPlugs(cls, node:ChimaeraNode, graph:ChimaeraNode)->None:
+		"""create all plugs for this node"""
+		#make root plug nodes
+		cls._makeRootPlugNodes(node, graph)
+		# make user-defined plugs
+		inTree = Tree(cls.IN_PLUG_KEY)
+		outTree = Tree(cls.OUT_PLUG_KEY)
+		cls.makePlugs(
+			inTree,
+			outTree
+		)
+		#make plug nodes from trees
+		cls._makePlugNodesFromTree(node, inTree)
+		cls._makePlugNodesFromTree(node, outTree)
+
+
+
+	@classmethod
+	def setupNode(cls, node:ChimaeraNode, graph:ChimaeraNode=None) ->None:
 		"""control flow here is wacky but it's just a test -
 		create trees of plug nodes, then set up the node
 		"""
+		super().setupNode(node, graph)
+		#make root plug nodes
+		cls._makeRootPlugNodes(node, graph)
+		# make user-defined plugs
+		cls.makePlugs(
+			Tree(cls.IN_PLUG_KEY),
+			Tree(cls.OUT_PLUG_KEY)
+		)
+
+
+
+
+
 	@classmethod
 	def defaultParams(cls, paramRoot:Tree)->Tree:
 		"""set up default params for placing joints

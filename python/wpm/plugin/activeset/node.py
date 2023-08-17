@@ -22,7 +22,7 @@ be very clear where the two interact
 import maya.OpenMayaMPx as ompx
 import maya.OpenMaya as omOld
 
-from wpm.lib.lifespan import NodeLifespanTracker
+from wpm.lib.tracker import NodeLifespanTracker
 from wpm.lib.plugin import MayaPluginAid, NodeParamData, PluginNodeTemplate
 from wpm.plugin.activeset.settracker import ActiveSetLifespanTracker
 

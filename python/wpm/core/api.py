@@ -51,7 +51,7 @@ def toMObject(node)->om.MObject:
 	return getCache().getMObject(node)
 
 def nodeTypeFromMObject(mobj:om.MObject):
-	"""return a nodeType string that can be passed to cmds.createNode
+	"""return a nodeTypeName string that can be passed to cmds.createNode
 	"""
 	return getCache().nodeTypeFromMObject(mobj)
 
@@ -81,6 +81,11 @@ def isTransform(obj:om.MObject):
 
 def isShape(obj:om.MObject):
 	return getCache().isShape(obj)
+
+
+def classConstantValueToNameMap(cls):
+	"""return a dict mapping class constants to their names"""
+	return {v:k for k,v in cls.__dict__.items() if k.startswith('k')}
 
 
 class MObjectSet(UserSet):

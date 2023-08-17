@@ -26,6 +26,8 @@ def multiSplit(s:str, separators:list[str], preserveSepChars=False)->list[str]:
 				tokens.append(s[i])
 			tokens.append(s[startIndex:i])
 			startIndex = i + 1
+	if not tokens:
+		return [s]
 	return tokens
 
 def splitBefore(s:str, splitChar:str):

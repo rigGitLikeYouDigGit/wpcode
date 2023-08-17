@@ -4,7 +4,7 @@ from __future__ import annotations
 maybe for this package, we just assume that everything is a lib
 unless specified otherwise
 
-depends on wplib and wptree, but not on any other wp packages
+depends on wplib and wptree and chimaera, but not on any other wp packages
 """
 
 import sys, gc

@@ -13,6 +13,7 @@ from .api import (
 	toMFn, getCache, toMObject, getMFnType, toMFnDag, toMFnDep, toMFnMesh,
 	toMFnCurve, toMFnSurface, toMFnTransform,
 	isDag, isShape, isTransform,
+	classConstantValueToNameMap,
 	MObjectSet, listMObjects)
 
 

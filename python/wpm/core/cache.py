@@ -236,7 +236,7 @@ class APICache:
 
 
 	def nodeTypeFromMObject(self, mobj:om.MObject)->str:
-		"""return a nodeType string that can be passed to cmds.createNode
+		"""return a nodeTypeName string that can be passed to cmds.createNode
 		"""
 		name = self.apiCodeNameMap[mobj.apiType()]
 		# name = mobj.apiTypeStr

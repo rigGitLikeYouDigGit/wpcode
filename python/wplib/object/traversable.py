@@ -58,11 +58,14 @@ class Traversable:
 
 	keyT = (str, tuple[str, ...])
 
-	def parseFirstToken(self, *address:keyT)->tuple[str, str]:
+	def parseFirstToken(self, address:keyT)->tuple[str, str]:
 		"""parse an address and retrieve its first token.
 		We assume that the first token will not just be a separator char"""
 		firstTokens = multiSplit(
-			address[0], self.separatorChars.keys(), preserveSepChars=True)[0]
+			address[0], self.separatorChars.keys(), preserveSepChars=True)
+		#print("first tokens", firstTokens)
+
+
 		return firstTokens[0], "".join(firstTokens[1:])
 
 	def findNextTraversable(self, separator:str, token:str,
@@ -85,24 +88,26 @@ class Traversable:
 		"""build params object from raw kwargs"""
 		return self.defaultTraverseParamCls()(**kwargs)
 
-	def traverse(self, *path, traverseParams:defaultTraverseParamCls()=None, **kwargs)->Traversable:
+	def traverse(self, path, traverseParams:(defaultTraverseParamCls(), None), **kwargs)->Traversable:
 		"""all paths are assumed relative from this object -
 		a leading separator is used for direction, with the default used
 		if missing.
 
-		if params are not supplied, construct them from kwargs
+		we require explicitly constructed params, or None
 
 		:raises LookupError: if path cannot be resolved
 		"""
+		path = flatten(path)
+		#print("traverse", path, kwargs)
 		if not path: # empty path, return self
 			return self
+		#print("flattened path", path)
 
-		# build params from kwargs if not supplied
 		if traverseParams is None:
 			traverseParams = self.buildTraverseParamsFromRawKwargs(**kwargs)
 
 		# first parse address into tokens
-		first, body = self.parseFirstToken(*path)
+		first, body = self.parseFirstToken(path)
 		if first in self.separatorChars:
 			# use first token as separator
 			separator = first
@@ -111,13 +116,25 @@ class Traversable:
 			# use default separator
 			separator = self.defaultStartSeparator()
 
+		#print("traverse", path, first, body, separator)
+
+		body = ((body,) if body else ()) + path[1:]
+
+
 		# look up target from separator and token
 		target = self.findNextTraversable(separator, first, params=traverseParams)
 
-		return target(*body, traverseParams=traverseParams, **kwargs)
 
-	def __call__(self, *path, _params:defaultTraverseParamCls()=None, **kwargs)->Traversable:
+		#return target(body, **kwargs)
+		return target.traverse(body, traverseParams, **kwargs)
+
+	def __call__(self, *path, traverseParams:defaultTraverseParamCls()=None, **kwargs)->Traversable:
 		"""syntax sugar for traverse"""
-		return self.traverse(*path, traverseParams=_params, **kwargs)
+
+		path = flatten(path)
+		#print("call base", path)
+		if traverseParams is None:
+			traverseParams = self.buildTraverseParamsFromRawKwargs(**kwargs)
+		return self.traverse(path, traverseParams, **kwargs)
 
 

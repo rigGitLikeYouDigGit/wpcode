@@ -32,7 +32,7 @@ def createWN(nodeType, name="", n="", parent=None, existOk=False,
 			return WN(name)
 
 
-	# check if specific node wrapper class exists for nodeType
+	# check if specific node wrapper class exists for nodeTypeName
 	wrapCls = WN.wrapperClassForNodeType(nodeType)
 
 	if wrapCls is WN:
