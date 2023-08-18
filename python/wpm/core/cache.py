@@ -38,7 +38,11 @@ conformNameMap = {
 
 class APICache:
 	"""object encapsulating various api-related registers,
-	functionset maps"""
+	functionset maps
+
+	ok IN MY DEFENCE I didn't know about MObject.apiTypeStr
+
+	"""
 
 	def __init__(self):
 		self.mObjRegister = {}

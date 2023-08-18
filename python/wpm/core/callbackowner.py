@@ -12,16 +12,16 @@ class CallbackOwner:
 
 	"""
 
-	defaultCallbackKey = "main"
+	DEFAULT_CB_KEY = "main"
 
 	def __init__(self):
 		self._callbackIds : dict[str, list[int]] = defaultdict(list)
 
-	def addOwnedCallback(self, callback, key=defaultCallbackKey):
+	def addOwnedCallback(self, callback, key=DEFAULT_CB_KEY):
 		"""add callback to list"""
 		self._callbackIds[key].append(callback)
 
-	def removeOwnedCallback(self, id:int, key=defaultCallbackKey):
+	def removeOwnedCallback(self, id:int, key=DEFAULT_CB_KEY):
 		"""remove callback from list"""
 		om.MMessage.removeCallback(id)
 		self._callbackIds[key].remove(id)

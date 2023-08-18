@@ -15,8 +15,26 @@ from wpm import om, WN
 from wpm.core import classConstantValueToNameMap
 from wpm.lib.tracker import NodeLifespanTracker, NodeHierarchyTracker
 from wpm.lib import hierarchy as h
+from wpm.constant import Space
 
+"""
+throwing things at the wall
 
+for now data trees literally represent hierarchy - values are 
+rich data classes defining that node - shape, transform, etc
+
+for sanity, we assume that in a data view, individual data objects are immutable - 
+updating them requires setting value of tree. Likewise a user edit
+in maya regenerates the entire tree.
+
+duplication of some work here from the USD representation of 
+nodes as flat arrays - the Data object should probably be the core,
+with single conversions between it and the USD representation.
+
+Then each Data can inherit domain-specific methods for interacting
+with that dcc
+
+"""
 
 @dataclass
 class Transform:
@@ -25,8 +43,8 @@ class Transform:
 	"""
 
 	matrix : np.ndarray
-	rotateOrder : str = "XYZ"
-	dagPath : str = ""
+	# rotateOrder : str = "XYZ"
+	# dagPath : str = ""
 
 	def applyToMObject(self, mayaObject:om.MObject):
 		"""set mayaObject to this transform data
@@ -42,10 +60,14 @@ class Transform:
 	def fromMObject(cls, obj:om.MObject):
 		mfn = om.MFnTransform(obj)
 		matrix = np.identity(4)
-		matrix[:3, :3] = np.array(mfn.rotation().asMatrix())
-		matrix[:3, 3] = np.array(mfn.translation())
+		matrix[:3, :3] = np.array(mfn.rotation(Space.TF).asMatrix()).reshape(4, 4)[:3, :3]
+
+		# set translation values along bottom row of matrix
+		matrix[3, :3] = np.array(mfn.translation(Space.TF))
 		matrix[:3, :3] *= np.array(mfn.scale())
 		return cls(matrix)
+
+	apiType = om.MFn.kTransform
 
 @dataclass
 class Mesh:
@@ -74,6 +96,8 @@ class Mesh:
 			np.array(mfn.getPoints())[:, :3]
 		)
 
+	apiType = om.MFn.kMesh
+
 
 class MayaData(DataTree):
 	"""DataTree for Maya data.
@@ -99,6 +123,14 @@ class TransformData(MayaData):
 		data.applyToMObject(transform)
 
 
+def dataFromMayaNode(node:om.MObject):
+	if node.hasFn(om.MFn.kMesh):
+		return Mesh.fromMObject(node)
+	elif node.hasFn(om.MFn.kTransform):
+		return Transform.fromMObject(node)
+	else:
+		mfn = om.MFnDependencyNode(node)
+		raise TypeError(f"no supported Data object for node {node}, {mfn.name()} of type {node.apiTypeStr}")
 
 def gatherData(topNode:om.MObject):
 	"""return tree from data"""
@@ -109,7 +141,9 @@ def gatherData(topNode:om.MObject):
 	for node in h.iterDagChildren(topNode, includeRoot=False):
 		mfn = om.MFnDagNode(om.MDagPath.getAPathTo(node))
 		relPath = h.relativeDagTokens(topPath, mfn.dagPath())
-		topTree(*relPath, create=True).value = mfn.name()
+		branch = topTree(*relPath, create=True)
+		branch.value = dataFromMayaNode(node)
+
 
 	return topTree
 
@@ -152,5 +186,10 @@ class MayaDataView(NodeHierarchyTracker):
 	                       ):
 		self.displayDataTree()
 
+	def onChildLocalMatrixModified(self, node:om.MObject, matrixModifiedFlags:int, *args):
+		self.displayDataTree()
+
+	def onChildMeshModified(self, node:om.MObject, dirtyPlug:om.MPlug, *args):
+		self.displayDataTree()
 
 

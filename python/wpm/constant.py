@@ -9,8 +9,12 @@ X_AXIS = om.MVector(1, 0, 0)
 Y_AXIS = om.MVector(0, 1, 0)
 Z_AXIS = om.MVector(0, 0, 1)
 
-OBJ_SPACE = om.MSpace.kObject
-WORLD_SPACE = om.MSpace.kWorld
+class Space:
+	"""namespace for space constants
+	not making this a full type namespace for now"""
+	OBJECT = om.MSpace.kObject
+	TF = om.MSpace.kTransform
+	WORLD = om.MSpace.kWorld
 
 
 # in preparation for getting a plugin namespace from AD

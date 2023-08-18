@@ -8,6 +8,8 @@ This should depend on nothing else in wp, or any other project.
 Will migrate things from tree.lib.object as needed, if they get used.
 """
 
+from .coderef import CodeRefErrorData, getCodeRef, resolveCodeRef
+
 from .expression import *
 
 from .object import TypeNamespace

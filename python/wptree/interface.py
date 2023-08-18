@@ -9,6 +9,7 @@ from wplib.sequence import flatten, resolveSeqIndex
 from wplib.object import Signal, Traversable, TraversableParams
 from wplib import TypeNamespace
 from wplib.sentinel import Sentinel
+from wplib import coderef
 from wptree.delta import TreeDeltas
 
 """interface specification for objects that may behave like a basic tree.
@@ -751,17 +752,19 @@ class TreeInterface(Traversable
 	def _baseSerialData(self)->dict:
 		"""return name, value, auxProperties for this branch only"""
 		data = { self._serialKeys().name : self.getName(),
-		         self._serialKeys().uid : self.uid
 		         }
 		#if self.value != self.default:
 		data[self._serialKeys().value] = self._getRawValue()
 		if self.auxProperties != self.defaultAuxProperties():
-			data[self._serialKeys().auxProperties] = self.auxProperties
+			data[self._serialKeys().properties] = self.auxProperties
 
 		# check if type differs from parent - if so define it
 		if self.parent and self.parent.__class__ != self.__class__:
-			typeData = TypeReference(type(self)).serialise()
+			typeData = coderef.getCodeRef(self.__class__)
 			data[self._serialKeys().type] = typeData
+
+		data[self._serialKeys().uid] = self.uid
+
 		return data
 
 
@@ -808,7 +811,7 @@ class TreeInterface(Traversable
 		# if loadType is True, load saved type
 		elif loadType and cls._serialKeys().type in baseData:
 			# retrieve the reference to type, resolve it to get the actual type
-			treeCls = TypeReference.deserialise(baseData[cls._serialKeys().type]).resolve()
+			treeCls = coderef.resolveCodeRef(baseData[cls._serialKeys().type])
 		else:
 			treeCls = cls
 
@@ -935,7 +938,7 @@ class TreeInterface(Traversable
 		return incrementName(baseName, self.keys())
 
 	def displayStr(self, nested=True):
-		seq = pprint.pformat( self.serialise(nested=nested),
+		seq = pprint.pformat( self.serialise(nested=nested), sort_dicts=False
 		                      )
 		return seq
 
