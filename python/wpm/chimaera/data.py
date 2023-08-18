@@ -36,8 +36,17 @@ with that dcc
 
 """
 
+class MayaData:
+	"""
+	"""
+
+
+	def createMayaNode(self, parentNode:om.MObject)->om.MObject:
+		"""create new maya node if none is found"""
+		raise NotImplementedError
+
 @dataclass
-class Transform:
+class Transform(MayaData):
 	"""data object for transform
 	for now also includes optional dag path
 	"""
@@ -52,9 +61,18 @@ class Transform:
 		if it's faster or lets us build changes with multiple threads
 		"""
 		mfn = om.MFnTransform(mayaObject)
-		mfn.setTranslation(om.MVector(self.matrix[3, :3]), om.MSpace.kTransform)
-		mfn.setRotation(om.MEulerRotation(self.matrix[:3, :3]), om.MSpace.kTransform)
-		mfn.setScale(om.MVector(self.matrix[:3, :3]), om.MSpace.kTransform)
+		tfMat = om.MTransformationMatrix(om.MMatrix(self.matrix))
+		# mfn.setTranslation(om.MVector(self.matrix[3, :3]), om.MSpace.kTransform)
+		# mfn.setRotation(om.MEulerRotation(self.matrix[:3, :3]), om.MSpace.kTransform)
+		# mfn.setScale(om.MVector(self.matrix[:3, :3]), om.MSpace.kTransform)
+		mfn.setTransformation(tfMat)
+
+	def createMayaNode(self, parentNode:om.MObject) ->om.MObject:
+		"""create new maya node if none is found"""
+		mfn = om.MFnTransform()
+		mayaObject = mfn.create(parentNode)
+		self.applyToMObject(mayaObject)
+		return mayaObject
 
 	@classmethod
 	def fromMObject(cls, obj:om.MObject):
@@ -70,7 +88,7 @@ class Transform:
 	apiType = om.MFn.kTransform
 
 @dataclass
-class Mesh:
+class Mesh(MayaData):
 	"""data object for mesh shape
 	"""
 
@@ -85,8 +103,19 @@ class Mesh:
 		"""
 		mfn = om.MFnMesh(mayaObject)
 		mfn.createInPlace(
-			self.pointCoords, self.facePointCounts, self.facePointConnects
+			map(om.MPoint, self.pointCoords),
+			self.facePointCounts, self.facePointConnects
 		)
+
+	def createMayaNode(self, parentNode:om.MObject) ->om.MObject:
+		"""create new maya node if none is found"""
+		mfn = om.MFnMesh()
+		mayaObject = mfn.create(
+			map(om.MPoint, self.pointCoords),
+			self.facePointCounts, self.facePointConnects,
+			parent=parentNode
+		)
+		return mayaObject
 
 	@classmethod
 	def fromMObject(cls, obj:om.MObject):
@@ -99,28 +128,7 @@ class Mesh:
 	apiType = om.MFn.kMesh
 
 
-class MayaData(DataTree):
-	"""DataTree for Maya data.
-	not sure of inheritance, only sketch for now
 
-	If we use dataclasses as tree values, how do we detect changes to them?
-	"""
-
-
-	def createMayaNode(self, parentNode:om.MObject):
-		pass
-
-
-
-class TransformData(MayaData):
-
-	def createMayaNode(self, parentNode:om.MObject):
-		data : Transform = self.value
-		dagMod = om.MDagModifier()
-		transform = dagMod.createNode("transform", parentNode)
-		dagMod.doIt()
-
-		data.applyToMObject(transform)
 
 
 def dataFromMayaNode(node:om.MObject):
@@ -144,10 +152,18 @@ def gatherData(topNode:om.MObject):
 		branch = topTree(*relPath, create=True)
 		branch.value = dataFromMayaNode(node)
 
-
 	return topTree
 
-
+def applyMayaData(dataTree:Tree, topNode:om.MObject):
+	"""apply data to maya nodes"""
+	# clear all nodes below tree, for now
+	topWn = WN(topNode)
+	for i in topWn.children():
+		i.delete()
+	dataTree.node = topWn.object()
+	for branch in dataTree.allBranches(includeSelf=False):
+		branchNode = branch.value.createMayaNode(branch.parent.node)
+		branch.node = branchNode
 
 
 class MayaDataView(NodeHierarchyTracker):
@@ -166,6 +182,9 @@ class MayaDataView(NodeHierarchyTracker):
 	# def __init__(self, node:om.MObject, data:DataTree=None):
 	# 	super(MayaDataView, self).__init__(node)
 	# 	self.data : DataTree = None
+
+	def getData(self)->Tree:
+		return gatherData(self.node())
 
 	def displayDataTree(self):
 		tree = gatherData(self.node())

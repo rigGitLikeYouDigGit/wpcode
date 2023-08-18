@@ -13,6 +13,10 @@ from . import bases, attr
 if T.TYPE_CHECKING:
 	from wpm import WN
 
+# def getPlugInput(plug:om.MPlug)->om.MPlug:
+# 	"""return the input plug of the given plug
+# 	"""
+# 	return plug.source()
 
 class PlugMeta(type):
 	"""Metaclass to initialise plug wrapper from mplug
