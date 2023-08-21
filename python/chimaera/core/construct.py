@@ -36,7 +36,7 @@ class NodeConstruct:
 		self.node : ChimaeraNode = node
 
 	@classmethod
-	def setupNode(cls, node:ChimaeraNode, parent:ChimaeraNode=None)->None:
+	def setupNode(cls, node:ChimaeraNode, name:str, parent:ChimaeraNode=None)->None:
 		"""default process to set up node when freshly created -
 		used by plug nodes to create plugs, etc
 		"""

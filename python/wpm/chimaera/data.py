@@ -90,11 +90,15 @@ class Transform(MayaData):
 @dataclass
 class Mesh(MayaData):
 	"""data object for mesh shape
+	not tackling the general per-point / per-vertex attribute
+	system yet
 	"""
 
 	facePointCounts : np.ndarray
 	facePointConnects : np.ndarray
 	pointCoords : np.ndarray
+	normals : np.ndarray = None
+	uvSets : dict[str, np.ndarray] = None
 
 	def applyToMObject(self, mayaObject:om.MObject):
 		"""set mayaObject to this transform data
@@ -106,6 +110,12 @@ class Mesh(MayaData):
 			map(om.MPoint, self.pointCoords),
 			self.facePointCounts, self.facePointConnects
 		)
+		if self.normals is not None:
+			mfn.setFaceVertexNormals(
+				self.normals,
+				self.facePointCounts,
+				self.facePointConnects,
+			)
 
 	def createMayaNode(self, parentNode:om.MObject) ->om.MObject:
 		"""create new maya node if none is found"""
@@ -120,9 +130,30 @@ class Mesh(MayaData):
 	@classmethod
 	def fromMObject(cls, obj:om.MObject):
 		mfn = om.MFnMesh(obj)
+
+
+
+
+		# # uvs - custom support for uv sets
+		# uvSetNamesAttr = prim.CreateAttribute("uvSetNames", Sdf.ValueTypeNames.TokenArray)
+		# uvSetNamesAttr.Set(mfn.getUVSetNames())
+		#
+		# for name in mfn.getUVSetNames():
+		# 	uvCounts, uvIds = mfn.getAssignedUVs(name)
+		# 	prim.GetAttribute(
+		# 		cls.uvPrimNameFromSetName(name),
+		# 		Sdf.ValueTypeNames.TexCoord2fArray,
+		# 	).Set(
+		# 		np.array(mfn.getUVs(name), dtype=np.float32)[:, :2],
+		# 	)
 		return cls(
 			*mfn.getVertices(),
-			np.array(mfn.getPoints())[:, :3]
+			np.array(mfn.getPoints())[:, :3],
+			normals=np.array(mfn.getNormals(), dtype=np.float32)[:, :3],
+			uvSets={
+				name : np.array(mfn.getUVs(name), dtype=np.float32)[:, :2]
+				for name in mfn.getUVSetNames()
+			}
 		)
 
 	apiType = om.MFn.kMesh

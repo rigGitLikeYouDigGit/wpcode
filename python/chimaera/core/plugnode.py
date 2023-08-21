@@ -60,15 +60,23 @@ class PlugNode(NodeConstruct):
 	@classmethod
 	def setPlugSource(cls, plugNode:ChimaeraNode, plugDriver:ChimaeraNode)->None:
 		"""set plug node to be driven by another node's plug"""
-		plugNode.setRef(cls.PLUG_SOURCE_KEY, uid=plugDriver.uid)
+		if isinstance(plugDriver, ChimaeraNode):
+			plugNode.setRef(cls.PLUG_SOURCE_KEY, uid=(plugDriver.uid,))
+		elif plugDriver is None:
+			plugNode.setRef(cls.PLUG_SOURCE_KEY, uid=())
+
+	@classmethod
+	def plugSourceRefValue(cls, plugNode:ChimaeraNode)->T.Any:
+		"""get value of plug source ref"""
+		return plugNode.getRef(cls.PLUG_SOURCE_KEY, )
 
 	@classmethod
 	def plugSource(cls, plugNode:ChimaeraNode, raw=False)->list[ChimaeraNode]:
 		"""get source node of plug node"""
 		sourceNodeFilter = plugNode.getRef(cls.PLUG_SOURCE_KEY, raw=False)
-		if raw:
-			return sourceNodeFilter
-		return plugNode.parent().resolveRef(sourceNodeFilter, fromNode=plugNode)
+		# if raw:
+		# 	return sourceNodeFilter
+		return plugNode.parent().resolveRef(, fromNode=plugNode)
 
 	@classmethod
 	def nodeIsPlug(cls, node:ChimaeraNode):
@@ -150,13 +158,13 @@ class PlugNode(NodeConstruct):
 
 
 	@classmethod
-	def setupNode(cls, node:ChimaeraNode, graph:ChimaeraNode=None) ->None:
+	def setupNode(cls, node:ChimaeraNode, name:str, parent:ChimaeraNode=None) ->None:
 		"""control flow here is wacky but it's just a test -
 		create trees of plug nodes, then set up the node
 		"""
-		super().setupNode(node, graph)
+		super().setupNode(node, name, parent)
 		#make root plug nodes
-		cls._makeRootPlugNodes(node, graph)
+		cls._makeRootPlugNodes(node, parent)
 		# make user-defined plugs
 		cls.makePlugs(
 			Tree(cls.IN_PLUG_KEY),

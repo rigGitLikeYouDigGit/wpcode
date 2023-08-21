@@ -12,16 +12,15 @@ graph = ChimaeraNode()
 node = graph.createNode("topNodeA")
 print(node)
 
-pprint.pprint(graph.data)
+pprint.pprint(graph.dataBlock())
 
-pprint.pprint(node.dataBlock())
+#pprint.pprint(node.dataBlock())
 
-childGraph = graph.createNode("childGraph", ChimaeraNode)
+childGraph = graph.createNode("childGraph")
 
-print(childGraph)
-print(childGraph.parent())
-pprint.pp(childGraph.dataBlock())
-pprint.pp(graph.data)
+from chimaera.core.plugnode import PlugNode
+pNode = childGraph.createNode("plugNode", PlugNode)
+print(pNode)
 
 
 eGraph = ChimaeraDirtyGraph.create()

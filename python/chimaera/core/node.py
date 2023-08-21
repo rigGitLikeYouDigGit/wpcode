@@ -2,6 +2,9 @@
 from __future__ import annotations
 import typing as T
 
+#from collections import namedtuple
+from typing import NamedTuple, TypedDict
+
 from wplib import Expression, DirtyExp, coderef
 from wplib.sentinel import Sentinel
 from wplib.object import UidElement, DirtyNode
@@ -9,6 +12,31 @@ from wplib.object import UidElement, DirtyNode
 from wptree import Tree
 
 from chimaera.core.construct import NodeConstruct
+
+"""how to pass the ref object parametres? How to store those parametres?
+
+refMap{
+	"refName" : "uid:adafas, affectEval:False"
+}
+
+has to resolve dynamically to dict - this might get quite messy :))) 
+
+outer level is expression, evals 
+
+"""
+
+class RefValue(TypedDict):
+	"""wrapper for ref object parametres"""
+	uid : tuple[str]# = ()
+	path : tuple[str]# = ()
+	affectEval : int# = 1
+
+# class RefObject:
+# 	"""wrapper for object that can be referenced in graph
+# 	"""
+# 	def __init__(self, obj:T.Any):
+# 		self.obj = obj
+
 
 class ChimaeraNode(UidElement, DirtyNode):
 	"""smallest unit of computation in chimaera graph
@@ -18,7 +46,7 @@ class ChimaeraNode(UidElement, DirtyNode):
 	Simple node objects can also be compound graphs, with just a small
 	modification to datablock.
 
-	Graphs are nodes, some nodes are graphs.
+	Graphs are nodes, non-leaf nodes are graphs.
 
 	In this model the parent/child relationship is rock solid,
 	and not defined by node edges.
@@ -34,6 +62,9 @@ class ChimaeraNode(UidElement, DirtyNode):
 
 	for test, we also inherit from DirtyNode - may separate to an
 	execution-specific wrapper later
+
+	not all features of the graph can (or should) appear in the execution graph -
+	make ref map values proper function params
 
 	"""
 
@@ -79,13 +110,18 @@ class ChimaeraNode(UidElement, DirtyNode):
 			"name" : DirtyExp(name="name"),
 			"value": DirtyExp(name="value"),
 		}
-		refMapExp : T.Callable[[], dict[str, (str, ChimaeraNode)]] = DirtyExp(
+		refMapExp : T.Callable[[], dict[str, dict[str]]] = DirtyExp(
 			value={},
 			name="refMap")
 		attrMap["name"].setStructure("node")
 		# nodes attribute cannot be proxied live -
 		# if instancing needed, use a generator or directly reference
 		# a parent graph node
+
+		# a second "message" ref map is guaranteed not to affect evaluation -
+		# these edges are not picked up by the execution graph,
+		# and only appear in the data structure
+
 		return {
 			"attrMap" : attrMap,
 			"refMap" : refMapExp,
@@ -109,6 +145,8 @@ class ChimaeraNode(UidElement, DirtyNode):
 	def dataBlock(self)->dict:
 		"""should match exact object also tracked by parent graph"""
 		#return self.parent().nodeDataBlock(self)
+		# if self.parent():
+		# 	return self.parent().nodeDataBlock(self)
 		return self._data
 
 	def nameExp(self)->DirtyExp:
@@ -141,28 +179,29 @@ class ChimaeraNode(UidElement, DirtyNode):
 	def refMapExp(self)->DirtyExp:
 		return self.dataBlock()["refMap"]
 
-	def setRef(self, key, uid:str="", nodeFilter:str=""):
+	def setRef(self, key, uid:tuple[str]=(), path:tuple[str]=(), node:tuple[ChimaeraNode]=(), affectEval=True)->None:
 		"""updates expression source of refmap with given value"""
-		refMap = self.refMapExp().rawStructure()
-		if uid:
-			valueStr = f"uid:{uid}"
-		refMap[key] = valueStr
-		self.refMapExp().setStructure(refMap)
+		refMapSrc : dict = self.refMapExp().rawStructure()
+		refMapSrc[key] = RefValue(uid=uid, path=path, affectEval=affectEval)
+		self.refMapExp().setStructure(refMapSrc)
 
-	def refMap(self)->dict[str, (str, ChimaeraNode)]:
-		"""returns resolved refmap dict of nodes"""
+	def refMap(self)->dict[str, RefValue]:
+		"""returns evaluated ref map expression - not yet
+		resolved to chimaera nodes"""
 		return self.refMapExp().eval()
 
-	def refMapRaw(self)->dict[str, str]:
+	def refMapRaw(self)->dict[str, dict[str, RefValue]]:
 		"""returns raw refmap dict of strings"""
 		return self.refMapExp().rawStructure()
 
-	def getRef(self, key, default=Sentinel.FailToFind, raw=False):
+	def getRef(self, key, default=Sentinel.FailToFind, raw=False)->RefValue:
 		"""return refmap entry for given key, or default if not found
 		"""
 		if raw:
 			return self.refMapExp().rawStructure().get(key, default)
 		return self.refMap().get(key, default)
+
+
 	#endregion
 
 	#region child nodes
@@ -178,14 +217,14 @@ class ChimaeraNode(UidElement, DirtyNode):
 	def allChildNodes(self)->dict[str, ChimaeraNode]:
 		"""return dict of child nodes, and their children, etc"""
 		nodes = self.childNodes()
-		for childNode in nodes.values():
+		for childNode in tuple(nodes.values()):
 			nodes.update(childNode.allChildNodes())
 		return nodes
 
 	def addNode(self, node:ChimaeraNode,# nodeData:dict
 	            ):
 		"""add a node to the graph, with data"""
-		self._data["nodes"][node.getElementId()] = node.data
+		self._data["nodes"][node.getElementId()] = node.dataBlock()
 		node._parent = self
 
 	@classmethod
@@ -195,18 +234,22 @@ class ChimaeraNode(UidElement, DirtyNode):
 	def createNode(self, name:str, nodeType:type[NodeConstruct]=None)->ChimaeraNode:
 		"""create a node of type nodeTypeName, add it to the graph, and return it"""
 
-		nodeType = nodeType or self.defaultNodeType()
-		newNode = ChimaeraNode()
+		toCreateCls = ChimaeraNode
+
+
+		#nodeType = nodeType or self.defaultNodeType()
+		newNode = toCreateCls()
 		#newData = newNode.defaultData()
-		newData = newNode.data
+		newData = newNode.dataBlock()
 		self.addNode(newNode,# newData
 		             )
-		newNode.setName(name)
+
 
 		# if construct class given, run node setup
 		if nodeType:
-			nodeType.setupNode(newNode, parent=self)
-
+			nodeType.setupNode(newNode, name=name, parent=self)
+		else: # just set basic name
+			newNode.setName(name)
 		return newNode
 	#endregion
 
@@ -233,25 +276,48 @@ class ChimaeraNode(UidElement, DirtyNode):
 	# endregion
 
 	# region node referencing and connections
-	def resolveRef(self, ref:str, fromNode:ChimaeraNode)->list[ChimaeraNode]:
-		"""return sequence of nodes matching ref string -
+	@classmethod
+	def templateNodeRefDict(cls)->dict[str]:
+		"""return a template for the dict defining a single reference"""
+		return {
+			# return nodes by uid
+			"uid": "",
+
+			# refer to nodes by path
+			"path": "",
+
+			# should this edge appear in execution graph?
+			"affectEval" : True,
+		}
+
+	def resolveRef(self, ref:RefValue, fromNode:ChimaeraNode)->tuple[ChimaeraNode]:
+		"""return sequence of nodes matching ref strings -
 		consider closer integration between this and node-side expressions.
 
-		For test we only support single uid strings
-		"""
-		if ref.startswith("uid:"):
-			uid = ref[4:]
-			return [self.nodeByUid(uid)]
-		if ref.startswith("n:"):
-			name = ref[2:]
-			return self.nodesByName(name)
+		RefValue is a dict with keys:
+		uid: return nodes by uid
+		path: refer to nodes by path
+		affectEval: should this edge appear in execution graph?
 
-	def resolveRefMap(self, refMap:dict, fromNode:ChimaeraNode)->dict:
-		"""return dict of resolved references"""
-		resolved = {}
-		for key, ref in refMap.items():
-			resolved[key] = self.resolveRef(ref, fromNode)
-		return resolved
+		each of the node categories are tuples, may contain multiple string
+		values - each string value must be evaluated and results combined to
+		get all nodes matching the ref
+
+		"""
+		nodes = set()
+		for i in ref["uid"]:
+			nodes.add(self.nodeByUid(i))
+		for i in ref["path"]:
+			nodes.update(self.nodesByName(i))
+
+		return tuple(nodes)
+
+	# def resolveRefMap(self, refMap:dict, fromNode:ChimaeraNode)->dict:
+	# 	"""return dict of resolved references"""
+	# 	resolved = {}
+	# 	for key, ref in refMap.items():
+	# 		resolved[key] = self.resolveRef(ref, fromNode)
+	# 	return resolved
 
 
 	# endregion
