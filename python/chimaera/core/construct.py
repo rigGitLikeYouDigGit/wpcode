@@ -15,7 +15,7 @@ Construct wrapper base for operating on chimaera nodes at high level
 """
 
 
-class NodeConstruct:
+class NodeFnSet:
 	"""it lives again lol
 	Base class for "function set" wrapper objects to be created
 	around base chimaera nodes -
@@ -30,6 +30,8 @@ class NodeConstruct:
 
 	Main point is that a chimaera node may outlive or predate its creator construct,
 
+	IF NEEDED, experiment with FnSet INSTANCE being set on a single node in order to evaluate it, but for now stick with class methods
+
 	"""
 
 	def __init__(self, node:ChimaeraNode=None):
@@ -42,6 +44,15 @@ class NodeConstruct:
 		"""
 
 	@classmethod
-	def compute(cls, dataBlock:dict[str, T.Any], graph:ChimaeraNode)->None:
-		"""compute node output from input data block"""
+	def compute(cls, node:ChimaeraNode, graph:ChimaeraNode, **kwargs)->object:
+		"""compute node output from input data block
+		return the node's new value to be cached"""
+		raise NotImplementedError
+
+	@classmethod
+	def dirtyComputeOuter(cls, node:ChimaeraNode, graph:ChimaeraNode)->object:
+		"""outer function called to run dirty compute
+		return the node's new value to be cached
+		should call compute and handle any possible errors
+		"""
 		raise NotImplementedError

@@ -22,6 +22,8 @@ def strList(i)->list[str]:
 		return [i]
 	return list(i)
 
+getFirst = lambda x: next(iter(x), None)
+
 def flatten(l, ltypes=(list, tuple))->(tuple, list):
 	"""after Mike C Fletcher"""
 	if isinstance(l, str):

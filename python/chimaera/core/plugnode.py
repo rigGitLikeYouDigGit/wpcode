@@ -1,11 +1,12 @@
 from __future__ import annotations
 import typing as T
 
+from wplib.sequence import getFirst, flatten
 from wplib import Expression
 from wptree import Tree
 
-from chimaera.core.node import ChimaeraNode
-from chimaera.core.construct import NodeConstruct
+from chimaera.core.node import ChimaeraNode, RefValue, newRefValue
+from chimaera.core.construct import NodeFnSet
 if T.TYPE_CHECKING:
 	#from chimaera.core.graph import ChimaeraGraph
 	pass
@@ -44,7 +45,7 @@ perfectly, and can access refMap and other node attributes directly
 
 
 
-class PlugNode(NodeConstruct):
+class PlugNode(NodeFnSet):
 	"""Plug node is really just a few ChimaeraNodes in a trenchcoat
 
 
@@ -55,6 +56,7 @@ class PlugNode(NodeConstruct):
 	OUT_PLUG_KEY = "_out"
 	PLUG_SOURCE_KEY = "_src"
 	PLUG_PARENT_KEY = "_parent"
+	PLUG_CHILDREN_KEY = "_children"
 
 	# region plug node support
 	@classmethod
@@ -71,12 +73,41 @@ class PlugNode(NodeConstruct):
 		return plugNode.getRef(cls.PLUG_SOURCE_KEY, )
 
 	@classmethod
-	def plugSource(cls, plugNode:ChimaeraNode, raw=False)->list[ChimaeraNode]:
+	def getPlugParent(cls, childPlug:ChimaeraNode)->ChimaeraNode:
+		"""get parent plug of child plug"""
+		parentPlug = getFirst(childPlug.parent().resolveRef(
+			childPlug.getRef(cls.PLUG_PARENT_KEY, raw=False),
+			fromNode=childPlug))
+		return parentPlug
+
+	@classmethod
+	def setPlugParent(cls, childPlug:ChimaeraNode, parentPlug:ChimaeraNode)->None:
+		"""set parent plug of child plug
+		feels very close to tree, but we're not quite ready for that yet"""
+		if isinstance(parentPlug, ChimaeraNode):
+			childPlug.setRef(cls.PLUG_PARENT_KEY, uid=(parentPlug.uid,))
+
+		elif parentPlug is None:
+			parent = cls.getPlugParent(childPlug)
+			if parent:
+				# remove parent
+				parentRef : RefValue = parent.getRef(cls.PLUG_CHILDREN_KEY, raw=True)
+				parentRef["uid"].remove(childPlug.uid)
+				parent.setRef(cls.PLUG_CHILDREN_KEY, refVal=parentRef)
+			childPlug.setRef(cls.PLUG_PARENT_KEY, uid=())
+
+	@classmethod
+	def plugSource(cls, plugNode:ChimaeraNode, raw=False)->tuple[ChimaeraNode]:
 		"""get source node of plug node"""
-		sourceNodeFilter = plugNode.getRef(cls.PLUG_SOURCE_KEY, raw=False)
-		# if raw:
-		# 	return sourceNodeFilter
-		return plugNode.parent().resolveRef(, fromNode=plugNode)
+		# sourceNodeFilter = plugNode.getRef(cls.PLUG_SOURCE_KEY, raw=False)
+		# # if raw:
+		# # 	return sourceNodeFilter
+		refVal = plugNode.getRef(cls.PLUG_SOURCE_KEY,)
+		print("ref val", refVal)
+		if refVal is None:
+			return ()
+		return plugNode.parent().resolveRef(refVal, plugNode)
+
 
 	@classmethod
 	def nodeIsPlug(cls, node:ChimaeraNode):
@@ -92,25 +123,35 @@ class PlugNode(NodeConstruct):
 		# return plug.name() == cls.IN_PLUG_KEY
 
 	@classmethod
-	def plugChildren(cls, plug:ChimaeraNode)->dict[str, list[ChimaeraNode]]:
+	def plugChildren(cls, plug:ChimaeraNode)->tuple[ChimaeraNode]:
 		"""get immediate children of plug node"""
-		fullMap = plug.parent().resolveRefMap(plug.refMap(), plug)
-		fullMap.pop(cls.PLUG_SOURCE_KEY, None)
-		return fullMap
+		nodeSet = plug.parent().resolveRef(plug.getRef(cls.PLUG_CHILDREN_KEY, default=newRefValue()), plug)
+		return nodeSet
 
-	#endregion
+	@classmethod
+	def inputPlugRoot(cls, mainNode:ChimaeraNode):
+		allNodes = mainNode.resolveRef(mainNode.getRef(cls.IN_PLUG_KEY, ), mainNode)
+		if not allNodes:
+			return None
+		return allNodes[0]
 
+	@classmethod
+	def outputPlugRoot(cls, mainNode:ChimaeraNode):
+		allNodes = mainNode.resolveRef(mainNode.getRef(cls.OUT_PLUG_KEY, ), mainNode)
+		if not allNodes:
+			return None
+		return allNodes[0]
 	@classmethod
 	def _makeRootPlugNodes(cls, mainNode:ChimaeraNode, graph:ChimaeraNode)->None:
 		"""create root plug nodes for this node and link to refmap
 		"""
 		inRoot = graph.createNode(cls.IN_PLUG_KEY)
-		mainNode.setRef(cls.IN_PLUG_KEY, uid=inRoot.uid)
+		mainNode.setRef(cls.IN_PLUG_KEY, uid=(inRoot.uid,))
 		#set value input of plug node to be empty
 		cls.setPlugSource(inRoot, None)
 
 		outRoot = graph.createNode(cls.OUT_PLUG_KEY)
-		mainNode.setRef(cls.OUT_PLUG_KEY, uid=outRoot.uid)
+		mainNode.setRef(cls.OUT_PLUG_KEY, uid=(outRoot.uid,), affectEval=False)
 		cls.setPlugSource(outRoot, mainNode)
 
 
@@ -139,39 +180,32 @@ class PlugNode(NodeConstruct):
 			plugNode.setRef(cls.PLUG_PARENT_KEY, uid=i.parent.node.uid)
 
 
+	#endregion
+
 	@classmethod
-	def _setupAllPlugs(cls, node:ChimaeraNode, graph:ChimaeraNode)->None:
-		"""create all plugs for this node"""
-		#make root plug nodes
-		cls._makeRootPlugNodes(node, graph)
-		# make user-defined plugs
-		inTree = Tree(cls.IN_PLUG_KEY)
-		outTree = Tree(cls.OUT_PLUG_KEY)
-		cls.makePlugs(
-			inTree,
-			outTree
-		)
-		#make plug nodes from trees
-		cls._makePlugNodesFromTree(node, inTree)
-		cls._makePlugNodesFromTree(node, outTree)
-
-
+	def extractInputData(cls, node:ChimaeraNode)->Tree:
+		"""return data tree from node's input plugs"""
 
 	@classmethod
 	def setupNode(cls, node:ChimaeraNode, name:str, parent:ChimaeraNode=None) ->None:
 		"""control flow here is wacky but it's just a test -
 		create trees of plug nodes, then set up the node
+
+		make plug setup explicit here, reduce nesting
 		"""
 		super().setupNode(node, name, parent)
 		#make root plug nodes
+		#cls._setupAllPlugs(node, parent)
 		cls._makeRootPlugNodes(node, parent)
+
+		# set default params on node
+		node.setParams(cls.defaultParams(Tree("root")))
+
 		# make user-defined plugs
-		cls.makePlugs(
-			Tree(cls.IN_PLUG_KEY),
-			Tree(cls.OUT_PLUG_KEY)
-		)
-
-
+		# cls.makePlugs(
+		# 	Tree(cls.IN_PLUG_KEY),
+		# 	Tree(cls.OUT_PLUG_KEY)
+		# )
 
 
 

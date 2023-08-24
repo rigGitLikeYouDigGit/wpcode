@@ -74,19 +74,18 @@ class DirtyNode:
 		#return self.dirtyGraph
 		raise NotImplementedError
 
-	def dirtyCoputeFn(self):
+	def dirtyComputeFn(self):
 		""" OVERRIDE THIS or set with a lambda
 		compute node logic
 		inheriting from this feels like too tight a coupling
 		return the value that will become this node's cached value
 		"""
-		self._cachedValue = None
 
 	def _computeDirtyNodeOuter(self):
 		"""compute node logic, cache result
 		maybe also set clean
 		"""
-		self._cachedValue = self.dirtyCoputeFn()
+		self._cachedValue = self.dirtyComputeFn()
 		return self._cachedValue
 
 	def getDirtyNodeAntecedents(self)->tuple[DirtyNode]:
@@ -186,7 +185,7 @@ class DirtyGraph(nx.DiGraph):
 			node.setDirty()
 			nodeSet.update(succ[node])
 
-	def earliestDirtyNodes(self, nodes:set[DirtyNode])->set[DirtyNode]:
+	def earliestDirtyNodes(self, beforeNodes:set[DirtyNode])->set[DirtyNode]:
 		"""given pool of nodes, return earliest dirty nodes
 		that have no dirty inputs.
 
@@ -195,11 +194,11 @@ class DirtyGraph(nx.DiGraph):
 		edges between them
 		"""
 		ancestors = set()
-		nodes = set(nodes)
+		beforeNodes = set(beforeNodes)
 
-		while nodes:
-			ancestors.update(i for i in nx.ancestors(self, nodes.pop()) if i.dirtyState)
-			nodes -= ancestors
+		while beforeNodes:
+			ancestors.update(i for i in nx.ancestors(self, beforeNodes.pop()) if i.dirtyState)
+			beforeNodes -= ancestors
 
 		return {i for i in ancestors if not
 			any(j.dirtyState for j in self.pred[i])

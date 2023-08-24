@@ -8,10 +8,11 @@ from typing import NamedTuple, TypedDict
 from wplib import Expression, DirtyExp, coderef
 from wplib.sentinel import Sentinel
 from wplib.object import UidElement, DirtyNode
+from wplib.sequence import getFirst, flatten
 
 from wptree import Tree
 
-from chimaera.core.construct import NodeConstruct
+from chimaera.core.construct import NodeFnSet
 
 """how to pass the ref object parametres? How to store those parametres?
 
@@ -27,15 +28,13 @@ outer level is expression, evals
 
 class RefValue(TypedDict):
 	"""wrapper for ref object parametres"""
-	uid : tuple[str]# = ()
-	path : tuple[str]# = ()
+	uid : list[str]# = ()
+	path : list[str]# = ()
 	affectEval : int# = 1
 
-# class RefObject:
-# 	"""wrapper for object that can be referenced in graph
-# 	"""
-# 	def __init__(self, obj:T.Any):
-# 		self.obj = obj
+def newRefValue() ->RefValue:
+	return {"uid" : [], "path" : [], "affectEval" : 1}
+
 
 
 class ChimaeraNode(UidElement, DirtyNode):
@@ -68,6 +67,9 @@ class ChimaeraNode(UidElement, DirtyNode):
 
 	"""
 
+	# special key in ref map pointing to construct class
+	CONSTRUCT_CLS_REF_KEY = "_clsRef"
+
 	def __init__(self, debugName:str=""):
 		UidElement.__init__(self)
 		DirtyNode.__init__(self, debugName)
@@ -87,6 +89,7 @@ class ChimaeraNode(UidElement, DirtyNode):
 	# def _getDirtyNodeName(self) ->str:
 	# 	return self._data["attrMap"]["name"].value
 
+	#region dirtynode integration
 	def getDirtyNodeAntecedents(self) ->tuple[DirtyNode]:
 		"""return all nodes that this node depends on -
 		return expressions directly connected to this
@@ -98,9 +101,42 @@ class ChimaeraNode(UidElement, DirtyNode):
 			self.refMapExp()
 		)
 
+	def dirtyComputeFn(self):
+		if self.fnSetType():
+			return self.fnSetType().dirtyComputeOuter(self, self.parent())
+		return self.valueExp().eval()
+
+	#endregion
+
 	@classmethod
 	def typeRefStr(cls)->str:
+		"""return code ref to the type of this node,
+		NOT to its construct type"""
 		return coderef.getCodeRef(cls)
+
+
+	def fnSetTypeRefStr(self)->(str, None):
+		"""return code ref to the construct type of this node
+		weird to put this in refmap but it's the least likely
+		thing to go missing from a node (and if you want to,
+		you can always override it"""
+		refValue = self.getRef(self.CONSTRUCT_CLS_REF_KEY, default=None)
+		if refValue:
+			return refValue["uid"][0]
+		return refValue
+
+	def setFnSetTypeRefStr(self, refStr:str):
+		"""set code ref to the construct type of this node"""
+		self.setRef(self.CONSTRUCT_CLS_REF_KEY, uid=(refStr,))
+
+	def fnSetType(self)->T.Type[NodeFnSet]:
+		"""return construct class of this node"""
+		refStr = self.fnSetTypeRefStr()
+		if refStr:
+			return coderef.resolveCodeRef(refStr)
+		return None
+
+
 
 	@classmethod
 	def defaultData(cls)->dict:
@@ -109,6 +145,12 @@ class ChimaeraNode(UidElement, DirtyNode):
 		attrMap : dict[str, Expression] = {
 			"name" : DirtyExp(name="name"),
 			"value": DirtyExp(name="value"),
+
+			# putting these here for now for ease - only complex nodes need them,
+			"params" : DirtyExp(name="params",
+			                    value=Tree("root")),
+			"storage" : DirtyExp(name="storage",
+			                  value=Tree("root")),
 		}
 		refMapExp : T.Callable[[], dict[str, dict[str]]] = DirtyExp(
 			value={},
@@ -156,12 +198,31 @@ class ChimaeraNode(UidElement, DirtyNode):
 	def nodeName(self)->str:
 		return self.nameExp().resultStructure()
 
+	#region params
+	def paramsExp(self)->DirtyExp:
+		return self.dataBlock()["attrMap"]["params"]
+	def setParams(self, value)->None:
+		"""directly set the current value to rescan tree in expression"""
+		self.paramsExp().setStructure(value)
+	def params(self)->Tree:
+		return self.paramsExp().eval()
+	# endregion
+	
+	#region storage
+	def storageExp(self)->DirtyExp:
+		return self.dataBlock()["attrMap"]["storage"]
+	def setstorage(self, value)->None:
+		"""directly set the current value to rescan tree in expression"""
+		self.storageExp().setStructure(value)
+	def storage(self)->Tree:
+		return self.storageExp().eval()
+	# endregion
+
 	#region value and evaluation
 	def valueExp(self)->DirtyExp:
 		return self.dataBlock()["attrMap"]["value"]
 	def setValue(self, value)->None:
 		self.valueExp().setStructure(value)
-
 	def value(self):
 		"""if exp is set, evaluate it
 		if data tree is defined, return it,
@@ -179,10 +240,14 @@ class ChimaeraNode(UidElement, DirtyNode):
 	def refMapExp(self)->DirtyExp:
 		return self.dataBlock()["refMap"]
 
-	def setRef(self, key, uid:tuple[str]=(), path:tuple[str]=(), node:tuple[ChimaeraNode]=(), affectEval=True)->None:
+	def setRef(self, key, uid:tuple[str]=(), path:tuple[str]=(), node:tuple[ChimaeraNode]=(), affectEval=True, refVal:RefValue=None)->None:
 		"""updates expression source of refmap with given value"""
 		refMapSrc : dict = self.refMapExp().rawStructure()
-		refMapSrc[key] = RefValue(uid=uid, path=path, affectEval=affectEval)
+		if refVal:
+			refMapSrc[key] = refVal
+		else:
+			refMapSrc[key] = RefValue(
+				uid=list(uid), path=list(path), affectEval=affectEval)
 		self.refMapExp().setStructure(refMapSrc)
 
 	def refMap(self)->dict[str, RefValue]:
@@ -194,12 +259,15 @@ class ChimaeraNode(UidElement, DirtyNode):
 		"""returns raw refmap dict of strings"""
 		return self.refMapExp().rawStructure()
 
-	def getRef(self, key, default=Sentinel.FailToFind, raw=False)->RefValue:
+	def getRef(self, key, default:object=Sentinel.FailToFind, raw=False)->RefValue:
 		"""return refmap entry for given key, or default if not found
 		"""
 		if raw:
 			return self.refMapExp().rawStructure().get(key, default)
-		return self.refMap().get(key, default)
+		result = self.refMap().get(key, default)
+		if result is Sentinel.FailToFind:
+			raise KeyError(f"refmap key {key} not found in {self.refMapRaw()}")
+		return result
 
 
 	#endregion
@@ -231,7 +299,7 @@ class ChimaeraNode(UidElement, DirtyNode):
 	def defaultNodeType(cls)->T.Type[ChimaeraNode]:
 		return ChimaeraNode
 
-	def createNode(self, name:str, nodeType:type[NodeConstruct]=None)->ChimaeraNode:
+	def createNode(self, name:str, nodeType:type[NodeFnSet]=None)->ChimaeraNode:
 		"""create a node of type nodeTypeName, add it to the graph, and return it"""
 
 		toCreateCls = ChimaeraNode
@@ -311,13 +379,6 @@ class ChimaeraNode(UidElement, DirtyNode):
 			nodes.update(self.nodesByName(i))
 
 		return tuple(nodes)
-
-	# def resolveRefMap(self, refMap:dict, fromNode:ChimaeraNode)->dict:
-	# 	"""return dict of resolved references"""
-	# 	resolved = {}
-	# 	for key, ref in refMap.items():
-	# 		resolved[key] = self.resolveRef(ref, fromNode)
-	# 	return resolved
 
 
 	# endregion

@@ -14,14 +14,6 @@ from wptree import Tree
 from chimaera import ChimaeraNode, PlugNode
 
 
-class DataBlock:
-	"""test sketch of retrieving data
-	and operating on it in a separable way"""
-	params : Tree
-	data : Tree # consider packing different components in another object, since
-	# not all nodes may define all of them
-	inPlug : Tree
-	outPlug : Tree
 
 
 class SkeletonOp(PlugNode):
@@ -42,13 +34,8 @@ class SkeletonOp(PlugNode):
 		inRoot("parent", create=True)
 
 	@classmethod
-	def compute(cls, dataBlock:DataBlock, graph:ChimaeraNode)->None:
-		"""Create joint hierarchy from template hierarchy.
-		"""
-# get data
-		jointRoot = dataBlock.params("joints")
-		# get parent plug
-		parentPlug = dataBlock.inPlug("parent")
+	def compute(cls, node:ChimaeraNode, graph:ChimaeraNode) ->None:
+
 
 
 

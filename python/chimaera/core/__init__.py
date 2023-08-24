@@ -18,6 +18,6 @@ we need something to compute a load of nodes in order.
 
 from .node import ChimaeraNode
 from .plugnode import PlugNode
-from .construct import NodeConstruct
+from .construct import NodeFnSet
 
 from .data import DataTree

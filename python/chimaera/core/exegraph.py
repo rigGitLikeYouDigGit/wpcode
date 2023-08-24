@@ -10,8 +10,9 @@ from wplib.object import UidElement
 
 from wptree import Tree
 
+from chimaera.core.node import ChimaeraNode
 if T.TYPE_CHECKING:
-	from chimaera.core.node import ChimaeraNode
+	pass
 
 """We consider the data and execution of Chimaera separately - 
 main nodes hold data and subnetworks, while this class handles
@@ -36,9 +37,19 @@ class ChimaeraDirtyGraph(DirtyGraph):
 
 	@classmethod
 	def makeRegisterNode(cls, graph:ChimaeraDirtyGraph) ->DirtyNode:
-		"""make a node to register names of all nodes in the graph"""
+		"""make a node to register names of all nodes in the graph,
+		marked dirty when a name changes.
+
+		This is my first attempt at making a centralised nodes to support
+		list or filter operations - pretty sure it's a stupid idea since
+		we immediately hit cycles.
+
+		I think we might just have to live with cycles.
+
+
+		"""
 		node = DirtyNode("nameRegister")
-		node.dirtyCoputeFn = graph.getNodeRegister
+		node.dirtyComputeFn = graph.getNodeRegister
 		graph.add_node(node)
 		graph._nodeRegisterDNode = node
 		return node
