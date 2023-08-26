@@ -75,7 +75,7 @@ class PlugNode(NodeFnSet):
 	@classmethod
 	def getPlugParent(cls, childPlug:ChimaeraNode)->ChimaeraNode:
 		"""get parent plug of child plug"""
-		parentPlug = getFirst(childPlug.parent().resolveRef(
+		parentPlug = getFirst(childPlug.parent().resolveChildRef(
 			childPlug.getRef(cls.PLUG_PARENT_KEY, raw=False),
 			fromNode=childPlug))
 		return parentPlug
@@ -106,7 +106,7 @@ class PlugNode(NodeFnSet):
 		print("ref val", refVal)
 		if refVal is None:
 			return ()
-		return plugNode.parent().resolveRef(refVal, plugNode)
+		return plugNode.parent().resolveChildRef(refVal, plugNode)
 
 
 	@classmethod
@@ -125,19 +125,19 @@ class PlugNode(NodeFnSet):
 	@classmethod
 	def plugChildren(cls, plug:ChimaeraNode)->tuple[ChimaeraNode]:
 		"""get immediate children of plug node"""
-		nodeSet = plug.parent().resolveRef(plug.getRef(cls.PLUG_CHILDREN_KEY, default=newRefValue()), plug)
+		nodeSet = plug.parent().resolveChildRef(plug.getRef(cls.PLUG_CHILDREN_KEY, default=newRefValue()), plug)
 		return nodeSet
 
 	@classmethod
 	def inputPlugRoot(cls, mainNode:ChimaeraNode):
-		allNodes = mainNode.resolveRef(mainNode.getRef(cls.IN_PLUG_KEY, ), mainNode)
+		allNodes = mainNode.resolveChildRef(mainNode.getRef(cls.IN_PLUG_KEY, ), mainNode)
 		if not allNodes:
 			return None
 		return allNodes[0]
 
 	@classmethod
 	def outputPlugRoot(cls, mainNode:ChimaeraNode):
-		allNodes = mainNode.resolveRef(mainNode.getRef(cls.OUT_PLUG_KEY, ), mainNode)
+		allNodes = mainNode.resolveChildRef(mainNode.getRef(cls.OUT_PLUG_KEY, ), mainNode)
 		if not allNodes:
 			return None
 		return allNodes[0]
@@ -198,7 +198,7 @@ class PlugNode(NodeFnSet):
 		#cls._setupAllPlugs(node, parent)
 		cls._makeRootPlugNodes(node, parent)
 
-		# set default params on node
+		# set default resultParams on node
 		node.setParams(cls.defaultParams(Tree("root")))
 
 		# make user-defined plugs
@@ -211,6 +211,6 @@ class PlugNode(NodeFnSet):
 
 	@classmethod
 	def defaultParams(cls, paramRoot:Tree)->Tree:
-		"""set up default params for placing joints
+		"""set up default resultParams for placing joints
 		maybe pass in tree root as argument"""
 		return paramRoot

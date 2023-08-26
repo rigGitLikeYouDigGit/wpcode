@@ -2,6 +2,7 @@
 from __future__ import annotations
 import typing as T
 
+from wplib.sentinel import Sentinel
 from wplib.object import DirtyNode, DirtyGraph
 from wplib.expression.new import Expression
 
@@ -14,7 +15,7 @@ need to be recomputed, if their inputs change etc"""
 class DirtyExp( Expression, DirtyNode):
 
 	def __init__(self,
-	             value: [T.Callable, VT, str] = None,
+	             value: [T.Callable, VT, str] = Sentinel.Empty,
 	             policy: ExpPolicy = None,
 	             name="exp",
 	             ):

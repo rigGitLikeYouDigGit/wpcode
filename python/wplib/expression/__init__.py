@@ -6,6 +6,9 @@ Need to evaluate expressions in any structure, any possibly recursively
 
 """
 
-from .new import Expression
+from .syntax import SyntaxPasses, ExpTokens, ExpSyntaxError, ExpSyntaxProcessor
+from .new import Expression, ExpPolicy, EvaluationError, ExpEvaluator
 from .dirty import DirtyExp
+
+
 

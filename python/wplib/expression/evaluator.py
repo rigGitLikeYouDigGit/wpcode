@@ -18,6 +18,9 @@ class ExpEvaluator:
 
 	Subclass this to change behaviour of expression itself, once full
 	syntax is known.
+
+	This class does not control overall evaluation of whole expression,
+	only the evaluation of individual tokens and constants.
 	"""
 
 
@@ -38,21 +41,3 @@ class ExpEvaluator:
 		"""called on any names remaining in expression"""
 		print("resolveName", name)
 		return self.resolveConstant(name)
-
-	def evalExpression(self, expInput:str, expGlobals:dict, inputData:dict=None, frameName="<expression>")->any:
-		"""evaluate an expression string, using custom syntax
-		and resolve functions
-		syntax transform passes should have already been run,
-		expInput here is final processed, unparsed string
-		"""
-		self.expStrInput = expInput
-		self.expGlobals = dict(expGlobals)
-		self.expInputData = inputData
-
-		# add this object to globals as __evaluator__
-		self.expGlobals[MASTER_GLOBALS_EVALUATOR_KEY] = self
-
-		# evaluate expression
-		parsedExp = astModuleToExpression(parseStrToASTModule(expInput))
-		result = evalASTExpression(parsedExp, self.expGlobals, frameName=frameName)
-		return result

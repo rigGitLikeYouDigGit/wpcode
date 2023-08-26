@@ -13,6 +13,7 @@ from types import FunctionType, ModuleType
 from dataclasses import dataclass
 
 from wplib.constant import IMMUTABLE_TYPES, LITERAL_TYPES, MAP_TYPES, SEQ_TYPES
+from wplib.sentinel import Sentinel
 from wplib import ast as wpast
 from wplib.object.serialisable import Serialisable, compileFunctionFromString, serialise
 from wplib.object import Visitor
@@ -195,7 +196,7 @@ class Expression(Serialisable, T.Generic[VT]):
 	defaultModule = ModuleType("expModule") # copy over all baseline globals keys from this
 
 	def __init__(self,
-	             value:[T.Callable, VT, str]=None,
+	             value:[T.Callable, VT, str]=Sentinel.Empty,
 	             policy:ExpPolicy=None,
 	             name="exp",
 	             ):
@@ -206,18 +207,22 @@ class Expression(Serialisable, T.Generic[VT]):
 
 		self.name = name # nice name for identifying source of expressions, do not rely on this
 
-		self._rawValue = "" # text of expression
+		self._rawValue = Sentinel.Empty # raw value of expression
 		self._processedText = "" # text of expression after syntax passes
 		self._parsedAST : ast.AST = None # ast tree of parsed syntax text
 		self._finalAst : ast.AST = None # ast tree of text after transform passes
 		self._isStatic = False
 		self._compiledFn : FunctionType = None
-
-		self.setStructure(value)
+		if value != Sentinel.Empty:
+			self.setStructure(value)
 
 	def getExpName(self)->str:
 		"""return name of expression"""
 		return self.name
+
+	def isEmpty(self)->bool:
+		"""return true if expression is empty"""
+		return self._rawValue is Sentinel.Empty
 
 	def __hash__(self):
 		"""for now removing hashes from expression results -
@@ -262,7 +267,8 @@ class Expression(Serialisable, T.Generic[VT]):
 
 
 	def setFunction(self, fn:FunctionType):
-		"""set expression to callable function"""
+		"""set expression to callable function
+		"""
 		self._cachedValue = None
 		self._compiledFn = fn
 		self._isStatic = False
@@ -282,6 +288,12 @@ class Expression(Serialisable, T.Generic[VT]):
 		                                           )
 		#print("parsed result", parsed, type(parsed))
 		self._parsedStructure = parsed
+
+	def setSource(self, source):
+		if isinstance(source, FunctionType):
+			self.setFunction(source)
+		else:
+			self.setStructure(source)
 
 	def rawStructure(self)->object:
 		"""return raw structure of expression"""
@@ -304,6 +316,9 @@ class Expression(Serialisable, T.Generic[VT]):
 		}
 		globals().update(expGlobalsMap)
 
+		if self._compiledFn:
+			result = self._compiledFn()
+
 		# recursively evaluate any sub-expressions
 		result = recursiveVisitCopy(
 			self._parsedStructure, transformEvaluateExpStructure,
@@ -313,6 +328,8 @@ class Expression(Serialisable, T.Generic[VT]):
 		# restore globals
 		# for k in expGlobalsMap:
 		# 	globals().pop(k)
+
+
 
 		# return result
 		return result
@@ -401,11 +418,6 @@ class Expression(Serialisable, T.Generic[VT]):
 		"""print parsed expression"""
 		pprint.pprint(self._parsedStructure)
 
-class ExpTools:
-	"""namespace for collecting a load of expression tools"""
-	ExpressionPolicy = ExpPolicy
-	ExpressionEvaluator = ExpEvaluator
-	#class SyntaxPasses:
 
 
 if __name__ == '__main__':

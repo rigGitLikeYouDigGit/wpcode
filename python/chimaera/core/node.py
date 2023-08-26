@@ -5,7 +5,8 @@ import typing as T
 #from collections import namedtuple
 from typing import NamedTuple, TypedDict
 
-from wplib import Expression, DirtyExp, coderef
+from wplib import DirtyExp, coderef
+from wplib.expression import Expression, SyntaxPasses, ExpTokens, ExpSyntaxError, EvaluationError, ExpEvaluator, ExpPolicy, ExpSyntaxProcessor
 from wplib.sentinel import Sentinel
 from wplib.object import UidElement, DirtyNode
 from wplib.sequence import getFirst, flatten
@@ -63,7 +64,7 @@ class ChimaeraNode(UidElement, DirtyNode):
 	execution-specific wrapper later
 
 	not all features of the graph can (or should) appear in the execution graph -
-	make ref map values proper function params
+	make ref map values proper function resultParams
 
 	"""
 
@@ -147,7 +148,7 @@ class ChimaeraNode(UidElement, DirtyNode):
 			"value": DirtyExp(name="value"),
 
 			# putting these here for now for ease - only complex nodes need them,
-			"params" : DirtyExp(name="params",
+			"resultParams" : DirtyExp(name="resultParams",
 			                    value=Tree("root")),
 			"storage" : DirtyExp(name="storage",
 			                  value=Tree("root")),
@@ -191,6 +192,38 @@ class ChimaeraNode(UidElement, DirtyNode):
 		# 	return self.parent().nodeDataBlock(self)
 		return self._data
 
+	# region expression stuff
+	@classmethod
+	def getExpPolicy(cls)->ExpPolicy:
+		"""return a policy object for Chimaera expression
+		syntax and evaluation.
+		Can't delegate to constructs since this directly affects how
+		the graph structures itself.
+		"""
+
+		tokenPass = SyntaxPasses.TokenReplacerPass(
+			tokenTypes=(ExpTokens.Dollar,)
+		)
+
+		def definesExpFn(s):
+			return ExpTokens.Dollar.head in s
+
+		syntaxProcessor = ExpSyntaxProcessor(
+			syntaxStringPasses=[tokenPass],
+			syntaxAstPasses=[],
+			stringDefinesExpressionFn=definesExpFn
+		)
+
+		evaluator = ExpEvaluator() # specialised this
+
+		policy = ExpPolicy(
+			syntaxProcessor=syntaxProcessor,
+			evaluator=evaluator
+		)
+		return policy
+
+
+	# region name
 	def nameExp(self)->DirtyExp:
 		return self.dataBlock()["attrMap"]["name"]
 	def setName(self, name:str)->None:
@@ -198,13 +231,15 @@ class ChimaeraNode(UidElement, DirtyNode):
 	def nodeName(self)->str:
 		return self.nameExp().resultStructure()
 
-	#region params
+	#region resultParams
 	def paramsExp(self)->DirtyExp:
-		return self.dataBlock()["attrMap"]["params"]
-	def setParams(self, value)->None:
+		return self.dataBlock()["attrMap"]["resultParams"]
+	def sourceParams(self)->Tree:
+		return self.paramsExp().rawStructure()
+	def setParams(self, value:Tree)->None:
 		"""directly set the current value to rescan tree in expression"""
 		self.paramsExp().setStructure(value)
-	def params(self)->Tree:
+	def resultParams(self)->Tree:
 		return self.paramsExp().eval()
 	# endregion
 	
@@ -221,18 +256,21 @@ class ChimaeraNode(UidElement, DirtyNode):
 	#region value and evaluation
 	def valueExp(self)->DirtyExp:
 		return self.dataBlock()["attrMap"]["value"]
+	def sourceValue(self):
+		return self.valueExp().rawStructure()
 	def setValue(self, value)->None:
 		self.valueExp().setStructure(value)
 	def value(self):
 		"""if exp is set, evaluate it
 		if data tree is defined, return it,
-		if params tree is defined, return it?
+		if resultParams tree is defined, return it?
 
 		Really like old version where a node either operated on
 		data or became data - maybe we can carry that through
 		"""
-		if self.valueExp().rawStructure():
-			return self.valueExp().resultStructure()
+		if not self.valueExp().isEmpty():
+			return self.valueExp().eval()
+		return self.resultParams()
 
 	# endregion
 
@@ -240,7 +278,7 @@ class ChimaeraNode(UidElement, DirtyNode):
 	def refMapExp(self)->DirtyExp:
 		return self.dataBlock()["refMap"]
 
-	def setRef(self, key, uid:tuple[str]=(), path:tuple[str]=(), node:tuple[ChimaeraNode]=(), affectEval=True, refVal:RefValue=None)->None:
+	def setRef(self, key, uid:tuple[str, ...]=(), path:tuple[str, ...]=(), node:tuple[ChimaeraNode, ...]=(), affectEval=True, refVal:RefValue=None)->None:
 		"""updates expression source of refmap with given value"""
 		refMapSrc : dict = self.refMapExp().rawStructure()
 		if refVal:
@@ -268,6 +306,9 @@ class ChimaeraNode(UidElement, DirtyNode):
 		if result is Sentinel.FailToFind:
 			raise KeyError(f"refmap key {key} not found in {self.refMapRaw()}")
 		return result
+		baseRefValue = newRefValue()
+		baseRefValue.update(result)
+		return baseRefValue
 
 
 	#endregion
@@ -358,7 +399,7 @@ class ChimaeraNode(UidElement, DirtyNode):
 			"affectEval" : True,
 		}
 
-	def resolveRef(self, ref:RefValue, fromNode:ChimaeraNode)->tuple[ChimaeraNode]:
+	def resolveChildRef(self, ref:RefValue, fromNode:ChimaeraNode)->tuple[ChimaeraNode]:
 		"""return sequence of nodes matching ref strings -
 		consider closer integration between this and node-side expressions.
 
@@ -380,6 +421,25 @@ class ChimaeraNode(UidElement, DirtyNode):
 
 		return tuple(nodes)
 
+	def resolveExpRef(self, localName:str, mode="value"):
+		"""function called from within node expressions as REF()
+		implement other modes to return node, to return literal text
+		of ref node's value, etc
+		Weird to call up to parent, see if there's a cleaner way
+		"""
+		return self.parent().resolveChildRef(self.getRef(localName), self)
+
+	def getExpParseGlobals(self)->dict[str, object]:
+		"""return dict of globals to be used when parsing expressions"""
+		return {
+			"REF" : self.resolveExpRef,
+		}
+
+	def getExpEvalGlobals(self)->dict[str, object]:
+		"""return dict of globals to be used when evaluating expressions"""
+		return {
+			"REF" : self.resolveExpRef,
+		}
 
 	# endregion
 
