@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import ast
+import inspect
+
 from types import FunctionType
 
 
@@ -27,3 +30,18 @@ def addToFunctionGlobals(fn:FunctionType, customGlobals:dict):
 	except (AttributeError, TypeError): # which will always be raised
 		baseBuiltins.__dict__.update(customGlobals) # this line will succeed
 		fn.__globals__["__builtins__"] = baseBuiltins.__dict__
+
+if __name__ == '__main__':
+
+	def fn(a, b, *args, c=3, **kwargs):
+		"""test function"""
+		print(a, b, args, c, kwargs)
+
+	spec = inspect.signature(fn)
+	print(spec)
+	for i in spec.parameters.values():
+		print(i.__reduce__())
+		print(i.kind, i.name, i.default, i.annotation)
+	#print(spec.parameters)
+
+

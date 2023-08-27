@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 from types import CodeType
 
+"""have to name this module 'astlib' because 'ast' is already taken by the stdlib"""
 
 def parseStrToASTModule(s:str)->ast.Module:
 	"""ast has some tricky stuff around parsing vs compiling vs eval-ing,

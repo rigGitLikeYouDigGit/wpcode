@@ -8,7 +8,7 @@ from types import ModuleType, FunctionType
 from collections import namedtuple
 
 from wplib import sequence
-from wplib.ast import parseStrToASTModule
+from wplib.astlib import parseStrToASTModule
 from wplib.object import TypeNamespace
 from wplib.expression.constant import MASTER_GLOBALS_EVALUATOR_KEY, EXP_LAMBDA_NAME
 from wplib.expression.error import CompilationError, EvaluationError, ExpSyntaxError
@@ -495,9 +495,9 @@ class SyntaxPasses(TypeNamespace):
 		def preProcessRawString(self, s:str) ->str:
 			"""check that string starts with
 			'lambda' keyword, and add if not"""
-			if s.startswith("lambda :"):
+			if s.startswith("lambda *args, **kwargs :"):
 				return s
-			return EXP_LAMBDA_NAME + "= lambda :" + s
+			return EXP_LAMBDA_NAME + "= lambda *args, **kwargs:" + s
 			#return "lambda :" + s
 
 
@@ -563,7 +563,7 @@ class ExpSyntaxProcessor:
 			expGlobals:dict)->FunctionType:
 		"""compile final ast to function
 		this should live somewhere else"""
-		print("compile ast", ast.dump(finalAst))
+		#print("compile ast", ast.dump(finalAst))
 
 		c = compile(finalAst, "<expCompile>", "exec", )
 
@@ -573,7 +573,7 @@ class ExpSyntaxProcessor:
 
 		exec(c, expDict
 		     )
-		print("post exec", expDict.keys())
+		#print("post exec", expDict.keys())
 		return expDict[EXP_LAMBDA_NAME]
 
 

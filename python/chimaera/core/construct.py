@@ -30,21 +30,53 @@ class NodeFnSet:
 
 	Main point is that a chimaera node may outlive or predate its creator construct,
 
-	IF NEEDED, experiment with FnSet INSTANCE being set on a single node in order to evaluate it, but for now stick with class methods
+	FnSets are INSTANTIATED on chimaera nodes, and an attached function set's compute
+	takes precedence over the node's value expression. Constructs may be destroyed and
+	reinstantiated for each node - reloading a construct class should immediately update
+	a node's active behaviour.
 
 	"""
 
 	def __init__(self, node:ChimaeraNode=None):
-		self.node : ChimaeraNode = node
+		self.node : ChimaeraNode = None
+		if node is not None:
+			self.setNode(node)
+
+	def setNode(self, node:ChimaeraNode)->None:
+		self.node = node
+		if node is None:
+			return
+		node.setFnSet(self)
+
+		# delegate methods from node
+		self.name = node.name
+		self.refMap = node.refMap
+		self.resultParams = node.resultParams
+		self.resultStorage = node.resultStorage
+
 
 	@classmethod
 	def setupNode(cls, node:ChimaeraNode, name:str, parent:ChimaeraNode=None)->None:
 		"""default process to set up node when freshly created -
 		used by plug nodes to create plugs, etc
 		"""
+		# set param defaults
+		rawParams = node.sourceParams()
+		rawParams.lookupCreate = True
+		cls.makeDefaultParams(rawParams)
+		rawParams.lookupCreate = False
+
+
+
 
 	@classmethod
-	def compute(cls, node:ChimaeraNode, graph:ChimaeraNode, **kwargs)->object:
+	def makeDefaultParams(cls, paramRoot: Tree):
+		"""set up default resultParams for placing joints
+		maybe pass in tree root as argument"""
+
+
+
+	def compute(self, **kwargs)->object:
 		"""compute node output from input data block
 		return the node's new value to be cached"""
 		raise NotImplementedError
@@ -56,3 +88,11 @@ class NodeFnSet:
 		should call compute and handle any possible errors
 		"""
 		raise NotImplementedError
+
+	@classmethod
+	def create(cls, name:str, parent:ChimaeraNode=None)->cls:
+		"""create a new node with this construct -
+		control flow is wacky, since this calls graph which will also call this
+		"""
+		node = parent.createNode(name, cls)
+		return cls(node)

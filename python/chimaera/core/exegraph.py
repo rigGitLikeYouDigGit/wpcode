@@ -32,7 +32,7 @@ class ChimaeraDirtyGraph(DirtyGraph):
 
 	def getNodeRegister(self):
 		return {"uid" : self.allChimaeraNodes(),
-		        "name" : {n.nodeName() : n for n in self.allChimaeraNodes().values()}
+		        "name" : {n.name() : n for n in self.allChimaeraNodes().values()}
 		        }
 
 	@classmethod

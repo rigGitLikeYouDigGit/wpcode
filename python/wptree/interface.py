@@ -10,7 +10,9 @@ from wplib.object import Signal, Traversable, TraversableParams
 from wplib import TypeNamespace
 from wplib.sentinel import Sentinel
 from wplib import coderef
+
 from wptree.delta import TreeDeltas
+from wptree.treedescriptor import TreePropertyDescriptor
 
 """interface specification for objects that may behave like a basic tree.
 
@@ -70,10 +72,22 @@ class TreeInterface(Traversable
 	class AuxKeys(TypeNamespace):
 		class _Base(TypeNamespace.base()):
 			"""base aux keys for all trees"""
-		class lookupCreate(_Base):
+		class LookupCreate(_Base):
 			"""if True, missing branches will be created when traversing"""
-		class default(_Base):
+		class Default(_Base):
 			"""default value for branches"""
+		class Description(_Base):
+			"""description of branch"""
+
+	_DEFAULT_PROP_KEY = "_default"
+	default = TreePropertyDescriptor(
+		AuxKeys.Default, default=None, inherited=True)
+
+	lookupCreate = TreePropertyDescriptor(
+		AuxKeys.LookupCreate, default=False, inherited=True)
+
+	description = TreePropertyDescriptor(
+		AuxKeys.Description, default="", inherited=False	)
 
 	@classmethod
 	def defaultBranchCls(cls):
@@ -185,7 +199,7 @@ class TreeInterface(Traversable
 		value on this tree.
 		On the normal Tree, this looks for the aux property "default"
 		"""
-		return self.getAuxProperty(self.AuxKeys.default)
+		return self.getAuxProperty(self.AuxKeys.Default)
 	def _evalDefault(self):
 		if callable(self._getDefault()):
 			return self._getDefault()(self)
@@ -388,7 +402,7 @@ class TreeInterface(Traversable
 		params : TreeTraversalParams = self.defaultTraverseParamCls()()
 		params.create = kwargs.pop(
 			"create", self.getAuxProperty(
-				self.AuxKeys.lookupCreate, default=None
+				self.AuxKeys.LookupCreate, default=None
 			)
 		)
 		return params

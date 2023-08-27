@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import wplib.ast
+import wplib.astlib
 import wplib.expression.evaluator
 import wplib.expression.syntax
 from wplib.function import addToFunctionGlobals
@@ -9,12 +9,12 @@ from wplib.function import addToFunctionGlobals
 to be evaluated"""
 import typing as T
 import ast, pprint, re
-from types import FunctionType, ModuleType
+from types import FunctionType, ModuleType, MethodType, MethodWrapperType
 from dataclasses import dataclass
 
 from wplib.constant import IMMUTABLE_TYPES, LITERAL_TYPES, MAP_TYPES, SEQ_TYPES
 from wplib.sentinel import Sentinel
-from wplib import ast as wpast
+from wplib import astlib as wpast
 from wplib.object.serialisable import Serialisable, compileFunctionFromString, serialise
 from wplib.object import Visitor
 from wplib.object.visit import Visitable, getVisitDestinations, Visitor, recursiveVisitCopy
@@ -91,6 +91,7 @@ class ExpVisitDict(T.TypedDict):
 	no way to read back the isStatic flag yet"""
 	parentExp : Expression
 	isStatic : bool
+	callArgsKwargs : T.Tuple[T.Tuple, T.Dict]
 
 
 def transformParseExpStructure(
@@ -146,8 +147,11 @@ def transformEvaluateExpStructure(
 	"""if it's an expression, eval the expression
 	and visit the result"""
 	#print("transformEvaluateExpStructure", parsedObj, type(parsedObj), callable(parsedObj))
-	if callable(parsedObj):
-		return parsedObj()
+	if isinstance(parsedObj, (FunctionType, MethodType, MethodWrapperType)):
+		return parsedObj(
+			*visitData["callArgsKwargs"][0],
+			**visitData["callArgsKwargs"][1]
+		)
 
 	# if obj is string, check if it contains expression syntax
 	# if isinstance(parsedObj, Expression):
@@ -164,12 +168,6 @@ def transformEvaluateExpStructure(
 	# 	return parsedResult
 	return parsedObj
 
-
-# class Helper:
-#
-# 	def __getattr__(self, item):
-# 		print("helper getattr", item)
-# 		return item
 
 VT = T.TypeVar("VT")
 class Expression(Serialisable, T.Generic[VT]):
@@ -235,6 +233,7 @@ class Expression(Serialisable, T.Generic[VT]):
 		self._finalAst : ast.AST = None # ast tree of text after transform passes
 		self._isStatic = False
 		self._compiledFn : FunctionType = None
+		self._evalTarget : T.Callable = Sentinel.Empty # function to evaluate
 		if value != Sentinel.Empty:
 			self.setStructure(value)
 
@@ -305,14 +304,19 @@ class Expression(Serialisable, T.Generic[VT]):
 		self._compiledFn = fn
 		self._isStatic = False
 		#self._text = serialiseFunction(fn)["code"]
-		self._rawValue = libfn.getFnSource(fn)
-		self._finalAst = wplib.ast.parseStrToASTExpression(self._rawValue)
+		# self._rawValue = libfn.getFnSource(fn)
+		# self._finalAst = wplib.ast.parseStrToASTExpression(self._rawValue)
+
+		#TODO: set coderef to function if possible
+
+		self._evalTarget = fn
 
 	def setStructure(self, structure:object):
 		"""set expression to structure - recursively parse structure to find any embedded functions
 		"""
 		self._cachedValue = None
 		self._compiledFn = None
+		self._evalTarget = Sentinel.Empty
 		self._rawValue = structure
 		parsed = recursiveVisitCopy(
 			structure, transformParseExpStructure,
@@ -320,6 +324,7 @@ class Expression(Serialisable, T.Generic[VT]):
 		                                           )
 		#print("parsed result", parsed, type(parsed))
 		self._parsedStructure = parsed
+		self._evalTarget = parsed
 
 	def setSource(self, source):
 		if isinstance(source, FunctionType):
@@ -332,7 +337,7 @@ class Expression(Serialisable, T.Generic[VT]):
 		return self._rawValue
 
 
-	def eval(self):
+	def eval(self, *args, **kwargs):
 		"""evaluate expression and return result -
 		update globals with references to evaluator and self.
 
@@ -349,13 +354,14 @@ class Expression(Serialisable, T.Generic[VT]):
 		}
 		globals().update(expGlobalsMap)
 
-		if self._compiledFn:
-			result = self._compiledFn()
+		# if self._evalTarget is not Sentinel.Empty:
+		# 	result = self._evalTarget(*args, **kwargs)
+		# 	#return result
 
 		# recursively evaluate any sub-expressions
 		result = recursiveVisitCopy(
-			self._parsedStructure, transformEvaluateExpStructure,
-			ExpVisitDict(parentExp=self, isStatic=False)
+			self._evalTarget, transformEvaluateExpStructure,
+			ExpVisitDict(parentExp=self, isStatic=False, callArgsKwargs=(args, kwargs))
 		)
 
 		# restore globals
@@ -532,7 +538,7 @@ if __name__ == '__main__':
 	class MayaSetEvaluator(ExpEvaluator):
 
 		def resolveName(self, name:str):
-			print("resolveName", name)
+			#print("resolveName", name)
 			return name
 		pass
 

@@ -4,6 +4,7 @@ import typing as T
 
 #from collections import namedtuple
 from typing import NamedTuple, TypedDict
+from types import FunctionType
 
 from wplib import DirtyExp, coderef
 from wplib.expression import Expression, SyntaxPasses, ExpTokens, ExpSyntaxError, EvaluationError, ExpEvaluator, ExpPolicy, ExpSyntaxProcessor
@@ -43,9 +44,9 @@ class NodeExpEvaluator(ExpEvaluator):
 		self.node = node
 
 	def resolveName(self, name:str):
-		print("nodeExpEvaluator resolveName", name)
+		#print("nodeExpEvaluator resolveName", name)
 		if name == "name":
-			return self.node.nodeName()
+			return self.node.name()
 		if name == "uid":
 			return self.node.uid
 		if name == "value":
@@ -107,8 +108,12 @@ class ChimaeraNode(UidElement, DirtyNode):
 		self._expPolicy = self.getExpPolicy()
 		self._data = self.makeDefaultData()
 
-	# def _getDirtyNodeName(self) ->str:
-	# 	return self._data["attrMap"]["name"].value
+		# for now we give a node a fleeting reference to its active function set -
+		# control flow is a bit tangled, but it's good enough for a v1
+		self._fnSet : NodeFnSet = None
+
+
+
 
 	#region dirtynode integration
 	def getDirtyNodeAntecedents(self) ->tuple[DirtyNode]:
@@ -156,6 +161,13 @@ class ChimaeraNode(UidElement, DirtyNode):
 		if refStr:
 			return coderef.resolveCodeRef(refStr)
 		return None
+
+	def setFnSet(self, fnSet:NodeFnSet=None):
+		self._fnSet = fnSet
+		self.setFnSetTypeRefStr(coderef.getCodeRef(type(fnSet)))
+
+	def fnSet(self)->NodeFnSet:
+		return self._fnSet
 
 
 
@@ -270,13 +282,13 @@ class ChimaeraNode(UidElement, DirtyNode):
 
 	def resolveExpNodeToken(self, token:str):
 		if token == "name":
-			return self.nodeName()
+			return self.name()
 		if token == "value":
 			return self.value()
 		if token == "params":
 			return self.resultParams()
 		if token == "storage":
-			return self.storage()
+			return self.resultStorage()
 
 	# region name
 	def nameExp(self)->DirtyExp:
@@ -285,8 +297,8 @@ class ChimaeraNode(UidElement, DirtyNode):
 		return self.nameExp().rawStructure()
 	def setName(self, name:str)->None:
 		self.nameExp().setStructure(name)
-	def nodeName(self)->str:
-		return self.nameExp().resultStructure()
+	def name(self)->str:
+		return self.nameExp().eval(self)
 
 	#region resultParams
 	def paramsExp(self)->DirtyExp:
@@ -297,7 +309,7 @@ class ChimaeraNode(UidElement, DirtyNode):
 		"""directly set the current value to rescan tree in expression"""
 		self.paramsExp().setStructure(value)
 	def resultParams(self)->Tree:
-		return self.paramsExp().eval()
+		return self.paramsExp().eval(self)
 	# endregion
 	
 	#region storage
@@ -309,7 +321,7 @@ class ChimaeraNode(UidElement, DirtyNode):
 		"""directly set the current value to rescan tree in expression"""
 		self.storageExp().setStructure(value)
 	def resultStorage(self)->Tree:
-		return self.storageExp().eval()
+		return self.storageExp().eval(self)
 	# endregion
 
 	#region value and evaluation
@@ -327,8 +339,10 @@ class ChimaeraNode(UidElement, DirtyNode):
 		Really like old version where a node either operated on
 		data or became data - maybe we can carry that through
 		"""
+		if self.fnSet():
+			return self.fnSet().compute()
 		if not self.valueExp().isEmpty():
-			return self.valueExp().eval()
+			return self.valueExp().eval(self)
 		return self.resultParams()
 
 	# endregion
@@ -414,10 +428,9 @@ class ChimaeraNode(UidElement, DirtyNode):
 
 
 		# if construct class given, run node setup
+		newNode.setName(name)
 		if nodeType:
 			nodeType.setupNode(newNode, name=name, parent=self)
-		else: # just set basic name
-			newNode.setName(name)
 		return newNode
 	#endregion
 

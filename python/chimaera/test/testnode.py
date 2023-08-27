@@ -43,3 +43,38 @@ class TestNode(unittest.TestCase):
 		nodeA.setValue("$name.upper()")
 		self.assertEqual(nodeA.value(), "NODEA")
 
+		nodeA.setValue( lambda node : 22)
+		self.assertEqual(nodeA.value(), 22)
+
+
+	class TestPlugNode(PlugNode):
+		""" test for basic Chimaera node evaluation and referencing """
+
+
+		@classmethod
+		def defaultParams(cls, paramRoot:Tree) ->Tree:
+			paramRoot("inputs", create=True)
+			return paramRoot
+
+		def compute(self, **kwargs) ->object:
+			return str(self.node.refMap())
+
+	def test_plugNode(self):
+		graph = ChimaeraNode("graph")
+
+		node = graph.createNode("nodeA", TestNode.TestPlugNode)
+		self.assertIsInstance(node, ChimaeraNode)
+		self.assertEqual(node.name(), "nodeA")
+
+		construct = TestNode.TestPlugNode.create("nodeB", graph)
+		self.assertIsInstance(construct, TestNode.TestPlugNode)
+		self.assertIs(construct.node.fnSet(), construct)
+		print(construct.node.fnSet())
+		print(construct.node.value())
+		self.assertIn("inputs", construct.node.resultParams().branchMap)
+
+
+
+
+
+
