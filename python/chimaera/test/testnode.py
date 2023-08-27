@@ -38,17 +38,8 @@ class TestNode(unittest.TestCase):
 		# check node expression tokens
 		nodeA.setValue("$name")
 
-		print(nodeA.valueExp()._parsedStructure)
+		self.assertEqual(nodeA.value(), "nodeA")
 
-		# def printArgs(*args, **kwargs):
-		# 	print("printArgs", args, kwargs)
-		# 	return args, kwargs
-		#
-		# nodeA.setValue(printArgs)
-		# result = nodeA.value()
-		# print(result)
-		#
-		# nodeA.setValue("(): print('hello')")
-		# result = nodeA.value()
-		# print(result, type(result))
+		nodeA.setValue("$name.upper()")
+		self.assertEqual(nodeA.value(), "NODEA")
 

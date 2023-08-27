@@ -1,9 +1,11 @@
 from __future__ import annotations
+import typing as T
 
 from wplib.ast import astModuleToExpression, parseStrToASTModule, evalASTExpression
 from wplib.expression.constant import MASTER_GLOBALS_EVALUATOR_KEY
 #from wplib.expression.syntax import ExpressionToken
-
+if T.TYPE_CHECKING:
+	from wplib.expression.syntax import SyntaxPasses, ExpTokens
 
 class ExpEvaluator:
 	"""main class to actually evaluate expressions
@@ -23,13 +25,7 @@ class ExpEvaluator:
 	only the evaluation of individual tokens and constants.
 	"""
 
-
-	def __init__(self):
-		self.expStrInput = ""
-		self.expInputData = None
-		self.expGlobals : dict = None
-
-	def resolveToken(self, token: ExpressionToken):
+	def resolveToken(self, token:ExpTokens.T() ):
 		"""resolve specially marked tokens to their final value"""
 		return token.content
 
@@ -39,5 +35,14 @@ class ExpEvaluator:
 
 	def resolveName(self, name:str):
 		"""called on any names remaining in expression"""
-		print("resolveName", name)
+		#print("resolveName", name)
 		return self.resolveConstant(name)
+
+	def __getattr__(self, item):
+		"""resolve any other attributes to constants"""
+		return self.resolveName(item)
+
+	# def __call__(self, *args, **kwargs):
+	# 	"""resolve a longer string"""
+	# 	return self.resolveConstant(args)
+

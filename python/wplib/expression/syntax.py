@@ -306,7 +306,7 @@ class SyntaxPasses(TypeNamespace):
 			self.tokenBaseCharMap = {}
 			self.tokenLegalCharMap = {}
 
-		def _getSyntaxLocalMap(self)->dict:
+		def getSyntaxLocalMap(self)->dict:
 			"""return dict of {name : value} to update expression globals"""
 			return {"_" + i.__name__ : i for i in self.tokenTypes}
 
@@ -520,7 +520,8 @@ class ExpSyntaxProcessor:
 	"""
 	syntaxStringPasses:list[SyntaxPasses.T()]
 	syntaxAstPasses:list[SyntaxPasses.T()]
-	stringDefinesExpressionFn:T.Callable[[str], bool] = lambda s: False
+	stringIsExpressionFn:T.Callable[[str], bool] = lambda s: False
+	stringIsExpFunctionDefinitionFn:T.Callable[[str], bool] = lambda s: False
 
 
 	def parseRawExpString(self, s:str) ->str:

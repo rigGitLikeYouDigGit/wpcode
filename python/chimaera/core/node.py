@@ -36,6 +36,24 @@ class RefValue(TypedDict):
 def newRefValue() ->RefValue:
 	return {"uid" : [], "path" : [], "affectEval" : 1}
 
+class NodeExpEvaluator(ExpEvaluator):
+	"""evaluate node expression"""
+
+	def __init__(self, node:ChimaeraNode):
+		self.node = node
+
+	def resolveName(self, name:str):
+		print("nodeExpEvaluator resolveName", name)
+		if name == "name":
+			return self.node.nodeName()
+		if name == "uid":
+			return self.node.uid
+		if name == "value":
+			return self.node.value()
+		if name == "params":
+			return self.node.resultParams()
+		if name == "storage":
+			return self.node.resultStorage()
 
 
 class ChimaeraNode(UidElement, DirtyNode):
@@ -85,7 +103,9 @@ class ChimaeraNode(UidElement, DirtyNode):
 		but it's safe to copied or instanced data -
 		only falls back to this object's attribute if no parent is available
 		"""
-		self._data = self.defaultData()
+		self._evaluator = NodeExpEvaluator(self)
+		self._expPolicy = self.getExpPolicy()
+		self._data = self.makeDefaultData()
 
 	# def _getDirtyNodeName(self) ->str:
 	# 	return self._data["attrMap"]["name"].value
@@ -139,23 +159,42 @@ class ChimaeraNode(UidElement, DirtyNode):
 
 
 
-	@classmethod
-	def defaultData(cls)->dict:
+	def makeDefaultData(self)->dict:
 		"""called when node object is constructed,
 		BEFORE any reference to graph is known"""
 		attrMap : dict[str, Expression] = {
-			"name" : DirtyExp(name="name"),
-			"value": DirtyExp(name="value"),
+			"name" : DirtyExp(name="name",
+			                  policy=self._expPolicy,
+			                  evaluator=self._evaluator
+
+			                  ),
+			"value": DirtyExp(name="value",
+			                  policy=self._expPolicy,
+			                  evaluator=self._evaluator
+
+			                  ),
 
 			# putting these here for now for ease - only complex nodes need them,
 			"resultParams" : DirtyExp(name="resultParams",
-			                    value=Tree("root")),
+			                    value=Tree("root"),
+			                          policy=self._expPolicy,
+			                          evaluator=self._evaluator
+
+			                          ),
 			"storage" : DirtyExp(name="storage",
-			                  value=Tree("root")),
+			                  value=Tree("root"),
+								policy = self._expPolicy,
+								 evaluator=self._evaluator
+
+			                     ),
 		}
 		refMapExp : T.Callable[[], dict[str, dict[str]]] = DirtyExp(
 			value={},
-			name="refMap")
+			name="refMap",
+			policy=self._expPolicy,
+			evaluator=self._evaluator
+
+		)
 		attrMap["name"].setStructure("node")
 		# nodes attribute cannot be proxied live -
 		# if instancing needed, use a generator or directly reference
@@ -193,39 +232,57 @@ class ChimaeraNode(UidElement, DirtyNode):
 		return self._data
 
 	# region expression stuff
-	@classmethod
-	def getExpPolicy(cls)->ExpPolicy:
+	def getExpPolicy(self)->ExpPolicy:
 		"""return a policy object for Chimaera expression
 		syntax and evaluation.
 		Can't delegate to constructs since this directly affects how
 		the graph structures itself.
 		"""
 
-		tokenPass = SyntaxPasses.TokenReplacerPass(
-			tokenTypes=(ExpTokens.Dollar,)
-		)
-
+		# tokenPass = SyntaxPasses.TokenReplacerPass(
+		# 	tokenTypes=(ExpTokens.Dollar,)
+		# )
+		#
 		def definesExpFn(s):
 			return ExpTokens.Dollar.head in s
 
+		charPass = SyntaxPasses.CharReplacerPass(
+			charMap={ "$" : ExpPolicy.EXP_GLOBALS_KEY + ".evaluator." }
+		)
+		ensureLambdaPass = SyntaxPasses.EnsureLambdaPass()
+
 		syntaxProcessor = ExpSyntaxProcessor(
-			syntaxStringPasses=[tokenPass],
+			syntaxStringPasses=[charPass, ensureLambdaPass],
 			syntaxAstPasses=[],
-			stringDefinesExpressionFn=definesExpFn
+			stringIsExpressionFn=definesExpFn
 		)
 
-		evaluator = ExpEvaluator() # specialised this
+		evaluator = NodeExpEvaluator(self) # specialise this
+
+		# def getExpGlobals():
+		# 	return tokenPass.getSyntaxLocalMap()
 
 		policy = ExpPolicy(
 			syntaxProcessor=syntaxProcessor,
-			evaluator=evaluator
+			evaluator=evaluator,
 		)
 		return policy
 
+	def resolveExpNodeToken(self, token:str):
+		if token == "name":
+			return self.nodeName()
+		if token == "value":
+			return self.value()
+		if token == "params":
+			return self.resultParams()
+		if token == "storage":
+			return self.storage()
 
 	# region name
 	def nameExp(self)->DirtyExp:
 		return self.dataBlock()["attrMap"]["name"]
+	def sourceName(self)->str:
+		return self.nameExp().rawStructure()
 	def setName(self, name:str)->None:
 		self.nameExp().setStructure(name)
 	def nodeName(self)->str:
@@ -246,10 +303,12 @@ class ChimaeraNode(UidElement, DirtyNode):
 	#region storage
 	def storageExp(self)->DirtyExp:
 		return self.dataBlock()["attrMap"]["storage"]
+	def sourceStorage(self)->Tree:
+		return self.storageExp().rawStructure()
 	def setstorage(self, value)->None:
 		"""directly set the current value to rescan tree in expression"""
 		self.storageExp().setStructure(value)
-	def storage(self)->Tree:
+	def resultStorage(self)->Tree:
 		return self.storageExp().eval()
 	# endregion
 
@@ -348,7 +407,7 @@ class ChimaeraNode(UidElement, DirtyNode):
 
 		#nodeType = nodeType or self.defaultNodeType()
 		newNode = toCreateCls()
-		#newData = newNode.defaultData()
+		#newData = newNode.makeDefaultData()
 		newData = newNode.dataBlock()
 		self.addNode(newNode,# newData
 		             )

@@ -17,10 +17,13 @@ class DirtyExp( Expression, DirtyNode):
 	def __init__(self,
 	             value: [T.Callable, VT, str] = Sentinel.Empty,
 	             policy: ExpPolicy = None,
+	             evaluator: ExpEvaluator = None,
 	             name="exp",
+
 	             ):
 		DirtyNode.__init__(self)
-		Expression.__init__(self, value=value, policy=policy, name=name)
+		Expression.__init__(self, value=value, policy=policy, name=name,
+		                    evaluator=evaluator)
 		self._prevExpressions : tuple[(DirtyExp, DirtyNode)] = ()
 
 	@classmethod

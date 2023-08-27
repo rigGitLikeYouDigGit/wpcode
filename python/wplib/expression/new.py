@@ -56,6 +56,8 @@ class ExpPolicy:
 	"""general shared object defining behaviour of expression
 	"""
 
+
+
 	# object to resolve tokens, manage syntax passes, etc
 	syntaxProcessor : ExpSyntaxProcessor = ExpSyntaxProcessor([], [])
 
@@ -63,11 +65,24 @@ class ExpPolicy:
 	# use list of these too to add functionality for different tokens
 	evaluator : ExpEvaluator = None
 
-	def expGlobalMap(self)->dict:
-		"""map of globals to update expression with"""
-		return {
-			expconstant.MASTER_GLOBALS_EVALUATOR_KEY : self.evaluator,
-		}
+	# function to return globals needed for expression -
+	# connect syntax passes more closely with this later
+	getExpGlobalsFn : T.Callable[[], dict] = lambda : {}
+
+	EXP_GLOBALS_KEY = expconstant.MASTER_GLOBALS_EXP_KEY
+
+
+
+	# def getExpParseGlobalMap(self)->dict:
+	# 	"""map of globals to update expression with"""
+	# 	baseGlobals = self.getExpGlobalsFn()
+	# 	baseGlobals.update(
+	# 		{
+	# 			expconstant.MASTER_GLOBALS_EVALUATOR_KEY : self.evaluator,
+	# 			expconstant.MASTER_GLOBALS_EXP_KEY : self,
+	# 		}
+	# 	)
+	# 	return baseGlobals
 #
 
 
@@ -85,10 +100,6 @@ def transformParseExpStructure(
 	"""Given any random object, check if it contains any latent expression
 	syntax. If so, parse it to a lambda and embed it in structure.
 
-	This does mean we need a second recursive pass to evaluate the full expression -
-	could we add "expression stream" objects to a register and only evaluate
-	them when requested?
-	Cleaner to just return a new copy.
 
 	If not, mark it as static.
 
@@ -96,7 +107,10 @@ def transformParseExpStructure(
 
 	Inherit expression settings from parent
 
-	Output false if no transform done, true if transform done
+	First check if a string defines an expression of any kind -
+	then check if it's a function definition.
+	If it is, it has to be exec'd
+
 	"""
 	parentExp = visitData["parentExp"]
 
@@ -104,17 +118,19 @@ def transformParseExpStructure(
 	#print("transformParseExpStructure", obj)
 	if isinstance(obj, str):
 		#print("defines", parentExp.policy.syntaxProcessor.stringDefinesExpressionFn(obj))
-		if not parentExp.policy.syntaxProcessor.stringDefinesExpressionFn(obj):
+		if not parentExp.policy.syntaxProcessor.stringIsExpressionFn(obj):
 			return obj
 		processor = parentExp.policy.syntaxProcessor
 		# parse string to frozen lambda
 		parsedStr = processor.parseRawExpString(obj)
 		parsedAst = processor.parseStringToAST(parsedStr)
 		processedAst = processor.processAST(parsedAst)
-		# print("processed AST:")
-		# print(ast.dump(processedAst))
+
+		parseGlobals = parentExp.getParseGlobals()
+
+		#print("compiling with globals", parentExp.getParseGlobals())
 		compiledFn = processor.compileFinalASTToFunction(
-			processedAst, parentExp.getExpGlobals())
+			processedAst, parentExp.getParseGlobals())
 		# create expression object with function
 		return compiledFn
 		"""TODO: duplication here - probably delegate to expression on actual compilation"""
@@ -149,7 +165,11 @@ def transformEvaluateExpStructure(
 	return parsedObj
 
 
-
+# class Helper:
+#
+# 	def __getattr__(self, item):
+# 		print("helper getattr", item)
+# 		return item
 
 VT = T.TypeVar("VT")
 class Expression(Serialisable, T.Generic[VT]):
@@ -198,12 +218,14 @@ class Expression(Serialisable, T.Generic[VT]):
 	def __init__(self,
 	             value:[T.Callable, VT, str]=Sentinel.Empty,
 	             policy:ExpPolicy=None,
+	             evaluator:ExpEvaluator=None,
 	             name="exp",
 	             ):
 		"""unsure how best to pass in graph stuff
 		for now default to singleton if not specified"""
 
 		self.policy = policy or ExpPolicy()
+		self.evaluator = evaluator or ExpEvaluator()
 
 		self.name = name # nice name for identifying source of expressions, do not rely on this
 
@@ -240,12 +262,12 @@ class Expression(Serialisable, T.Generic[VT]):
 	def __repr__(self):
 		return str(self)
 
-	def getExpGlobals(self)->dict:
-		"""return dict of globals to pass to expression"""
-		globalsMap = self.policy.expGlobalMap()
-		# add in reference to self
-		globalsMap[expconstant.MASTER_GLOBALS_EXP_KEY] = self
-		return globalsMap
+	# def getExpGlobals(self)->dict:
+	# 	"""return dict of globals to pass to expression"""
+	# 	globalsMap = self.policy.getExpParseGlobalMap()
+	# 	# add in reference to self
+	# 	globalsMap[expconstant.MASTER_GLOBALS_EXP_KEY] = self
+	# 	return globalsMap
 
 	@classmethod
 	def _textFromStatic(cls, static:object)->str:
@@ -265,6 +287,16 @@ class Expression(Serialisable, T.Generic[VT]):
 		self._isStatic = False
 		self._compiledFn : FunctionType = None
 
+
+	def getParseGlobals(self)->dict:
+		"""draw from any policies or other sources
+		add main reference to this expression object"""
+		baseGlobals = {}
+		#baseGlobals.update(self.policy.getExpParseGlobalMap())
+		baseGlobals.update({
+			expconstant.MASTER_GLOBALS_EXP_KEY : self
+		})
+		return baseGlobals
 
 	def setFunction(self, fn:FunctionType):
 		"""set expression to callable function
@@ -298,6 +330,7 @@ class Expression(Serialisable, T.Generic[VT]):
 	def rawStructure(self)->object:
 		"""return raw structure of expression"""
 		return self._rawValue
+
 
 	def eval(self):
 		"""evaluate expression and return result -
