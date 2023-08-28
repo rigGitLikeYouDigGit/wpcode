@@ -2,7 +2,7 @@
 
 from wplib.serial import SerialRegister
 
-from wplib.coderef import getCodeRef, resolveCodeRef, Test
+from wplib.coderef import CodeRef
 
 from wplib.object.traversable import Traversable
 
@@ -19,9 +19,9 @@ from enum import Enum
 # resolved = resolveCodeRefSequence(internalRef)
 # print(resolved)
 
-internalRef = getCodeRef(Test.InternalTest.internalMethod)
+internalRef = CodeRef.get(Test.InternalTest.internalMethod)
 print(internalRef)
-resolved = resolveCodeRef(internalRef)
+resolved = CodeRef.get(internalRef)
 print(resolved)
 
 

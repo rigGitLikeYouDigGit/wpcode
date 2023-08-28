@@ -2,9 +2,21 @@
 from __future__ import annotations
 import typing as T
 
-from enum import Enum
 
 from wplib.validation import ValidationError
+
+def version(index:int):
+	"""Decorator for classes - adjusts class name,
+	sets class attribute.
+	"""
+	assert index > 0, f"Version index must be greater than 0, not {index}"
+	def _inner(cls:type[EncoderBase]):
+		cls.__name__ = f"{cls.__name__}_V{index}"
+		cls._versionIndex = index
+		return cls
+	return _inner
+
+
 
 class EncoderBase:
 	"""Base class for encoding and decoding types.
@@ -19,6 +31,8 @@ class EncoderBase:
 	# END CONTROL
 
 	encodeType:T.Type = object
+
+	versionDec = version
 
 	@classmethod
 	def encode(cls, obj:encodeType)->dict:
@@ -41,17 +55,6 @@ class EncoderBase:
 	@classmethod
 	def getVersion(cls)->int:
 		return cls._versionIndex
-
-def version(index:int):
-	"""Decorator for classes - adjusts class name,
-	sets class attribute.
-	"""
-	assert index > 0, f"Version index must be greater than 0, not {index}"
-	def _inner(cls:type[EncoderBase]):
-		cls.__name__ = f"{cls.__name__}_V{index}"
-		cls._versionIndex = index
-		return cls
-	return _inner
 
 
 """version of an encoder class should know its type, and that's it"""

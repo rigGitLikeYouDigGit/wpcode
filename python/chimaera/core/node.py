@@ -2,15 +2,19 @@
 from __future__ import annotations
 import typing as T
 
+import pprint
 #from collections import namedtuple
 from typing import NamedTuple, TypedDict
 from types import FunctionType
 
-from wplib import DirtyExp, coderef
+
+from wplib import DirtyExp, CodeRef
 from wplib.expression import Expression, SyntaxPasses, ExpTokens, ExpSyntaxError, EvaluationError, ExpEvaluator, ExpPolicy, ExpSyntaxProcessor
 from wplib.sentinel import Sentinel
 from wplib.object import UidElement, DirtyNode
 from wplib.sequence import getFirst, flatten
+
+from wplib.serial import Serialisable, EncoderBase
 
 from wptree import Tree
 
@@ -56,8 +60,12 @@ class NodeExpEvaluator(ExpEvaluator):
 		if name == "storage":
 			return self.node.resultStorage()
 
+#
+# class EncoderBase(Serialisable.EncoderBase):
+# 	"""base class for encoding Chimaera nodes"""
 
-class ChimaeraNode(UidElement, DirtyNode):
+
+class ChimaeraNode(UidElement, DirtyNode, Serialisable):
 	"""smallest unit of computation in chimaera graph
 
 	refmap is key : node filter, not too crazy
@@ -138,7 +146,7 @@ class ChimaeraNode(UidElement, DirtyNode):
 	def typeRefStr(cls)->str:
 		"""return code ref to the type of this node,
 		NOT to its construct type"""
-		return coderef.getCodeRef(cls)
+		return CodeRef.get(cls)
 
 
 	def fnSetTypeRefStr(self)->(str, None):
@@ -159,12 +167,12 @@ class ChimaeraNode(UidElement, DirtyNode):
 		"""return construct class of this node"""
 		refStr = self.fnSetTypeRefStr()
 		if refStr:
-			return coderef.resolveCodeRef(refStr)
+			return CodeRef.resolve(refStr)
 		return None
 
 	def setFnSet(self, fnSet:NodeFnSet=None):
 		self._fnSet = fnSet
-		self.setFnSetTypeRefStr(coderef.getCodeRef(type(fnSet)))
+		self.setFnSetTypeRefStr(CodeRef.get(type(fnSet)))
 
 	def fnSet(self)->NodeFnSet:
 		return self._fnSet
@@ -515,4 +523,29 @@ class ChimaeraNode(UidElement, DirtyNode):
 
 	# endregion
 
+	# region serialisation
+	uniqueAdapterName = "ChimaeraNode"
 
+	@EncoderBase.versionDec(1)
+	class Encoder(EncoderBase):
+		"""encoder for Chimaera nodes"""
+
+		@classmethod
+		def encode(cls, obj: ChimaeraNode) -> dict:
+			data = {}
+			for k, v in obj.dataBlock().items():
+				#print("k", k, "v", v, type(v))
+				if isinstance(v, Expression):
+					data[k] = v.rawStructure()
+				else:
+					data[k] = v
+			#print("serial data for node", obj)
+			#pprint.pprint(data)
+			return data
+
+		@classmethod
+		def decode(cls, serialCls: ChimaeraNode, serialData: dict) -> ChimaeraNode:
+			raise NotImplementedError
+
+
+	# endregion

@@ -9,7 +9,7 @@ from wplib.sequence import flatten, resolveSeqIndex
 from wplib.object import Signal, Traversable, TraversableParams
 from wplib import TypeNamespace
 from wplib.sentinel import Sentinel
-from wplib import coderef
+from wplib import CodeRef
 
 from wptree.delta import TreeDeltas
 from wptree.treedescriptor import TreePropertyDescriptor
@@ -774,7 +774,7 @@ class TreeInterface(Traversable
 
 		# check if type differs from parent - if so define it
 		if self.parent and self.parent.__class__ != self.__class__:
-			typeData = coderef.getCodeRef(self.__class__)
+			typeData = CodeRef.get(self.__class__)
 			data[self._serialKeys().type] = typeData
 
 		data[self._serialKeys().uid] = self.uid
@@ -825,7 +825,7 @@ class TreeInterface(Traversable
 		# if loadType is True, load saved type
 		elif loadType and cls._serialKeys().type in baseData:
 			# retrieve the reference to type, resolve it to get the actual type
-			treeCls = coderef.resolveCodeRef(baseData[cls._serialKeys().type])
+			treeCls = CodeRef.resolve(baseData[cls._serialKeys().type])
 		else:
 			treeCls = cls
 

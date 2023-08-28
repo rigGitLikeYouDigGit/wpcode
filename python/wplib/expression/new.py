@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from wplib.constant import IMMUTABLE_TYPES, LITERAL_TYPES, MAP_TYPES, SEQ_TYPES
 from wplib.sentinel import Sentinel
 from wplib import astlib as wpast
-from wplib.object.serialisable import Serialisable, compileFunctionFromString, serialise
+#from wplib.object.serialisable import Serialisable, compileFunctionFromString, serialise
 from wplib.object import Visitor
 from wplib.object.visit import Visitable, getVisitDestinations, Visitor, recursiveVisitCopy
 
@@ -24,6 +24,7 @@ from wplib.expression.error import CompilationError, EvaluationError, ExpSyntaxE
 from wplib.expression.evaluator import ExpEvaluator
 from wplib.expression.syntax import ExpSyntaxProcessor, SyntaxPasses
 
+from wplib.serial import Serialisable, EncoderBase
 
 if T.TYPE_CHECKING:
 	pass
@@ -436,18 +437,6 @@ class Expression(Serialisable, T.Generic[VT]):
 		return newExp
 
 
-	def serialise(self) ->dict:
-		"""serialise expression"""
-
-		return {
-			"name": self.name,
-			"text": self.getText(),
-		}
-
-	@classmethod
-	def deserialise(cls, data:dict):
-		exp = cls(name=data["name"])
-		exp.set(data["text"])
 
 	def printRaw(self):
 		"""print raw expression text"""
@@ -457,6 +446,23 @@ class Expression(Serialisable, T.Generic[VT]):
 		"""print parsed expression"""
 		pprint.pprint(self._parsedStructure)
 
+	# region serialisation
+	uniqueAdapterName = "Expression"
+	@EncoderBase.versionDec(1)
+	class Encoder(EncoderBase):
+
+		@classmethod
+		def encode(cls, obj: Expression) -> dict:
+			"""encode expression to dict"""
+			return {
+				"name": obj.name,
+				"structure": obj.rawStructure()
+			}
+
+		@classmethod
+		def decode(cls, serialCls: Expression, serialData: dict) -> Expression:
+			obj = Expression(name=serialData["name"])
+			return obj
 
 
 if __name__ == '__main__':

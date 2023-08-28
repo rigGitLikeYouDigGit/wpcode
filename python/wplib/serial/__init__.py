@@ -45,6 +45,8 @@ We DO still need a type reference system, unless we make an entirely new adaptor
 for every possible custom class, dataclass, enum, etc. that we want to serialise.
 balls.
 
+We just use string code refs to serialised types - if this ever needs upgrading, shouldn't
+require any changes to these classes
 """
 
 from .encoder import EncoderBase, version
@@ -53,4 +55,7 @@ from .register import SerialRegister
 
 # import and register all default types
 from .applied import *
+
+# import the custom base class
+from .main import Serialisable
 

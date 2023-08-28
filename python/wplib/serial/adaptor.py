@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing as T
 
 from wplib.validation import ValidationError
-from wplib import coderef
+from wplib import CodeRef, inheritance
 
 from .constant import ENCODE_DATA_KEY, FORMAT_DATA_KEY
 from .encoder import EncoderBase
@@ -35,7 +35,7 @@ class SerialAdaptor:
 		return cls.encoderBaseCls.encodeType
 
 	@classmethod
-	def getFormatData(cls, version:int, objToSerialise)->dict:
+	def getFormatDataToSerialise(cls, version:int, objToSerialise)->dict:
 		"""Return the marker data for a given version -
 		include this adapter's unique name and the target version,
 		"""
@@ -43,7 +43,7 @@ class SerialAdaptor:
 		return {
 			cls.VERSION_DATA_NAME_KEY : cls.uniqueAdapterName,
 			cls.VERSION_DATA_VERSION_KEY : version,
-			cls.VERSION_DATA_TYPE_KEY : coderef.getCodeRef(type(objToSerialise)),
+			cls.VERSION_DATA_TYPE_KEY : CodeRef.get(type(objToSerialise)),
 		}
 
 	@classmethod
@@ -51,14 +51,19 @@ class SerialAdaptor:
 		"""Return a map of version-index to encoder class.
 		"""
 		encoders = {}
-		for k, v in cls.__dict__.items():
+		#print("get version map for", cls)
+		for k, v in inheritance.mroMergedDict(cls).items():
+		#for k, v in cls.__dict__.items():
 			if not isinstance(v, type):
 				continue
 			if k == "encoderBaseCls": #reference to base, not an actual encoder
 				continue
-			if issubclass(v, cls.encoderBaseCls):
+			#print("checking", k, v)
+			if issubclass(v, EncoderBase):
+				#print("adding", k, v, v.getVersion())
 				assert v.checkIsValid(), f"Invalid encoder {v} - check that it is properly versioned"
 				encoders[v.getVersion()] = v
+		#print("returning encoders", encoders)
 		return encoders
 
 	@classmethod
@@ -70,6 +75,7 @@ class SerialAdaptor:
 	@classmethod
 	def getEncoder(cls, versionIndex:int=None)->T.Type[EncoderBase]:
 		"""by default, retrieve the latest"""
+		#print("encoder map", cls.encoderVersionMap())
 		if versionIndex is None:
 			return cls.encoderVersionMap()[max(cls.encoderVersionMap().keys())]
 		return cls.encoderVersionMap()[versionIndex]
@@ -100,10 +106,11 @@ class SerialAdaptor:
 		which gets tedious to read.
 		"""
 		encoder = cls.getEncoder(versionIndex=encoderVersion)
+		print("found encoder", encoder, "for type", type(obj))
 		return {
 			**encoder.encode(obj),
-			FORMAT_DATA_KEY : cls.getFormatData(encoder.getVersion(),
-			                                    obj)
+			FORMAT_DATA_KEY : cls.getFormatDataToSerialise(encoder.getVersion(),
+			                                               obj)
 		}
 
 	@classmethod
@@ -118,7 +125,7 @@ class SerialAdaptor:
 
 		# resolve the type
 		# catch coderef exception here
-		serialType = coderef.resolveCodeRef(formatData[cls.VERSION_DATA_TYPE_KEY])
+		serialType = CodeRef.resolve(formatData[cls.VERSION_DATA_TYPE_KEY])
 
 		# decode
 		return encoder.decode(

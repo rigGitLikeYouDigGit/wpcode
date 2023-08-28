@@ -27,7 +27,7 @@ class EnumAdaptor(SerialAdaptor):
 	uniqueAdapterName = "stdEnum"
 
 	@version(1)
-	class EnumEncoder(EnumEncoderBase):
+	class Encoder(EnumEncoderBase):
 		@classmethod
 		def encode(cls, obj: Enum):
 			return obj.value
@@ -37,7 +37,7 @@ class EnumAdaptor(SerialAdaptor):
 			return serialCls._value2member_map_[serialData]
 
 
-SerialRegister.register(EnumAdaptor)
+SerialRegister.registerAdaptor(EnumAdaptor)
 
 
 

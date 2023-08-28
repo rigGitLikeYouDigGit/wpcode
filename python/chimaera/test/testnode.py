@@ -74,7 +74,12 @@ class TestNode(unittest.TestCase):
 		self.assertIn("inputs", construct.node.resultParams().branchMap)
 
 
+	def test_serialisation(self):
+		graph = ChimaeraNode("graph")
 
+		nodeA = graph.createNode("nodeA")
+		serialData = nodeA.serialise()
+		pprint.pp(serialData)
 
 
 

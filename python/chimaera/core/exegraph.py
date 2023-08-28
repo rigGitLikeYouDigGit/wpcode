@@ -3,7 +3,7 @@
 from __future__ import annotations
 import typing as T
 
-from wplib import Expression, DirtyExp, coderef
+from wplib import Expression, DirtyExp, CodeRef
 from wplib.object import DirtyNode, DirtyGraph
 from wplib.sentinel import Sentinel
 from wplib.object import UidElement

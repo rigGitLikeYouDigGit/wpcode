@@ -17,6 +17,7 @@ from typing import TypedDict
 from dataclasses import dataclass
 from wplib.constant import MAP_TYPES, SEQ_TYPES, LITERAL_TYPES
 from wplib.inheritance import overrideThis
+from copy import deepcopy
 
 DEBUG = 0
 
@@ -75,9 +76,60 @@ def getVisitDestinations(obj:T.Any)->tuple:
 
 
 
+def visitTopDown(obj, transformFn):
+	"""visit each item in a hierarchy, top down"""
+	resultObj = transformFn(obj)
+	if isinstance(resultObj, Visitable):
+		# visit the next objects
+		visitDestinations = getVisitDestinations(resultObj)
+		visitedObjects = []
+		for i in visitDestinations:
+			visitedObjects.append(visitTopDown(i, transformFn))
+		# copy the object with the visited objects
+		return resultObj.copyFromVisitedObjects(*visitedObjects)
+
+	if isinstance(resultObj, SEQ_TYPES):
+		return type(resultObj)(visitTopDown(i, transformFn) for i in resultObj)
+	elif isinstance(resultObj, MAP_TYPES):
+		results = []
+		for k, v in resultObj.items():
+			results.append((
+				visitTopDown(transformFn(k), transformFn),
+				visitTopDown(transformFn(v), transformFn)
+			))
+		return type(resultObj)({k: v for k, v in results})
+	return resultObj
+
+def visitLeavesUp(obj, transformFn):
+	"""visit each item in a hierarchy, leaves up"""
+	if isinstance(obj, Visitable):
+		# visit the next objects
+		visitDestinations = getVisitDestinations(obj)
+		visitedObjects = []
+		for i in visitDestinations:
+			visitedObjects.append(visitLeavesUp(i, transformFn))
+		# copy the object with the visited objects
+		return transformFn(obj.copyFromVisitedObjects(*visitedObjects))
+
+	if isinstance(obj, SEQ_TYPES):
+		return transformFn(
+			type(obj)(visitLeavesUp(i, transformFn) for i in obj)
+		)
+	elif isinstance(obj, MAP_TYPES):
+		results = []
+		for k, v in obj.items():
+			results.append((
+				visitLeavesUp(k, transformFn),
+				visitLeavesUp(v, transformFn)
+			))
+		return transformFn(type(obj)({k: v for k, v in results}))
+
+	return transformFn(obj)
+
 def recursiveVisitCopy(obj:T.Any,
                        transformFn:T.Callable[[object, TypedDict], object],
-                       visitData:(TypedDict, dict))->T.Any:
+                       visitData:(TypedDict, dict)
+                       )->T.Any:
 	"""return a deep copy of the given object, recursively
 	visiting any objects that are Visitable.
 
@@ -92,16 +144,16 @@ def recursiveVisitCopy(obj:T.Any,
 
 		results = []
 		for i in obj.nextObjectsToVisit():
-			newData = visitData.copy()
+			newData = deepcopy(visitData)
 			results.append(recursiveVisitCopy(
 				transformFn(i, newData), transformFn, newData))
-		return obj.copyFromVisitedObjects(*results)
+		return transformFn(obj.copyFromVisitedObjects(*results), newData)
 
 	elif isinstance(obj, MAP_TYPES):
 		results = []
 		for k, v in obj.items():
-			kData = visitData.copy()
-			vData = visitData.copy()
+			kData = deepcopy(visitData)
+			vData = deepcopy(visitData)
 			results.append((
 				recursiveVisitCopy(transformFn(k, kData), transformFn, kData),
 				recursiveVisitCopy(transformFn(v, vData), transformFn, vData)
@@ -111,7 +163,7 @@ def recursiveVisitCopy(obj:T.Any,
 	elif isinstance(obj, SEQ_TYPES):
 		results = list(obj)
 		for i, v in enumerate(obj):
-			newData = visitData.copy()
+			newData = deepcopy(visitData)
 			results[i] = (recursiveVisitCopy(
 				transformFn(v, newData), transformFn, newData))
 

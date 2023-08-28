@@ -40,44 +40,48 @@ class CodeRefErrorData:
 	lastFoundParent : object = None
 	missingParentMember : str = None
 
-def getCodeRef(obj)->str:
-	"""Return a code ref string of the form,
-	"module.path:object.path"
-	"""
-	return MODULE_MEMBER_SEP.join([obj.__module__, obj.__qualname__])
+class CodeRef:
 
-def resolveCodeRef(refStr:str)->T.Any:
-	"""resolve a code reference string to the actual object.
-	Expects string of the form "module.path:object.path"
-	:raises ModuleNotFoundError if the module is not found.
-	:raises AttributeError if the object at any level is not found.
+	@staticmethod
+	def get(obj)->str:
+		"""Return a code ref string of the form,
+		"module.path:object.path"
+		"""
+		return MODULE_MEMBER_SEP.join([obj.__module__, obj.__qualname__])
 
-	TODO: consider if we need tighter integration with errors - for now
-	we pack error data on to the exception object as ".codeRefErrorData"
-	"""
-	modulePath, objPath = refStr.split(MODULE_MEMBER_SEP)
-	try:
-		if modulePath in sys.modules:
-			module = sys.modules[modulePath]
-		else:
-			module = __import__(modulePath)
-	except ModuleNotFoundError:
-		errorData = CodeRefErrorData(
-			codeRefPath=refStr,
-			modulePath=modulePath)
-		exception = ModuleNotFoundError(f"Could not find module {modulePath} for code reference {refStr}")
-		exception.codeRefErrorData = errorData
-		raise exception
-	parentObj = module
-	tokens = objPath.split(".")
+	@staticmethod
+	def resolve(refStr:str)->T.Any:
+		"""resolve a code reference string to the actual object.
+		Expects string of the form "module.path:object.path"
+		:raises ModuleNotFoundError if the module is not found.
+		:raises AttributeError if the object at any level is not found.
 
-	for i in range(0, len(tokens)):
+		TODO: consider if we need tighter integration with errors - for now
+		we pack error data on to the exception object as ".codeRefErrorData"
+		"""
+		modulePath, objPath = refStr.split(MODULE_MEMBER_SEP)
 		try:
-			parentObj = getattr(parentObj, tokens[i])
-		except AttributeError:
-			errorData = CodeRefErrorData(modulePath=modulePath, objPath=objPath, lastFoundParent=parentObj, missingParentMember=tokens[i])
-			exception = AttributeError(f"Could not find attribute {tokens[i]} in object {parentObj} for code reference {refStr}")
+			if modulePath in sys.modules:
+				module = sys.modules[modulePath]
+			else:
+				module = __import__(modulePath)
+		except ModuleNotFoundError:
+			errorData = CodeRefErrorData(
+				codeRefPath=refStr,
+				modulePath=modulePath)
+			exception = ModuleNotFoundError(f"Could not find module {modulePath} for code reference {refStr}")
 			exception.codeRefErrorData = errorData
 			raise exception
-	return parentObj
+		parentObj = module
+		tokens = objPath.split(".")
+
+		for i in range(0, len(tokens)):
+			try:
+				parentObj = getattr(parentObj, tokens[i])
+			except AttributeError:
+				errorData = CodeRefErrorData(modulePath=modulePath, objPath=objPath, lastFoundParent=parentObj, missingParentMember=tokens[i])
+				exception = AttributeError(f"Could not find attribute {tokens[i]} in object {parentObj} for code reference {refStr}")
+				exception.codeRefErrorData = errorData
+				raise exception
+		return parentObj
 
