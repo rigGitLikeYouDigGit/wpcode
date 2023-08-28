@@ -49,8 +49,7 @@ We just use string code refs to serialised types - if this ever needs upgrading,
 require any changes to these classes
 """
 
-from .encoder import EncoderBase, version
-from .adaptor import SerialAdaptor
+from .adaptor import SerialAdaptor, EncoderBase
 from .register import SerialRegister
 
 # import and register all default types

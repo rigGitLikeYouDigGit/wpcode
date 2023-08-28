@@ -448,7 +448,7 @@ class Expression(Serialisable, T.Generic[VT]):
 
 	# region serialisation
 	uniqueAdapterName = "Expression"
-	@EncoderBase.versionDec(1)
+	@Serialisable.encoderVersion(1)
 	class Encoder(EncoderBase):
 
 		@classmethod
@@ -462,6 +462,7 @@ class Expression(Serialisable, T.Generic[VT]):
 		@classmethod
 		def decode(cls, serialCls: Expression, serialData: dict) -> Expression:
 			obj = Expression(name=serialData["name"])
+			obj.setStructure(serialData["structure"])
 			return obj
 
 

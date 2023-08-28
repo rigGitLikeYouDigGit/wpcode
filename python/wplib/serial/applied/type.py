@@ -5,24 +5,22 @@ import typing as T
 
 from enum import Enum
 from wplib import CodeRef
-from wplib.serial.encoder import EncoderBase, version
-from wplib.serial.adaptor import SerialAdaptor
+from wplib.serial.adaptor import SerialAdaptor, EncoderBase
 
 from wplib.serial.register import SerialRegister
 
 
-class TypeEncoderBase(EncoderBase):
-	"""Base class for encoding and decoding Enum types.
-	Subclass this and define the enum type to encode.
-	"""
-	encodeType = type
+
 
 class TypeAdaptor(SerialAdaptor):
-	encoderBaseCls = TypeEncoderBase
 
 	uniqueAdapterName = "stdEnum"
 
-	@version(1)
+	@classmethod
+	def serialType(cls) ->type:
+		return type
+
+	@SerialAdaptor.encoderVersion(1)
 	class Encoder(EncoderBase):
 		@classmethod
 		def encode(cls, obj: type):

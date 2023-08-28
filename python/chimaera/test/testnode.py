@@ -3,6 +3,7 @@ import pprint
 import unittest
 
 from wplib.object import DirtyGraph, DirtyNode
+from wplib.sentinel import Sentinel
 
 from wptree import Tree
 
@@ -78,8 +79,24 @@ class TestNode(unittest.TestCase):
 		graph = ChimaeraNode("graph")
 
 		nodeA = graph.createNode("nodeA")
+		nodeA.setName("gggg")
 		serialData = nodeA.serialise()
-		pprint.pp(serialData)
+		#pprint.pp(serialData)
+
+		nodeB = ChimaeraNode.deserialise(serialData)
+
+		self.assertIsInstance(nodeB, ChimaeraNode)
+		#print(nodeB.name(), type(nodeB.name()), nodeB.name() == Sentinel.Empty)
+		self.assertEqual(nodeA.name(), nodeB.name())
+		self.assertEqual(nodeA.uid, nodeB.uid)
+
+		leafNode = nodeA.createNode("leafNode")
+		leafNode.setValue(1)
+		serialData = graph.serialise()
+
+		graphB = ChimaeraNode.deserialise(serialData)
+		self.assertIsInstance(graphB, ChimaeraNode)
+
 
 
 

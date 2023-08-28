@@ -6,7 +6,40 @@ from wplib.validation import ValidationError
 from wplib import CodeRef, inheritance
 
 from .constant import ENCODE_DATA_KEY, FORMAT_DATA_KEY
-from .encoder import EncoderBase
+
+class EncoderBase:
+	@classmethod
+	def encode(cls, obj:T.Any, **kwargs)->dict:
+		"""Encode the given object into a dict.
+		"""
+		raise NotImplementedError()
+	@classmethod
+	def decode(cls, serialCls:type, serialData:dict)->T.Any:
+		"""Decode the given dict into an object.
+		"""
+		raise NotImplementedError()
+
+	@classmethod
+	def getVersion(cls)->int:
+		"""Return the version of this encoder.
+		"""
+		return cls._versionIndex
+
+
+def encoderVersion(index:int):
+	"""Decorate internally-defined Encoder classes with this -
+	classes must define classmethods for encode() and decode().
+	Beyond that, do whatever
+	"""
+	assert index > 0, f"Version index must be greater than 0, not {index}"
+	def _inner(cls:type[EncoderBase]):
+		assert "encode" in cls.__dict__, f"Encoder {cls} does not define encode()"
+		assert "decode" in cls.__dict__, f"Encoder {cls} does not define decode()"
+		cls.__name__ = f"{cls.__name__}_V{index}"
+		cls._versionIndex = index
+		cls._isEncoder = True
+		return cls
+	return _inner
 
 class SerialAdaptor:
 	"""Helper class to be used with external types,
@@ -22,17 +55,18 @@ class SerialAdaptor:
 	# DEFINE THIS MANUALLY AND NEVER CHANGE IT
 	uniqueAdapterName : str = None
 
-	encoderBaseCls:T.Type[EncoderBase] = None
-
 	VERSION_DATA_NAME_KEY = "name"
 	VERSION_DATA_VERSION_KEY = "version"
 	VERSION_DATA_TYPE_KEY = "type"
 
+	encoderVersion = encoderVersion
+
 	@classmethod
-	def serialType(cls)->T.Type:
-		"""Return the type that this adaptor is for.
+	def serialType(cls)->type:
+		"""Return the type that this adaptor serialises -
+		by defult, the adaptor class itself.
 		"""
-		return cls.encoderBaseCls.encodeType
+		return cls
 
 	@classmethod
 	def getFormatDataToSerialise(cls, version:int, objToSerialise)->dict:
@@ -47,6 +81,16 @@ class SerialAdaptor:
 		}
 
 	@classmethod
+	def getFormatData(cls, data: dict):
+		return data.get(FORMAT_DATA_KEY, {})
+
+	@classmethod
+	def getDataCodeRefStr(cls, data: dict) -> str:
+		"""Get the code ref from the given data dict.
+		"""
+		return cls.getFormatData(data).get(cls.VERSION_DATA_TYPE_KEY, None)
+
+	@classmethod
 	def encoderVersionMap(cls)->dict[int, T.Type[EncoderBase]]:
 		"""Return a map of version-index to encoder class.
 		"""
@@ -56,13 +100,8 @@ class SerialAdaptor:
 		#for k, v in cls.__dict__.items():
 			if not isinstance(v, type):
 				continue
-			if k == "encoderBaseCls": #reference to base, not an actual encoder
-				continue
-			#print("checking", k, v)
-			if issubclass(v, EncoderBase):
-				#print("adding", k, v, v.getVersion())
-				assert v.checkIsValid(), f"Invalid encoder {v} - check that it is properly versioned"
-				encoders[v.getVersion()] = v
+			if getattr(v, "_isEncoder", False):
+				encoders[v._versionIndex] = v
 		#print("returning encoders", encoders)
 		return encoders
 
@@ -85,19 +124,19 @@ class SerialAdaptor:
 	def checkIsValid(cls)->bool:
 		"""Check that the class has been defined correctly.
 		"""
-		if cls.encoderBaseCls is None:
-			raise ValidationError(f"Encoder base class not set for {cls}")
+		# if cls.encoderBaseCls is None:
+		# 	raise ValidationError(f"Encoder base class not set for {cls}")
 		if not isinstance(cls.uniqueAdapterName, str) :
 			raise ValidationError(f"Unique adapter name not set for {cls}")
-		if not issubclass(cls.encoderBaseCls, EncoderBase):
-			raise ValidationError(f"Encoder base class {cls.encoderBaseCls} is not a subclass of {EncoderBase}")
+		# if not issubclass(cls.encoderBaseCls, EncoderBase):
+		# 	raise ValidationError(f"Encoder base class {cls.encoderBaseCls} is not a subclass of {EncoderBase}")
 		if not cls.encoderVersionMap():
 			raise ValidationError(f"No encoders defined for {cls}, no versionMap derived")
 		return True
 
 	# main methods
 	@classmethod
-	def encode(cls, obj, encoderVersion:int=None)->dict:
+	def encode(cls, obj, encoderVersion:int=None, **kwargs)->dict:
 		"""Encode the object into a dict - if no version is specified,
 		use the latest. (Latest should probably always be used when saving).
 
@@ -106,9 +145,9 @@ class SerialAdaptor:
 		which gets tedious to read.
 		"""
 		encoder = cls.getEncoder(versionIndex=encoderVersion)
-		print("found encoder", encoder, "for type", type(obj))
+		#print("found encoder", encoder, "for type", type(obj))
 		return {
-			**encoder.encode(obj),
+			**encoder.encode(obj, **kwargs),
 			FORMAT_DATA_KEY : cls.getFormatDataToSerialise(encoder.getVersion(),
 			                                               obj)
 		}
@@ -129,4 +168,5 @@ class SerialAdaptor:
 
 		# decode
 		return encoder.decode(
-			serialType, serialData[ENCODE_DATA_KEY])
+			serialType, serialData
+		)

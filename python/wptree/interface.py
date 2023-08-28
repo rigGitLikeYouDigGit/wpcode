@@ -11,6 +11,8 @@ from wplib import TypeNamespace
 from wplib.sentinel import Sentinel
 from wplib import CodeRef
 
+from wplib.serial import Serialisable, SerialAdaptor, EncoderBase
+
 from wptree.delta import TreeDeltas
 from wptree.treedescriptor import TreePropertyDescriptor
 
@@ -45,8 +47,8 @@ class TreeSignalComponent:
 
 keyT = Traversable.keyT
 TreeType = T.TypeVar("TreeType", bound="TreeInterface")
-class TreeInterface(Traversable
-                    ):
+class TreeInterface(Traversable,
+                    Serialisable):
 
 
 
@@ -797,15 +799,29 @@ class TreeInterface(Traversable
 			data[self._serialKeys().children] = [i._serialiseNested() for i in self.branches]
 		return data
 
-	def serialise(self, nested=True)->dict:
-		"""main entrypoint for serialisation -
-		we assume that this tree should act as the root for this serialisation,
-		so this tree will give its own root data"""
-		data = self._serialiseNested() if nested else self._serialiseFlat()
+	def _serialiseNestedOuter(self):
+		data = self._serialiseNested()
 		# add root data
 		data[self._serialKeys().rootData] = self._rootData()
-		data[self._serialKeys().layout] = self._serialKeys().nestedMode if nested else self._serialKeys().flatMode
+		data[self._serialKeys().layout] = self._serialKeys().nestedMode
 		return data
+
+	def _serialiseFlatOuter(self):
+		data = self._serialiseFlat()
+		# add root data
+		data[self._serialKeys().rootData] = self._rootData()
+		data[self._serialKeys().layout] = self._serialKeys().flatMode
+		return data
+
+	# def serialise(self, nested=True)->dict:
+	# 	"""main entrypoint for serialisation -
+	# 	we assume that this tree should act as the root for this serialisation,
+	# 	so this tree will give its own root data"""
+	# 	data = self._serialiseNested() if nested else self._serialiseFlat()
+	# 	# add root data
+	# 	data[self._serialKeys().rootData] = self._rootData()
+	# 	data[self._serialKeys().layout] = self._serialKeys().nestedMode if nested else self._serialKeys().flatMode
+	# 	return data
 
 	def serialiseSingle(self)->dict:
 		"""ignores children, returns only serial data for this branch"""
@@ -877,21 +893,52 @@ class TreeInterface(Traversable
 			firstBranch(address[:-1]).addChild(branch)
 		return firstBranch
 
-	@classmethod
-	def deserialise(cls, data:dict, preserveUid=False, preserveType=True)->cls:
-		"""main entrypoint"""
-		##print("deserialise main")
-		rootData = data[cls._serialKeys().rootData] # not used yet
+	# @classmethod
+	# def deserialise(cls, data:dict, preserveUid=False, preserveType=True)->cls:
+	# 	"""main entrypoint"""
+	# 	##print("deserialise main")
+	# 	rootData = data[cls._serialKeys().rootData] # not used yet
+	#
+	# 	#cls._setCaching(False)
+	# 	layoutMode = data.get(cls._serialKeys().layout, cls._serialKeys().nestedMode)
+	# 	if layoutMode == cls._serialKeys().nestedMode:
+	# 		tree = cls._deserialiseNested(data, preserveUid=preserveUid, preserveType=preserveType)
+	# 	elif layoutMode == cls._serialKeys().flatMode:
+	# 		tree = cls._deserialiseFlat(data, preserveUid=preserveUid, preserveType=preserveType)
+	# 	#cls._setCaching(True)
+	# 	#tree.setCachedHierarchyDataDirty(True, True)
+	# 	return tree
+	uniqueAdapterName = "treeInterface"
+	@Serialisable.encoderVersion(1)
+	class Encoder(EncoderBase):
+		"""placing here in a very very temp way -
+		the whole point of this system is to separate serialisation
+		from the main class, but just trying to get something quick"""
+		@classmethod
+		def encode(cls, obj:TreeInterface, **kwargs):
+			nested = True
+			data = obj._serialiseNested() if nested else obj._serialiseFlat()
+			# add root data
+			data[obj._serialKeys().rootData] = obj._rootData()
+			data[obj._serialKeys().layout] = obj._serialKeys().nestedMode if nested else obj._serialKeys().flatMode
+			return data
 
-		#cls._setCaching(False)
-		layoutMode = data.get(cls._serialKeys().layout, cls._serialKeys().nestedMode)
-		if layoutMode == cls._serialKeys().nestedMode:
-			tree = cls._deserialiseNested(data, preserveUid=preserveUid, preserveType=preserveType)
-		elif layoutMode == cls._serialKeys().flatMode:
-			tree = cls._deserialiseFlat(data, preserveUid=preserveUid, preserveType=preserveType)
-		#cls._setCaching(True)
-		#tree.setCachedHierarchyDataDirty(True, True)
-		return tree
+		@classmethod
+		def decode(cls, serialCls: type, serialData: dict) -> TreeInterface:
+			#print("tree interface decode")
+			preserveUid = False
+			preserveType = False
+			rootData = serialData[serialCls._serialKeys().rootData]  # not used yet
+
+			# cls._setCaching(False)
+			layoutMode = serialData.get(serialCls._serialKeys().layout, serialCls._serialKeys().nestedMode)
+			if layoutMode == serialCls._serialKeys().nestedMode:
+				tree = serialCls._deserialiseNested(serialData, preserveUid=preserveUid, preserveType=preserveType)
+			elif layoutMode == serialCls._serialKeys().flatMode:
+				tree = serialCls._deserialiseFlat(serialData, preserveUid=preserveUid, preserveType=preserveType)
+			# cls._setCaching(True)
+			# tree.setCachedHierarchyDataDirty(True, True)
+			return tree
 
 	#endregion
 	# region literal definitions

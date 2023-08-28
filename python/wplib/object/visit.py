@@ -144,7 +144,7 @@ def recursiveVisitCopy(obj:T.Any,
 
 		results = []
 		for i in obj.nextObjectsToVisit():
-			newData = deepcopy(visitData)
+			newData = visitData.copy()
 			results.append(recursiveVisitCopy(
 				transformFn(i, newData), transformFn, newData))
 		return transformFn(obj.copyFromVisitedObjects(*results), newData)
@@ -152,8 +152,8 @@ def recursiveVisitCopy(obj:T.Any,
 	elif isinstance(obj, MAP_TYPES):
 		results = []
 		for k, v in obj.items():
-			kData = deepcopy(visitData)
-			vData = deepcopy(visitData)
+			kData = visitData.copy()
+			vData = visitData.copy()
 			results.append((
 				recursiveVisitCopy(transformFn(k, kData), transformFn, kData),
 				recursiveVisitCopy(transformFn(v, vData), transformFn, vData)
@@ -163,7 +163,7 @@ def recursiveVisitCopy(obj:T.Any,
 	elif isinstance(obj, SEQ_TYPES):
 		results = list(obj)
 		for i, v in enumerate(obj):
-			newData = deepcopy(visitData)
+			newData = visitData.copy()
 			results[i] = (recursiveVisitCopy(
 				transformFn(v, newData), transformFn, newData))
 

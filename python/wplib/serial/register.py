@@ -4,7 +4,6 @@ import typing as T
 from wplib import inheritance, CodeRef
 from wplib.serial.adaptor import SerialAdaptor
 from wplib.serial.constant import FORMAT_DATA_KEY
-from wplib.serial import lib
 
 
 """global register for adaptor classes - top-level
@@ -36,7 +35,13 @@ class SerialRegister:
 	def adaptorForClass(cls, forCls:T.Type)->SerialAdaptor:
 		"""Get the adaptor for the given class.
 		"""
-		return inheritance.superClassLookup(cls.typeAdaptorMap, forCls, default=None)
+		result = inheritance.superClassLookup(cls.typeAdaptorMap, forCls, default=None)
+		if not result:
+			print("missing:")
+			print(cls.typeAdaptorMap)
+			print(forCls)
+			print(inheritance.superClassLookup(cls.typeAdaptorMap, forCls, default=None))
+		return result
 
 	# @classmethod
 	# def adaptorForCodeRefString(cls, codeRefString:str)->SerialAdaptor:
@@ -51,4 +56,4 @@ class SerialRegister:
 	def adaptorForData(cls, data:dict)->SerialAdaptor:
 		"""Get the adaptor for the given data dict.
 		"""
-		return cls.adaptorForClass(CodeRef.resolve(lib.getDataCodeRefStr(data)))
+		return cls.adaptorForClass(CodeRef.resolve(SerialAdaptor.getDataCodeRefStr(data)))

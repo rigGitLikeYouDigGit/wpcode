@@ -526,7 +526,7 @@ class ChimaeraNode(UidElement, DirtyNode, Serialisable):
 	# region serialisation
 	uniqueAdapterName = "ChimaeraNode"
 
-	@EncoderBase.versionDec(1)
+	@Serialisable.encoderVersion(1)
 	class Encoder(EncoderBase):
 		"""encoder for Chimaera nodes"""
 
@@ -541,11 +541,16 @@ class ChimaeraNode(UidElement, DirtyNode, Serialisable):
 					data[k] = v
 			#print("serial data for node", obj)
 			#pprint.pprint(data)
+			data["uid"] = obj.getElementId()
 			return data
 
 		@classmethod
-		def decode(cls, serialCls: ChimaeraNode, serialData: dict) -> ChimaeraNode:
-			raise NotImplementedError
+		def decode(cls, serialCls: T.Type[ChimaeraNode], serialData: dict) -> ChimaeraNode:
+			node = serialCls()
+			node._data = serialData
+			node.setElementId(serialData["uid"])
+			return node
+
 
 
 	# endregion

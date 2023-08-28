@@ -6,9 +6,9 @@ from wplib.constant import IMMUTABLE_TYPES, LITERAL_TYPES, MAP_TYPES, SEQ_TYPES
 from wplib import CodeRef
 
 from .adaptor import SerialAdaptor
-from .encoder import EncoderBase, version
+#from .encoder import EncoderBase
 from .register import SerialRegister
-from . import lib
+#from . import lib
 
 
 # serialise from root down
@@ -17,6 +17,8 @@ from . import lib
 def serialiseTransform(obj, visitData=None):
 	"""Transform to apply to each object during serialisation.
 	"""
+	if obj is None:
+		return None
 	# literals can be serialised just so
 	if isinstance(obj, LITERAL_TYPES):
 		return obj
@@ -34,7 +36,7 @@ def serialiseTransform(obj, visitData=None):
 	return adaptorCls.encode(obj)
 
 
-def serialiseRecursive(obj):
+def serialiseRecursive(obj, ):
 	"""Serialise the given object, recursively visiting
 	any objects that are Visitable.
 	"""
@@ -43,15 +45,17 @@ def serialiseRecursive(obj):
 def deserialiseTransform(obj, visitData=None):
 	"""Transform to apply to each object during deserialisation.
 	"""
+	#print("deserialise", obj)
 	# literals can be serialised just so
 	if isinstance(obj, LITERAL_TYPES):
 		return obj
 
 	if isinstance(obj, MAP_TYPES):
-		codeRef = lib.getDataCodeRefStr(obj)
+		#print("get", lib.getDataCodeRefStr(obj))
+		codeRef = SerialAdaptor.getDataCodeRefStr(obj)
 		if codeRef is not None:
 			serialType = CodeRef.resolve(codeRef)
-			print(f"Found code ref {codeRef} -> {serialType}")
+			#print(f"Found code ref {codeRef} -> {serialType}")
 			if issubclass(serialType, SerialAdaptor):
 				return serialType.decode(obj)
 			# retrieve adaptor for the given data
@@ -95,7 +99,7 @@ class Serialisable(SerialAdaptor):
 	# 		raise NotImplementedError
 
 
-	def serialise(self)->dict:
+	def serialise(self, **kwargs)->dict:
 		"""top level method to get serialised representation"""
 		return serialiseRecursive(self)
 
