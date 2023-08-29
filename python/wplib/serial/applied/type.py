@@ -14,7 +14,7 @@ from wplib.serial.register import SerialRegister
 
 class TypeAdaptor(SerialAdaptor):
 
-	uniqueAdapterName = "stdEnum"
+	uniqueAdapterName = "type"
 
 	@classmethod
 	def serialType(cls) ->type:

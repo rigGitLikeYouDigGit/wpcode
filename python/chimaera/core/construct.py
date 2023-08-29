@@ -51,7 +51,9 @@ class NodeFnSet:
 		# delegate methods from node
 		self.name = node.name
 		self.refMap = node.refMap
+		self.sourceParams = node.sourceParams
 		self.resultParams = node.resultParams
+		self.sourceStorage = node.sourceStorage
 		self.resultStorage = node.resultStorage
 
 

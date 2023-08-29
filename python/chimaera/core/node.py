@@ -12,7 +12,7 @@ from wplib import DirtyExp, CodeRef
 from wplib.expression import Expression, SyntaxPasses, ExpTokens, ExpSyntaxError, EvaluationError, ExpEvaluator, ExpPolicy, ExpSyntaxProcessor
 from wplib.sentinel import Sentinel
 from wplib.object import UidElement, DirtyNode
-from wplib.sequence import getFirst, flatten
+from wplib.sequence import getFirst, flatten, toSeq, toSeqIf
 
 from wplib.serial import Serialisable, EncoderBase
 
@@ -325,7 +325,7 @@ class ChimaeraNode(UidElement, DirtyNode, Serialisable):
 		return self.dataBlock()["attrMap"]["storage"]
 	def sourceStorage(self)->Tree:
 		return self.storageExp().rawStructure()
-	def setstorage(self, value)->None:
+	def setStorage(self, value)->None:
 		"""directly set the current value to rescan tree in expression"""
 		self.storageExp().setStructure(value)
 	def resultStorage(self)->Tree:
@@ -347,13 +347,26 @@ class ChimaeraNode(UidElement, DirtyNode, Serialisable):
 		Really like old version where a node either operated on
 		data or became data - maybe we can carry that through
 		"""
-		if self.fnSet():
+		if self.fnSet(): # defer to function set's compute if one is set
 			return self.fnSet().compute()
 		if not self.valueExp().isEmpty():
 			return self.valueExp().eval(self)
 		return self.resultParams()
-
 	# endregion
+
+	#region data objects
+	"""the 'main' mode of passing data is in a tree structure
+	forming a hierarchical data object,
+	to be built up and copied over generations of nodes"""
+	def resultData(self)->Tree:
+		"""if value is defined as other than a tree,
+		set that as the value root of a single level of tree
+		"""
+		value = self.value()
+		if isinstance(value, Tree):
+			return value
+		return Tree(name="root", value=value)
+	#endregion
 
 	#region refmap / node connections
 	def refMapExp(self)->DirtyExp:
@@ -362,6 +375,9 @@ class ChimaeraNode(UidElement, DirtyNode, Serialisable):
 	def setRef(self, key, uid:tuple[str, ...]=(), path:tuple[str, ...]=(), node:tuple[ChimaeraNode, ...]=(), affectEval=True, refVal:RefValue=None)->None:
 		"""updates expression source of refmap with given value"""
 		refMapSrc : dict = self.refMapExp().rawStructure()
+		uid = toSeqIf(uid)
+		path = toSeqIf(path)
+		node = toSeqIf(node)
 		if refVal:
 			refMapSrc[key] = refVal
 		else:

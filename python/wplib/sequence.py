@@ -17,6 +17,9 @@ resolveSeqIndex = lambda index, length : (index if index >= 0 else length + inde
 # lambda to coerce values to iterable input
 toSeq = lambda x: x if isinstance(x, (*SEQUENCE_TYPES, *MAP_TYPES)) else (x, )
 
+# return empty sequence if original value is not
+toSeqIf = lambda x: (x if isinstance(x, (*SEQUENCE_TYPES, *MAP_TYPES)) else (x,)) if x else ()
+
 def strList(i)->list[str]:
 	if isinstance(i, str):
 		return [i]

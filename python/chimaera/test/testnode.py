@@ -97,6 +97,20 @@ class TestNode(unittest.TestCase):
 		graphB = ChimaeraNode.deserialise(serialData)
 		self.assertIsInstance(graphB, ChimaeraNode)
 
+		# test plug node serialisation
+		plugNode = graph.createNode("plugNode", TestNode.TestPlugNode)
+		serialData = graph.serialise()
+		graphB = ChimaeraNode.deserialise(serialData)
+		self.assertIsInstance(graphB, ChimaeraNode)
+		self.assertEqual(len(graphB.nodesByName("plugNode")), 1)
+		self.assertIsInstance(graphB.nodesByName("plugNode")[0], ChimaeraNode)
+		self.assertIsInstance(
+			PlugNode.inputPlugRoot(
+				graphB.nodesByName("plugNode")[0]
+			),
+			ChimaeraNode
+		)
+
 
 
 

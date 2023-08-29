@@ -25,8 +25,8 @@ def makePlugNode():
 	node = graph.createNode("topNodeA")
 
 	plugNode : TestPlugNode = graph.createNode("plugNodeA", nodeType=TestPlugNode)
-	print(PlugNode.inputPlugRoot(plugNode))
-	print(TestPlugNode.plugChildren(TestPlugNode.inputPlugRoot(plugNode)))
+	# print(PlugNode.inputPlugRoot(plugNode))
+	# print(TestPlugNode.plugChildren(TestPlugNode.inputPlugRoot(plugNode)))
 
 
 if __name__ == '__main__':

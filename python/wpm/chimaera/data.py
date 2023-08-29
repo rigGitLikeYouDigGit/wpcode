@@ -62,9 +62,6 @@ class Transform(MayaData):
 		"""
 		mfn = om.MFnTransform(mayaObject)
 		tfMat = om.MTransformationMatrix(om.MMatrix(self.matrix))
-		# mfn.setTranslation(om.MVector(self.matrix[3, :3]), om.MSpace.kTransform)
-		# mfn.setRotation(om.MEulerRotation(self.matrix[:3, :3]), om.MSpace.kTransform)
-		# mfn.setScale(om.MVector(self.matrix[:3, :3]), om.MSpace.kTransform)
 		mfn.setTransformation(tfMat)
 
 	def createMayaNode(self, parentNode:om.MObject) ->om.MObject:

@@ -402,11 +402,10 @@ class TreeInterface(Traversable,
 	def buildTraverseParamsFromRawKwargs(self, **kwargs) ->TraversableParams:
 		"""build traverse params object from raw kwargs"""
 		params : TreeTraversalParams = self.defaultTraverseParamCls()()
-		params.create = kwargs.pop(
-			"create", self.getAuxProperty(
-				self.AuxKeys.LookupCreate, default=None
-			)
-		)
+		create = kwargs.pop("create", None)
+		if create is None:
+			create = self.getInherited(self.AuxKeys.LookupCreate, default=False)
+		params.create = create
 		return params
 
 	def __call__(self, *path:keyT,
@@ -416,6 +415,7 @@ class TreeInterface(Traversable,
 		""" index into tree hierarchy via address sequence,
 		return matching branch"""
 		#print("call", self, path)
+
 		try:
 			return super(TreeInterface, self).__call__(
 				path, create=create, traverseParams=traverseParams, **kwargs
@@ -999,7 +999,8 @@ class TreeInterface(Traversable,
 		return incrementName(baseName, self.keys())
 
 	def displayStr(self, nested=True):
-		seq = pprint.pformat( self.serialise(nested=nested), sort_dicts=False
+		seq = pprint.pformat( self.serialise(#nested=nested
+		                                     ), sort_dicts=False
 		                      )
 		return seq
 

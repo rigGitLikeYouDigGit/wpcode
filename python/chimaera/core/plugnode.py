@@ -57,6 +57,7 @@ class PlugNode(NodeFnSet):
 	PLUG_SOURCE_KEY = "_src"
 	PLUG_PARENT_KEY = "_parent"
 	PLUG_CHILDREN_KEY = "_children"
+	PLUG_MAIN_KEY = "_plugMain"
 
 	# region plug node support
 	@classmethod
@@ -113,7 +114,12 @@ class PlugNode(NodeFnSet):
 	def nodeIsPlug(cls, node:ChimaeraNode):
 		"""if a node defines _src, it's a plug of another node
 		"""
-		return cls.PLUG_SOURCE_KEY in node.refMapRaw()
+		return cls.PLUG_MAIN_KEY in node.refMapRaw()
+
+	@classmethod
+	def plugMainNode(cls, plugNode:ChimaeraNode)->ChimaeraNode:
+		"""get main node of plug node"""
+		return plugNode.parent().resolveChildRef(plugNode.getRef(cls.PLUG_MAIN_KEY, ), plugNode)[0]
 
 	@classmethod
 	def plugIsInput(cls, plug:ChimaeraNode)->bool:
@@ -122,6 +128,8 @@ class PlugNode(NodeFnSet):
 		"""
 		# return plug.name() == cls.IN_PLUG_KEY
 
+	# region plug traversal
+	# yes I know we need proper tree support here
 	@classmethod
 	def plugChildren(cls, plug:ChimaeraNode)->tuple[ChimaeraNode]:
 		"""get immediate children of plug node"""
@@ -129,20 +137,33 @@ class PlugNode(NodeFnSet):
 		return nodeSet
 
 	@classmethod
+	def plugChildMap(cls, plug:ChimaeraNode)->dict[str, ChimaeraNode]:
+		"""get child map of plug node"""
+		childMap = {}
+		for child in cls.plugChildren(plug):
+			childMap[child.name()] = child
+		return childMap
+
+	#endregion
+
+	@classmethod
 	def inputPlugRoot(cls, mainNode:ChimaeraNode):
 		allNodes = mainNode.resolveChildRef(mainNode.getRef(cls.IN_PLUG_KEY, ), mainNode)
-		if not allNodes:
-			return None
-		return allNodes[0]
+		return getFirst(allNodes)
+
+	def ownInputPlugRoot(self)->ChimaeraNode:
+		return self.inputPlugRoot(self.node)
 
 	@classmethod
 	def outputPlugRoot(cls, mainNode:ChimaeraNode):
 		allNodes = mainNode.resolveChildRef(mainNode.getRef(cls.OUT_PLUG_KEY, ), mainNode)
-		if not allNodes:
-			return None
-		return allNodes[0]
+		return getFirst(allNodes)
+
+	def ownOutputPlugRoot(self)->ChimaeraNode:
+		return self.outputPlugRoot(self.node)
+
 	@classmethod
-	def _makeRootPlugNodes(cls, mainNode:ChimaeraNode, graph:ChimaeraNode)->None:
+	def _makeRootPlugNodes(cls, mainNode:ChimaeraNode, graph:ChimaeraNode)->tuple[ChimaeraNode, ChimaeraNode]:
 		"""create root plug nodes for this node and link to refmap
 		"""
 		inRoot = graph.createNode(cls.IN_PLUG_KEY)
@@ -153,6 +174,7 @@ class PlugNode(NodeFnSet):
 		outRoot = graph.createNode(cls.OUT_PLUG_KEY)
 		mainNode.setRef(cls.OUT_PLUG_KEY, uid=(outRoot.uid,), affectEval=False)
 		cls.setPlugSource(outRoot, mainNode)
+		return inRoot, outRoot
 
 
 	@classmethod
@@ -168,7 +190,7 @@ class PlugNode(NodeFnSet):
 		"""
 
 	@classmethod
-	def _makePlugNodesFromTree(cls, rootNode:ChimaeraNode, plugTree:Tree):
+	def _makePlugNodesFromTree(cls, rootNode:ChimaeraNode, plugTree:Tree, mainNode:ChimaeraNode):
 		for i in plugTree.allBranches(includeSelf=True, depthFirst=False):
 			if not i.parent:
 				i.node = rootNode
@@ -178,6 +200,7 @@ class PlugNode(NodeFnSet):
 			i.node = plugNode
 			#set plug node parent
 			plugNode.setRef(cls.PLUG_PARENT_KEY, uid=i.parent.node.uid)
+			plugNode.setRef(cls.PLUG_MAIN_KEY, uid=(mainNode.uid,))
 
 
 	#endregion
@@ -196,16 +219,18 @@ class PlugNode(NodeFnSet):
 		super().setupNode(node, name, parent)
 		#make root plug nodes
 		#cls._setupAllPlugs(node, parent)
-		cls._makeRootPlugNodes(node, parent)
+		inRoot, outRoot = cls._makeRootPlugNodes(node, parent)
 
 		# set default resultParams on node
 		node.setParams(cls.defaultParams(Tree("root")))
 
 		# make user-defined plugs
-		# cls.makePlugs(
-		# 	Tree(cls.IN_PLUG_KEY),
-		# 	Tree(cls.OUT_PLUG_KEY)
-		# )
+		inTree = Tree(cls.IN_PLUG_KEY)
+		outTree = Tree(cls.OUT_PLUG_KEY)
+		cls.makePlugs(inTree, outTree)
+		#make plug nodes
+		cls._makePlugNodesFromTree(inRoot, inTree, node)
+		cls._makePlugNodesFromTree(outRoot, outTree, node)
 
 
 

@@ -97,7 +97,14 @@ def visitTopDown(obj, transformFn):
 				visitTopDown(transformFn(k), transformFn),
 				visitTopDown(transformFn(v), transformFn)
 			))
-		return type(resultObj)({k: v for k, v in results})
+		#return type(resultObj)({"_dictItems" : results})
+		try: # how to resolve when a dict key returns complex type?
+			# list of tuples and some identifier to mark as dict
+			return type(resultObj)({k: v for k, v in results})
+		except TypeError:
+			return type(resultObj)({"_dictItems" : results})
+			print("error", results)
+			raise
 	return resultObj
 
 def visitLeavesUp(obj, transformFn):
