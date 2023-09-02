@@ -13,6 +13,8 @@ from wptree import Tree
 
 from chimaera import ChimaeraNode, PlugNode
 
+from wpm import cmds, om, oma, WN
+
 """
 Consider a tree
 branches form a spine

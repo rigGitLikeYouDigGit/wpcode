@@ -20,4 +20,4 @@ from .node import ChimaeraNode
 from .plugnode import PlugNode
 from .construct import NodeFnSet
 
-from .data import DataTree
+from .data import Data

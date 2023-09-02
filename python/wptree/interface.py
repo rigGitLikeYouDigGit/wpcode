@@ -9,6 +9,7 @@ from wplib.sequence import flatten, resolveSeqIndex
 from wplib.object import Signal, Traversable, TraversableParams
 from wplib import TypeNamespace
 from wplib.sentinel import Sentinel
+from wplib.string import incrementName
 from wplib import CodeRef
 
 from wplib.serial import Serialisable, SerialAdaptor, EncoderBase
@@ -432,10 +433,7 @@ class TreeInterface(Traversable,
 	# connected nodes
 	def getRoot (self)->TreeType:
 		"""no recursion
-		breakpoints have to be opt-in with a different function,
-		the slowdown otherwise is insane
 		"""
-		#return self.filterParents(fallbackRoot=True, breakpoint=breakpoint)
 		test = self
 		while test.getParent():
 			test = test.getParent()
@@ -444,7 +442,7 @@ class TreeInterface(Traversable,
 	@property
 	def root(self)->TreeType:
 		"""return the current root for this tree - respects any
-		active breakpoints"""
+		active """
 		return self.getRoot()
 
 	@property
@@ -568,8 +566,6 @@ class TreeInterface(Traversable,
 		or None
 		if one branch is direct parent of the other,
 		that branch will be returned
-
-		this uses absolute parents, ignoring breakpoints
 		"""
 		# #print("commonParent")
 		if self.root is not otherBranch.root:

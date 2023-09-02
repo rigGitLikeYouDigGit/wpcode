@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 from wp import constant as const
 from wp.treefield import TreeField
-from wp.ui.layout import autoLayout
+from wpui.layout import genAutoLayout
 from wp.ui.widget import WpWidgetBase, BorderFrame
 from wp.ui.treefieldwidget import TreeFieldParams, StringTreeWidget
 from wp.ui.widget.childlist import ChildListWidget
@@ -166,7 +166,7 @@ class IoListPane(WpWidgetBase, QtWidgets.QGroupBox):
 		#self.setToolTip(self.toolTip())
 
 	def _makeLayout(self):
-		autoLayout(self, recurse=False) # love this thing
+		genAutoLayout(self, recurse=False) # love this thing
 
 
 	def _refreshList(self):
@@ -255,7 +255,7 @@ class IoManagerWidget(QtWidgets.QWidget, WpWidgetBase):
 		self._makeConnections()
 
 	def _makeLayout(self):
-		autoLayout(self, recurse=False) # love this thing
+		genAutoLayout(self, recurse=False) # love this thing
 
 	def _makeConnections(self):
 		"""make signal connections

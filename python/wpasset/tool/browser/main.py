@@ -1,17 +1,12 @@
 from __future__ import annotations
 
+from PySide2 import QtWidgets
 
-import typing as T
-
-from PySide2 import QtWidgets, QtCore, QtGui
-
-from wp.treefield import TreeField, TreeFieldParams
-from wp import option, constant
-from wp.ui import layout
-from wp.ui.widget import ChildListWidget, WpWidgetBase
+from wpui import layout
+from wp.ui.widget import ChildListWidget
 
 from wpasset.bank import AssetBank
-from wpasset import lib, search, Asset
+from wpasset import Asset
 from wpasset.ui.widget import UidWidget
 
 """show what assets are available in the project"""
@@ -107,7 +102,7 @@ class AssetBrowserWidget(QtWidgets.QWidget):
 
 
 	def makeLayout(self):
-		layout.autoLayout(self)
+		layout.genAutoLayout(self)
 
 	def makeConnections(self):
 		self.refreshBtn.clicked.connect(self._onRefreshPressed)
