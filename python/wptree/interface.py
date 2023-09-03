@@ -54,7 +54,7 @@ class TreeInterface(Traversable,
 
 
 	@classmethod
-	def _serialKeys(cls):
+	def serialKeys(cls):
 		class SerialKeys:
 			name = "?NAME"
 			value = "?VALUE"
@@ -452,6 +452,12 @@ class TreeInterface(Traversable,
 		return {i.name : i for i in self.branches}
 
 	@property
+	def uidBranchMap(self)->dict[str, TreeType]:
+		"""return a nice view of {tree uid : tree}
+		generated from uid map"""
+		return {i.uid : i for i in self.branches}
+
+	@property
 	def isLeaf(self)->bool:
 		return not self.branches
 
@@ -693,6 +699,11 @@ class TreeInterface(Traversable,
 		but that raises ambiguity on new index, what happens to references etc
 		"""
 
+		if newBranch.uid in self.uidBranchMap:
+			if force:
+				newBranch.remove()
+			raise KeyError(f"UID of new branch {newBranch} already in tree {self, self.address()}" + "\n" + f" keys {self.keys()}")
+
 		if newBranch.name in self.keys():
 			if force:
 				self(newBranch.name).remove()
@@ -758,24 +769,24 @@ class TreeInterface(Traversable,
 		"""Returns any data needed to describe the whole tree
 		in its serialised state - eventually put format information in here"""
 		return {
-			self._serialKeys().format : 0
+			self.serialKeys().format : 0
 		}
 
 	def _baseSerialData(self)->dict:
 		"""return name, value, auxProperties for this branch only"""
-		data = { self._serialKeys().name : self.getName(),
+		data = { self.serialKeys().name : self.getName(),
 		         }
 		#if self.value != self.default:
-		data[self._serialKeys().value] = self._getRawValue()
+		data[self.serialKeys().value] = self._getRawValue()
 		if self.auxProperties != self.defaultAuxProperties():
-			data[self._serialKeys().properties] = self.auxProperties
+			data[self.serialKeys().properties] = self.auxProperties
 
 		# check if type differs from parent - if so define it
 		if self.parent and self.parent.__class__ != self.__class__:
 			typeData = CodeRef.get(self.__class__)
-			data[self._serialKeys().type] = typeData
+			data[self.serialKeys().type] = typeData
 
-		data[self._serialKeys().uid] = self.uid
+		data[self.serialKeys().uid] = self.uid
 
 		return data
 
@@ -792,21 +803,21 @@ class TreeInterface(Traversable,
 		data = self._baseSerialData()
 		#print("serialiseNested", self, self.branches)
 		if self.branches:
-			data[self._serialKeys().children] = [i._serialiseNested() for i in self.branches]
+			data[self.serialKeys().children] = [i._serialiseNested() for i in self.branches]
 		return data
 
 	def _serialiseNestedOuter(self):
 		data = self._serialiseNested()
 		# add root data
-		data[self._serialKeys().rootData] = self._rootData()
-		data[self._serialKeys().layout] = self._serialKeys().nestedMode
+		data[self.serialKeys().rootData] = self._rootData()
+		data[self.serialKeys().layout] = self.serialKeys().nestedMode
 		return data
 
 	def _serialiseFlatOuter(self):
 		data = self._serialiseFlat()
 		# add root data
-		data[self._serialKeys().rootData] = self._rootData()
-		data[self._serialKeys().layout] = self._serialKeys().flatMode
+		data[self.serialKeys().rootData] = self._rootData()
+		data[self.serialKeys().layout] = self.serialKeys().flatMode
 		return data
 
 	# def serialise(self, nested=True)->dict:
@@ -815,8 +826,8 @@ class TreeInterface(Traversable,
 	# 	so this tree will give its own root data"""
 	# 	data = self._serialiseNested() if nested else self._serialiseFlat()
 	# 	# add root data
-	# 	data[self._serialKeys().rootData] = self._rootData()
-	# 	data[self._serialKeys().layout] = self._serialKeys().nestedMode if nested else self._serialKeys().flatMode
+	# 	data[self.serialKeys().rootData] = self._rootData()
+	# 	data[self.serialKeys().layout] = self.serialKeys().nestedMode if nested else self.serialKeys().flatMode
 	# 	return data
 
 	def serialiseSingle(self)->dict:
@@ -835,19 +846,19 @@ class TreeInterface(Traversable,
 		if isinstance(loadType, type):
 			treeCls = loadType
 		# if loadType is True, load saved type
-		elif loadType and cls._serialKeys().type in baseData:
+		elif loadType and cls.serialKeys().type in baseData:
 			# retrieve the reference to type, resolve it to get the actual type
-			treeCls = CodeRef.resolve(baseData[cls._serialKeys().type])
+			treeCls = CodeRef.resolve(baseData[cls.serialKeys().type])
 		else:
 			treeCls = cls
 
 		tree = treeCls(
-			name=baseData[treeCls._serialKeys().name],
-			value=baseData.get(treeCls._serialKeys().value),
-			uid=baseData.get(treeCls._serialKeys().uid) if preserveUid else None
+			name=baseData[treeCls.serialKeys().name],
+			value=baseData.get(treeCls.serialKeys().value),
+			uid=baseData.get(treeCls.serialKeys().uid) if preserveUid else None
 		)
 
-		tree._properties = baseData.get(treeCls._serialKeys().properties, treeCls.defaultAuxProperties())
+		tree._properties = baseData.get(treeCls.serialKeys().properties, treeCls.defaultAuxProperties())
 
 		return tree
 
@@ -860,8 +871,8 @@ class TreeInterface(Traversable,
 
 		# regen any other branches, add as children
 		try:
-			if branchCls._serialKeys().children in data:
-				for i in data[branchCls._serialKeys().children]:
+			if branchCls.serialKeys().children in data:
+				for i in data[branchCls.serialKeys().children]:
 					#print("child deserialise", i)
 					newChild = branchCls._deserialiseNested(i, preserveUid=preserveUid)
 					#print("add new child", newChild, baseTree.getBranches())
@@ -893,13 +904,13 @@ class TreeInterface(Traversable,
 	# def deserialise(cls, data:dict, preserveUid=False, preserveType=True)->cls:
 	# 	"""main entrypoint"""
 	# 	##print("deserialise main")
-	# 	rootData = data[cls._serialKeys().rootData] # not used yet
+	# 	rootData = data[cls.serialKeys().rootData] # not used yet
 	#
 	# 	#cls._setCaching(False)
-	# 	layoutMode = data.get(cls._serialKeys().layout, cls._serialKeys().nestedMode)
-	# 	if layoutMode == cls._serialKeys().nestedMode:
+	# 	layoutMode = data.get(cls.serialKeys().layout, cls.serialKeys().nestedMode)
+	# 	if layoutMode == cls.serialKeys().nestedMode:
 	# 		tree = cls._deserialiseNested(data, preserveUid=preserveUid, preserveType=preserveType)
-	# 	elif layoutMode == cls._serialKeys().flatMode:
+	# 	elif layoutMode == cls.serialKeys().flatMode:
 	# 		tree = cls._deserialiseFlat(data, preserveUid=preserveUid, preserveType=preserveType)
 	# 	#cls._setCaching(True)
 	# 	#tree.setCachedHierarchyDataDirty(True, True)
@@ -915,22 +926,22 @@ class TreeInterface(Traversable,
 			nested = True
 			data = obj._serialiseNested() if nested else obj._serialiseFlat()
 			# add root data
-			data[obj._serialKeys().rootData] = obj._rootData()
-			data[obj._serialKeys().layout] = obj._serialKeys().nestedMode if nested else obj._serialKeys().flatMode
+			data[obj.serialKeys().rootData] = obj._rootData()
+			data[obj.serialKeys().layout] = obj.serialKeys().nestedMode if nested else obj.serialKeys().flatMode
 			return data
 
 		@classmethod
-		def decode(cls, serialCls: type, serialData: dict) -> TreeInterface:
+		def decode(cls, serialCls: type[TreeInterface], serialData: dict) -> TreeInterface:
 			#print("tree interface decode")
 			preserveUid = False
 			preserveType = False
-			rootData = serialData[serialCls._serialKeys().rootData]  # not used yet
+			rootData = serialData[serialCls.serialKeys().rootData]  # not used yet
 
 			# cls._setCaching(False)
-			layoutMode = serialData.get(serialCls._serialKeys().layout, serialCls._serialKeys().nestedMode)
-			if layoutMode == serialCls._serialKeys().nestedMode:
+			layoutMode = serialData.get(serialCls.serialKeys().layout, serialCls.serialKeys().nestedMode)
+			if layoutMode == serialCls.serialKeys().nestedMode:
 				tree = serialCls._deserialiseNested(serialData, preserveUid=preserveUid, preserveType=preserveType)
-			elif layoutMode == serialCls._serialKeys().flatMode:
+			elif layoutMode == serialCls.serialKeys().flatMode:
 				tree = serialCls._deserialiseFlat(serialData, preserveUid=preserveUid, preserveType=preserveType)
 			# cls._setCaching(True)
 			# tree.setCachedHierarchyDataDirty(True, True)

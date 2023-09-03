@@ -31,6 +31,12 @@ class SuperViewBase(
 		self.setAlternatingRowColors(True)
 		self.setViewportMargins(0, 0, 0, 0)
 		self.setContentsMargins(0, 0, 0, 0)
+		#self.setFrameShape(QtWidgets.QFrame.NoFrame)
+		self.setFrameShape(QtWidgets.QFrame.StyledPanel)
+		self.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
+
+		#self.setSectionResizeMode(QtWidgets.QAbstractScrollArea.ResizeToContents)
+
 		# self.setSizePolicy(
 		# 	QtWidgets.QSizePolicy.Fixed,
 		# 	QtWidgets.QSizePolicy.Fixed,
@@ -120,7 +126,7 @@ class SuperViewBase(
 		y = 0
 
 		for i in range(self.model().rowCount()):
-			y += self.sizeHintForRow(i) + 3
+			y += self.sizeHintForRow(i) + 2
 
 		try:
 			y += self.horizontalHeader().height()
@@ -210,6 +216,21 @@ class SuperModel(QtGui.QStandardItemModel):
 		#print("indices for widgets", indexMap)
 		#self.indexWidgetInstanceMap = indexMap
 		return indexMap
+
+	def data(self, index:PySide2.QtCore.QModelIndex, role:int=...) -> typing.Any:
+		if role == QtCore.Qt.TextAlignmentRole:
+			return QtCore.Qt.AlignLeft
+		return super(SuperModel, self).data(index, role)
+
+	def headerData(self, section:int, orientation:PySide2.QtCore.Qt.Orientation, role:int=...) -> typing.Any:
+		if role == QtCore.Qt.TextAlignmentRole:
+			return QtCore.Qt.AlignLeft
+		if role == QtCore.Qt.FontRole:
+			f = QtGui.QFont()
+			f.setPointSize(6)
+			return f
+		return super(SuperModel, self).headerData(section, orientation, role)
+
 
 	# def headerData(self, section:int, orientation:PySide2.QtCore.Qt.Orientation, role:int=...) -> typing.Any:
 	# 	"""return header data for section"""

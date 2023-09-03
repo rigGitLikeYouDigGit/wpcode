@@ -22,6 +22,7 @@ class TreeModel(QtGui.QStandardItemModel, UidElement):
 
 	beforeItemChanged = QtCore.Signal(QtGui.QStandardItem)
 	afterItemChanged = QtCore.Signal(QtGui.QStandardItem)
+	treeSet = QtCore.Signal(Tree)
 
 	# create new instance map for all tree models
 	indexInstanceMap = {}
@@ -34,11 +35,22 @@ class TreeModel(QtGui.QStandardItemModel, UidElement):
 		UidElement.__init__(self)
 
 		self.treeRef : weakref.ReferenceType[Tree] = None
-		self.setHorizontalHeaderLabels(["branch", "value"])
+		#self.setHorizontalHeaderLabels(["branch", "value"])
 
 		if tree:
 			self.setTree(tree)
 
+	def headerData(self, section:int, orientation:PySide2.QtCore.Qt.Orientation, role:int=...) -> typing.Any:
+		if role == QtCore.Qt.DisplayRole:
+			if section == 0:
+				return "branch"
+			elif section == 1:
+				return "value"
+		if role == QtCore.Qt.FontRole:
+			f = QtGui.QFont()
+			f.setPointSize(6)
+			return f
+		return super(TreeModel, self).headerData(section, orientation, role)
 
 	@property
 	def tree(self)->Tree:
@@ -63,6 +75,7 @@ class TreeModel(QtGui.QStandardItemModel, UidElement):
 		items = self.getBranchItemCls(tree).itemsForBranch(
 			tree)
 		self.appendRow(items)
+		self.treeSet.emit(tree)
 
 	def rootItem(self)->TreeBranchItem:
 		return self.item(0)
@@ -107,8 +120,8 @@ class TreeModel(QtGui.QStandardItemModel, UidElement):
 		infos = []
 		for i in indices:
 			branchItem = self.itemFromIndex(i)
-			branch = branchItem.tree
-			info = branch.serialise(includeAddress=True)
+			branch : Tree = branchItem.tree
+			info = branch.serialise()
 			infos.append(info)
 		text = str(infos)
 		mime = QtCore.QMimeData()
@@ -136,23 +149,26 @@ class TreeModel(QtGui.QStandardItemModel, UidElement):
 		if not isinstance(infos, list):
 			infos = [infos]
 
+		parentItem = self.itemFromIndex(parentIndex)
+		print("parentItem", parentItem)
+		if parentItem:
+			parentTree = parentItem.tree
+		else:
+			parentTree = self.tree
+
+		print("parentTree", parentTree)
 		for info in infos:
-			tree = Tree.fromDict(info)
+
+			#tree = Tree.deserialise(info)
 
 			# remove original entries
-			if action == QtCore.Qt.MoveAction and "?ADDR" in info:
-				found = self.tree.getBranch(info["?ADDR"])
-				if found:
-					found.remove()
+			print("dropMimeData", info)
+			if action == QtCore.Qt.MoveAction:
+				found = Tree.getByIndex(info[Tree.serialKeys().uid])
+				print("found", found)
 
-			parentItem = self.itemFromIndex(parentIndex)
-			if not parentItem:
-				#parentItem = self.invisibleRootItem()
-				#parentTree = self.tree.root
-				parentTree = self.tree
-			else:
-				parentTree = parentItem.tree
-			parentTree.addChild(tree)
+
+				parentTree.addChild(found, force=True)
 
 		#self.sync()
 		return True
