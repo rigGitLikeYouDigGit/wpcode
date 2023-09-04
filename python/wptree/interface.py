@@ -702,7 +702,8 @@ class TreeInterface(Traversable,
 		if newBranch.uid in self.uidBranchMap:
 			if force:
 				newBranch.remove()
-			raise KeyError(f"UID of new branch {newBranch} already in tree {self, self.address()}" + "\n" + f" keys {self.keys()}")
+			else:
+				raise KeyError(f"UID of new branch {newBranch} already in tree {self, self.address()}" + "\n" + f" keys {self.keys()}")
 
 		if newBranch.name in self.keys():
 			if force:
@@ -713,6 +714,7 @@ class TreeInterface(Traversable,
 		# get correct index
 		index = resolveSeqIndex(index if index is not None else len(self.branches), len(self.branches))
 		self._addChild(newBranch, index)
+
 
 
 	def _createChildBranch(self, name)->TreeType:

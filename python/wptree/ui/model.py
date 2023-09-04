@@ -168,8 +168,10 @@ class TreeModel(QtGui.QStandardItemModel, UidElement):
 				print("found", found)
 
 
-				parentTree.addChild(found, force=True)
-
+				parentTree.addChild(found, force=True, index=row)
+			print("after drop")
+			self.tree.display()
+		self.setTree(self.tree)
 		#self.sync()
 		return True
 
