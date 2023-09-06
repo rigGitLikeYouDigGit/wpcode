@@ -70,6 +70,10 @@ class TreeModel(QtGui.QStandardItemModel, UidElement):
 		Update this"""
 		self.clear()
 		tree = tree.root
+
+		# ensure tree creates a signal component
+		tree.getSignalComponent(create=True)
+
 		self.treeRef = weakref.ref(tree)
 		self.setElementId(tree.uid)
 		items = self.getBranchItemCls(tree).itemsForBranch(
@@ -92,14 +96,16 @@ class TreeModel(QtGui.QStandardItemModel, UidElement):
 
 		return model
 
-	# def beforeBranchSync(self, item:TreeBranchItem):
-	# 	"""fire this method manually before any automaed tree changes
-	# 	mixing up order of signals like this is some sweater spaghetti
-	# 	but it's fine
-	# 	"""
-	# 	self.beforeItemChanged.emit(item)
-	# def afterBranchSync(self, item:TreeBranchItem):
-	# 	self.afterItemChanged.emit(item)
+	def beforeBranchSync(self, item:TreeBranchItem):
+		"""
+		Fires before a tree branch changes,
+		use this to save expanded items in ui
+		"""
+		self.beforeItemChanged.emit(item)
+
+	def afterBranchSync(self, item:TreeBranchItem):
+		"""Fires after a tree branch has changed"""
+		self.afterItemChanged.emit(item)
 
 
 	# drag and drop support
@@ -303,9 +309,13 @@ class TreeModel(QtGui.QStandardItemModel, UidElement):
 				grandparent.addChild(branch, index=parent.index() + 1)
 				print("found new row", self.rowFromTree(branch))
 
-	def parentRows(self, rows:list[QtCore.QModelIndex], target:QtCore.QModelIndex):
+	def parentRows(self, rows:list[QtCore.QModelIndex], target:QtCore.QModelIndex, targetIndex:int=None):
 		""" parent all selected rows to last select target """
+		#print("parentRows")
 		# parent = self.tree(self.data(target, objRole))
+		address = self.data(target, relAddressRole)
+		assert address is not None
+		#print("parent address", address)
 		parent = self.tree(self.data(target, relAddressRole))
 		for i in rows:
 			# branch = self.tree(self.data(i, objRole))
@@ -316,7 +326,8 @@ class TreeModel(QtGui.QStandardItemModel, UidElement):
 				#print("branch parent is parent")
 				continue
 			branch.remove()
-			print("add child", branch)
-			parent.addChild(branch)
+			#print("add child", branch)
+			parent.addChild(branch, index=targetIndex)
+			#print("after add", parent.branches)
 
 

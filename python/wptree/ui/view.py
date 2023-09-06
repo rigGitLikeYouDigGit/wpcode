@@ -5,8 +5,11 @@ import typing as T
 from PySide2 import QtCore, QtGui, QtWidgets
 
 from wpui.keystate import KeyState
+from wpui.constant import keyDict, dropActionDict, tabKeys, enterKeys, deleteKeys, shiftKeys, escKeys, spaceKeys
+from wpui.event import AllEventEater
 
 from wptree.ui.constant import relAddressRole, treeObjRole, addressRole
+from wptree.ui.item import TreeBranchItem
 
 if T.TYPE_CHECKING:
 	from wptree import Tree
@@ -16,6 +19,19 @@ expandingPolicy = QtWidgets.QSizePolicy(
 	QtWidgets.QSizePolicy.Expanding,
 	QtWidgets.QSizePolicy.Expanding,
 )
+
+class FocusEventEater(QtCore.QObject):
+	def eventFilter(self, watched:QtCore.QObject,
+					event:QtCore.QEvent):
+		if not any([event.type() == i for i in [
+			QtCore.QEvent.FocusIn,
+			QtCore.QEvent.FocusOut,
+
+		]]):
+			return QtCore.QObject.eventFilter(self, watched, event)
+		#print("stopped", event)
+		return True
+
 
 class TreeView(QtWidgets.QTreeView):
 	"""relatively thin viewer for a tree Qt model.
@@ -28,10 +44,33 @@ class TreeView(QtWidgets.QTreeView):
 		super(TreeView, self).__init__(parent)
 		self.rootPath : list[str] = None
 
+		#self.installEventFilter(AllEventEater(self))
+
+
 		self.keyState = KeyState()
+
+		self.savedCollapsedUids : set[str] = set()
+		self.midUiOperation = 0
+		self.scrollPos = 0
 
 		self.makeBehaviour()
 		self.makeAppearance()
+		self.setSelectionBehavior(self.SelectRows)
+		self.setEditTriggers(self.DoubleClicked)
+
+
+		#self.setFocusPolicy(QtCore.Qt.ClickFocus)
+
+	def onIndexCollapsed(self, index:QtCore.QModelIndex):
+		self.savedCollapsedUids.add(self.model().itemFromIndex(index).uid)
+
+	def onIndexExpanded(self, index:QtCore.QModelIndex):
+		self.savedCollapsedUids.discard(self.model().itemFromIndex(index).uid)
+
+	def focusNextPrevChild(self, next:bool) -> bool:
+		"""override to prevent focus from leaving the tree view.
+		"""
+		return False
 
 	def makeAppearance(self):
 
@@ -54,8 +93,7 @@ class TreeView(QtWidgets.QTreeView):
 		self.setDragDropMode(
 			QtWidgets.QAbstractItemView.InternalMove
 		)
-		self.setSelectionMode(self.ExtendedSelection)
-		self.setSelectionBehavior(self.SelectRows)
+		#self.setSelectionMode(self.ExtendedSelection)
 		#self.setDragDropMode()
 		#self.setDropIndicatorShown()
 		self.setAutoScroll(False)
@@ -72,7 +110,15 @@ class TreeView(QtWidgets.QTreeView):
 		"""
 		super(TreeView, self).setModel(model)
 		self.model().treeSet.connect(self.onTreeSet)
+		self.model().beforeItemChanged.connect(self.onBeforeItemChanged)
+		self.model().afterItemChanged.connect(self.onAfterItemChanged)
 		self.onTreeSet(model.tree)
+
+	def onBeforeItemChanged(self, *args, **kwargs):
+		self.saveAppearance()
+
+	def onAfterItemChanged(self, *args, **kwargs):
+		self.restoreAppearance()
 
 	def setRootBranch(self, branch:Tree):
 		"""set the root branch of the tree view.
@@ -111,12 +157,45 @@ class TreeView(QtWidgets.QTreeView):
 		alt makes actions recursive?
 		"""
 		self.keyState.keyPressed(event)
+		print("key press", event.key(), event.key() in tabKeys)
+		if event.key() in tabKeys:
+			for index in self.selectedRowIndices():#type:QtCore.QModelIndex
+				#print("index", index, self.model().branchFromIndex(index))
+				if self.keyState.shift: #unparent one level
+					parentIndex = index.parent()
+					grandParentIndex = parentIndex.parent()
+					if not grandParentIndex.isValid():
+						continue
+					self.model().parentRows([index], grandParentIndex, parentIndex.row() + 1)
+				else: # parent to previous sibling - if first, do nothing
+					if not index.row():
+						continue
+					targetParent = index.sibling(index.row()-1, 0)
+					self.model().parentRows([index], targetParent)
+			event.accept()
+			return
+
+		if event.key() == QtCore.Qt.Key_Delete:
+			for index in self.selectedRowIndices():
+				self.model().deleteRow(index)
+
+		if event.key() == QtCore.Qt.Key_P:
+			if self.keyState.shift:
+				self.model().parentRows(self.selectedRowIndices(), self.model().index(0,0))
+			else:
+				self.model().parentRows(self.selectedRowIndices()[:-1], self.selectedRowIndices()[-1])
+
 		super(TreeView, self).keyPressEvent(event)
 
 	def keyReleaseEvent(self, event:PySide2.QtGui.QKeyEvent) -> None:
 		"""manage key state"""
 		self.keyState.keyReleased(event)
 		super(TreeView, self).keyReleaseEvent(event)
+
+	def mouseDoubleClickEvent(self, event:PySide2.QtGui.QMouseEvent) -> None:
+		"""manage key state"""
+		#self.keyState.mouseDoubleClicked(event)
+		super(TreeView, self).mouseDoubleClickEvent(event)
 
 	def mousePressEvent(self, event):
 		"""manage key state"""
@@ -127,16 +206,35 @@ class TreeView(QtWidgets.QTreeView):
 		if event.button() == QtCore.Qt.RightButton:
 			return super(TreeView, self).mousePressEvent(event)
 
-
-		# print("mouse press", )
-		# self.keyState.debug()
+		# indexAt only checks the whole row -
+		# to expand based on icon, need to check the visual rect
 		index = self.indexAt(event.pos())
+		rect = self.visualRect(index)
+		if not rect.contains(event.pos()):
+			# clicked on expand icon, not actual item
+			return super(TreeView, self).mousePressEvent(event)
+
+
 		self.onClicked(index)
 		event.accept()
+		return
+		# use temporary selection model to avoid super() messing with it
+		mainSelModel = self.selectionModel()
+		sel = mainSelModel.selection()
+		self.setSelectionModel(QtCore.QItemSelectionModel())
+		super(TreeView, self).mousePressEvent(event)
+
+		mainSelModel.clear()
+		self.setSelectionModel(mainSelModel)
+		mainSelModel.select(sel, QtCore.QItemSelectionModel.Select)
+
 
 
 	def onClicked(self, index):
 		""" manage selection manually """
+
+		index = self.model().index(index.row(), 0, index.parent())
+
 		if not self.keyState.shift:
 			# no contiguous selection
 			command = QtCore.QItemSelectionModel.ClearAndSelect
@@ -229,6 +327,17 @@ class TreeView(QtWidgets.QTreeView):
 			branchList.append(branch)
 		return branchList
 
+	def selectedRowIndices(self)->list[QtCore.QModelIndex]:
+		"""returns branch indices for all name and value items selected in ui"""
+		indices = []
+		for i in self.selectionModel().selectedIndexes():
+			row = self.model().index(i.row(), 0, i.parent())
+			if row in indices:
+				continue
+			indices.append(row)
+		return indices
+
+
 	# region visuals
 	def boundingRectForBranch(self, branch, includeBranches=True)->QtCore.QRect:
 		index = self.model().rowFromTree(branch)
@@ -244,6 +353,93 @@ class TreeView(QtWidgets.QTreeView):
 
 	def valuesShown(self)->bool:
 		return not self.isColumnHidden(1)
+
+	def saveCollapsedBranches(self):
+		for i in self.model().allRows():
+			if not self.isExpanded(i):
+				self.savedCollapsedUids.add(
+					self.model().itemFromIndex(i).uid
+				)
+
+	def restoreCollapsedBranches(self):
+		""" restores saved expansion state """
+		for uid in self.savedCollapsedUids:
+			item = TreeBranchItem.getByIndex(uid)
+			self.expand(item.index())
+
+
+	def saveAppearance(self, *args, **kwargs):
+		""" saves expansion and selection state
+		if clear, will remove any previously saved trees
+		"""
+		#print("save appearance", self.midUiOperation)
+		self.midUiOperation += 1
+
+		if self.midUiOperation > 1: # don't do anything if visual transaction already working
+			return
+		#
+		# if clear:
+		# 	self.savedSelectedTrees.clear()
+		# 	self.savedCollapsedTrees.clear()
+		# self.currentSelected = None
+		# for i in self.selectionModel().selectedRows():
+		# 	branch = self.model().treeFromRow(i)
+		# 	self.savedSelectedTrees.append(branch)
+		# for i in self.model().allRows():
+		# 	if not self.model().checkIndex(i):
+		# 		print("index {} is not valid, skipping".format(i))
+		# 	if not self.isExpanded(i):
+		# 		branch = self.model().treeFromRow(i)
+		# 		if branch:
+		# 			self.savedCollapsedTrees.append(branch)
+		# if self.selectionModel().currentIndex().isValid():
+		# 	self.currentSelected = self.model().treeFromRow(
+		# 		self.selectionModel().currentIndex() )
+		self.saveCollapsedBranches()
+		# save viewport scroll position
+		self.scrollPos = self.verticalScrollBar().value()
+
+	def restoreAppearance(self, *args, **kwargs):
+		""" restores expansion and selection state """
+		#print("restore appearance", self.midUiOperation)
+
+		self.midUiOperation -= 1
+		if self.midUiOperation:
+			return
+		#self.setRootIndex(self.model().invisibleRootItem().child(0, 0).index())
+
+		# self.resizeToTree()
+
+		#print("saved selected", self.savedSelectedTrees)
+		# for i in self.savedSelectedTrees:
+		# 	#print("check ", i)
+		# 	if not self.model().rowFromTree(i):
+		# 		#print("no saved branch found for ", i)
+		# 		continue
+		#
+		# 	self.selectionModel().select(
+		# 		self.model().rowFromTree(i),
+		# 		QtCore.QItemSelectionModel.Select | QtCore.QItemSelectionModel.Rows
+		# 	)
+		# trees default to expanded if not found
+		self.expandAll()
+		# for i in self.savedCollapsedTrees:
+		# 	if not self.model().rowFromTree(i):
+		# 		#print("expanded tree not found ")
+		# 		continue
+		# 	self.collapse( self.model().rowFromTree(i) )
+		# 	pass
+		# if self.currentSelected: # on deletion need to fix up this reference
+		# 	#print("setting current")
+		# 	row = self.model().rowFromTree(self.currentSelected)
+		# 	if row is not None:
+		# 		self.sel.setCurrent(row)
+		self.verticalScrollBar().setValue(self.scrollPos)
+		#
+		# #self.resizeToTree()
+		# self.savedSelectedTrees.clear()
+		# self.savedCollapsedTrees.clear()
+
 
 	# endregion visuals
 

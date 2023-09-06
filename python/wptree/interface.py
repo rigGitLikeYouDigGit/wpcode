@@ -115,6 +115,13 @@ class TreeInterface(Traversable,
 		signals for every single branch"""
 		if self._signalComponent:
 			return self._signalComponent
+
+		# need to implement cached parent data (properly) at some point
+		if self.parent:
+			parentComp = self.parent.getSignalComponent(create=False)
+			if parentComp:
+				return parentComp
+
 		if not create:
 			return None
 		self._signalComponent = self.defaultSignalCls()(self)
@@ -253,8 +260,8 @@ class TreeInterface(Traversable,
 		self._setRawValue(value)
 
 		# if something is listening to this tree's signals, emit valueChanged
-		if self._signalComponent and oldValue != value:
-			self._signalComponent.valueChanged.emit(
+		if self.getSignalComponent(create=False) and oldValue != value:
+			self.getSignalComponent(create=False).valueChanged.emit(
 				TreeDeltas.Value(self, oldValue, value)
 			)
 
@@ -667,8 +674,8 @@ class TreeInterface(Traversable,
 			if self.parent is not None:
 				return self.parent._removeBranch(self)
 		result = self._removeBranch(self.getBranch(address))
-		if self._signalComponent:
-			self._signalComponent.structureChanged.emit(
+		if self.getSignalComponent(create=False):
+			self.getSignalComponent(create=False).structureChanged.emit(
 				TreeDeltas.Delete(
 					result, self, result.serialise()
 				)
@@ -684,8 +691,8 @@ class TreeInterface(Traversable,
 		if index is not None:
 			self._setRawBranchIndex(newBranch, index)
 
-		if self._signalComponent:
-			self._signalComponent.structureChanged.emit(
+		if self.getSignalComponent(create=False):
+			self.getSignalComponent(create=False).structureChanged.emit(
 				TreeDeltas.Create(newBranch, self,
 				                  newBranch.serialise())
 			)

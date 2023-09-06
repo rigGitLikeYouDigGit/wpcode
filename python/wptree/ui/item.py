@@ -6,7 +6,10 @@ from PySide2 import QtGui, QtCore
 
 from wplib.constant import LITERAL_TYPES
 
+from wplib.object import UidElement
+
 from wptree.main import Tree
+from wptree.delta import TreeDeltas
 from wptree.ui.constant import addressRole, relAddressRole, childBoundsRole, treeObjRole, rowHeight
 
 
@@ -103,15 +106,58 @@ class TreeValueItem(QtGui.QStandardItem):
 
 
 
-class TreeBranchItem(QtGui.QStandardItem):
-	"""small wrapper allowing standardItems to take tree objects directly"""
+class TreeBranchItem(QtGui.QStandardItem, UidElement):
+	"""small wrapper allowing standardItems to take tree objects directly.
+	Always 1:1 with tree python object
+	"""
+
+	indexInstanceMap = {}
 
 	def __init__(self, tree):
 		""":param tree : Tree"""
 		self.treeRef = weakref.ref(tree)
-		super(TreeBranchItem, self).__init__(self.tree.name)
+		QtGui.QStandardItem.__init__(self, self.tree.name)
+		UidElement.__init__(self, self.tree.uid)
 
 		self.setColumnCount(1)
+
+		self.tree.getSignalComponent().structureChanged.connect(
+			self.onBranchEventReceived)
+		self.tree.getSignalComponent().valueChanged.connect(
+			self.onBranchEventReceived)
+		self.tree.getSignalComponent().nameChanged.connect(
+			self.onBranchEventReceived)
+
+
+	def sync(self):
+		#print("item sync", self, self.tree.branches)
+		for i in range(self.rowCount()):
+			self.takeRow(0)
+		for i in self.tree.branches:
+			self.appendRow(self.itemsForBranch(i))
+
+	def onBranchEventReceived(self, event:TreeDeltas.Base):
+		"""fires when a python branch object gets an internal event, including state deltas -
+		use to regenerate branch items below the given one"""
+		# print("")
+		# print("branch event received", event, self.tree)
+		if not self.model():
+			return
+		if not isinstance(event, TreeDeltas.Base):
+			return
+		# deltas : list[TreeDeltas.Base] = event.da
+		self.sync()
+		#return
+		shouldSync = True
+		# for i in deltas:
+		# 	#print("branch to sync for delta", branchToSyncForDelta(i, self.tree.root))
+		# 	if branchToSyncForDelta(i, self.tree.root) is self.tree:
+		# 		shouldSync = True
+
+		if shouldSync:
+			self.model().beforeBranchSync(self)
+			self.sync()
+			self.model().afterBranchSync(self)
 
 	def getTree(self)->Tree:
 		assert self.treeRef() is not None, "tree is dead"
@@ -153,3 +199,77 @@ class TreeBranchItem(QtGui.QStandardItem):
 			mainItems[0].appendRow(branchItems)
 		#print("itemsForBranch returning", mainItems)
 		return mainItems
+
+	def data(self, role=QtCore.Qt.DisplayRole):
+		""" just return branch name
+		data is used when regenerating abstractTree from model"""
+		if role in (addressRole, relAddressRole):
+			#print("get data", self.tree.address(), role)
+			pass
+
+		# if role == QtCore.Qt.DecorationRole:
+		# 	return self.icon
+		if role == addressRole:
+			#print("addressData", self, self.tree.address())
+			return self.tree.address()
+		elif role == relAddressRole:
+			"""same behaviour for now - may have to retire relAddressRole,
+			model is always on tree root, it's for individual displays to
+			determine relative address"""
+			return self.tree.address()
+
+			#print("relAddressData", self, self.tree)
+			# may not be actual tree root if ui is scoped on specific part of tree
+			uiRoot = self.model().rootItem.tree
+			#print("uiRoot", uiRoot)
+			rel = self.tree.relAddress(uiRoot)
+			#print("rel address", rel)
+			return rel
+
+		# elif role == QtCore.Qt.SizeHintRole:
+		# 	# return QtCore.QSize(
+		# 	# 	len(self.tree.name) * 7.5,
+		# 	# 	rowHeight)
+		# 	metrics = QtGui.QFontMetrics(self.font())
+		# 	length = metrics.size(
+		# 		QtCore.Qt.TextSingleLine,
+		# 		self.data(QtCore.Qt.DisplayRole)).width()
+		# 	return QtCore.QSize(length, rowHeight)
+
+
+		elif role == childBoundsRole:
+			pass
+
+		elif role == treeObjRole:
+			return self.tree
+
+		# check for displaying file path
+		elif role == QtCore.Qt.DisplayRole:
+			if self.tree.getAuxProperty("filePath"):
+				# show last 2 tokens
+				#fileStr = htmlColour(self.getFileTokensToDisplay(), colour="Gray")
+				fileStr = self.getFileTokensToDisplay()
+				return "..." + fileStr + " // " + self.tree.name
+			base = super(TreeBranchItem, self).data(role)
+			#return self.tree.name
+
+		# tooltip to show tree auxProperties
+		elif role == QtCore.Qt.ToolTipRole:
+			return self.tree.getDebugData()
+
+		base = super(TreeBranchItem, self).data(role)
+		return base
+
+	def setData(self, value, role=2):  # sets the NAME of the tree
+
+
+		name = self.tree.setName(value)  # role is irrelevant
+
+		try:
+			result = super(TreeBranchItem, self).setData(name, role)
+			self.emitDataChanged()
+		except:
+			pass
+
+
+

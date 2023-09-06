@@ -5,7 +5,7 @@ from collections import defaultdict
 
 from PySide2 import QtCore, QtGui, QtWidgets
 
-from wpui.constant import keyDict, dropActionDict
+from wpui.constant import keyDict, dropActionDict, shiftKeys, tabKeys, spaceKeys
 
 class KeyState(object):
 	""" holds variables telling if shift, LMB etc are held down
@@ -36,6 +36,7 @@ class KeyState(object):
 	ctrlKey = QtCore.Qt.Key_Control
 
 
+
 	def __init__(self, mouseTrackLength=3):
 		self.LMB = self._BoolRef(False)
 		self.RMB = self._BoolRef(False)
@@ -43,6 +44,7 @@ class KeyState(object):
 		self.alt = self._BoolRef(False)
 		self.ctrl = self._BoolRef(False)
 		self.shift = self._BoolRef(False)
+		self.space = self._BoolRef(False)
 
 		self.lastMousePosMap  = {
 			QtCore.Qt.LeftButton : (0, 0),
@@ -59,6 +61,7 @@ class KeyState(object):
 			self.alt: QtCore.Qt.AltModifier,
 			self.ctrl: QtCore.Qt.ControlModifier,
 			self.shift: QtCore.Qt.ShiftModifier,
+			self.space: QtCore.Qt.Key_Space
 		}
 		# shift and ctrl are swapped for me I kid you not
 		# I swear to god they actually are
