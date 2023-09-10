@@ -121,12 +121,28 @@ class TreeBranchItem(QtGui.QStandardItem, UidElement):
 
 		self.setColumnCount(1)
 
-		self.tree.getSignalComponent().structureChanged.connect(
-			self.onBranchEventReceived)
-		self.tree.getSignalComponent().valueChanged.connect(
-			self.onBranchEventReceived)
-		self.tree.getSignalComponent().nameChanged.connect(
-			self.onBranchEventReceived)
+		for i in (
+			Tree.SignalKeys.StructureChanged,
+			Tree.SignalKeys.NameChanged,
+			Tree.SignalKeys.PropertyChanged,
+			Tree.SignalKeys.ValueChanged,
+			Tree.SignalKeys.NameChanged
+		):
+			self.tree.addListenerCallable(
+				self.onBranchEventReceived,
+				i
+			)
+		#
+		# self.tree.addListenerCallable(
+		# 	self.onBranchEventReceived,
+		# 	Tree.SignalKeys.StructureChanged
+		# )
+		# self.tree.getSignalComponent().structureChanged.connect(
+		# 	self.onBranchEventReceived)
+		# self.tree.getSignalComponent().valueChanged.connect(
+		# 	self.onBranchEventReceived)
+		# self.tree.getSignalComponent().nameChanged.connect(
+		# 	self.onBranchEventReceived)
 
 
 	def sync(self):
@@ -146,7 +162,7 @@ class TreeBranchItem(QtGui.QStandardItem, UidElement):
 		if not isinstance(event, TreeDeltas.Base):
 			return
 		# deltas : list[TreeDeltas.Base] = event.da
-		self.sync()
+		#self.sync()
 		#return
 		shouldSync = True
 		# for i in deltas:
@@ -264,12 +280,13 @@ class TreeBranchItem(QtGui.QStandardItem, UidElement):
 
 
 		name = self.tree.setName(value)  # role is irrelevant
+		super(TreeBranchItem, self).setData(value, role)
 
-		try:
-			result = super(TreeBranchItem, self).setData(name, role)
-			self.emitDataChanged()
-		except:
-			pass
+		# try:
+		# 	result = super(TreeBranchItem, self).setData(name, role)
+		# 	self.emitDataChanged()
+		# except:
+		# 	pass
 
 
 

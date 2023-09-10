@@ -4,6 +4,7 @@ from .builtinextension import UserSet, PostDecMethodWrapper
 from .dirtygraph import DirtyGraph, DirtyNode
 
 from .element import IdElementBase, UidElement, NamedElement
+from .eventdispatcher import EventDispatcher, EventBase
 
 from .hashable import HashableMixin, UnHashableDict, UnHashableSet, HashFunctions, toHash
 

@@ -72,7 +72,7 @@ class TreeModel(QtGui.QStandardItemModel, UidElement):
 		tree = tree.root
 
 		# ensure tree creates a signal component
-		tree.getSignalComponent(create=True)
+		#tree.getSignalComponent(create=True)
 
 		self.treeRef = weakref.ref(tree)
 		self.setElementId(tree.uid)

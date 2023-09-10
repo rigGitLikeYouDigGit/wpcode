@@ -1,92 +1,72 @@
 
 from __future__ import annotations
-"""base class defining logic for sending atomic events, handling them,
-and passing them on to other objects in system"""
+import typing as T
+
 from wplib.object.signal import Signal
 from wplib.sequence import flatten
 from dataclasses import dataclass
 
+"""base class defining logic for sending atomic events, handling them,
+and passing them on to other objects in system
+
+for simplicity, no accepting system - all listeners will receive all events.
+if listeners want to implement more complicated systems, they can
+
+allow subscribing to different streams of events?
+"""
+
+
 @dataclass
 class EventBase:
 	"""events can be anything, base class just used for typing direction"""
-	accepted : dict = None
 	sender : EventDispatcher = None
-
-	def __post_init__(self):
-		self.accepted = self.accepted or {}
 
 
 class EventDispatcher:
+	"""base class for objects that can send events to other objects"""
 
 	def __init__(self):
-		self._eventSignal : Signal = None
+		self._eventNameSignalMap : dict[str, Signal] = {}
 
-	@property
-	def eventSignal(self)->Signal:
-		if self._eventSignal is None:
-			self._eventSignal = Signal()
-		return self._eventSignal
+
+	def getEventSignal(self, key:str, create=False)->Signal:
+		if self._eventNameSignalMap.get(key) is None:
+			if create:
+				self._eventNameSignalMap[key] = Signal()
+		return self._eventNameSignalMap.get(key)
+
 
 	def hasListeners(self):
-		return self._eventSignal is not None
+		return self._eventNameSignalMap is not None
 
-	def addListenerCallable(self, fn:callable):
-		self.eventSignal.connect(fn)
 
-	def _validateEventInput(self, eventInput:EventBase, sendEventKwargs:dict)->EventBase:
-		"""check event input is valid to send, optionally
-		run some fixes or changes to them
+	def addListenerCallable(self, fn:callable, key:str):
+		self.getEventSignal(key, create=True).connect(fn)
 
-		raise any error if given input is invalid
+
+	def _nextEventDestinations(self, forEvent:EventBase, key:str)->list[EventDispatcher]:
 		"""
-		eventInput.sender = self
-		return eventInput
-
-	def _nextEventDestinations(self, forEvent:EventBase, sendEventKwargs:dict)->list[EventDispatcher]:
-		"""return a list of objects to pass this event, if it
-		is not marked accepted"""
+		OVERRIDE
+		return a list of objects to pass this event
+		unsure if we should allow filtering here (parent deciding
+		which child should receive event)
+		"""
 		raise NotImplementedError
 
-	def _getEventDispatcherChain(self, forEvent:EventBase, sendEventKwargs:dict)->list[EventDispatcher]:
-		"""return total list of all dispatchers to pass this event"""
-		found = [self]
-		nextSteps = self._nextEventDestinations(forEvent, sendEventKwargs)
-		while nextSteps:
-			unchecked = set(nextSteps) - set(found)
-			found.extend(unchecked)
-			nextSteps = set(flatten(i._nextEventDestinations(forEvent, sendEventKwargs) for i in unchecked))
-		return found
 
-
-	def _handleEvent(self, event:EventBase):
+	def _emitEventToListeners(self, event:EventBase, key:str):
 		"""override to actually process the event on this object"""
-		if self._eventSignal:
-			self.eventSignal.emit(event)
-		event.accepted[self] = 1
+		if self.getEventSignal(key, create=False): # event exists, emit
+			self.getEventSignal(key).emit(event)
 
 
-	def _relayEvent(self, event:EventBase, targetChain=None, **sendEventKwargs):
-		if targetChain is None:
-			targetChain = self._getEventDispatcherChain(event, sendEventKwargs)
-
-		# iterate through targets - no need for recursion
-		while targetChain:
-			handler = targetChain.pop(0)
-			if event.accepted.get(handler):
-				#pass
-				continue
-			handler._handleEvent(event)
-		return event
-
-	def sendEvent(self, event:EventBase, **sendEventKwargs):
+	def sendEvent(self, event:(EventBase, T.Any), key:str):
 		"""user-facing entrypoint to introduce an event to the system
 		should not be necessary to override this"""
-		#event = self._validateEventInput(event, sendEventKwargs)
-		# setting attributes raw like this is a bit weird
-		#event.sender = self
-		#event.accepted = {} # set your own uses and acceptance status here?
-		#todo: see if there is a better way to manage event acceptance
-		return self._relayEvent(event, **sendEventKwargs)
-
+		if getattr(event, "sender", None) is None:
+			event.sender = self
+		self._emitEventToListeners(event, key )
+		for i in self._nextEventDestinations(event, key):
+			i.sendEvent(event, key)
 
 

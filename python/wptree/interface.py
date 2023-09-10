@@ -6,7 +6,7 @@ import pprint, copy
 from dataclasses import dataclass
 
 from wplib.sequence import flatten, resolveSeqIndex
-from wplib.object import Signal, Traversable, TraversableParams
+from wplib.object import Signal, Traversable, TraversableParams, EventDispatcher, EventBase
 from wplib import TypeNamespace
 from wplib.sentinel import Sentinel
 from wplib.string import incrementName
@@ -34,22 +34,24 @@ class TreeTraversalParams(TraversableParams):
 	"""
 	create : bool = None
 
-class TreeSignalComponent:
-	"""Signal object constructed lazily -
-	any signal used by a tree should go here
-
-	signals will now emit Delta objects
-	"""
-	def __init__(self, tree):
-		self.nameChanged = Signal()
-		self.valueChanged = Signal()
-		self.propertyChanged = Signal()
-		self.structureChanged = Signal()
+# class TreeSignalComponent:
+# 	"""Signal object constructed lazily -
+# 	any signal used by a tree should go here
+#
+# 	signals will now emit Delta objects
+# 	"""
+# 	def __init__(self, tree):
+# 		self.nameChanged = Signal()
+# 		self.valueChanged = Signal()
+# 		self.propertyChanged = Signal()
+# 		self.structureChanged = Signal()
 
 keyT = Traversable.keyT
 TreeType = T.TypeVar("TreeType", bound="TreeInterface")
 class TreeInterface(Traversable,
-                    Serialisable):
+                    Serialisable,
+                    EventDispatcher
+                    ):
 
 
 
@@ -71,6 +73,12 @@ class TreeInterface(Traversable,
 			nestedMode = 0
 			flatMode = 1
 		return SerialKeys
+
+	class SignalKeys:
+		NameChanged = "nameChanged"
+		ValueChanged = "valueChanged"
+		PropertyChanged = "propertyChanged"
+		StructureChanged = "structureChanged"
 
 	class AuxKeys(TypeNamespace):
 		class _Base(TypeNamespace.base()):
@@ -99,34 +107,38 @@ class TreeInterface(Traversable,
 		while other areas stay as defaults"""
 		return cls
 
-	@classmethod
-	def defaultSignalCls(cls):
-		return TreeSignalComponent
+	# @classmethod
+	# def defaultSignalCls(cls):
+	# 	return TreeSignalComponent
 
 	@classmethod
 	def defaultAuxProperties(cls)->dict:
 		return {}
 
 	def __init__(self):
-		self._signalComponent : TreeSignalComponent = None
+		EventDispatcher.__init__(self)
+		#self._signalComponent : TreeSignalComponent = None
 
-	def getSignalComponent(self, create=True)->TreeSignalComponent:
-		"""deferred creation so we don't create a load of
-		signals for every single branch"""
-		if self._signalComponent:
-			return self._signalComponent
+	# def getSignalComponent(self, create=True)->TreeSignalComponent:
+	# 	"""deferred creation so we don't create a load of
+	# 	signals for every single branch"""
+	# 	if self._signalComponent:
+	# 		return self._signalComponent
+	#
+	# 	# need to implement cached parent data (properly) at some point
+	# 	if self.parent:
+	# 		parentComp = self.parent.getSignalComponent(create=False)
+	# 		if parentComp:
+	# 			return parentComp
+	#
+	# 	if not create:
+	# 		return None
+	# 	self._signalComponent = self.defaultSignalCls()(self)
+	# 	return self._signalComponent
 
-		# need to implement cached parent data (properly) at some point
-		if self.parent:
-			parentComp = self.parent.getSignalComponent(create=False)
-			if parentComp:
-				return parentComp
-
-		if not create:
-			return None
-		self._signalComponent = self.defaultSignalCls()(self)
-		return self._signalComponent
-
+	def _nextEventDestinations(self, forEvent:EventBase, key:str) ->list[EventDispatcher]:
+		"""return only parent"""
+		return [self.parent] if self.parent else []
 
 	def __repr__(self):
 		return "<{} ({}) : {}>".format(self.__class__, self.getName(), self.getValue())
@@ -186,11 +198,15 @@ class TreeInterface(Traversable,
 		# set name internally
 		self._setRawName(name)
 
-		# if something is listening to this tree's signals, emit nameChanged
-		if self._signalComponent and oldName != name:
-			self._signalComponent.nameChanged.emit(
-				TreeDeltas.Name(self, oldName, name)
-			)
+		self.sendEvent(TreeDeltas.Name(self, oldName, name),
+		               			self.SignalKeys.NameChanged)
+		#
+		# # if something is listening to this tree's signals, emit nameChanged
+		# if self._signalComponent and oldName != name:
+		# 	self._signalComponent.nameChanged.emit(
+		# 		TreeDeltas.Name(self, oldName, name)
+		# 	)
+		return name
 
 	@property
 	def name(self)->str:
@@ -259,11 +275,12 @@ class TreeInterface(Traversable,
 		# set value internally
 		self._setRawValue(value)
 
-		# if something is listening to this tree's signals, emit valueChanged
-		if self.getSignalComponent(create=False) and oldValue != value:
-			self.getSignalComponent(create=False).valueChanged.emit(
-				TreeDeltas.Value(self, oldValue, value)
-			)
+		self.sendEvent(TreeDeltas.Value(self, oldValue, value),
+		               key=self.SignalKeys.ValueChanged)
+		# if self.getSignalComponent(create=False) and oldValue != value:
+		# 	self.getSignalComponent(create=False).valueChanged.emit(
+		# 		TreeDeltas.Value(self, oldValue, value)
+		# 	)
 
 	@property
 	def value(self)->T:
@@ -674,12 +691,14 @@ class TreeInterface(Traversable,
 			if self.parent is not None:
 				return self.parent._removeBranch(self)
 		result = self._removeBranch(self.getBranch(address))
-		if self.getSignalComponent(create=False):
-			self.getSignalComponent(create=False).structureChanged.emit(
-				TreeDeltas.Delete(
-					result, self, result.serialise()
-				)
-			)
+		self.sendEvent(TreeDeltas.Delete(result, self, result.serialise()),
+		               key=self.SignalKeys.StructureChanged)
+		# if self.getSignalComponent(create=False):
+		# 	self.getSignalComponent(create=False).structureChanged.emit(
+		# 		TreeDeltas.Delete(
+		# 			result, self, result.serialise()
+		# 		)
+		# 	)
 
 
 
@@ -691,11 +710,13 @@ class TreeInterface(Traversable,
 		if index is not None:
 			self._setRawBranchIndex(newBranch, index)
 
-		if self.getSignalComponent(create=False):
-			self.getSignalComponent(create=False).structureChanged.emit(
-				TreeDeltas.Create(newBranch, self,
-				                  newBranch.serialise())
-			)
+		self.sendEvent(TreeDeltas.Create(newBranch, self, newBranch.serialise()),
+		               key=self.SignalKeys.StructureChanged)
+		# if self.getSignalComponent(create=False):
+		# 	self.getSignalComponent(create=False).structureChanged.emit(
+		# 		TreeDeltas.Create(newBranch, self,
+		# 		                  newBranch.serialise())
+		# 	)
 
 		return newBranch
 

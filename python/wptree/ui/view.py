@@ -158,7 +158,7 @@ class TreeView(QtWidgets.QTreeView):
 		alt makes actions recursive?
 		"""
 		self.keyState.keyPressed(event)
-		print("key press", event.key(), event.key() in tabKeys)
+		#print("key press", event.key(), event.key() in tabKeys)
 		if event.key() in tabKeys:
 			for index in self.selectedRowIndices():#type:QtCore.QModelIndex
 				#print("index", index, self.model().branchFromIndex(index))
@@ -176,15 +176,27 @@ class TreeView(QtWidgets.QTreeView):
 			event.accept()
 			return
 
-		if event.key() == QtCore.Qt.Key_Delete:
+		if event.key() == QtCore.Qt.Key_Delete: # delete
 			for index in self.selectedRowIndices():
 				self.model().deleteRow(index)
 
-		if event.key() == QtCore.Qt.Key_P:
+		if event.key() == QtCore.Qt.Key_P: #reparent
 			if self.keyState.shift:
 				self.model().parentRows(self.selectedRowIndices(), self.model().index(0,0))
 			else:
 				self.model().parentRows(self.selectedRowIndices()[:-1], self.selectedRowIndices()[-1])
+
+		if event.key() == QtCore.Qt.Key_D and self.keyState.ctrl: # duplicate
+			self.model().duplicateRows(self.selectedRowIndices())
+
+		if event.key() == QtCore.Qt.Key_Return: # edit branch
+			if self.keyState.shift:
+				self.edit(self.model().index(
+					self.currentIndex().row(), 0, self.currentIndex().parent()))
+			else:
+				self.edit(self.model().index(
+					self.currentIndex().row(), 1, self.currentIndex().parent()))
+
 
 		super(TreeView, self).keyPressEvent(event)
 
@@ -199,12 +211,15 @@ class TreeView(QtWidgets.QTreeView):
 		if event.button() == QtCore.Qt.RightButton: #double right click get out of here
 			return
 			return super(TreeView, self).mouseDoubleClickEvent(event)
-		super(TreeView, self).mouseDoubleClickEvent(event)
+		if event.button() == QtCore.Qt.LeftButton:
+			self.edit(self.currentIndex())
+			return
+		return super(TreeView, self).mouseDoubleClickEvent(event)
 
 	def mouseReleaseEvent(self, event:PySide2.QtGui.QMouseEvent) -> None:
 		"""manage key state"""
 		self.keyState.mouseReleased(event)
-		#super(TreeView, self).mouseReleaseEvent(event)
+		super(TreeView, self).mouseReleaseEvent(event)
 
 	def dragEnterEvent(self, event:PySide2.QtGui.QDragEnterEvent) -> None:
 		return
@@ -240,7 +255,7 @@ class TreeView(QtWidgets.QTreeView):
 		self.onClicked(index)
 		self.ensureRowsSelected()
 		#event.accept()
-		print("selected", self.selectionModel().selectedIndexes())
+		#print("selected", self.selectionModel().selectedIndexes())
 
 		return
 		# use temporary selection model to avoid super() messing with it
@@ -276,6 +291,8 @@ class TreeView(QtWidgets.QTreeView):
 		# for row in rowIndices:
 		# 	rowSel.select(row, row)
 
+		baseIndex = index
+
 		index = self.model().index(index.row(), 0, index.parent())
 
 		if not self.keyState.shift:
@@ -296,17 +313,27 @@ class TreeView(QtWidgets.QTreeView):
 				index,
 				command
 			)
-			self.selectionModel().setCurrentIndex(
-				index, QtCore.QItemSelectionModel.Current
-			)
-			return
+			# self.selectionModel().setCurrentIndex(
+			# 	index, QtCore.QItemSelectionModel.Current
+			# )
+			# return
 
 		elif self.keyState.shift: # contiguous span
 
 			clickRow = self.model().rowFromIndex(index)
+			if not self.selectionModel().currentIndex().isValid():
+				self.selectionModel().setCurrentIndex(
+					index, QtCore.QItemSelectionModel.Current
+				)
+				self.selectionModel().select(
+					index,
+					QtCore.QItemSelectionModel.Select
+				)
+				return
 			currentRow = self.model().rowFromIndex(
 				self.selectionModel().currentIndex()
 			)
+
 			# find physically lowest on screen
 			if self.visualRect(clickRow).y() < \
 				self.visualRect(currentRow).y():
@@ -321,9 +348,11 @@ class TreeView(QtWidgets.QTreeView):
 			checkIdx = currentRow
 			selRows = self.selectionModel().selectedRows()
 			count = 0
-			while checkIdx != clickRow and count < 4:
+			while checkIdx != clickRow: #and count < 4:
 				count += 1
 				checkIdx = fn(checkIdx)
+				if not checkIdx.isValid():
+					break
 
 				targets.append(checkIdx)
 				selStatuses.append(checkIdx in selRows)
@@ -353,7 +382,7 @@ class TreeView(QtWidgets.QTreeView):
 
 		# set previous selection
 		self.selectionModel().setCurrentIndex(
-			index,
+			baseIndex,
 			QtCore.QItemSelectionModel.Current
 		)
 
