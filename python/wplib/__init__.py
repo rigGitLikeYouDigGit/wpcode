@@ -14,3 +14,5 @@ from .expression import *
 
 from .object import TypeNamespace
 from .sentinel import Sentinel
+
+from .log import log

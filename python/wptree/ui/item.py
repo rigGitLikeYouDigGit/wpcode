@@ -3,7 +3,7 @@ import typing as T
 import os, pathlib, weakref
 
 from PySide2 import QtGui, QtCore
-
+from wplib import log
 from wplib.constant import LITERAL_TYPES
 
 from wplib.object import UidElement
@@ -146,7 +146,7 @@ class TreeBranchItem(QtGui.QStandardItem, UidElement):
 
 
 	def sync(self):
-		#print("item sync", self, self.tree.branches)
+		#log("item sync", self, self.tree.branches)
 		for i in range(self.rowCount()):
 			self.takeRow(0)
 		for i in self.tree.branches:
@@ -155,16 +155,24 @@ class TreeBranchItem(QtGui.QStandardItem, UidElement):
 	def onBranchEventReceived(self, event:TreeDeltas.Base):
 		"""fires when a python branch object gets an internal event, including state deltas -
 		use to regenerate branch items below the given one"""
-		# print("")
-		# print("branch event received", event, self.tree)
+		# log("")
+		# log("branch event received", event, self.tree)
 		if not self.model():
 			return
 		if not isinstance(event, TreeDeltas.Base):
 			return
+
+		isOwnTree = event.branchRef is self.tree
+		isParentTree = getattr(event, "parentRef", None) is self.tree
+
+		shouldSync = False
+		if isOwnTree or isParentTree:
+			shouldSync = True
+
 		# deltas : list[TreeDeltas.Base] = event.da
 		#self.sync()
 		#return
-		shouldSync = True
+
 		# for i in deltas:
 		# 	#print("branch to sync for delta", branchToSyncForDelta(i, self.tree.root))
 		# 	if branchToSyncForDelta(i, self.tree.root) is self.tree:

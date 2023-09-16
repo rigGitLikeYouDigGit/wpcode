@@ -70,10 +70,7 @@ def stringMatches(testStr:str, matchStr, allowPartial=False, regex=False, fnMatc
 		return True
 	return
 
-def incrementName(name, currentNames=None):
-	"""checks if name is already in children, returns valid one"""
-	if currentNames and name not in currentNames:
-		return name
+def _incrementNameInner(name, currentNames):
 	if name[-1].isdigit():  # increment digit like basic bitch
 		new = int(name[-1]) + 1
 		return name[:-1] + str(new)
@@ -85,10 +82,13 @@ def incrementName(name, currentNames=None):
 			name = name[:-1] + string.ascii_uppercase[index + 1]
 	else:  # ends with lowerCase letter
 		name += "B"
+	return name
+def incrementName(name, currentNames=None):
+	"""checks if name is already in children, returns valid one"""
 
 	# check if name already taken
-	if currentNames and name in currentNames:
-		return incrementName(name, currentNames)
+	while currentNames and name in currentNames:
+		name = _incrementNameInner(name, currentNames)
 	return name
 
 

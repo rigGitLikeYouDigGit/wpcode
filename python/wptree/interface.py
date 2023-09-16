@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 from wplib.sequence import flatten, resolveSeqIndex
 from wplib.object import Signal, Traversable, TraversableParams, EventDispatcher, EventBase
-from wplib import TypeNamespace
+from wplib import TypeNamespace, log
 from wplib.sentinel import Sentinel
 from wplib.string import incrementName
 from wplib import CodeRef
@@ -377,16 +377,17 @@ class TreeInterface(Traversable,
 			return self.parent
 		return self.branchMap.get(token)
 
-	def getBranch(self, key:keyT)->(TreeType, None):
+	def getBranch(self, key:keyT,
+	              traverseParams:defaultTraverseParamCls()=None)->(TreeType, None):
 		"""return branch for this tree, or None"""
 		try:
-			return self.traverse(key)
+			return self.traverse(key, traverseParams or self.defaultTraverseParamCls()())
 		except KeyError:
 			return None
 
-	def get(self, key:keyT, default=None):
+	def get(self, key:keyT, default=None, traverseParams:defaultTraverseParamCls()=None):
 		"""return branch value, or default"""
-		result = self.getBranch(key)
+		result = self.getBranch(key, traverseParams)
 		if result:
 			return result.value
 		return default
@@ -687,12 +688,22 @@ class TreeInterface(Traversable,
 	def remove(self, address:(keyT, TreeInterface, None)=None,
 	           ):
 		"""removes address, or just removes the tree if no address is given"""
-		if address is None:
+		log("remove", address, self, self.parent)
+		result = None
+		if address:
+			branch = self.getBranch(address)
+			parent = branch.parent
+			result = parent._removeBranch(branch)
+		else:
 			if self.parent is not None:
-				return self.parent._removeBranch(self)
-		result = self._removeBranch(self.getBranch(address))
-		self.sendEvent(TreeDeltas.Delete(result, self, result.serialise()),
-		               key=self.SignalKeys.StructureChanged)
+				parent = self.parent
+				result = self.parent._removeBranch(self)
+			else:
+				raise ValueError("Cannot remove root branch")
+		event = TreeDeltas.Delete(result, parent, result.serialise())
+		self.sendEvent(event, self.SignalKeys.StructureChanged)
+		parent.sendEvent(event, parent.SignalKeys.StructureChanged)
+		return result
 		# if self.getSignalComponent(create=False):
 		# 	self.getSignalComponent(create=False).structureChanged.emit(
 		# 		TreeDeltas.Delete(
@@ -792,7 +803,7 @@ class TreeInterface(Traversable,
 				# if usePickle: return pickle.loads(pickle.dumps(self))
 				# elif useDeepcopy: return copy.deepcopy(self, )
 				# else: return self.deserialise(self.serialise(), preserveUid=True)
-		return targetType.deserialise(self.serialise(), preserveUid=False)
+		return targetType.deserialise(self.serialise())
 
 
 	def _rootData(self)->dict:
@@ -995,12 +1006,54 @@ class TreeInterface(Traversable,
 		return branch
 
 	@classmethod
+	def _fromLiteralTuple(cls, literal:(tuple[str],
+				tuple[str, T.Any],
+				tuple[str, T.Any, list],
+				tuple[str, T.Any, list, dict])
+	                      ):
+		"""create a tree from a literal definition"""
+		assert len(literal)
+		if isinstance(literal, str):
+			literal = (literal,)
+		tree = cls(name=literal[0])
+		if len(literal) > 1:
+			tree.setValue(literal[1])
+		if len(literal) > 2:
+			for i in literal[2]:
+				tree.addChild(cls.fromLiteral(i))
+		if len(literal) > 3:
+			for k, v in literal[3].items():
+				tree.setAuxProperty(k, v)
+		return tree
+
+	@classmethod
+	def _fromLiteralDict(cls, literal:dict, parent:TreeInterface=None):
+		"""
+		create only tree branches, no values specified until leaves
+
+		{"root" : {
+			"branchA" : {
+				"leafA" : "value"
+				},
+			"branchB" : {}
+			}
+
+		:param literal:
+		:return:
+		"""
+
+
+
+
+
+	@classmethod
 	def fromLiteral(cls, literal:
 		(
 				tuple[str],
 				tuple[str, T.Any],
 				tuple[str, T.Any, list],
-				tuple[str, T.Any, list, dict]
+				tuple[str, T.Any, list, dict],
+			dict[str, T.Any],
 		)):
 		"""create a tree from a literal definition
 		may not use full serialisation - this would be user-defined
@@ -1013,10 +1066,23 @@ class TreeInterface(Traversable,
 			("branch2", 3, [
 				("leaf1", 4, [], {"prop1": 1}), # name, value, no branches, auxProperties
 				("leaf2", p={"prop2": 2}), # arguments can be defined by kwargs
+		
+		for defining a structure, dict can also be used:
+		
+		{ "root" : {
+			"branch" : {
+				"leaf" : 1
+
 
 		"""
+		if isinstance(literal, (tuple, list, str)):
+			return cls._fromLiteralTuple(literal)
+		elif isinstance(literal, dict):
+			return cls._fromLiteralDict(literal)
 		# can't tell if this code is clean or revolting
 		assert len(literal)
+		if isinstance(literal, str):
+			literal = (literal,)
 		tree = cls(name=literal[0])
 		if len(literal) > 1:
 			tree.setValue(literal[1])

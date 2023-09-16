@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import typing
 from PySide2 import QtWidgets, QtGui, QtCore
+
+import wpui.superitem.view
 from wptree.main import Tree
 
 if typing.TYPE_CHECKING:
@@ -34,9 +36,9 @@ class EasyDelegate(QtWidgets.QStyledItemDelegate
 		colour = self.backgroundColour(painter, option, index)
 
 		return QtGui.QBrush(colour
-		                    or # QtCore.Qt.NoBrush
-		                    option.palette.base()
-		)
+		                    or  # QtCore.Qt.NoBrush
+		                    wpui.superitem.view.base()
+		                    )
 
 
 	def outlineColour(self, painter:QtGui.QPainter, option:QtWidgets.QStyleOptionViewItem, index:QtCore.QModelIndex)->typing.Union[QtGui.QColor, None]:

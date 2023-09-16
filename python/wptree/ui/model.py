@@ -6,6 +6,7 @@ from itertools import product
 
 from PySide2 import QtGui, QtCore, QtWidgets
 
+from wplib import log
 from wplib.object import UidElement
 
 from wptree.main import Tree
@@ -185,7 +186,7 @@ class TreeModel(QtGui.QStandardItemModel, UidElement):
 		""" returns tree object associated with qModelIndex """
 		return self.itemFromIndex(index).tree
 
-	def connectedIndices(self, index):
+	def connectedIndices(self, index:QtCore.QModelIndex):
 		""" return previous, next, upper and lower indices
 		or None if not present
 		only considers rows for now """
@@ -197,6 +198,7 @@ class TreeModel(QtGui.QStandardItemModel, UidElement):
 		result["prev"] = prevIdx if prevIdx.isValid() else None
 		result["parent"] = index.parent() \
 			if not index.parent() == QtCore.QModelIndex() else None
+		result["child"] = index.child(0, 0) if index.child(0, 0).isValid() else None
 		return result
 
 	@staticmethod
@@ -246,6 +248,25 @@ class TreeModel(QtGui.QStandardItemModel, UidElement):
 		return self.data(row, treeObjRole)
 		#return self.tree.getBranch(self.data(row, relAddressRole))
 
+
+	def duplicateRows(self, rows:list[QtCore.QModelIndex])->list[Tree]:
+		""" copies tree, increments its name, adds it as sibling
+		:param row : QModelIndex for row """
+
+		newTrees = []
+		for row in rows:
+			address = self.data(row, relAddressRole)
+
+			tree = self.tree(address)
+			treeParent : Tree = tree.parent
+			newTree = tree.copy()
+
+			# assign non-duplicate name for new tree
+			newTree.name = treeParent.getUniqueBranchName(newTree.name)
+			treeParent.addChild(newTree)
+			newTrees.append(newTree)
+		return newTrees
+
 	def duplicateRow(self, row:QtCore.QModelIndex)->Tree:
 		""" copies tree, increments its name, adds it as sibling
 		:param row : QModelIndex for row """
@@ -285,29 +306,33 @@ class TreeModel(QtGui.QStandardItemModel, UidElement):
 	def deleteRow(self, row):
 		""" removes tree branch, then removes item """
 		#tree = self.tree(self.data(row, objRole))
-		#print("")
-		toRemove : Tree = self.tree(self.data(row, relAddressRole))
+		#log("")
+		#log("model delete row", row)
+		address = self.data(row, relAddressRole)
+		#log("address", address)
+		toRemove : Tree = self.tree(address)
+		#log("to remove", toRemove)
 		parent = toRemove.parent
 		#print("removing", toRemove, toRemove.frameContextEnabled())
 		toRemove.remove()
-		#print("after remove", parent.branches)
+		#log("after remove", parent.branches)
 
 
 
 	def unParentRow(self, row):
 		""" parent row to its parent's parent """
 		#branch = self.tree(self.data(row, objRole))
-		print("")
+		log("")
 		branch = self.tree(self.data(row, relAddressRole))
 		parent = branch.parent
 		if parent:
 			grandparent = parent.parent
 			if grandparent:
-				print("unparent row", branch)
+				log("unparent row", branch)
 				branch.remove()
 				#grandparent.addChild(branch)
 				grandparent.addChild(branch, index=parent.index() + 1)
-				print("found new row", self.rowFromTree(branch))
+				log("found new row", self.rowFromTree(branch))
 
 	def parentRows(self, rows:list[QtCore.QModelIndex], target:QtCore.QModelIndex, targetIndex:int=None):
 		""" parent all selected rows to last select target """

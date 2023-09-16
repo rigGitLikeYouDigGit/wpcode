@@ -50,6 +50,7 @@ class TreeView(QtWidgets.QTreeView):
 		self.keyState = KeyState()
 
 		self.savedCollapsedUids : set[str] = set()
+		self.savedSelection = []
 		self.midUiOperation = 0
 		self.scrollPos = 0
 
@@ -187,7 +188,9 @@ class TreeView(QtWidgets.QTreeView):
 				self.model().parentRows(self.selectedRowIndices()[:-1], self.selectedRowIndices()[-1])
 
 		if event.key() == QtCore.Qt.Key_D and self.keyState.ctrl: # duplicate
-			self.model().duplicateRows(self.selectedRowIndices())
+			newTrees = self.model().duplicateRows(self.selectedRowIndices())
+
+
 
 		if event.key() == QtCore.Qt.Key_Return: # edit branch
 			if self.keyState.shift:
@@ -258,14 +261,7 @@ class TreeView(QtWidgets.QTreeView):
 		#print("selected", self.selectionModel().selectedIndexes())
 
 		return
-		# use temporary selection model to avoid super() messing with it
-		mainSelModel = self.selectionModel()
-		sel = mainSelModel.selection()
-		self.setSelectionModel(QtCore.QItemSelectionModel())
-		#super(TreeView, self).mousePressEvent(event)
-		mainSelModel.clear()
-		self.setSelectionModel(mainSelModel)
-		mainSelModel.select(sel, QtCore.QItemSelectionModel.Select)
+
 
 	def ensureRowsSelected(self):
 		"""run after selection change to ensure rows are selected"""
@@ -274,12 +270,45 @@ class TreeView(QtWidgets.QTreeView):
 		selIndices = []
 		indices = self.selectionModel().selectedIndexes()
 		for i in indices:
+
 			if i.column() == 0:
 				selIndices.append(i)
 		self.selectionModel().clearSelection()
 		for rowIndex in selIndices:
 			for itemIndex in self.indicesForRowIndex(rowIndex):
 				self.selectionModel().select(itemIndex, QtCore.QItemSelectionModel.Select)
+
+	def pickWalkFromRows(self, rows:list[QtCore.QModelIndex], key,
+	                     stickOnEndOfRows=True)->list[QtCore.QModelIndex]:
+		"""return selection of new rows based on key press
+		if stickOnEndOfRows, will return last entry in row if already
+		selected - if not, will return nothing
+		"""
+		newRows = []
+		if key in (QtCore.Qt.Key_Left, QtCore.Qt.Key_Right,
+			QtCore.Qt.Key_Up, QtCore.Qt.Key_Down):
+
+			for i in rows:
+				adj = self.model().connectedIndices(i)
+				target = None
+				if key == QtCore.Qt.Key_Left:
+					# back one index
+					target = adj["prev"]
+				elif key == QtCore.Qt.Key_Right:
+					# forwards one index
+					target = adj["next"]
+				elif key == QtCore.Qt.Key_Up:
+					# up to parent
+					target = adj["parent"]
+				elif key == QtCore.Qt.Key_Down:
+					target = adj["child"]
+
+				if target:
+					newRows.append(target)
+				elif stickOnEndOfRows: # leave branch selected if no target
+					newRows.append(i)
+
+		return newRows
 
 
 	def onClicked(self, index:QtCore.QModelIndex):
