@@ -8,6 +8,8 @@ from .eventdispatcher import EventDispatcher, EventBase
 
 from .hashable import HashableMixin, UnHashableDict, UnHashableSet, HashFunctions, toHash
 
+from .plugin import PluginBase, PluginRegister
+
 from .namespace import TypeNamespace
 
 from .signal import Signal

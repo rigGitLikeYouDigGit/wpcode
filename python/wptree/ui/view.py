@@ -8,6 +8,8 @@ from wpui.keystate import KeyState
 from wpui.constant import keyDict, dropActionDict, tabKeys, enterKeys, deleteKeys, shiftKeys, escKeys, spaceKeys
 from wpui.event import AllEventEater
 
+
+
 from wptree.ui.constant import relAddressRole, treeObjRole, addressRole
 from wptree.ui.item import TreeBranchItem
 

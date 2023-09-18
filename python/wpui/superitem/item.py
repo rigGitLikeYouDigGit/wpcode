@@ -6,57 +6,76 @@ from PySide2 import QtWidgets, QtCore, QtGui
 
 from wplib.constant import LITERAL_TYPES, SEQ_TYPES, MAP_TYPES
 from wplib.sentinel import Sentinel
+from wplib.object import PluginRegister, PluginBase
 
 from wpui.superitem.model import SuperModel
-from wpui.superitem.view import SuperViewBase, SuperListView, SuperTableView
-
+from wpui.superitem.view import SuperViewBase
+from wpui.superitem.plugin import SuperItemPlugin
 """item -> model -> item"""
 
 
 
 
 class SuperItem(QtGui.QStandardItem):
-	"""base class for nested standarditems - """
+	"""base class for nested standarditems -
+	use .forValue(), do not initialise directly
+	"""
 
-	def __init__(self, baseValue:T.Any=Sentinel.Empty):
+	pluginRegister = PluginRegister(
+		systemName="superItem"
+	)
+
+	def __init__(self, _baseValue:T.Any=Sentinel.Empty):
 		super(SuperItem, self).__init__()
 		self.value = Sentinel.Empty
 		self.childModel = SuperModel()
 
-		# I know this is mixing up MVC in ways that should never be done,
-		# but it's only within the domain of this widget system
-		self.childWidget :SuperViewBase = None
-
-
-		if baseValue is not Sentinel.Empty:
-			self.setValue(baseValue)
+		if _baseValue is not Sentinel.Empty:
+			self.setValue(_baseValue)
 
 	def __repr__(self):
 		return f"SuperItem({self.value})"
 
 	@classmethod
-	def viewTypeForValue(cls, value):
+	def forValue(cls, value)->SuperItem:
+		itemCls = cls.getPlugin(value).itemCls or cls
+		item = itemCls(value)
+		return item
+
+
+	@classmethod
+	def getPlugin(cls, forValue)->type[SuperItemPlugin]:
+		return cls.pluginRegister.getPlugin(type(forValue))
+
+	@classmethod
+	def registerPlugin(cls, plugin:type[PluginBase], forType):
+		cls.pluginRegister.registerPlugin(plugin, forType)
+
+	@classmethod
+	def viewTypeForValue(cls, value)->type[SuperViewBase]:
 		"""return a view type for a value -
 		make this more extensible somehow"""
-		if isinstance(value, SEQ_TYPES):
-			return SuperListView
-		elif isinstance(value, MAP_TYPES):
-			return SuperTableView
-		else:
-			return None
+		return cls.getPlugin(value).viewCls
+
+	def childIndexWidgetTypeMap(self)->dict[QtCore.QModelIndex, type[SuperViewBase]]:
+		"""return map of model indices and view widgets for child items
+		"""
+		#print("indexMap")
+		indexMap = {}
+		for row in range(self.rowCount()):
+			for column in range(self.columnCount()):
+				item : SuperItem = self.item(row, column)
+				#print("item", item)
+				if item.hasChildModel():
+					indexMap[item.index()] = item.viewTypeForValue(item.value)
+		return indexMap
+
 
 	def getNewView(self)->QtWidgets.QWidget:
 		"""return a new view for this item
 		break this out into a Policy object"""
-		view = None
-		if isinstance(self.value, SEQ_TYPES):
-			view = SuperListView()
-		elif isinstance(self.value, MAP_TYPES):
-			view = SuperTableView()
 
-		if view is None:
-			return None
-
+		view = self.viewTypeForValue(self.value)()
 		view.setModel(self.childModel)
 		return view
 
@@ -81,6 +100,7 @@ class SuperItem(QtGui.QStandardItem):
 
 	def setValue(self, value):
 		self.childModel.clear()
+		self.childModel = self.getPlugin(value).modelCls()
 		self.value = value
 		self.childModel.pyValue = value
 		self.setUpChildModel(self.childModel, value)
@@ -106,31 +126,7 @@ class SuperItem(QtGui.QStandardItem):
 
 
 
-if __name__ == '__main__':
-	import sys
 
-	structure = {
-		"root": {
-			"a": 1,
-
-			"b": (2, 3),
-			# "branch": {
-			# 	(2, 4) : [1, {"key" : "val"}, "chips", 3],
-			# }
-		},
-		"root2": {
-			"a": 1,
-		}
-	}
-
-	app = QtWidgets.QApplication([])
-
-	item = SuperItem(structure)
-	w = item.getNewView()
-
-
-	w.show()
-	sys.exit(app.exec_())
 
 
 

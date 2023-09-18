@@ -6,12 +6,13 @@ from PySide2 import QtWidgets, QtCore, QtGui
 
 from wplib.constant import LITERAL_TYPES, SEQ_TYPES, MAP_TYPES
 from wplib.sentinel import Sentinel
+from wplib.object import PluginBase
 
 from wpui.superitem.delegate import SuperDelegate
 
 if T.TYPE_CHECKING:
 	from wpui.superitem.model import SuperModel
-	from wpui.superitem.item import SuperItem
+	from wpui.superitem.combined import SuperItemBase
 
 
 base = object
@@ -38,47 +39,9 @@ class SuperViewBase(
 		self.setFrameShape(QtWidgets.QFrame.StyledPanel)
 		self.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
 
-		#self.setSectionResizeMode(QtWidgets.QAbstractScrollArea.ResizeToContents)
-
-		# self.setSizePolicy(
-		# 	QtWidgets.QSizePolicy.Fixed,
-		# 	QtWidgets.QSizePolicy.Fixed,
-		# )
-
-
-	def syncSize(self):
-		self.updateGeometries()
-		self.update()
-		self.updateGeometry()
-		try:
-			self.resizeRowsToContents()
-		except:
+	if T.TYPE_CHECKING:
+		def model(self)->SuperModel:
 			pass
-		try:
-			pass
-			self.resizeColumnsToContents()
-		except:
-			pass
-		try:
-			self.setStretchLastSection(True)
-		except:
-			pass
-
-		# try:
-		# 	self.horizontalHeader().setStretchLastSection(True)
-
-		# self.updateGeometries()
-		# self.update()
-		# self.updateGeometry()
-
-	def resizeEvent(self, event):
-		#self.sizeChanged.emit(self.size())
-		for i in self.childViews():
-			i.resizeEvent(event)
-		self.syncSize()
-
-		result = super(SuperViewBase, self).resizeEvent(event)
-		return result
 
 	def setModel(self, model: SuperModel):
 		"""run over model to set view widgets on delegates"""
@@ -94,20 +57,16 @@ class SuperViewBase(
 			item : SuperItem = model.itemFromIndex(index)
 			view.setModel(item.childModel)
 			self.setIndexWidget(index, view)
-			item.childWidget = view
 
 			delegate.sizeHintChanged.emit(index)
 			view.syncSize()
-		model.indexWidgetInstanceMap = instanceMap
 
-		# # self.update()
-		# #self.updateGeometries()
-		# # self.updateGeometry()
-		# #self.setRowHeight(0, 100)
-		# #self.resize(self.sizeHint())
 		self.syncSize()
 
 		pass
+
+	def parentSuperItem(self)->SuperItemBase:
+		return self.model().parentSuperItem
 
 	def childViews(self)->list[SuperViewBase]:
 		"""return all child views"""
@@ -139,24 +98,32 @@ class SuperViewBase(
 		total = QtCore.QSize(x, y)
 		return total
 
-class SuperListView(SuperViewBase, QtWidgets.QListView):
-	def __init__(self, *args, **kwargs):
-		QtWidgets.QListView.__init__(self, *args, **kwargs)
-		SuperViewBase.__init__(self, *args, **kwargs)
-
-class SuperTableView(SuperViewBase, QtWidgets.QTableView):
-	def __init__(self, *args, **kwargs):
-		QtWidgets.QTableView.__init__(self, *args, **kwargs)
-		SuperViewBase.__init__(self, *args, **kwargs)
-
-		# header = self.horizontalHeader()
-		#self.horizontalHeader().setFirstSectionMovable(False)
-		self.horizontalHeader().setCascadingSectionResizes(True)
-		self.horizontalHeader().setStretchLastSection(True)
-		# self.setHorizontalHeader(header)
-
-		# self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
-		# self.verticalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
 
 
+	def syncSize(self):
+		self.updateGeometries()
+		self.update()
+		self.updateGeometry()
+		try:
+			self.resizeRowsToContents()
+		except:
+			pass
+		try:
+			pass
+			self.resizeColumnsToContents()
+		except:
+			pass
+		try:
+			self.setStretchLastSection(True)
+		except:
+			pass
+
+	def resizeEvent(self, event):
+		#self.sizeChanged.emit(self.size())
+		for i in self.childViews():
+			i.resizeEvent(event)
+		self.syncSize()
+
+		result = super(SuperViewBase, self).resizeEvent(event)
+		return result
 
