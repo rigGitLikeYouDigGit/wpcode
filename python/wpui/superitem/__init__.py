@@ -3,11 +3,25 @@
 pulls me in like an addict
 """
 
+from .base import (
+	SuperItem,
+	SuperModel,
+	SuperViewBase,
+	SuperDelegate,
+)
 
-from .item import SuperItem
-from .plugin import SuperItemPlugin
+from .stlplugin import (
+	ListSuperItem,
+	DictSuperItem,
+	LiteralSuperItem,
+	StringSuperItem,
+	FloatSuperItem
+)
 
-from .stlplugin import ListSuperItemPlugin, DictSuperItemPlugin
-
-SuperItem.registerPlugin(ListSuperItemPlugin, (tuple, list))
-SuperItem.registerPlugin(DictSuperItemPlugin, dict)
+for i in [ListSuperItem,
+          DictSuperItem,
+		  #LiteralSuperItem,
+		  StringSuperItem,
+		  FloatSuperItem]:
+	print(i, i.forCls)
+	SuperItem.registerPlugin(i, i.forCls)

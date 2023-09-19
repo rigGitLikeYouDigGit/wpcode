@@ -1,5 +1,4 @@
 
-
 from __future__ import annotations
 import typing as T
 
@@ -7,61 +6,142 @@ from PySide2 import QtWidgets, QtCore, QtGui
 
 from wplib.constant import LITERAL_TYPES, SEQ_TYPES, MAP_TYPES
 from wplib.sentinel import Sentinel
-from wplib.object import PluginBase
+from wplib.object import PluginRegister, PluginBase
 
-from wpui.superitem.model import SuperModel
-from wpui.superitem.delegate import SuperDelegate
-from wpui.superitem.plugin import SuperItemPlugin
-from wpui.superitem.item import SuperItem
-from wpui.superitem.view import SuperViewBase
+from wpui.model import iterAllItems
 
-"""provide plugin adaptors for stl containers - 
-dictionaries and lists
-"""
+from wpui.superitem.base import SuperItem, SuperViewBase, SuperDelegate, SuperModel
 
-class SuperListView(SuperViewBase, QtWidgets.QListView):
+
+"""what if whole thing in one"""
+
+class SuperWidgetBase:
+	parentSuperItem : SuperItem
+
+
+class SuperListView(SuperViewBase, QtWidgets.QTableView):
 	def __init__(self, *args, **kwargs):
-		QtWidgets.QListView.__init__(self, *args, **kwargs)
+		QtWidgets.QTableView.__init__(self, *args, **kwargs)
 		SuperViewBase.__init__(self, *args, **kwargs)
+		# corner = self.cornerWidget()
+		# print(corner, type(corner))
+		self.setCornerButtonEnabled(True)
+		label = QtWidgets.QLabel("test")
+		self.setCornerWidget(label)
 
+class ListSuperItem(SuperItem):
 
-class ListSuperItemPlugin(SuperItemPlugin):
+	forCls = (list, tuple)
 	viewCls = SuperListView
 
+	def makeChildItems(self):
+		for i in self.value:
+			pluginItemCls = self.getPlugin(i)
+			self.childModel.appendRow(
+				pluginItemCls(i)
+			)
+
+	def getResultValue(self):
+		return [i.getResultValue() for i in self.childSuperItems()]
 
 
-class SuperTableView(SuperViewBase, QtWidgets.QTableView):
+class SuperDictModel(SuperModel):
+	def headerData(self, section:int, orientation:QtCore.Qt.Orientation, role:int=...) -> T.Any:
+		if role == QtCore.Qt.TextAlignmentRole:
+			return QtCore.Qt.AlignLeft
+		if role == QtCore.Qt.FontRole:
+			f = QtGui.QFont()
+			f.setPointSize(6)
+			return f
+		elif role == QtCore.Qt.DisplayRole:
+			if orientation == QtCore.Qt.Horizontal:
+				if section == 0:
+					return "key"
+				elif section == 1:
+					return "value"
+		return super(SuperModel, self).headerData(section, orientation, role)
+	#
+
+
+class SuperDictView(SuperViewBase, QtWidgets.QTableView):
 	def __init__(self, *args, **kwargs):
 		QtWidgets.QTableView.__init__(self, *args, **kwargs)
 		SuperViewBase.__init__(self, *args, **kwargs)
 
-		# header = self.horizontalHeader()
-		#self.horizontalHeader().setFirstSectionMovable(False)
-		self.horizontalHeader().setCascadingSectionResizes(True)
 		self.horizontalHeader().setStretchLastSection(True)
-		# self.setHorizontalHeader(header)
+		self.horizontalHeader().setModel(
+			QtCore.QStringListModel(["key", "value"])
+		)
+		self.horizontalHeader().model().setData(
+			self.horizontalHeader().model().index(0, 0),
+			"key",
+			QtCore.Qt.DisplayRole
 
-		# self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
-		# self.verticalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
-
-
-	def createOwnChildItems(self, value)->list[SuperItem]:
-		rows = []
-		if isinstance(value, MAP_TYPES):
-			for i in value.items():
-				rows.append(
-					[self.createChildItem(s) for s in i]
-					#[self.createChildItem(i[0]), self.createChildItem(i[1])]
-				)
-			return rows
-		if isinstance(value, SEQ_TYPES):
-			#rows.append(self.createChildItem(value))
-			for i in value:
-				rows.append(self.createChildItem(i))
-			return rows
-		raise TypeError(f"value {value} must be a sequence or mapping")
+		)
 
 
+class DictSuperItem(SuperItem):
+	forCls = dict
+	viewCls = SuperDictView
+	modelCls = SuperDictModel
 
-class DictSuperItemPlugin(SuperItemPlugin):
-	viewCls = SuperTableView
+	def childSuperItems(self) ->list[tuple[SuperItem]]:
+		items = []
+		for i in range(self.childModel.rowCount()):
+			key = self.childModel.item(i, 0)
+			value = self.childModel.item(i, 1)
+			items.append((key, value))
+		return items
+
+	def makeChildItems(self):
+		for k, v in self.value.items():
+			keyItem = self.getPlugin(k)(k)
+			try:
+				valueItem = self.getPlugin(v)(v)
+			except TypeError:
+				print("no plugin for", v, type(v))
+			self.childModel.appendRow(
+				[keyItem, valueItem]
+			)
+
+	def getResultValue(self):
+		return {i[0].getResultValue():i[1].getResultValue()
+		        for i in self.childSuperItems()}
+
+class LiteralView(QtWidgets.QLineEdit):
+	pass
+
+class LiteralSuperItem(SuperItem):
+	viewCls = LiteralView
+
+	def getNewView(self) ->viewCls:
+		view = self.viewCls()
+		view.setText(str(self.value))
+		return view
+
+	def getResultValue(self):
+		return self.value
+
+class StringSuperItem(LiteralSuperItem):
+	"""
+	use a separate system for validation?
+	"""
+
+	forCls = str
+
+	def setValue(self, value:str):
+		super(StringSuperItem, self).setValue(value)
+		self.setData(value, role=QtCore.Qt.DisplayRole)
+
+
+class FloatSuperItem(LiteralSuperItem):
+	"""
+	"""
+
+	forCls = (int, float, complex)
+
+	def setValue(self, value:str):
+		super(FloatSuperItem, self).setValue(value)
+		self.setData(value, role=QtCore.Qt.DisplayRole)
+
+
