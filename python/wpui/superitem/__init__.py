@@ -14,14 +14,15 @@ from .stlplugin import (
 	ListSuperItem,
 	DictSuperItem,
 	LiteralSuperItem,
-	StringSuperItem,
-	FloatSuperItem
+	# StringSuperItem,
+	# FloatSuperItem
 )
 
 for i in [ListSuperItem,
           DictSuperItem,
-		  #LiteralSuperItem,
-		  StringSuperItem,
-		  FloatSuperItem]:
-	print(i, i.forCls)
+		  LiteralSuperItem,
+		  #StringSuperItem,
+		  #FloatSuperItem
+          ]:
+	#print(i, i.forCls)
 	SuperItem.registerPlugin(i, i.forCls)

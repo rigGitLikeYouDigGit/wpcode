@@ -31,17 +31,17 @@ if __name__ == '__main__':
 
 	app = QtWidgets.QApplication([])
 
-	item = SuperItem(tree)
-	w = item.getNewView()
+	# item = SuperItem.forValue(tree)
+	# w = item.getNewView()
 
 
 
-	# w = QtWidgets.QWidget()
-	# widget = TreeWidget(tree=tree, parent=w)
-	# #btn = QtWidgets.QPushButton("sync tree", parent=w)
-	# #btn.clicked.connect(lambda *args, **kwargs: widget.setTree(tree))
-	#
-	# #w.setLayout(genAutoLayout(w, recurse=False))
+	w = QtWidgets.QWidget()
+	widget = TreeWidget(tree=tree, parent=w)
+	#btn = QtWidgets.QPushButton("sync tree", parent=w)
+	#btn.clicked.connect(lambda *args, **kwargs: widget.setTree(tree))
+
+	w.setLayout(genAutoLayout(w, recurse=False))
 
 
 

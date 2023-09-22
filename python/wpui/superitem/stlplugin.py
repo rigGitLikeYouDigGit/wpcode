@@ -11,6 +11,7 @@ from wplib.object import PluginRegister, PluginBase
 from wpui.model import iterAllItems
 
 from wpui.superitem.base import SuperItem, SuperViewBase, SuperDelegate, SuperModel
+from wpui.widget import WPTableView
 
 
 """what if whole thing in one"""
@@ -19,9 +20,9 @@ class SuperWidgetBase:
 	parentSuperItem : SuperItem
 
 
-class SuperListView(SuperViewBase, QtWidgets.QTableView):
+class SuperListView(SuperViewBase, WPTableView):
 	def __init__(self, *args, **kwargs):
-		QtWidgets.QTableView.__init__(self, *args, **kwargs)
+		WPTableView.__init__(self, *args, **kwargs)
 		SuperViewBase.__init__(self, *args, **kwargs)
 		# corner = self.cornerWidget()
 		# print(corner, type(corner))
@@ -63,9 +64,9 @@ class SuperDictModel(SuperModel):
 	#
 
 
-class SuperDictView(SuperViewBase, QtWidgets.QTableView):
+class SuperDictView(SuperViewBase, WPTableView):
 	def __init__(self, *args, **kwargs):
-		QtWidgets.QTableView.__init__(self, *args, **kwargs)
+		WPTableView.__init__(self, *args, **kwargs)
 		SuperViewBase.__init__(self, *args, **kwargs)
 
 		self.horizontalHeader().setStretchLastSection(True)
@@ -108,40 +109,51 @@ class DictSuperItem(SuperItem):
 		return {i[0].getResultValue():i[1].getResultValue()
 		        for i in self.childSuperItems()}
 
-class LiteralView(QtWidgets.QLineEdit):
-	pass
+# class LiteralView(QtWidgets.QLineEdit):
+# 	pass
+
+class LiteralDelegate(SuperDelegate):
+	def paint(self, painter:PySide2.QtGui.QPainter, option:PySide2.QtWidgets.QStyleOptionViewItem, index:PySide2.QtCore.QModelIndex) -> None:
+		rect = option.rect
+		brush = QtGui.QBrush(QtGui.QColor(212, 255, 212))
+		painter.save()
+		painter.setBrush(brush)
+		painter.drawRoundedRect(rect, 5, 5, mode=QtCore.Qt.AbsoluteSize)
+		painter.restore()
+		super(LiteralDelegate, self).paint(painter, option, index)
+		# painter.drawText(option.rect, str(index.data()))
 
 class LiteralSuperItem(SuperItem):
-	viewCls = LiteralView
+	"""For literal values, delegate to the delegate"""
+	#viewCls = LiteralView
+	forCls = LITERAL_TYPES
+	delegateCls = LiteralDelegate
 
 	def getNewView(self) ->viewCls:
-		view = self.viewCls()
-		view.setText(str(self.value))
-		return view
+		return None
 
 	def getResultValue(self):
 		return self.value
 
-class StringSuperItem(LiteralSuperItem):
-	"""
-	use a separate system for validation?
-	"""
-
-	forCls = str
-
-	def setValue(self, value:str):
-		super(StringSuperItem, self).setValue(value)
+	def setValue(self, value):
+		super(LiteralSuperItem, self).setValue(value)
 		self.setData(value, role=QtCore.Qt.DisplayRole)
 
-
-class FloatSuperItem(LiteralSuperItem):
-	"""
-	"""
-
-	forCls = (int, float, complex)
-
-	def setValue(self, value:str):
-		super(FloatSuperItem, self).setValue(value)
-		self.setData(value, role=QtCore.Qt.DisplayRole)
+# class StringSuperItem(LiteralSuperItem):
+# 	"""
+# 	use a separate system for validation?
+# 	"""
+#
+# 	forCls = str
+#
+# class FloatSuperItem(LiteralSuperItem):
+# 	"""
+# 	"""
+#
+# 	forCls = (int, float, complex)
+#
+# 	def setValue(self, value:str):
+# 		super(FloatSuperItem, self).setValue(value)
+# 		self.setData(value, role=QtCore.Qt.DisplayRole)
 
 

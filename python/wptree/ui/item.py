@@ -19,6 +19,13 @@ if T.TYPE_CHECKING:
 """for these ui items, we take an immediate approach of syncing and items directly
 whenever tree changes
 it's just so much simpler
+
+these items ARE NOT SuperItems - each tree occupies a single SuperItem, 
+with a child SuperItem for each name and each value
+
+I THINK that's a decent way of doing it - separate the superItem system
+from the tree
+
  """
 
 
@@ -215,9 +222,13 @@ class TreeBranchItem(QtGui.QStandardItem, UidElement):
 		given tree branch"""
 		# create branches first
 		branchItem = cls(branch)
+		colonItem = QtGui.QStandardItem(":")
 		valueItem = branchItem.makeValueItemForBranch(branch)
 
-		mainItems = (branchItem, valueItem)
+		mainItems = (
+			branchItem,
+			#colonItem,
+			valueItem)
 		for i in branch.branches:
 			branchItems = cls.itemsForBranch(i)
 			mainItems[0].appendRow(branchItems)

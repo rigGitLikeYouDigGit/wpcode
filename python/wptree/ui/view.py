@@ -11,11 +11,11 @@ from wpui.event import AllEventEater
 
 
 from wptree.ui.constant import relAddressRole, treeObjRole, addressRole
-from wptree.ui.item import TreeBranchItem
 
 if T.TYPE_CHECKING:
 	from wptree import Tree
 	from wptree.ui.model import TreeModel
+	from wptree.ui.item import TreeBranchItem
 
 expandingPolicy = QtWidgets.QSizePolicy(
 	QtWidgets.QSizePolicy.Expanding,
@@ -485,6 +485,8 @@ class TreeView(QtWidgets.QTreeView):
 
 	def restoreCollapsedBranches(self):
 		""" restores saved expansion state """
+		from wptree.ui.item import TreeBranchItem
+
 		for uid in self.savedCollapsedUids:
 			item = TreeBranchItem.getByIndex(uid)
 			self.expand(item.index())

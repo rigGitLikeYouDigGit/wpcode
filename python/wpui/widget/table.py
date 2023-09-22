@@ -18,17 +18,40 @@ def patchPaintEvent(*args, **kwargs):
 	painter = args[1]
 	option = args[2]
 
+class NLabel(QtWidgets.QLabel):
+	pass
+
 class WPTableView(QtWidgets.QTableView):
+
+	def __init__(self, *args, **kwargs):
+		super(WPTableView, self).__init__(*args, **kwargs)
+		self._tableCornerWidget = None
+
+	def setTableCornerWidget(self, widget:QtWidgets.QWidget):
+		"""set widget to corner of table"""
+		if self._tableCornerWidget:
+			self._tableCornerWidget.setParent(None)
+		self._tableCornerWidget = widget
+		self._tableCornerWidget.setParent(self)
+		self._tableCornerWidget.show()
+		self._tableCornerWidget.setGeometry(self.getBaseCornerButton().geometry())
+
+	def tableCornerWidget(self) ->QtWidgets.QWidget:
+		"""return widget in corner of table"""
+		return self._tableCornerWidget
+
 
 	def getBaseCornerButton(self) ->QtWidgets.QAbstractButton:
 		"""search through child qwidgets to find the corner button"""
 
 		children = self.findChildren(QtWidgets.QWidget)
 		for i in children:
-			print(i, type(i), i.objectName())
+			#print(i, type(i), i.objectName())
+			pass
 		result = self.findChild(QtWidgets.QAbstractButton)
-		print("result", result, type(result))
-		result.paintEvent = patchPaintEvent
+		#print("result", result, type(result))
+		setattr(result, "paintEvent", patchPaintEvent)
+		#result.paintEvent = patchPaintEvent
 		return result
 
 
@@ -48,7 +71,9 @@ if __name__ == '__main__':
 	widget.setModel(model)
 	widget.show()
 
-	btn = widget.getBaseCornerButton()
+	widget.setTableCornerWidget(NLabel("test"))
+
+	#btn = widget.getBaseCornerButton()
 	# palette = btn.palette()
 	# palette.setColor(QtGui.QPalette.Button, QtCore.Qt.red)
 	# palette.setBrush(QtGui.QPalette.Base, QtGui.QBrush(QtCore.Qt.red))
@@ -56,7 +81,7 @@ if __name__ == '__main__':
 	# btn.setAutoFillBackground(True)
 	# btn.setPalette(palette)
 
-	btn.clicked.connect(onClicked)
+	#btn.clicked.connect(onClicked)
 
 
 	sys.exit(app.exec_())

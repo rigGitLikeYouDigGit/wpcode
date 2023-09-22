@@ -12,6 +12,8 @@ from wplib.object import PluginRegister, PluginBase
 
 from wpui.model import iterAllItems
 
+from wpui.widget import WPTableView
+
 """what if whole thing in one"""
 
 
@@ -62,7 +64,7 @@ class SuperModel(QtGui.QStandardItemModel):
 
 base = object
 if T.TYPE_CHECKING:
-	base = QtWidgets.QAbstractItemView
+	base = QtWidgets.WPTableView
 # else:
 # 	base = object
 
@@ -119,6 +121,10 @@ class SuperViewBase(
 				continue
 			if item.childModel is not None:
 				self.setIndexWidget(item.index(), item.getNewView())
+			if item.delegateCls is not None:
+				delegate = item.delegateCls(self)
+
+				self.setItemDelegateForColumn(item.column(), delegate)
 
 			#delegate.sizeHintChanged.emit(item.index())
 			#view.syncSize()
@@ -147,8 +153,6 @@ class SuperViewBase(
 			pass
 
 
-	def makeChildWidgets(self):
-		pass
 
 
 	# def parentSuperItem(self)->SuperItemBase:
@@ -239,6 +243,7 @@ class SuperItem(QtGui.QStandardItem, PluginBase):
 		"""create a new view class, set it on this item's model,
 		return it
 		"""
+		print("getNewView", self, self.viewCls, self.childModel)
 		view = self.viewCls()
 		view.parentSuperItem = self
 		view.setModel(self.childModel)

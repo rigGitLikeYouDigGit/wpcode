@@ -11,8 +11,9 @@ from wplib.object import UidElement
 
 from wptree.main import Tree
 from wptree.ui.constant import addressRole, relAddressRole, treeObjRole
-from wptree.ui.item import TreeValueItem, TreeBranchItem
 
+if T.TYPE_CHECKING:
+	from wptree.ui.item import TreeValueItem, TreeBranchItem
 
 """test for something slightly more advanced - 
 each model is initialised on a tree root, and any views of any branches of that
@@ -47,6 +48,10 @@ class TreeModel(QtGui.QStandardItemModel, UidElement):
 				return "branch"
 			elif section == 1:
 				return "value"
+			elif section == 1:
+				return " "
+			elif section == 2:
+				return "value"
 		if role == QtCore.Qt.FontRole:
 			f = QtGui.QFont()
 			f.setPointSize(6)
@@ -61,9 +66,13 @@ class TreeModel(QtGui.QStandardItemModel, UidElement):
 		return self.treeRef()
 
 	def getBranchItemCls(self, forBranch:Tree):
+		from wptree.ui.item import TreeValueItem, TreeBranchItem
+
 		return TreeBranchItem
 
 	def getBranchValueCls(self, forBranch:Tree):
+		from wptree.ui.item import TreeValueItem, TreeBranchItem
+
 		return TreeValueItem
 
 	def setTree(self, tree):
