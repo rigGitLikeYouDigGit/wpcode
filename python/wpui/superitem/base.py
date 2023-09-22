@@ -211,8 +211,8 @@ class SuperItem(QtGui.QStandardItem, PluginBase):
 		itemCls = cls.getPlugin(value)
 		return itemCls(value)
 
-	def childSuperItems(self)->list[SuperItem]:
-		return [self.childModel.item(i, 0) for i in range(self.childModel.rowCount())]
+	# def childSuperItems(self)->list[SuperItem]:
+	# 	return [self.childModel.item(i, 0) for i in range(self.childModel.rowCount())]
 
 	def clearValue(self):
 		self.childModel.clear()
@@ -236,7 +236,9 @@ class SuperItem(QtGui.QStandardItem, PluginBase):
 		pass
 
 	def getResultValue(self):
-		"""return new value from content of child widgets"""
+		""" OVERRIDE
+		return new value from content of child widgets -
+		"""
 		raise NotImplementedError
 
 	def getNewView(self)->viewCls:

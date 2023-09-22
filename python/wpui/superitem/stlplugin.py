@@ -12,6 +12,7 @@ from wpui.model import iterAllItems
 
 from wpui.superitem.base import SuperItem, SuperViewBase, SuperDelegate, SuperModel
 from wpui.widget import WPTableView
+from wpui.model import iterAllItems
 
 
 """what if whole thing in one"""
@@ -37,13 +38,13 @@ class ListSuperItem(SuperItem):
 
 	def makeChildItems(self):
 		for i in self.value:
-			pluginItemCls = self.getPlugin(i)
+			pluginItem = self.forValue(i)
 			self.childModel.appendRow(
-				pluginItemCls(i)
+				pluginItem
 			)
 
 	def getResultValue(self):
-		return [i.getResultValue() for i in self.childSuperItems()]
+		return [i.getResultValue() for i in iterAllItems(model=self.childModel)]
 
 
 class SuperDictModel(SuperModel):
@@ -86,21 +87,15 @@ class DictSuperItem(SuperItem):
 	viewCls = SuperDictView
 	modelCls = SuperDictModel
 
-	def childSuperItems(self) ->list[tuple[SuperItem]]:
-		items = []
-		for i in range(self.childModel.rowCount()):
-			key = self.childModel.item(i, 0)
-			value = self.childModel.item(i, 1)
-			items.append((key, value))
-		return items
 
 	def makeChildItems(self):
 		for k, v in self.value.items():
-			keyItem = self.getPlugin(k)(k)
+			keyItem = self.forValue(k)
 			try:
-				valueItem = self.getPlugin(v)(v)
-			except TypeError:
+				valueItem = self.forValue(v)
+			except TypeError as e:
 				print("no plugin for", v, type(v))
+				raise e
 			self.childModel.appendRow(
 				[keyItem, valueItem]
 			)

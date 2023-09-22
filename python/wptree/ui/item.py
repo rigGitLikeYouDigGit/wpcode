@@ -12,6 +12,7 @@ from wptree.main import Tree
 from wptree.delta import TreeDeltas
 from wptree.ui.constant import addressRole, relAddressRole, childBoundsRole, treeObjRole, rowHeight
 
+from wpui.superitem.base import SuperItem, SuperModel, SuperDelegate
 
 if T.TYPE_CHECKING:
 	from tree.ui.model import TreeModel
@@ -20,12 +21,11 @@ if T.TYPE_CHECKING:
 whenever tree changes
 it's just so much simpler
 
-these items ARE NOT SuperItems - each tree occupies a single SuperItem, 
-with a child SuperItem for each name and each value
+ROOT item is a SuperItem - VALUE items are its child superitems
+we assume for now that names will be simple strings?
 
-I THINK that's a decent way of doing it - separate the superItem system
-from the tree
-
+nah, simplicity is making this too complicated
+all or nothing
  """
 
 
