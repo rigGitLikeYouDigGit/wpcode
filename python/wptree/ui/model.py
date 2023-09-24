@@ -70,10 +70,10 @@ class TreeModel(QtGui.QStandardItemModel, UidElement):
 
 		return TreeBranchItem
 
-	def getBranchValueCls(self, forBranch:Tree):
-		from wptree.ui.item import TreeValueItem, TreeBranchItem
-
-		return TreeValueItem
+	# def getBranchValueCls(self, forBranch:Tree):
+	# 	from wptree.ui.item import TreeValueItem, TreeBranchItem
+	#
+	# 	return TreeValueItem
 
 	def setTree(self, tree):
 		"""we enforce initialising a model on a tree root.

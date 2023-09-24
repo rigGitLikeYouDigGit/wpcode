@@ -13,6 +13,7 @@ from .base import (
 from .stlplugin import (
 	ListSuperItem,
 	DictSuperItem,
+	NoneSuperItem,
 	LiteralSuperItem,
 	# StringSuperItem,
 	# FloatSuperItem
@@ -20,6 +21,7 @@ from .stlplugin import (
 
 for i in [ListSuperItem,
           DictSuperItem,
+	NoneSuperItem,
 		  LiteralSuperItem,
 		  #StringSuperItem,
 		  #FloatSuperItem

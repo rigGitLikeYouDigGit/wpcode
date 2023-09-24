@@ -31,13 +31,17 @@ class SuperListView(SuperViewBase, WPTableView):
 		label = QtWidgets.QLabel("test")
 		self.setCornerWidget(label)
 
+	def setModel(self, model: SuperModel):
+		WPTableView.setModel(self, model)
+		SuperViewBase.setModel(self, model)
+
 class ListSuperItem(SuperItem):
 
 	forCls = (list, tuple)
 	viewCls = SuperListView
 
 	def makeChildItems(self):
-		for i in self.value:
+		for i in self.superItemValue:
 			pluginItem = self.forValue(i)
 			self.childModel.appendRow(
 				pluginItem
@@ -78,9 +82,14 @@ class SuperDictView(SuperViewBase, WPTableView):
 			self.horizontalHeader().model().index(0, 0),
 			"key",
 			QtCore.Qt.DisplayRole
-
 		)
+		# self.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
 
+		#self.setFixedSize(QtCore.QSize(200, 200))
+
+	def setModel(self, model: SuperModel):
+		WPTableView.setModel(self, model)
+		SuperViewBase.setModel(self, model)
 
 class DictSuperItem(SuperItem):
 	forCls = dict
@@ -89,7 +98,7 @@ class DictSuperItem(SuperItem):
 
 
 	def makeChildItems(self):
-		for k, v in self.value.items():
+		for k, v in self.superItemValue.items():
 			keyItem = self.forValue(k)
 			try:
 				valueItem = self.forValue(v)
@@ -104,13 +113,22 @@ class DictSuperItem(SuperItem):
 		return {i[0].getResultValue():i[1].getResultValue()
 		        for i in self.childSuperItems()}
 
+
+class NoneSuperItem(SuperItem):
+	forCls = type(None)
+	viewCls = None
+
+	def getResultValue(self):
+		return None
+
+
 # class LiteralView(QtWidgets.QLineEdit):
 # 	pass
 
 class LiteralDelegate(SuperDelegate):
 	def paint(self, painter:PySide2.QtGui.QPainter, option:PySide2.QtWidgets.QStyleOptionViewItem, index:PySide2.QtCore.QModelIndex) -> None:
 		rect = option.rect
-		brush = QtGui.QBrush(QtGui.QColor(212, 255, 212))
+		brush = QtGui.QBrush(QtGui.QColor(212, 0, 0))
 		painter.save()
 		painter.setBrush(brush)
 		painter.drawRoundedRect(rect, 5, 5, mode=QtCore.Qt.AbsoluteSize)
@@ -120,19 +138,20 @@ class LiteralDelegate(SuperDelegate):
 
 class LiteralSuperItem(SuperItem):
 	"""For literal values, delegate to the delegate"""
-	#viewCls = LiteralView
+	viewCls = None
 	forCls = LITERAL_TYPES
 	delegateCls = LiteralDelegate
-
-	def getNewView(self) ->viewCls:
-		return None
+	#
+	# def getNewView(self, parentQObject) ->viewCls:
+	# 	return None
 
 	def getResultValue(self):
-		return self.value
+		return self.superItemValue
 
 	def setValue(self, value):
 		super(LiteralSuperItem, self).setValue(value)
 		self.setData(value, role=QtCore.Qt.DisplayRole)
+
 
 # class StringSuperItem(LiteralSuperItem):
 # 	"""

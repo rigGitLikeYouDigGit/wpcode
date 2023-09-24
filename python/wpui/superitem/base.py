@@ -2,6 +2,7 @@
 
 
 from __future__ import annotations
+import pprint, copy, textwrap, ast
 import typing as T
 
 from PySide2 import QtWidgets, QtCore, QtGui
@@ -9,6 +10,7 @@ from PySide2 import QtWidgets, QtCore, QtGui
 from wplib.constant import LITERAL_TYPES, SEQ_TYPES, MAP_TYPES
 from wplib.sentinel import Sentinel
 from wplib.object import PluginRegister, PluginBase
+from wplib import log
 
 from wpui.model import iterAllItems
 
@@ -18,21 +20,65 @@ from wpui.widget import WPTableView
 
 
 class SuperDelegate(QtWidgets.QStyledItemDelegate):
-	"""delegate for superitem"""
+	"""delegate for superitem
+
+	It seems if you set an indexWidget for a view index, the delegate is not called
+	at all.
+
+	We need to run all size hint stuff inside delegates, because the view
+	the view only defines sizeHintForRow, sizeHintForColumn,
+	which don't work for nested items
+
+	this WORKS, as long as embedded widgets report their sizeHint correctly
+	if you set it manually it's great
+	focus now on getting sizehint to trigger properly
+
+	"""
 
 	# def __init__(self, parent=None):
-	# 	super(SuperDelegate, self).__init__(parent)
-
+	# # 	super(SuperDelegate, self).__init__(parent)
+	#
+	def _sizeHintForIndex(self, option:QtWidgets.QStyleOptionViewItem, index:QtCore.QModelIndex) -> PySide2.QtCore.QSize:
+		"""return size for single index"""
+		if self.parent().indexWidget(index):
+			return self.parent().indexWidget(index).sizeHint()
+		return super(SuperDelegate, self).sizeHint(option, index)
+		pass
 	def sizeHint(self, option:PySide2.QtWidgets.QStyleOptionViewItem, index:PySide2.QtCore.QModelIndex) -> PySide2.QtCore.QSize:
 		"""return size hint for index - if complex, delegate to nested widget
 		"""
-		#print("size hint", index)
-		if self.parent().indexWidget(index):
-			return self.parent().indexWidget(index).sizeHint()
-			item : SuperItem = self.parent().model().itemFromIndex(index)
-			#print("size hint", item, item.childWidget.sizeHint())
-			if item.childWidget:
-				return item.childWidget.sizeHint()
+		log("size hint", index.model().itemFromIndex(index), self.parent().indexWidget(index))
+		#return QtCore.QSize(100, 100)
+
+		# return maximum of all items in row
+		if index.parent().isValid():
+			rowItems = index.model().columnCount(index.parent())
+		else:
+			rowItems = index.model().columnCount()
+		baseSize = self._sizeHintForIndex(option, index)
+		height = baseSize.height()
+		width = baseSize.width()
+		#width = 50
+		#log("rowItems", index, rowItems)
+		for i in range(rowItems):
+			childIndex = index.parent().child(index.row(), i)
+			if not childIndex.isValid():
+				continue
+
+			indexSize = self._sizeHintForIndex(option, childIndex)
+			#log("item", item, item.sizeHint())
+			height = max(height, indexSize.height())
+			#width += indexSize.width()
+		#width = self._sizeHintForIndex(option, index).width()
+
+		log("endSizeHint", height, width, "for", index, "rowItems", rowItems)
+		return QtCore.QSize(width, height)
+		# if self.parent().indexWidget(index):
+		# 	return self.parent().indexWidget(index).sizeHint()
+		# 	item : SuperItem = self.parent().model().itemFromIndex(index)
+		# 	#print("size hint", item, item.childWidget.sizeHint())
+		# 	if item.childWidget:
+		# 		return item.childWidget.sizeHint()
 
 		return super(SuperDelegate, self).sizeHint(option, index)
 
@@ -47,6 +93,7 @@ class SuperModel(QtGui.QStandardItemModel):
 	def data(self, index:QtCore.QModelIndex, role:int=...) -> T.Any:
 		if role == QtCore.Qt.TextAlignmentRole:
 			return QtCore.Qt.AlignLeft
+		#log("data", index, role, self.itemFromIndex(index))
 		return super(SuperModel, self).data(index, role)
 
 	def headerData(self, section:int, orientation:QtCore.Qt.Orientation, role:int=...) -> T.Any:
@@ -86,15 +133,40 @@ class SuperViewBase(
 		self.setContentsMargins(0, 0, 0, 0)
 		#self.setFrameShape(QtWidgets.QFrame.NoFrame)
 		self.setFrameShape(QtWidgets.QFrame.StyledPanel)
+
+		#self.setFixedSize(400, 400) # THIS WORKS
+		self.setItemDelegate(SuperDelegate(self))
+
 		self.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
+		#self.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+
+		#self.setWidgetResizable(True)
 
 	if T.TYPE_CHECKING:
 		def model(self)->SuperModel:
 			pass
 
+	# for some reason this is never called
+	# def sizeHintForIndex(self, index:QtCore.QModelIndex) -> QtCore.QSize:
+	# 	"""return size hint for index - if complex, delegate to nested widget"""
+	# 	log("size hint for index", index, self.indexWidget(index))
+	# 	if self.indexWidget(index):
+	# 		return self.indexWidget(index).sizeHint()
+	# 	return super(SuperViewBase, self).sizeHintForIndex(index)
+	#
+	# def sizeHintForRow(self, row:int) -> int:
+	# 	"""return size hint for row - if complex, delegate to nested widget"""
+	# 	#log("size hint for row", row)
+	# 	index = self.model().index(row, 0)
+	# 	if self.indexWidget(index):
+	# 		return self.indexWidget(index).sizeHint()
+	# 	return super(SuperViewBase, self).sizeHintForRow(row)
+
+
 	def sizeHint(self):
 		"""combine size hints of all rows and columns"""
-
+		#log("base view sizehint", self)
+		return QtCore.QSize(100, 100)
 		x = self.size().width()
 		y = 0
 
@@ -109,32 +181,56 @@ class SuperViewBase(
 		total = QtCore.QSize(x, y)
 		return total
 
+	def onItemChanged(self, item:QtGui.QStandardItem):
+		"""item changed - update view"""
+		self.regenWidgets()
+		#self.syncSize()
+		pass
 
-	def setModel(self, model: SuperModel):
-		"""run over model to set view widgets on delegates"""
-		delegate = SuperDelegate(self)
-		self.setItemDelegate(delegate)
-		super(SuperViewBase, self).setModel(model)
-
-		for item in iterAllItems(model=model):
+	def regenWidgets(self):
+		#log("regen widgets", self, self.model(), self.parentSuperItem, self.parentSuperItem.childModel)
+		# if self.model() is None:
+		# 	print("no model for ", self)
+		# 	return
+		for item in iterAllItems(model=self.model()):
 			if not isinstance(item, SuperItem):
 				continue
 			if item.childModel is not None:
-				self.setIndexWidget(item.index(), item.getNewView())
-			if item.delegateCls is not None:
-				delegate = item.delegateCls(self)
+				w = item.getNewView(parentQObject=self)
+				if w is None:
+					continue
+				self.setIndexWidget(item.index(), w)
+				#w.setFixedSize(QtCore.QSize(100, 100))
 
-				self.setItemDelegateForColumn(item.column(), delegate)
+	def setModel(self, model: SuperModel):
+		"""run over model to set view widgets on delegates"""
+		#log("base set model", self, model, self.parentSuperItem)
+		# if self.parentSuperItem.delegateCls:
+		# 	delegate = self.parentSuperItem.delegateCls(self)
+		# 	self.setItemDelegate(delegate)
+		#super(SuperViewBase, self).setModel(model)
 
-			#delegate.sizeHintChanged.emit(item.index())
-			#view.syncSize()
-
-		self.syncSize()
+		# for item in iterAllItems(model=model):
+		# 	if not isinstance(item, SuperItem):
+		# 		continue
+		# 	if item.childModel is not None:
+		# 		self.setIndexWidget(item.index(), item.getNewView())
+		# 	# if item.delegateCls is not None:
+		# 	# 	delegate = item.delegateCls(self)
+		# 	#
+		# 	# 	self.setItemDelegateForColumn(item.column(), delegate)
+		#
+		# 	#delegate.sizeHintChanged.emit(item.index())
+		# 	#view.syncSize()
+		model.itemChanged.connect(self.onItemChanged)
+		self.regenWidgets()
+		#self.syncSize()
 
 		pass
 
 
 	def syncSize(self):
+		#return
 		self.updateGeometries()
 		self.update()
 		self.updateGeometry()
@@ -188,30 +284,53 @@ class SuperItem(QtGui.QStandardItem, PluginBase):
 	#itemCls = QtGui.QStandardItem
 	delegateCls = QtWidgets.QStyledItemDelegate
 
-	def __init__(self, value):
+	def __init__(self):
 		super(SuperItem, self).__init__()
-		self.value = Sentinel.Empty # raw python value for item
+		self.superItemValue = Sentinel.Empty # raw python value for item
 		self.childModel = self.getNewChildModel() # model for all child items
 		# try to keep childModel persistent as object
 		#print("init", type(self), value)
-		self.setValue(value)
+		#self.setValue(value)
 
 	_reprDepth = 0
-	def __repr__(self):
-		outer = "\t" * self._reprDepth + f"""<{self.__class__.__name__}>({self.value}"""
-		SuperItem._reprDepth += 1
-		childRepr = [repr(i) for i in self.childSuperItems()]
-		SuperItem._reprDepth -= 1
-		#end = ")"
-		return "\n".join([outer] + childRepr)
+
+	def childSuperItems(self)->list[SuperItem]:
+		return list(iterAllItems(model=self.childModel))
+
+
+	# def __repr__(self):
+	# 	outer = "\t" * self._reprDepth + f"""<{self.__class__.__name__}>({self.superItemValue}"""
+	# 	SuperItem._reprDepth += 1
+	# 	childRepr = [repr(i) for i in self.childSuperItems()]
+	# 	SuperItem._reprDepth -= 1
+	# 	#end = ")"
+	# 	return "\n".join([outer] + childRepr)
 
 
 	@classmethod
 	def forValue(cls, value)->SuperItem:
+		"""NO OVERRIDE
+		creates item for value, and sets value on item.
+		Outer and system interface, for getting plugin
+		items for any types
+		"""
 		itemCls = cls.getPlugin(value)
-		return itemCls(value)
+		assert itemCls is not None, f"no item class for {type(value)},\n"  +\
+		                            pprint.pformat(cls.pluginRegister.pluginMap)
+		item = itemCls._getNewInstanceForValue(value)
+		item.setValue(value)
+		return item
 
-	# def childSuperItems(self)->list[SuperItem]:
+	@classmethod
+	def _getNewInstanceForValue(cls, value)->SuperItem:
+		"""OVERRIDE if needed
+		delegate to specific item classes, to do
+		any specific setup around a new instance -
+		DO NOT set value on item, that's handled by outer .forValue() method
+		"""
+		return cls()
+
+	# def childSuperItems(self)->list [SuperItem]:
 	# 	return [self.childModel.item(i, 0) for i in range(self.childModel.rowCount())]
 
 	def clearValue(self):
@@ -226,7 +345,7 @@ class SuperItem(QtGui.QStandardItem, PluginBase):
 
 	def setValue(self, value):
 		self.clearValue()
-		self.value = value
+		self.superItemValue = value
 		self.makeChildItems()
 
 	def makeChildItems(self):
@@ -241,12 +360,14 @@ class SuperItem(QtGui.QStandardItem, PluginBase):
 		"""
 		raise NotImplementedError
 
-	def getNewView(self)->viewCls:
+	def getNewView(self, parentQObject=None)->viewCls:
 		"""create a new view class, set it on this item's model,
 		return it
 		"""
-		print("getNewView", self, self.viewCls, self.childModel)
-		view = self.viewCls()
+		#log("getNewView", self, self.viewCls, self.childModel)
+		if not self.viewCls:
+			return None
+		view = self.viewCls(parent=parentQObject)
 		view.parentSuperItem = self
 		view.setModel(self.childModel)
 		return view

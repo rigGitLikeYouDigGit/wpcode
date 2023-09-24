@@ -30,5 +30,8 @@ from .model import TreeModel
 from .item import TreeBranchItem
 from .view import TreeView
 
-#SuperItem.registerPlugin(TreeBranchItem, TreeInterface)
+from .superitem import TreeSuperItem
+
+SuperItem.registerPlugin(TreeSuperItem, TreeSuperItem.forCls)
+TreeSuperItem.modelCls = TreeModel
 

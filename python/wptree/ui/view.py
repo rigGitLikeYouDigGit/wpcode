@@ -11,10 +11,12 @@ from wpui.event import AllEventEater
 
 
 from wptree.ui.constant import relAddressRole, treeObjRole, addressRole
+from wptree.ui.model import TreeModel
+
+from wpui.superitem import SuperItem, SuperModel, SuperDelegate, SuperViewBase
 
 if T.TYPE_CHECKING:
 	from wptree import Tree
-	from wptree.ui.model import TreeModel
 	from wptree.ui.item import TreeBranchItem
 
 expandingPolicy = QtWidgets.QSizePolicy(
@@ -35,7 +37,7 @@ class FocusEventEater(QtCore.QObject):
 		return True
 
 
-class TreeView(QtWidgets.QTreeView):
+class TreeView( SuperViewBase, QtWidgets.QTreeView,):
 	"""relatively thin viewer for a tree Qt model.
 	A tree view holds only a path to its focused branch,
 	and a reference to the shared tree model it's viewing.
@@ -43,7 +45,9 @@ class TreeView(QtWidgets.QTreeView):
 	currentBranchChanged = QtCore.Signal(dict)
 
 	def __init__(self, parent=None):
-		super(TreeView, self).__init__(parent)
+		#super(TreeView, self).__init__(parent)
+		QtWidgets.QTreeView.__init__(self, parent)
+		SuperViewBase.__init__(self)
 		self.rootPath : list[str] = None
 
 		#self.installEventFilter(AllEventEater(self))
@@ -62,8 +66,16 @@ class TreeView(QtWidgets.QTreeView):
 		#self.setSelectionMode(self.ExtendedSelection)
 		self.setEditTriggers(self.DoubleClicked)
 
+		self.setSizeAdjustPolicy(
+			QtWidgets.QAbstractScrollArea.AdjustToContents
+		)
+
 
 		#self.setFocusPolicy(QtCore.Qt.ClickFocus)
+
+	# def sizeHintForIndex(self, index:QtCore.QModelIndex) -> QtCore.QSize:
+	# 	"""override to return a fixed size for all rows"""
+	# 	return QtWidgets.QTreeView.sizeHintForIndex(self, index)
 
 	def onIndexCollapsed(self, index:QtCore.QModelIndex):
 		self.savedCollapsedUids.add(self.model().itemFromIndex(index).uid)
@@ -111,12 +123,20 @@ class TreeView(QtWidgets.QTreeView):
 
 	def setModel(self, model:TreeModel):
 		"""set the tree model for this view.
+
+		set up all tree-specific stuff, then add superItem
+		widgets
 		"""
-		super(TreeView, self).setModel(model)
+		QtWidgets.QTreeView.setModel(self, model)
 		self.model().treeSet.connect(self.onTreeSet)
 		self.model().beforeItemChanged.connect(self.onBeforeItemChanged)
 		self.model().afterItemChanged.connect(self.onAfterItemChanged)
 		self.onTreeSet(model.tree)
+		assert isinstance(self.model(), TreeModel)
+		SuperViewBase.setModel(self, model)
+		#self.setItemDelegate(SuperDelegate(self))
+		print("set model", model)
+		print("items", model.rowCount())
 
 	def onBeforeItemChanged(self, *args, **kwargs):
 		self.saveAppearance()

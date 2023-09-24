@@ -8,14 +8,14 @@ from wplib.constant import LITERAL_TYPES
 
 from wplib.object import UidElement
 
+from wptree.interface import TreeInterface
 from wptree.main import Tree
 from wptree.delta import TreeDeltas
 from wptree.ui.constant import addressRole, relAddressRole, childBoundsRole, treeObjRole, rowHeight
-
+from wptree.ui.view import TreeView
 from wpui.superitem.base import SuperItem, SuperModel, SuperDelegate
 
-if T.TYPE_CHECKING:
-	from tree.ui.model import TreeModel
+
 
 """for these ui items, we take an immediate approach of syncing and items directly
 whenever tree changes
@@ -30,15 +30,22 @@ all or nothing
 
 
 
-class TreeValueItem(QtGui.QStandardItem):
+class TreeValueItem(#QtGui.QStandardItem
+                    SuperItem
+                    ):
 	""""""
+
+	#forCls = TreeInterface
 
 	def __init__(self, tree:Tree):
 		self.treeRef = weakref.ref(tree)
 		super(TreeValueItem, self).__init__(
-			self.processValueForDisplay(self.tree.value)
+			#self.processValueForDisplay(self.tree.value)
 		)
 
+	if T.TYPE_CHECKING:
+		def model(self) -> TreeModel:
+			pass
 	def getTree(self)->Tree:
 		assert self.treeRef() is not None, "tree is dead"
 		return self.treeRef()
@@ -79,26 +86,26 @@ class TreeValueItem(QtGui.QStandardItem):
 		# 	return value
 		return str(value)
 
-	def setData(self, value, role=2):
-		""""""
-		if role == 2: # user role
-			self.tree.value = value
-			valueObj = self.processValueForDisplay(value)
-
-			return super(TreeValueItem, self).setData(valueObj, role=role)
-		return super(TreeValueItem, self).setData(value, role)
-
-
-	def data(self, role=QtCore.Qt.DisplayRole):
-		"""return the right font advance for value text"""
-		if role == QtCore.Qt.SizeHintRole:
-			return QtCore.QSize(
-				len(str(self.tree.value)) * 7.5 + 3,
-				rowHeight)
-		base = self.processValueFromDisplay(
-			super(TreeValueItem, self).data(role))
-		base = super(TreeValueItem, self).data(role)
-		return base
+	# def setData(self, value, role=2):
+	# 	""""""
+	# 	if role == 2: # user role
+	# 		self.tree.value = value
+	# 		valueObj = self.processValueForDisplay(value)
+	#
+	# 		return super(TreeValueItem, self).setData(valueObj, role=role)
+	# 	return super(TreeValueItem, self).setData(value, role)
+	#
+	#
+	# def data(self, role=QtCore.Qt.DisplayRole):
+	# 	"""return the right font advance for value text"""
+	# 	if role == QtCore.Qt.SizeHintRole:
+	# 		return QtCore.QSize(
+	# 			len(str(self.tree.value)) * 7.5 + 3,
+	# 			rowHeight)
+	# 	base = self.processValueFromDisplay(
+	# 		super(TreeValueItem, self).data(role))
+	# 	base = super(TreeValueItem, self).data(role)
+	# 	return base
 
 
 	def __repr__(self):
@@ -113,10 +120,19 @@ class TreeValueItem(QtGui.QStandardItem):
 
 
 
-class TreeBranchItem(QtGui.QStandardItem, UidElement):
+class TreeBranchItem(
+	QtGui.QStandardItem,
+	#SuperItem,
+    UidElement
+                     ):
 	"""small wrapper allowing standardItems to take tree objects directly.
-	Always 1:1 with tree python object
+	Always 1:1 with tree python object.
+
+	Individual tree branches are not superitems - values are.
+	A single master item holds entire tree
 	"""
+
+
 
 	indexInstanceMap = {}
 
@@ -124,9 +140,10 @@ class TreeBranchItem(QtGui.QStandardItem, UidElement):
 		""":param tree : Tree"""
 		self.treeRef = weakref.ref(tree)
 		QtGui.QStandardItem.__init__(self, self.tree.name)
+		#SuperItem.__init__(self)
 		UidElement.__init__(self, self.tree.uid)
 
-		self.setColumnCount(1)
+		#self.setColumnCount(1)
 
 		for i in (
 			Tree.SignalKeys.StructureChanged,
@@ -152,12 +169,22 @@ class TreeBranchItem(QtGui.QStandardItem, UidElement):
 		# 	self.onBranchEventReceived)
 
 
+	if T.TYPE_CHECKING:
+		def model(self) -> TreeModel:
+			pass
 	def sync(self):
 		#log("item sync", self, self.tree.branches)
+		if self.model():
+			self.model().beforeBranchSync(self)
+
+		self.takeColumn(1)
+		self.appendColumn(self.makeValueItemForBranch(self.tree))
 		for i in range(self.rowCount()):
 			self.takeRow(0)
 		for i in self.tree.branches:
 			self.appendRow(self.itemsForBranch(i))
+		if self.model():
+			self.model().afterBranchSync(self)
 
 	def onBranchEventReceived(self, event:TreeDeltas.Base):
 		"""fires when a python branch object gets an internal event, including state deltas -
@@ -176,19 +203,8 @@ class TreeBranchItem(QtGui.QStandardItem, UidElement):
 		if isOwnTree or isParentTree:
 			shouldSync = True
 
-		# deltas : list[TreeDeltas.Base] = event.da
-		#self.sync()
-		#return
-
-		# for i in deltas:
-		# 	#print("branch to sync for delta", branchToSyncForDelta(i, self.tree.root))
-		# 	if branchToSyncForDelta(i, self.tree.root) is self.tree:
-		# 		shouldSync = True
-
 		if shouldSync:
-			self.model().beforeBranchSync(self)
 			self.sync()
-			self.model().afterBranchSync(self)
 
 	def getTree(self)->Tree:
 		assert self.treeRef() is not None, "tree is dead"
@@ -214,7 +230,9 @@ class TreeBranchItem(QtGui.QStandardItem, UidElement):
 
 	def makeValueItemForBranch(self, branch:Tree):
 		"""return a value item for the given tree branch"""
-		return self.valueItemClsForBranch(branch)(branch)
+		#return self.valueItemClsForBranch(branch)(branch)
+		valueItem = SuperItem.forValue(branch.value)
+		return valueItem
 
 	@classmethod
 	def itemsForBranch(cls, branch:Tree):
@@ -224,6 +242,9 @@ class TreeBranchItem(QtGui.QStandardItem, UidElement):
 		branchItem = cls(branch)
 		colonItem = QtGui.QStandardItem(":")
 		valueItem = branchItem.makeValueItemForBranch(branch)
+		# valueItem.setValue(branch.value)
+
+		#branchItem.appendColumn([valueItem])
 
 		mainItems = (
 			branchItem,
@@ -261,16 +282,6 @@ class TreeBranchItem(QtGui.QStandardItem, UidElement):
 			#print("rel address", rel)
 			return rel
 
-		# elif role == QtCore.Qt.SizeHintRole:
-		# 	# return QtCore.QSize(
-		# 	# 	len(self.tree.name) * 7.5,
-		# 	# 	rowHeight)
-		# 	metrics = QtGui.QFontMetrics(self.font())
-		# 	length = metrics.size(
-		# 		QtCore.Qt.TextSingleLine,
-		# 		self.data(QtCore.Qt.DisplayRole)).width()
-		# 	return QtCore.QSize(length, rowHeight)
-
 
 		elif role == childBoundsRole:
 			pass
@@ -301,11 +312,7 @@ class TreeBranchItem(QtGui.QStandardItem, UidElement):
 		name = self.tree.setName(value)  # role is irrelevant
 		super(TreeBranchItem, self).setData(value, role)
 
-		# try:
-		# 	result = super(TreeBranchItem, self).setData(name, role)
-		# 	self.emitDataChanged()
-		# except:
-		# 	pass
+
 
 
 
