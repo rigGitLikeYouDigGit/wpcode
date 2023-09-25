@@ -47,8 +47,10 @@ class SuperDelegate(QtWidgets.QStyledItemDelegate):
 	def sizeHint(self, option:PySide2.QtWidgets.QStyleOptionViewItem, index:PySide2.QtCore.QModelIndex) -> PySide2.QtCore.QSize:
 		"""return size hint for index - if complex, delegate to nested widget
 		"""
-		log("size hint", index.model().itemFromIndex(index), self.parent().indexWidget(index))
+		#log("size hint for:", index.model().itemFromIndex(index), self.parent().indexWidget(index))
 		#return QtCore.QSize(100, 100)
+
+		item = index.model().itemFromIndex(index)
 
 		# return maximum of all items in row
 		if index.parent().isValid():
@@ -57,21 +59,25 @@ class SuperDelegate(QtWidgets.QStyledItemDelegate):
 			rowItems = index.model().columnCount()
 		baseSize = self._sizeHintForIndex(option, index)
 		height = baseSize.height()
+		height = 500
 		width = baseSize.width()
 		#width = 50
 		#log("rowItems", index, rowItems)
 		for i in range(rowItems):
-			childIndex = index.parent().child(index.row(), i)
+			#if index.parent().isValid():
+			childIndex = index.model().index(index.row(), i, index.parent())
+			#childIndex = index.parent().child(index.row(), i)
 			if not childIndex.isValid():
+				#log(item, "invalid child index", childIndex)
 				continue
 
 			indexSize = self._sizeHintForIndex(option, childIndex)
-			#log("item", item, item.sizeHint())
+			#log("item", item, indexSize, indexSize.height(), "for", childIndex.model().itemFromIndex(childIndex))
 			height = max(height, indexSize.height())
 			#width += indexSize.width()
 		#width = self._sizeHintForIndex(option, index).width()
 
-		log("endSizeHint", height, width, "for", index, "rowItems", rowItems)
+		#log("endSizeHint for", item, height, width, "rowItems", rowItems)
 		return QtCore.QSize(width, height)
 		# if self.parent().indexWidget(index):
 		# 	return self.parent().indexWidget(index).sizeHint()
@@ -162,30 +168,65 @@ class SuperViewBase(
 	# 		return self.indexWidget(index).sizeHint()
 	# 	return super(SuperViewBase, self).sizeHintForRow(row)
 
+	# def sizeHintForIndex(self, index:QtCore.QModelIndex) -> QtCore.QSize:
+	# 	"""return size hint for index - if complex, delegate to nested widget"""
+	# 	#log("size hint for index", index, self.indexWidget(index))
+	# 	if self.indexWidget(index):
+	# 		return self.indexWidget(index).sizeHint()
+	# 	return super(SuperViewBase, self).sizeHintForIndex(index)
 
-	def sizeHint(self):
+	def sizeHintForSingleRow(self, index,one):
+		rowCount = self.model().rowCount(index)
+		width = 0
+		height = 0
+		for i in range(rowCount):
+			indexSize = self.sizeHintForIndex(self.model().index(i, 0, index))
+			height = max(height, indexSize.height())
+			width += indexSize.width()
+		return QtCore.QSize(width, height)
+
+
+	def sizeHint(self:QtWidgets.QAbstractItemView):
 		"""combine size hints of all rows and columns"""
 		#log("base view sizehint", self)
-		return QtCore.QSize(100, 100)
-		x = self.size().width()
-		y = 0
-
-		for i in range(self.model().rowCount()):
-			y += self.sizeHintForRow(i) + 2
-
-		try:
-			y += self.horizontalHeader().height()
-		except:
-			pass
-		#y += 20
-		total = QtCore.QSize(x, y)
-		return total
+		return QtCore.QSize(200, 200)
+	# 	#return self.contentsRect().size()
+	# 	x = self.size().width()
+	# 	y = 0
+	#
+	# 	# for item in iterAllItems(model=self.model()):
+	# 	# 	y += self.sizeHintForIndex(item.index()).height()
+	# 	for i in range(self.model().rowCount()):
+	# 		y += self.sizeHintForRow(i) + 2
+	#
+	# 	try:
+	# 		y += self.horizontalHeader().height()
+	# 	except:
+	# 		pass
+	# 	#y += 20
+	# 	total = QtCore.QSize(x, y)
+	# 	return total
 
 	def onItemChanged(self, item:QtGui.QStandardItem):
 		"""item changed - update view"""
 		self.regenWidgets()
 		#self.syncSize()
 		pass
+
+	def childWidgets(self:QtWidgets.QAbstractItemView)->T.Iterable[QtWidgets.QWidget]:
+		"""return all child widgets of view"""
+		for obj in self.children():
+			if isinstance(obj, SuperViewBase):
+				#print("child widget", obj)
+				yield obj
+
+	def syncChildWidgetSizes(self:QtWidgets.QAbstractItemView):
+		"""sync child widget sizes"""
+		for childWidget in self.childWidgets():
+			childWidget.syncChildWidgetSizes()
+		self.updateGeometries()
+		self.updateGeometry()
+		self.setMinimumSize(self.sizeHint())
 
 	def regenWidgets(self):
 		#log("regen widgets", self, self.model(), self.parentSuperItem, self.parentSuperItem.childModel)
@@ -196,34 +237,20 @@ class SuperViewBase(
 			if not isinstance(item, SuperItem):
 				continue
 			if item.childModel is not None:
-				w = item.getNewView(parentQObject=self)
+				w :QtWidgets.QAbstractItemView = item.getNewView(parentQObject=self)
 				if w is None:
 					continue
 				self.setIndexWidget(item.index(), w)
+				#w.setMinimumSize(w.sizeHint())
 				#w.setFixedSize(QtCore.QSize(100, 100))
+
 
 	def setModel(self, model: SuperModel):
 		"""run over model to set view widgets on delegates"""
-		#log("base set model", self, model, self.parentSuperItem)
-		# if self.parentSuperItem.delegateCls:
-		# 	delegate = self.parentSuperItem.delegateCls(self)
-		# 	self.setItemDelegate(delegate)
-		#super(SuperViewBase, self).setModel(model)
 
-		# for item in iterAllItems(model=model):
-		# 	if not isinstance(item, SuperItem):
-		# 		continue
-		# 	if item.childModel is not None:
-		# 		self.setIndexWidget(item.index(), item.getNewView())
-		# 	# if item.delegateCls is not None:
-		# 	# 	delegate = item.delegateCls(self)
-		# 	#
-		# 	# 	self.setItemDelegateForColumn(item.column(), delegate)
-		#
-		# 	#delegate.sizeHintChanged.emit(item.index())
-		# 	#view.syncSize()
 		model.itemChanged.connect(self.onItemChanged)
 		self.regenWidgets()
+		self.syncChildWidgetSizes()
 		#self.syncSize()
 
 		pass

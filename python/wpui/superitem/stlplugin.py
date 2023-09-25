@@ -126,15 +126,16 @@ class NoneSuperItem(SuperItem):
 # 	pass
 
 class LiteralDelegate(SuperDelegate):
-	def paint(self, painter:PySide2.QtGui.QPainter, option:PySide2.QtWidgets.QStyleOptionViewItem, index:PySide2.QtCore.QModelIndex) -> None:
-		rect = option.rect
-		brush = QtGui.QBrush(QtGui.QColor(212, 0, 0))
-		painter.save()
-		painter.setBrush(brush)
-		painter.drawRoundedRect(rect, 5, 5, mode=QtCore.Qt.AbsoluteSize)
-		painter.restore()
-		super(LiteralDelegate, self).paint(painter, option, index)
-		# painter.drawText(option.rect, str(index.data()))
+	# def paint(self, painter:PySide2.QtGui.QPainter, option:PySide2.QtWidgets.QStyleOptionViewItem, index:PySide2.QtCore.QModelIndex) -> None:
+	# 	rect = option.rect
+	# 	brush = QtGui.QBrush(QtGui.QColor(212, 0, 0))
+	# 	painter.save()
+	# 	painter.setBrush(brush)
+	# 	painter.drawRoundedRect(rect, 5, 5, mode=QtCore.Qt.AbsoluteSize)
+	# 	painter.restore()
+	# 	super(LiteralDelegate, self).paint(painter, option, index)
+	# 	# painter.drawText(option.rect, str(index.data()))
+	pass
 
 class LiteralSuperItem(SuperItem):
 	"""For literal values, delegate to the delegate"""

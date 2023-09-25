@@ -39,6 +39,8 @@ if __name__ == '__main__':
 	# tree["branch", "leaf4"] = "leaf4 value"
 	# tree["b"] = (2, 3)
 
+	tree["c"] = [1, [1, 2], 2]
+
 	app = QtWidgets.QApplication([])
 
 	item = SuperItem.forValue(tree)
