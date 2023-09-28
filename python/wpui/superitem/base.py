@@ -18,6 +18,9 @@ from wpui.widget import WPTableView
 
 """what if whole thing in one"""
 
+if T.TYPE_CHECKING:
+	from wptree import Tree, TreeInterface
+	from wptree.ui import TreeSuperItem
 
 class SuperDelegate(QtWidgets.QStyledItemDelegate):
 	"""delegate for superitem
@@ -33,6 +36,10 @@ class SuperDelegate(QtWidgets.QStyledItemDelegate):
 	if you set it manually it's great
 	focus now on getting sizehint to trigger properly
 
+
+	it SEEMS that nested items inherit their sizehint directly from their root
+
+
 	"""
 
 	# def __init__(self, parent=None):
@@ -40,12 +47,28 @@ class SuperDelegate(QtWidgets.QStyledItemDelegate):
 	#
 	def _sizeHintForIndex(self, option:QtWidgets.QStyleOptionViewItem, index:QtCore.QModelIndex) -> PySide2.QtCore.QSize:
 		"""return size for single index"""
+		#log("size hint for index", index, index.model().itemFromIndex(index))
 		if self.parent().indexWidget(index):
+			#log("index widget size", self.parent().indexWidget(index), self.parent().indexWidget(index).sizeHint())
 			return self.parent().indexWidget(index).sizeHint()
-		return super(SuperDelegate, self).sizeHint(option, index)
+		item = index.model().itemFromIndex(index)
+		baseSize = super(SuperDelegate, self).sizeHint(option, index)
+		# if hasattr(item, "treeRef"):
+		# 	item : TreeSuperItem
+		# 	#print("tree ref", item.treeRef(), item.treeRef().root)
+		# 	if item.treeRef() is item.treeRef().root:
+		# 		return QtCore.QSize(baseSize.width(), 100)
+		# 	else:
+		# 		return QtCore.QSize(baseSize.width(), 20)
+		# 	#return item.sizeHint(option, index)
+		return baseSize
 		pass
 	def sizeHint(self, option:PySide2.QtWidgets.QStyleOptionViewItem, index:PySide2.QtCore.QModelIndex) -> PySide2.QtCore.QSize:
 		"""return size hint for index - if complex, delegate to nested widget
+
+		widget sizes are being reported properly - seems like setting
+		heights on branch items just doesn't do anything if the
+		root isn't set too?
 		"""
 		#log("size hint for:", index.model().itemFromIndex(index), self.parent().indexWidget(index))
 		#return QtCore.QSize(100, 100)
@@ -59,7 +82,7 @@ class SuperDelegate(QtWidgets.QStyledItemDelegate):
 			rowItems = index.model().columnCount()
 		baseSize = self._sizeHintForIndex(option, index)
 		height = baseSize.height()
-		height = 500
+		#height = 60
 		width = baseSize.width()
 		#width = 50
 		#log("rowItems", index, rowItems)
@@ -72,12 +95,14 @@ class SuperDelegate(QtWidgets.QStyledItemDelegate):
 				continue
 
 			indexSize = self._sizeHintForIndex(option, childIndex)
+			#log("height", height, indexSize.height(), max(height, indexSize.height()))
 			#log("item", item, indexSize, indexSize.height(), "for", childIndex.model().itemFromIndex(childIndex))
 			height = max(height, indexSize.height())
+
 			#width += indexSize.width()
 		#width = self._sizeHintForIndex(option, index).width()
 
-		#log("endSizeHint for", item, height, width, "rowItems", rowItems)
+		log("endSizeHint for", item, QtCore.QSize(width, height), "rowItems", rowItems)
 		return QtCore.QSize(width, height)
 		# if self.parent().indexWidget(index):
 		# 	return self.parent().indexWidget(index).sizeHint()
@@ -130,7 +155,7 @@ class SuperViewBase(
 
 	sizeChanged = QtCore.Signal(QtCore.QSize)
 
-	def __init__(self, *args, **kwargs):
+	def __init__(self:QtWidgets.QAbstractItemView, *args, **kwargs):
 		#super(SuperViewBase, self).__init__(*args, **kwargs)
 		self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
 		self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
@@ -144,6 +169,8 @@ class SuperViewBase(
 		self.setItemDelegate(SuperDelegate(self))
 
 		self.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
+		self.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+		self.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
 		#self.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
 
 		#self.setWidgetResizable(True)
@@ -151,6 +178,11 @@ class SuperViewBase(
 	if T.TYPE_CHECKING:
 		def model(self)->SuperModel:
 			pass
+
+	# def itemDelegateForIndex(self:QtWidgets.QAbstractItemView,
+	#                          index:QtCore.QModelIndex)->SuperDelegate:
+	# 	log("item delegate for index", index, self.itemDelegate())
+	# 	return SuperDelegate(self)
 
 	# for some reason this is never called
 	# def sizeHintForIndex(self, index:QtCore.QModelIndex) -> QtCore.QSize:
@@ -186,10 +218,10 @@ class SuperViewBase(
 		return QtCore.QSize(width, height)
 
 
-	def sizeHint(self:QtWidgets.QAbstractItemView):
-		"""combine size hints of all rows and columns"""
-		#log("base view sizehint", self)
-		return QtCore.QSize(200, 200)
+	# def sizeHint(self:QtWidgets.QAbstractItemView):
+	# 	"""combine size hints of all rows and columns"""
+	# 	#log("base view sizehint", self)
+	# 	return QtCore.QSize(200, 200)
 	# 	#return self.contentsRect().size()
 	# 	x = self.size().width()
 	# 	y = 0
@@ -227,6 +259,7 @@ class SuperViewBase(
 		self.updateGeometries()
 		self.updateGeometry()
 		self.setMinimumSize(self.sizeHint())
+		self.scheduleDelayedItemsLayout()
 
 	def regenWidgets(self):
 		#log("regen widgets", self, self.model(), self.parentSuperItem, self.parentSuperItem.childModel)

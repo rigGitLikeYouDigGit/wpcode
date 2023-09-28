@@ -98,7 +98,7 @@ class TreeView( SuperViewBase, QtWidgets.QTreeView,):
 		self.setSizeAdjustPolicy(
 			QtWidgets.QAbstractScrollArea.AdjustToContents
 		)
-		self.setUniformRowHeights(True)
+		#self.setUniformRowHeights(True)
 		self.setIndentation(10)
 		self.setAlternatingRowColors(True)
 		self.showDropIndicator()

@@ -24,10 +24,11 @@ if __name__ == '__main__':
 	tree = Tree("root")
 	tree.lookupCreate = True
 	#tree.value = {"a": 1}
-	# # tree["a"] = 1
+
 	tree["b"] = {"a": 1,
 	             "b": valTree,
 	             "c": 3,}
+	tree["a"] = 1
 
 	# tree["branch", "leaf"] = "leaf value"
 	# tree["branch", "branch2", "leaf2"] = { "a": 1,
