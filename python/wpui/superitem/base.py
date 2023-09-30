@@ -100,18 +100,9 @@ class SuperDelegate(QtWidgets.QStyledItemDelegate):
 			height = max(height, indexSize.height())
 
 			#width += indexSize.width()
-		#width = self._sizeHintForIndex(option, index).width()
 
-		log("endSizeHint for", item, QtCore.QSize(width, height), "rowItems", rowItems)
+		#log("endSizeHint for", item, QtCore.QSize(width, height), "rowItems", rowItems)
 		return QtCore.QSize(width, height)
-		# if self.parent().indexWidget(index):
-		# 	return self.parent().indexWidget(index).sizeHint()
-		# 	item : SuperItem = self.parent().model().itemFromIndex(index)
-		# 	#print("size hint", item, item.childWidget.sizeHint())
-		# 	if item.childWidget:
-		# 		return item.childWidget.sizeHint()
-
-		return super(SuperDelegate, self).sizeHint(option, index)
 
 
 class SuperModel(QtGui.QStandardItemModel):
@@ -171,6 +162,16 @@ class SuperViewBase(
 		self.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
 		self.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
 		self.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+
+		try:
+			self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+		except AttributeError:
+			pass
+		try:
+			self.verticalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+		except AttributeError:
+			pass
+
 		#self.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
 
 		#self.setWidgetResizable(True)
@@ -192,12 +193,13 @@ class SuperViewBase(
 	# 		return self.indexWidget(index).sizeHint()
 	# 	return super(SuperViewBase, self).sizeHintForIndex(index)
 	#
+
 	# def sizeHintForRow(self, row:int) -> int:
 	# 	"""return size hint for row - if complex, delegate to nested widget"""
 	# 	#log("size hint for row", row)
 	# 	index = self.model().index(row, 0)
 	# 	if self.indexWidget(index):
-	# 		return self.indexWidget(index).sizeHint()
+	# 		return self.indexWidget(index).sizeHint().height()
 	# 	return super(SuperViewBase, self).sizeHintForRow(row)
 
 	# def sizeHintForIndex(self, index:QtCore.QModelIndex) -> QtCore.QSize:
@@ -205,43 +207,52 @@ class SuperViewBase(
 	# 	#log("size hint for index", index, self.indexWidget(index))
 	# 	if self.indexWidget(index):
 	# 		return self.indexWidget(index).sizeHint()
-	# 	return super(SuperViewBase, self).sizeHintForIndex(index)
+	# 	 return super(SuperViewBase, self).sizeHintForIndex(index)
 
-	def sizeHintForSingleRow(self, index,one):
-		rowCount = self.model().rowCount(index)
-		width = 0
-		height = 0
-		for i in range(rowCount):
-			indexSize = self.sizeHintForIndex(self.model().index(i, 0, index))
-			height = max(height, indexSize.height())
-			width += indexSize.width()
-		return QtCore.QSize(width, height)
+	# def sizeHintForSingleRow(self, index,one):
+	# 	rowCount = self.model().rowCount(index)
+	# 	width = 0
+	# 	height = 0
+	# 	for i in range(rowCount):
+	# 		indexSize = self.sizeHintForIndex(self.model().index(i, 0, index))
+	# 		height = max(height, indexSize.height())
+	# 		width += indexSize.width()
+	# 	return QtCore.QSize(width, height)
 
 
 	# def sizeHint(self:QtWidgets.QAbstractItemView):
 	# 	"""combine size hints of all rows and columns"""
 	# 	#log("base view sizehint", self)
-	# 	return QtCore.QSize(200, 200)
+	# 	#return QtCore.QSize(200, 200)
 	# 	#return self.contentsRect().size()
 	# 	x = self.size().width()
 	# 	y = 0
+	# 	try:
+	# 		#y = self.horizontalHeader().height()
+	# 		pass
+	# 	except AttributeError:
+	# 		pass
 	#
 	# 	# for item in iterAllItems(model=self.model()):
 	# 	# 	y += self.sizeHintForIndex(item.index()).height()
 	# 	for i in range(self.model().rowCount()):
-	# 		y += self.sizeHintForRow(i) + 2
+	# 		y += self.sizeHintForRow(i)#
+	# 		#y += self.contentsMargins().top() + self.contentsMargins().bottom()
 	#
-	# 	try:
-	# 		y += self.horizontalHeader().height()
-	# 	except:
-	# 		pass
+	# 	# try:
+	# 	# 	y += self.horizontalHeader().height()
+	# 	# except:
+	# 	# 	pass
 	# 	#y += 20
+	# 	#y += self.contentsMargins().top() + self.contentsMargins().bottom()
+	# 	#y += self.viewportMargins().top() + self.viewportMargins().bottom()
 	# 	total = QtCore.QSize(x, y)
 	# 	return total
 
 	def onItemChanged(self, item:QtGui.QStandardItem):
 		"""item changed - update view"""
 		self.regenWidgets()
+		self.syncChildWidgetSizes()
 		#self.syncSize()
 		pass
 
@@ -256,10 +267,16 @@ class SuperViewBase(
 		"""sync child widget sizes"""
 		for childWidget in self.childWidgets():
 			childWidget.syncChildWidgetSizes()
+		try:
+			self.resizeRowsToContents()
+		except AttributeError:
+			pass
 		self.updateGeometries()
 		self.updateGeometry()
-		self.setMinimumSize(self.sizeHint())
-		self.scheduleDelayedItemsLayout()
+
+		#self.setMinimumSize(self.sizeHint())
+		#self.scheduleDelayedItemsLayout()
+
 
 	def regenWidgets(self):
 		#log("regen widgets", self, self.model(), self.parentSuperItem, self.parentSuperItem.childModel)
@@ -356,6 +373,11 @@ class SuperItem(QtGui.QStandardItem, PluginBase):
 
 	def childSuperItems(self)->list[SuperItem]:
 		return list(iterAllItems(model=self.childModel))
+
+	def data(self, role:int=...) -> typing.Any:
+		if role == QtCore.Qt.TextAlignmentRole:
+			return QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop
+		return super(SuperItem, self).data(role)
 
 
 	# def __repr__(self):

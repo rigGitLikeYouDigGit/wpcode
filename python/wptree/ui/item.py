@@ -289,6 +289,10 @@ class TreeBranchItem(
 		elif role == treeObjRole:
 			return self.tree
 
+		elif role == QtCore.Qt.TextAlignmentRole:
+			return QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop
+
+
 		# check for displaying file path
 		elif role == QtCore.Qt.DisplayRole:
 			if self.tree.getAuxProperty("filePath"):

@@ -30,10 +30,26 @@ class SuperListView(SuperViewBase, WPTableView):
 		self.setCornerButtonEnabled(True)
 		label = QtWidgets.QLabel("test")
 		self.setCornerWidget(label)
+		#self.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
+		#self.setUniformRowHeights(False)
+
 
 	def setModel(self, model: SuperModel):
 		WPTableView.setModel(self, model)
 		SuperViewBase.setModel(self, model)
+
+
+	def sizeHintForRow(self, row:int) -> int:
+		"""return size hint for row - if complex, delegate to nested widget"""
+
+		#log("size hint for row", row)
+		if not self.model():
+			return super(SuperViewBase, self).sizeHintForRow(row)
+		index = self.model().index(row, 0)
+		if self.indexWidget(index):
+			return self.indexWidget(index).sizeHint().height()
+		return super(SuperViewBase, self).sizeHintForRow(row)
+
 
 class ListSuperItem(SuperItem):
 
@@ -74,7 +90,7 @@ class SuperDictView(SuperViewBase, WPTableView):
 		WPTableView.__init__(self, *args, **kwargs)
 		SuperViewBase.__init__(self, *args, **kwargs)
 
-		self.horizontalHeader().setStretchLastSection(True)
+		#self.horizontalHeader().setStretchLastSection(True)
 		self.horizontalHeader().setModel(
 			QtCore.QStringListModel(["key", "value"])
 		)

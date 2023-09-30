@@ -66,9 +66,9 @@ class TreeView( SuperViewBase, QtWidgets.QTreeView,):
 		#self.setSelectionMode(self.ExtendedSelection)
 		self.setEditTriggers(self.DoubleClicked)
 
-		self.setSizeAdjustPolicy(
-			QtWidgets.QAbstractScrollArea.AdjustToContents
-		)
+		# self.setSizeAdjustPolicy(
+		# 	QtWidgets.QAbstractScrollArea.AdjustToContents
+		# )
 
 
 		#self.setFocusPolicy(QtCore.Qt.ClickFocus)
@@ -93,12 +93,11 @@ class TreeView( SuperViewBase, QtWidgets.QTreeView,):
 
 		header = self.header()
 		header.setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
-		header.setStretchLastSection(True)
-
-		self.setSizeAdjustPolicy(
-			QtWidgets.QAbstractScrollArea.AdjustToContents
-		)
-		#self.setUniformRowHeights(True)
+		# header.setStretchLastSection(True)
+		#
+		# self.setSizeAdjustPolicy(
+		# 	QtWidgets.QAbstractScrollArea.AdjustToContents
+		# )
 		self.setIndentation(10)
 		self.setAlternatingRowColors(True)
 		self.showDropIndicator()
@@ -135,8 +134,8 @@ class TreeView( SuperViewBase, QtWidgets.QTreeView,):
 		assert isinstance(self.model(), TreeModel)
 		SuperViewBase.setModel(self, model)
 		#self.setItemDelegate(SuperDelegate(self))
-		print("set model", model)
-		print("items", model.rowCount())
+		#print("set model", model)
+		#print("items", model.rowCount())
 
 	def onBeforeItemChanged(self, *args, **kwargs):
 		self.saveAppearance()

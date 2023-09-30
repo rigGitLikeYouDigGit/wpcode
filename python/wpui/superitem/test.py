@@ -29,6 +29,20 @@ if __name__ == '__main__':
 		}
 	}
 
+	structure = [
+		2,
+		3,
+		[1, 2, 3],
+		4,
+		[1, 2, 3, 4, 5,
+			[4, 4, 4],
+         7, 8,
+         [], 9, 0],
+		5,
+
+	]
+
+
 	app = QtWidgets.QApplication([])
 
 	item = SuperItem.forValue(structure)
