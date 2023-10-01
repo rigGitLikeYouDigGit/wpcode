@@ -22,6 +22,9 @@ if T.TYPE_CHECKING:
 	from wptree import Tree, TreeInterface
 	from wptree.ui import TreeSuperItem
 
+
+ITEM_PADDING = 10
+
 class SuperDelegate(QtWidgets.QStyledItemDelegate):
 	"""delegate for superitem
 
@@ -51,16 +54,11 @@ class SuperDelegate(QtWidgets.QStyledItemDelegate):
 		if self.parent().indexWidget(index):
 			#log("index widget size", self.parent().indexWidget(index), self.parent().indexWidget(index).sizeHint())
 			return self.parent().indexWidget(index).sizeHint()
+			return self.parent().indexWidget(index).sizeHint().grownBy(
+				QtCore.QMargins(ITEM_PADDING, ITEM_PADDING, ITEM_PADDING, ITEM_PADDING)
+			)
 		item = index.model().itemFromIndex(index)
 		baseSize = super(SuperDelegate, self).sizeHint(option, index)
-		# if hasattr(item, "treeRef"):
-		# 	item : TreeSuperItem
-		# 	#print("tree ref", item.treeRef(), item.treeRef().root)
-		# 	if item.treeRef() is item.treeRef().root:
-		# 		return QtCore.QSize(baseSize.width(), 100)
-		# 	else:
-		# 		return QtCore.QSize(baseSize.width(), 20)
-		# 	#return item.sizeHint(option, index)
 		return baseSize
 		pass
 	def sizeHint(self, option:PySide2.QtWidgets.QStyleOptionViewItem, index:PySide2.QtCore.QModelIndex) -> PySide2.QtCore.QSize:
@@ -125,15 +123,59 @@ class SuperModel(QtGui.QStandardItemModel):
 			f = QtGui.QFont()
 			f.setPointSize(6)
 			return f
+		elif role == QtCore.Qt.DisplayRole:
+			if orientation == QtCore.Qt.Horizontal:
+				if section == 0:
+					return ""
+				# elif section == 1:
+				# 	return "value"
 		return super(SuperModel, self).headerData(section, orientation, role)
 	#
 
 
+class TypeLabel(QtWidgets.QLabel):
+	"""label for type, occupies first column of header -
+	clicking will expand or collapse full view"""
+
+	clicked = QtCore.Signal(dict)
+
+	def __init__(self, *args, **kwargs):
+		super(TypeLabel, self).__init__(*args, **kwargs)
+		self.setMargin(2)
+		self.setContentsMargins(0, 0, 0, 0)
+		#self.setIndent(0)
+		#self.setFrameStyle(QtWidgets.QFrame.Raised)
+		#self.setStyleSheet("QLabel { padding: 0px; margin: 0px; border-radius: 5px}")
+		# self.setStyleSheet("")
+		# self.setAutoFillBackground(True)
+		# palette = QtGui.QPalette()
+		# palette.setColor(QtGui.QPalette.Background, QtCore.Qt.gray)
+		#
+		# self.setPalette(palette)
+
+	def paintEvent(self, arg__1:PySide2.QtGui.QPaintEvent) -> None:
+		"""draw background"""
+		painter = QtGui.QPainter(self)
+		painter.setPen(QtCore.Qt.NoPen)
+		painter.setBrush(QtGui.QBrush(QtCore.Qt.gray))
+		painter.drawRoundedRect(self.rect(), 2, 2)
+
+		painter.setPen(QtGui.QPen(QtCore.Qt.white))
+		painter.setFont(self.font())
+		painter.drawText(self.rect(), QtCore.Qt.AlignCenter, self.text())
+		#super(TypeLabel, self).paintEvent(arg__1)
+
+		pass
+
+	def mousePressEvent(self, ev:PySide2.QtGui.QMouseEvent) -> None:
+		"""emit signal with event"""
+		#log("clicked", ev)
+		self.clicked.emit({"event": ev})
 
 
 base = object
 if T.TYPE_CHECKING:
-	base = QtWidgets.WPTableView
+	base = WPTableView
 # else:
 # 	base = object
 
@@ -142,26 +184,39 @@ if T.TYPE_CHECKING:
 class SuperViewBase(
 	base
                     ):
+	"""base class for view widgets into nested objects -
+	each list, dict or tree is has its own view, with views
+	of child items being index widgets in this view
+
+	first column of header should be a label with the class name -
+	also functions to collapse view when not wanted
+	"""
+
 	parentSuperItem : SuperItem
 
-	sizeChanged = QtCore.Signal(QtCore.QSize)
+	#sizeChanged = QtCore.Signal(QtCore.QSize)
+
+	viewExpanded = QtCore.Signal(bool)
 
 	def __init__(self:QtWidgets.QAbstractItemView, *args, **kwargs):
 		#super(SuperViewBase, self).__init__(*args, **kwargs)
 		self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
 		self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
 		self.setAlternatingRowColors(True)
-		self.setViewportMargins(0, 0, 0, 0)
-		self.setContentsMargins(0, 0, 0, 0)
-		#self.setFrameShape(QtWidgets.QFrame.NoFrame)
-		self.setFrameShape(QtWidgets.QFrame.StyledPanel)
+		#self.setViewportMargins(0, 0, 0, 0)
+		#self.setViewportMargins(ITEM_PADDING, ITEM_PADDING, ITEM_PADDING, ITEM_PADDING)
+		#self.setContentsMargins(0, 0, 0, 0)
 
-		#self.setFixedSize(400, 400) # THIS WORKS
+		self.setContentsMargins(ITEM_PADDING, ITEM_PADDING, ITEM_PADDING, ITEM_PADDING)
+		#self.setFrameShape(QtWidgets.QFrame.NoFrame)
+		#self.setFrameShape(QtWidgets.QFrame.StyledPanel)
+
 		self.setItemDelegate(SuperDelegate(self))
 
 		self.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
 		self.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
 		self.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+		self.setFrameStyle(QtWidgets.QFrame.NoFrame)
 
 		try:
 			self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
@@ -172,82 +227,90 @@ class SuperViewBase(
 		except AttributeError:
 			pass
 
-		#self.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+		self._expanded = True
 
+		self.typeLabel = self.makeTypeLabel()
+		self.typeLabel.clicked.connect(self._onTypeLabelClicked)
+
+
+		#self.typeLabel.setText(type(self.parentSuperItemValue).__name__)
+
+
+		#self.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
 		#self.setWidgetResizable(True)
+
+
+
+	def _getTopHeader(self):
+		"""tableView defines horizontalHeader and verticalHeader -
+		treeView only defines header()"""
+		try:
+			return self.horizontalHeader()
+		except AttributeError:
+			return self.header()
+
+	def makeTypeLabel(self):
+		label = TypeLabel(parent=self._getTopHeader())
+		font = label.font()
+		font.setPointSize(7)
+		label.setFont(font)
+		#label.setFont(QtGui.QFont("Courier", 2))
+		#label.setText(type(self.parentSuperItemValue).__name__)
+		return label
+
+
+	def setExpanded(self, state:bool):
+		"""expand or collapse view"""
+		#log("setExpanded", self.isExpanded(), state)
+		self._expanded = state
+		if self._expanded:
+			self._expand()
+		else:
+			self._collapse()
+		self.viewExpanded.emit({"state": state})
+		# self.update()
+		# # self.regenWidgets()
+		# self.syncChildWidgetSizes()
+
+	def _expand(self:QtWidgets.QWidget):
+		#self.setSizeConstraint(QtWidgets.QLayout.SetNoConstraint)
+		# self.setMinimumSize(...)
+		# self.setMaximumSize(...)
+		self.setMaximumSize(QtCore.QSize(16777215, 16777215))
+		self.setMinimumSize(self.sizeHint())
+
+	def _collapse(self):
+		self.setMinimumSize(self.typeLabel.sizeHint())
+		self.setMaximumSize(self.typeLabel.sizeHint())
+
+	def isExpanded(self):
+		return self._expanded
+
+	def toggleExpanded(self):
+		self.setExpanded(not self.isExpanded())
+
+	def _onTypeLabelClicked(self, *args, **kwargs):
+		self.toggleExpanded()
+
+	def _onChildExpanded(self, *args, **kwargs):
+		"""child view expanded - update size"""
+		#log("child expanded", self)
+		self.syncChildWidgetSizes()
+		# try:
+		# 	self.resizeRowsToContents()
+		# except AttributeError:
+		# 	pass
+		self.doItemsLayout()
+
+	def sizeHint(self) -> PySide2.QtCore.QSize:
+		if self._expanded:
+			return super(SuperViewBase, self).sizeHint()
+		return self.typeLabel.sizeHint()
 
 	if T.TYPE_CHECKING:
 		def model(self)->SuperModel:
 			pass
 
-	# def itemDelegateForIndex(self:QtWidgets.QAbstractItemView,
-	#                          index:QtCore.QModelIndex)->SuperDelegate:
-	# 	log("item delegate for index", index, self.itemDelegate())
-	# 	return SuperDelegate(self)
-
-	# for some reason this is never called
-	# def sizeHintForIndex(self, index:QtCore.QModelIndex) -> QtCore.QSize:
-	# 	"""return size hint for index - if complex, delegate to nested widget"""
-	# 	log("size hint for index", index, self.indexWidget(index))
-	# 	if self.indexWidget(index):
-	# 		return self.indexWidget(index).sizeHint()
-	# 	return super(SuperViewBase, self).sizeHintForIndex(index)
-	#
-
-	# def sizeHintForRow(self, row:int) -> int:
-	# 	"""return size hint for row - if complex, delegate to nested widget"""
-	# 	#log("size hint for row", row)
-	# 	index = self.model().index(row, 0)
-	# 	if self.indexWidget(index):
-	# 		return self.indexWidget(index).sizeHint().height()
-	# 	return super(SuperViewBase, self).sizeHintForRow(row)
-
-	# def sizeHintForIndex(self, index:QtCore.QModelIndex) -> QtCore.QSize:
-	# 	"""return size hint for index - if complex, delegate to nested widget"""
-	# 	#log("size hint for index", index, self.indexWidget(index))
-	# 	if self.indexWidget(index):
-	# 		return self.indexWidget(index).sizeHint()
-	# 	 return super(SuperViewBase, self).sizeHintForIndex(index)
-
-	# def sizeHintForSingleRow(self, index,one):
-	# 	rowCount = self.model().rowCount(index)
-	# 	width = 0
-	# 	height = 0
-	# 	for i in range(rowCount):
-	# 		indexSize = self.sizeHintForIndex(self.model().index(i, 0, index))
-	# 		height = max(height, indexSize.height())
-	# 		width += indexSize.width()
-	# 	return QtCore.QSize(width, height)
-
-
-	# def sizeHint(self:QtWidgets.QAbstractItemView):
-	# 	"""combine size hints of all rows and columns"""
-	# 	#log("base view sizehint", self)
-	# 	#return QtCore.QSize(200, 200)
-	# 	#return self.contentsRect().size()
-	# 	x = self.size().width()
-	# 	y = 0
-	# 	try:
-	# 		#y = self.horizontalHeader().height()
-	# 		pass
-	# 	except AttributeError:
-	# 		pass
-	#
-	# 	# for item in iterAllItems(model=self.model()):
-	# 	# 	y += self.sizeHintForIndex(item.index()).height()
-	# 	for i in range(self.model().rowCount()):
-	# 		y += self.sizeHintForRow(i)#
-	# 		#y += self.contentsMargins().top() + self.contentsMargins().bottom()
-	#
-	# 	# try:
-	# 	# 	y += self.horizontalHeader().height()
-	# 	# except:
-	# 	# 	pass
-	# 	#y += 20
-	# 	#y += self.contentsMargins().top() + self.contentsMargins().bottom()
-	# 	#y += self.viewportMargins().top() + self.viewportMargins().bottom()
-	# 	total = QtCore.QSize(x, y)
-	# 	return total
 
 	def onItemChanged(self, item:QtGui.QStandardItem):
 		"""item changed - update view"""
@@ -274,8 +337,14 @@ class SuperViewBase(
 		self.updateGeometries()
 		self.updateGeometry()
 
-		#self.setMinimumSize(self.sizeHint())
-		#self.scheduleDelayedItemsLayout()
+		self.updateTypeLabel()
+
+	def updateTypeLabel(self):
+
+		self.typeLabel.setText(type(self.parentSuperItem.
+		                            superItemValue).__name__)
+		self.typeLabel.move(2, 2)
+
 
 
 	def regenWidgets(self):
@@ -291,6 +360,7 @@ class SuperViewBase(
 				if w is None:
 					continue
 				self.setIndexWidget(item.index(), w)
+				w.viewExpanded.connect(self._onChildExpanded)
 				#w.setMinimumSize(w.sizeHint())
 				#w.setFixedSize(QtCore.QSize(100, 100))
 
@@ -335,8 +405,7 @@ class SuperViewBase(
 		"""return all child views"""
 		return [
 			self.indexWidget(index)
-			for index in self.model().indicesForWidgets()
-		]
+				for index in self.model().indicesForWidgets()]
 
 class SuperItem(QtGui.QStandardItem, PluginBase):
 	"""inheriting from standardItem for the master object,

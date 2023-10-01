@@ -127,12 +127,13 @@ class TreeView( SuperViewBase, QtWidgets.QTreeView,):
 		widgets
 		"""
 		QtWidgets.QTreeView.setModel(self, model)
+		SuperViewBase.setModel(self, model)
 		self.model().treeSet.connect(self.onTreeSet)
 		self.model().beforeItemChanged.connect(self.onBeforeItemChanged)
 		self.model().afterItemChanged.connect(self.onAfterItemChanged)
 		self.onTreeSet(model.tree)
 		assert isinstance(self.model(), TreeModel)
-		SuperViewBase.setModel(self, model)
+
 		#self.setItemDelegate(SuperDelegate(self))
 		#print("set model", model)
 		#print("items", model.rowCount())

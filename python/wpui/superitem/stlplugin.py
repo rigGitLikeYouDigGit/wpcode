@@ -25,13 +25,7 @@ class SuperListView(SuperViewBase, WPTableView):
 	def __init__(self, *args, **kwargs):
 		WPTableView.__init__(self, *args, **kwargs)
 		SuperViewBase.__init__(self, *args, **kwargs)
-		# corner = self.cornerWidget()
-		# print(corner, type(corner))
-		self.setCornerButtonEnabled(True)
-		label = QtWidgets.QLabel("test")
-		self.setCornerWidget(label)
-		#self.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
-		#self.setUniformRowHeights(False)
+		self.verticalHeader().hide()
 
 
 	def setModel(self, model: SuperModel):
@@ -78,7 +72,7 @@ class SuperDictModel(SuperModel):
 		elif role == QtCore.Qt.DisplayRole:
 			if orientation == QtCore.Qt.Horizontal:
 				if section == 0:
-					return "key"
+					return ""
 				elif section == 1:
 					return "value"
 		return super(SuperModel, self).headerData(section, orientation, role)
@@ -90,15 +84,16 @@ class SuperDictView(SuperViewBase, WPTableView):
 		WPTableView.__init__(self, *args, **kwargs)
 		SuperViewBase.__init__(self, *args, **kwargs)
 
-		#self.horizontalHeader().setStretchLastSection(True)
-		self.horizontalHeader().setModel(
-			QtCore.QStringListModel(["key", "value"])
-		)
-		self.horizontalHeader().model().setData(
-			self.horizontalHeader().model().index(0, 0),
-			"key",
-			QtCore.Qt.DisplayRole
-		)
+		# #self.horizontalHeader().setStretchLastSection(True)
+		# self.horizontalHeader().setModel(
+		# 	QtCore.QStringListModel(["key", "value"])
+		# )
+		# self.horizontalHeader().model().setData(
+		# 	self.horizontalHeader().model().index(0, 0),
+		# 	"key",
+		# 	QtCore.Qt.DisplayRole
+		# )
+		self.verticalHeader().hide()
 		# self.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
 
 		#self.setFixedSize(QtCore.QSize(200, 200))

@@ -45,7 +45,8 @@ class TreeModel(QtGui.QStandardItemModel, UidElement):
 	def headerData(self, section:int, orientation:PySide2.QtCore.Qt.Orientation, role:int=...) -> typing.Any:
 		if role == QtCore.Qt.DisplayRole:
 			if section == 0:
-				return "branch"
+				#return "branch"
+				return " "
 			elif section == 1:
 				return "value"
 			elif section == 1:
