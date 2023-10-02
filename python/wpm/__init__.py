@@ -39,9 +39,12 @@ from .core import (
 	cmds, om, oma, omui, omr, # wrapped maya modules
 	getCache, # api cache
 	WN, createWN, # node wrappers
+	PlugTree,
 	getSceneGlobals, # scene wrappers
 
 )
 
+# use to denote function arguments to accept either static values or plugs
+PLUG_VAL = (PlugTree, object)
 
 

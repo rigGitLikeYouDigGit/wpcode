@@ -16,3 +16,5 @@ from .object import TypeNamespace
 from .sentinel import Sentinel
 
 from .log import log
+
+from .coerce import coerce

@@ -21,6 +21,8 @@ from .node import (
 	WN, createWN
 )
 
+from .plug import PlugTree
+
 from .scene import getSceneGlobals, setupGlobals
 from wpm.core.callbackowner import CallbackOwner
 

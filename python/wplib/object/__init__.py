@@ -1,6 +1,7 @@
 
 from .builtinextension import UserSet, PostDecMethodWrapper
 
+from .decorator import UserDecorator
 from .dirtygraph import DirtyGraph, DirtyNode
 
 from .element import IdElementBase, UidElement, NamedElement
