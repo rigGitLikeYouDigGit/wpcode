@@ -12,8 +12,9 @@ import copy, fnmatch, re
 
 from dataclasses import dataclass
 
+from wplib import log
 from wplib.string import sliceFromString
-from wplib.sequence import flatten
+from wplib.sequence import flatten, isSeq
 from wplib.object import TypeNamespace
 from wptree import Tree
 
@@ -31,9 +32,20 @@ def getMPlug(plug)->om.MPlug:
 		return plug
 	if isinstance(plug, PlugBase):
 		return plug.MPlug
-	sel = om.MSelectionList()
-	sel.add(plug)
-	return sel.getPlug(0)
+	if not isinstance(plug, str):
+		raise TypeError(f"cannot retrieve MPlug from argument {plug} of type {type(plug)}")
+	try:
+		sel = om.MSelectionList()
+		sel.add(plug)
+		return sel.getPlug(0)
+	except RuntimeError:
+		raise NameError(f"cannot retrieve MPlug from string {plug}")
+
+# do we need a way to iterate over nested structure to convert to MPlugs?
+
+
+# replicate something like numpy's slicing, but for connecting and setting plugs
+
 
 
 # region querying and structure
@@ -187,6 +199,95 @@ def ensurePlugHasMObject(plug:om.MPlug):
 	newObj = mfnData.create()
 	plug.setMObject(newObj)
 	return newObj
+
+
+#testing separate functions for different iteration systems -
+# more code, but simpler funtions and more explicit in calling
+def iterPlugsTopDown(rootPlug:om.MPlug):
+	"""we know the drill by now, breadth/depth-first iteration over
+	existing plug indices"""
+	yield rootPlug
+	for subPlug in plugSubPlugs(rootPlug):
+		yield from iterPlugsTopDown(subPlug)
+
+def iterPlugsBottomUp(rootPlug:om.MPlug):
+	for subPlug in plugSubPlugs(rootPlug):
+		yield from  iterPlugsBottomUp(subPlug)
+	yield rootPlug
+
+
+def _plugOrConstant(testPlug):
+	try:
+		return getMPlug(testPlug)
+	except (NameError, TypeError):
+		return testPlug
+
+
+def iterLeafPlugs(rootPlug:om.MPlug):
+	"""return all leaf plugs for the given plug"""
+	subPlugs = plugSubPlugs(rootPlug)
+	if subPlugs:
+		for i in subPlugs:
+			yield from iterLeafPlugs(i)
+	else:
+		yield rootPlug
+
+def nestedLeafPlugs(rootPlug:om.MPlug):
+	"""return nested leaf plugs for the given plug"""
+	subPlugs = plugSubPlugs(rootPlug)
+	return [nestedLeafPlugs(i) for i in subPlugs] if subPlugs else [rootPlug]
+
+def _expandPlugSeq(seq):
+	result = []
+	for i in seq:
+		val = _plugOrConstant(i)
+		if isinstance(val, om.MPlug):
+			val = nestedLeafPlugs(val)
+			result.extend(val)
+		else:
+			result.append(val)
+	return result
+
+def plugTreePairs(a:(om.MPlug, tuple), b:(om.MPlug, tuple)):
+	"""
+	yield final pairs of leaf plugs or values
+	for connection or setting
+	try to get to nested tuples
+
+	check for plug types for shortcuts - float3, vector plugs etc
+
+	still need to check for array plugs
+
+	maybe we can use tuples inside argument to denote units that should
+	not be expanded
+
+	"""
+	# convert to sequences
+	if not isSeq(a):
+		a = (a,)
+	if not isSeq(b):
+		b = (b,)
+
+	# check if can be made plugs
+	#print("base", a, b)
+	a = _expandPlugSeq(a)
+	b = _expandPlugSeq(b)
+
+	#log("plugTreePairs", a, b)
+	if len(a) == 1:
+		if len(b) == 1:
+			yield (a[0], b[0])
+			return
+		else:
+			for i in b:
+				yield from (plugTreePairs(a, i))
+			return
+	if len(a) == len(b):
+		for i, j in zip(a, b):
+			yield from plugTreePairs(i, j)
+		return
+
+	raise ValueError("plugTreePairs: mismatched plug sequences", a, b)
 
 
 
@@ -581,6 +682,29 @@ def con(srcPlug:om.MPlug, dstPlug:om.MPlug, _dgMod:om.MDGModifier=None):
 		modifier.connect(src, dst)
 	if _dgMod is None: # leave to calling code to execute if specified
 		modifier.doIt()
+
+def _con(a, b, _dgMod=None):
+	modifier = _dgMod or om.MDGModifier()
+	# disconnect any existing plugs
+	for prevDriver in plugDrivers(b):
+		modifier.disconnect(prevDriver, b)
+	modifier.connect(a, b)
+	if _dgMod is None: # leave to calling code to execute if specified
+		modifier.doIt()
+
+def _set(plug, val, _dgMod=None):
+	modifier = _dgMod or om.MDGModifier()
+	modifier.newPlugValue(plug, val)
+	if _dgMod is None: # leave to calling code to execute if specified
+		modifier.doIt()
+
+def conSet(src:(om.MPlug, object), dst:(om.MPlug, object), _dgMod:om.MDGModifier=None):
+	"""con() but with sets of plugs or objects"""
+
+	if isinstance(src, om.MPlug):
+		con(src, dst, _dgMod)
+	else:
+		setPlugValue(src, dst, _dgMod)
 
 
 #endregion

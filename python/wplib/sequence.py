@@ -7,8 +7,8 @@ from types import GeneratorType
 
 import typing as T
 
-SEQUENCE_TYPES = [list, tuple, set]
-MAP_TYPES = [dict]
+SEQUENCE_TYPES = (list, tuple, set)
+MAP_TYPES = (dict,)
 NESTED_TYPES = SEQUENCE_TYPES + MAP_TYPES
 
 # lambda to allow negative indexing
@@ -19,6 +19,16 @@ toSeq = lambda x: x if isinstance(x, (*SEQUENCE_TYPES, *MAP_TYPES)) else (x, )
 
 # return empty sequence if original value is not
 toSeqIf = lambda x: (x if isinstance(x, (*SEQUENCE_TYPES, *MAP_TYPES)) else (x,)) if x else ()
+
+# may need to be moved higher if we need stronger high-level coercion
+isSeq = lambda x: isinstance(x, tuple(SEQUENCE_TYPES))
+
+def toArgList(i, argType=str):
+	"""return a list of arguments, given a single value
+	"""
+	if isinstance(i, argType):
+		return [i]
+	return list(i)
 
 def strList(i)->list[str]:
 	if isinstance(i, str):

@@ -360,33 +360,22 @@ class WN(StringLike, # short for WePresentNode
 		return WN(obj)
 
 	@classmethod
-	def create(cls, name=None, n=None, parent="", skipSelect=True, dgMod:om.MDGModifier=None):
+	def create(cls, type=None, n="", parent=None, dgMod:om.MDGModifier=None):
 		"""any subsequent wrapper class will create its own node type
 		If modifier object is passed, add operation to it but do not execute yet.
 		Otherwise create and execute a separate modifier each time.
 		:rtype cls"""
-		nodeType = cls.clsApiType or om.MFn.kTransform
-		name = name or n or cls.nodeTypeName()
+		nodeType = type or cls.clsApiType
+		name = n or nodeType
 
-		passedDgMod = 0
-		if dgMod is None:
-			dgMod = om.MDagModifier()
+		if dgMod:
+			node = cls(dgMod.createNode(nodeType))
+			dgMod.renameNode(node.MObject, name)
+		else:
+			node = cls(om.MFnDependencyNode().create(nodeType, name)) # cheeky
 
-		#node
-
-		nodeType = cls.nodeTypeName()
-
-		node = cls(cmds.createNode(nodeType, n=name, parent=parent)) # cheeky
-
-		node.setDefaults()
-
+		#node.setDefaults()
 		return node
-
-	def createChild(self, nodeType="transform", n="", skipSelect=True)->WN:
-		"""instance method to create child node directly"""
-		from edRig import ECA
-		nodeName = n or nodeType
-		return ECA(nodeType, n=nodeName, parent=self)
 
 	def getPlug(self, lookup)->PlugTree:
 		"""return plugtree directly from lookup
@@ -738,33 +727,7 @@ class WN(StringLike, # short for WePresentNode
 		args = self.parseAttrArgs([source, dest])
 		attr.conOrSet(args[0], args[1])
 		pass
-	#
-	# @staticmethod
-	# def setAttr(plug, value, **kwargs):
-	# 	"""set attribute directly"""
-	# 	attr.setAttr(plug, value)
-	#
-	# def set(self, name=None, val=None, multi=None, **kwargs):
-	# 	"""sets value of node's own attr
-	# 	REFACTOR to catalogue MPlugs and set them directly"""
-	# 	if isinstance(multi, dict):
-	# 		attr.setAttrsFromDict(multi, node=self())
-	# 		return
-	# 	name = self.parseAttrArgs([name])[0]
-	# 	attr.setAttr(name, val, **kwargs)
-	#
-	# def get(self, attrName=None, **kwargs):
-	# 	"""duplication rip"""
-	# 	attrName = self.parseAttrArgs([attrName])[0]
-	# 	return attr.getAttr(attrName, **kwargs)
-	#
-	# def disconnect(self, attrName=None, source=True, dest=True):
-	# 	if not self() in attrName:
-	# 		attrName = self() + "." + attrName
-	# 	attr.breakConnections(attrName, source, dest)
-	#
-	# def addAttr(self, name, **kwargs):
-	# 	return attr.addAttr(self(), name, **kwargs)
+
 
 	# region attribute methods
 	AttrData = attr.AttrData

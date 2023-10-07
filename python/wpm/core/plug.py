@@ -165,7 +165,7 @@ class PlugTree(
 		"""
 		trunk = self.trunk(includeSelf=True,
 		                   includeRoot=includeRoot,
-		                   breakpoint=breakpoint)
+		                   )
 		s = ""
 		for i in range(len(trunk)):
 			s += str(trunk[i].name)
