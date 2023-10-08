@@ -41,6 +41,19 @@ def getMPlug(plug)->om.MPlug:
 	except RuntimeError:
 		raise NameError(f"cannot retrieve MPlug from string {plug}")
 
+def getMPlugOrNone(plug)->om.MPlug:
+	if isinstance(plug, om.MPlug):
+		return plug
+	if isinstance(plug, PlugBase):
+		return plug.MPlug
+	try:
+		sel = om.MSelectionList()
+		sel.add(plug)
+		return sel.getPlug(0)
+	except RuntimeError:
+		return None
+		raise NameError(f"cannot retrieve MPlug from string {plug}")
+
 # do we need a way to iterate over nested structure to convert to MPlugs?
 
 
@@ -412,6 +425,7 @@ def setPlugValue(plug:om.MPlug, data:T.Union[T.List, object],
 	copied out to the length of plugs for that level
 
 	"""
+	plug = getMPlug(plug)
 	subPlugs = plugSubPlugs(plug)
 	if plugHType(plug) == HType.Leaf:
 		return setLeafPlugValue(plug, data)
@@ -662,6 +676,12 @@ def plugPairLogic(a:om.MPlug, b:om.MPlug,
 			else: # zip to shortest
 				return list(zip(aSubPlugs, bSubPlugs))
 
+def tryConvertToMPlugs(struct:termType)->(om.MPlug, list[om.MPlug]):
+	"""iterate through structure, convert to mplugs if possible"""
+	if isinstance(struct, (tuple, list)):
+		return [tryConvertToMPlugs(i) for i in struct]
+	return getMPlugOrNone(struct) or struct
+
 def plugDrivers(dstPlug:om.MPlug)->list[om.MPlug]:
 	# some om functions don't allow keywords
 	return dstPlug.connectedTo(True, # asDest
@@ -700,11 +720,19 @@ def _set(plug, val, _dgMod=None):
 
 def conSet(src:(om.MPlug, object), dst:(om.MPlug, object), _dgMod:om.MDGModifier=None):
 	"""con() but with sets of plugs or objects"""
-
-	if isinstance(src, om.MPlug):
-		con(src, dst, _dgMod)
-	else:
-		setPlugValue(src, dst, _dgMod)
+	src = tryConvertToMPlugs(src)
+	dst = tryConvertToMPlugs(dst)
+	for pair in plugTreePairs(src, dst):
+		if isinstance(pair[0], om.MPlug):
+			_con(*pair, _dgMod)
+		else:
+			#_set(*pair, _dgMod)
+			setPlugValue(pair[1], pair[0])
+	#
+	# if isinstance(src, om.MPlug):
+	# 	con(src, dst, _dgMod)
+	# else:
+	# 	setPlugValue(src, dst, _dgMod)
 
 
 #endregion
