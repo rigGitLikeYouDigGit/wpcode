@@ -2,6 +2,8 @@ from __future__ import annotations, print_function
 
 import typing as T
 
+from wplib.sentinel import Sentinel
+
 
 def leafParentBases(*desiredBases:tuple[type])->list[type]:
 	"""given selection of superclasses to inherit from,
@@ -34,6 +36,60 @@ def superClassLookup(classMap:(dict[type], dict[tuple[type]]), lookupCls:(type, 
 	matching = containsSuperClass(classMap, lookupCls)
 	if matching is None: return default
 	return classMap[matching]
+
+
+class SuperClassLookupMap:
+	"""wrapping the above in a class for more consistent
+	use and caching
+	"""
+	def __init__(self, classMap:dict[type, T.Any]=None):
+		self.classMap : dict[type, T.Any] = {}
+		self.cacheMap : dict[type, T.Any] = {}
+		if classMap is not None:
+			self.updateClassMap(classMap)
+
+	def _expandTupleKeys(self, classMap:dict[type, T.Any]):
+		"""expand out any tuple keys and then sort"""
+		testMap = dict(classMap or {})
+		resultMap = {}
+		for k, v in testMap.items():
+			if isinstance(k, tuple):
+				for i in k:
+					resultMap[i] = v
+			else:
+				resultMap[k] = v
+		return resultMap
+
+	def _sortMap(self):
+		"""sort the map by length of mro,
+		so that longest mro (lowest superclasses) are first"""
+		self.classMap = dict(
+			sorted(self.classMap.items(),
+			       key=lambda i: len(i[0].__mro__),
+			       reverse=True)
+		)
+
+	def updateClassMap(self, classMap:dict[type, T.Any]):
+		"""register a map of {type : value}"""
+		self.classMap.update(self._expandTupleKeys(classMap))
+		self._sortMap()
+		self.cacheMap.clear()
+
+	def lookup(self, lookupCls:type, default=Sentinel.FailToFind):
+		"""lookup a value using lookupCls,
+		add found results to cache"""
+		if lookupCls in self.cacheMap:
+			return self.cacheMap[lookupCls]
+		result = superClassLookup(
+			self.classMap, lookupCls, default=Sentinel.FailToFind)
+		if result is not Sentinel.FailToFind: # found in map
+			self.cacheMap[lookupCls] = result
+			return result
+		if default is Sentinel.FailToFind :
+			raise KeyError(f"No value registered in {self.classMap}\n"
+			               f" for {lookupCls}")
+		return default
+
 
 
 def iterSubClasses(cls, _seen=None, includeTopCls=False)->T.Generator[T.Type["cls"]]:
