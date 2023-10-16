@@ -2,7 +2,7 @@
 from __future__ import annotations
 import typing as T
 
-from wplib import inheritance
+#from wplib import inheritance
 from wplib.object.metamagicdelegator import ClassMagicMethodMixin
 
 """without question overkill - 
@@ -77,6 +77,7 @@ class TypeNamespace(ClassMagicMethodMixin):
 
 	@classmethod
 	def members(cls)->dict[str, T()]:
+		from wplib import inheritance
 		members = {}
 		#for k, v in cls.__dict__.items():
 		for k, v in inheritance.mroMergedDict(cls).items():
@@ -131,6 +132,26 @@ class TypeNamespace(ClassMagicMethodMixin):
 		# add to class dict
 		setattr(cls, member.clsName(), member)
 
+
+
+
+class Sentinel(TypeNamespace):
+	"""sentinel values for various things,
+	usually function default and empty arguments
+	(since None may be a valid value)
+	"""
+	class _Base(TypeNamespace.base()):
+		"""base class for sentinel"""
+		pass
+	class Default(_Base):
+		"""no value or override given, use default"""
+		pass
+	class Empty(_Base):
+		"""value is empty"""
+		pass
+	class FailToFind(_Base):
+		"""lookup not found"""
+		pass
 
 
 """is there any advantage to this?

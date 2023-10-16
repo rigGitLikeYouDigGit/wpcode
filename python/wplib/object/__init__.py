@@ -1,6 +1,8 @@
 
 from .builtinextension import UserSet, PostDecMethodWrapper
 
+from .namespace import TypeNamespace, Sentinel
+
 from .decorator import UserDecorator
 from .dirtygraph import DirtyGraph, DirtyNode
 
@@ -11,7 +13,7 @@ from .hashable import HashableMixin, UnHashableDict, UnHashableSet, HashFunction
 
 from .plugin import PluginBase, PluginRegister
 
-from .namespace import TypeNamespace
+
 
 from .signal import Signal
 from .stringlike import StringLike

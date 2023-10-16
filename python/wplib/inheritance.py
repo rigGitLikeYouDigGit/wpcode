@@ -2,6 +2,7 @@ from __future__ import annotations, print_function
 
 import typing as T
 
+from wplib import log
 from wplib.sentinel import Sentinel
 
 
@@ -78,10 +79,12 @@ class SuperClassLookupMap:
 	def lookup(self, lookupCls:type, default=Sentinel.FailToFind):
 		"""lookup a value using lookupCls,
 		add found results to cache"""
+		#log(f"lookup {lookupCls} in {self.classMap}")
 		if lookupCls in self.cacheMap:
 			return self.cacheMap[lookupCls]
 		result = superClassLookup(
 			self.classMap, lookupCls, default=Sentinel.FailToFind)
+		#log(f"result {result}")
 		if result is not Sentinel.FailToFind: # found in map
 			self.cacheMap[lookupCls] = result
 			return result
