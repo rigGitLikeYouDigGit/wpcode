@@ -38,8 +38,11 @@ class Traversable:
 	split address above into ("my", "/", "node", ".", "attributeRoot", "/", "attributeBranch")
 	Only work on first tokens, then remove them when resolved, to pass to children
 
+	in the general case, this object is a node, with different types of edges to other objects.
+
 
 	"""
+	TraversableParams = TraversableParams
 
 	# maybe put this in an enum or namespace, but it's also fine like this
 	separatorChars = {

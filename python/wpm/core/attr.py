@@ -19,7 +19,7 @@ from wplib.object import TypeNamespace
 from wptree import Tree
 
 from .bases import PlugBase
-from .api import toMFn, mfnDataConstantTypeMap
+from .api import getMFn, mfnDataConstantTypeMap, getMObject
 from .cache import getCache, om
 
 
@@ -32,6 +32,8 @@ def getMPlug(plug)->om.MPlug:
 		return plug
 	if isinstance(plug, PlugBase):
 		return plug.MPlug
+	if isinstance(plug, om.MObject):
+		return om.MPlug(plug)
 	if not isinstance(plug, str):
 		raise TypeError(f"cannot retrieve MPlug from argument {plug} of type {type(plug)}")
 	try:
@@ -188,7 +190,7 @@ nodeObjMap = {}
 def plugMFnAttr(plug:om.MPlug):
 	"""return MFnAttribute for this plug's Attribute object"""
 	attribute = plug.attribute()
-	attrFn = toMFn(attribute)
+	attrFn = getMFn(attribute)
 	return attrFn
 
 def plugMFnDataType(plug:om.MPlug):
@@ -308,7 +310,7 @@ def plugTreePairs(a:(om.MPlug, tuple), b:(om.MPlug, tuple)):
 
 def _dataFromPlugMObject(obj:om.MObject):
 	"""retrieve data from direct plug MObject"""
-	dataFn = toMFn(obj)
+	dataFn = getMFn(obj)
 	try:
 		return list(dataFn.array())
 	except:
@@ -335,7 +337,7 @@ def leafPlugValue(plug:om.MPlug,
 
 	# we now need to check the attribute type of the plug
 	attribute = plug.attribute()
-	attrFn = toMFn(attribute)
+	attrFn = getMFn(attribute)
 	attrFnType = type(attrFn)
 	data = None
 	if attrFnType is om.MFnUnitAttribute:
@@ -373,7 +375,7 @@ def plugValue(plug:om.MPlug,
 
 # region setting
 def _setDataOnPlugMObject(obj, data):
-	dataFn = toMFn(obj)
+	dataFn = getMFn(obj)
 	dataFn.set(data)
 
 
@@ -391,7 +393,7 @@ def setLeafPlugValue(plug:om.MPlug, data,
 		pass
 	# we now need to check the attribute type of the plug
 	attribute = plug.attribute()
-	attrFn = toMFn(attribute)
+	attrFn = getMFn(attribute)
 	attrFnType = type(attrFn)
 	if attrFnType is om.MFnUnitAttribute:
 		if attrFn.unitType() == om.MFnUnitAttribute.kAngle and toRadians:
@@ -842,7 +844,7 @@ class AttrSpec(Tree):
 
 def addAttrFromSpec(node, spec:AttrSpec, parentAttrFn=None):
 	"""add a new attribute hierarchy to a node based on the given spec"""
-	mfn = toMFn(node)
+	mfn = getMFn(node)
 	if spec.branches:
 		attrFn = om.MFnCompoundAttribute()
 		obj = attrFn.create(spec.name, spec.name)

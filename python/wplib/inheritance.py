@@ -27,6 +27,8 @@ def containsSuperClass(classSeq:T.Sequence[type], lookup:(type, object))->(type,
 	if not isinstance(lookup, type):
 		lookup = type(lookup)
 	for i in classSeq:
+		if not isinstance(i, type):
+			continue
 		#if i in lookup.__mro__:
 		if issubclass(lookup, i): # really hope this works
 			return i
@@ -49,7 +51,7 @@ class SuperClassLookupMap:
 		if classMap is not None:
 			self.updateClassMap(classMap)
 
-	def _expandTupleKeys(self, classMap:dict[type, T.Any]):
+	def _expandTypeTupleKeys(self, classMap:dict[type, T.Any]):
 		"""expand out any tuple keys and then sort"""
 		testMap = dict(classMap or {})
 		resultMap = {}
@@ -66,13 +68,13 @@ class SuperClassLookupMap:
 		so that longest mro (lowest superclasses) are first"""
 		self.classMap = dict(
 			sorted(self.classMap.items(),
-			       key=lambda i: len(i[0].__mro__),
+			       key=lambda i: len(i[0].__mro__) if isinstance(i[0], type) else 0,
 			       reverse=True)
 		)
 
 	def updateClassMap(self, classMap:dict[type, T.Any]):
 		"""register a map of {type : value}"""
-		self.classMap.update(self._expandTupleKeys(classMap))
+		self.classMap.update(self._expandTypeTupleKeys(classMap))
 		self._sortMap()
 		self.cacheMap.clear()
 
@@ -82,15 +84,17 @@ class SuperClassLookupMap:
 		#log(f"lookup {lookupCls} in {self.classMap}")
 		if lookupCls in self.cacheMap:
 			return self.cacheMap[lookupCls]
-		result = superClassLookup(
-			self.classMap, lookupCls, default=Sentinel.FailToFind)
+		if lookupCls is None: # None messes up everything
+			result = self.classMap.get(None, default=Sentinel.FailToFind)
+		else:
+			result = superClassLookup(
+				self.classMap, lookupCls, default=Sentinel.FailToFind)
 		#log(f"result {result}")
 		if result is not Sentinel.FailToFind: # found in map
 			self.cacheMap[lookupCls] = result
 			return result
 		if default is Sentinel.FailToFind :
-			raise KeyError(f"No value registered in {self.classMap}\n"
-			               f" for {lookupCls}")
+			raise KeyError(f"No value registered in {self.classMap}\n\nfor {lookupCls}")
 		return default
 
 
@@ -126,6 +130,8 @@ def mroMergedDict(cls):
 	for i in cls.__mro__:
 		merged.update(i.__dict__)
 	return merged
+
+
 
 # annotation decorators
 def overrideThis(fn:T.Callable)->T.Callable:

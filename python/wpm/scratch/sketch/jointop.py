@@ -13,6 +13,10 @@ we can extract local and world if needed.
 but should it be valid to output a plug from a rig op? probably - 
 
 
+
+data objects in chimaera just contain string / plugs - data copied by each node
+
+
 """
 
 class GraphPlugData:
@@ -29,6 +33,29 @@ class GraphPlugData:
 
 
 class JointOp:
+
+	@classmethod
+	def buildJointsFromTree(cls, t:Tree):
+		"""iterate over tree, create joints, set as
+		tree values -
+		create joints in Y and +-X """
+
+		y = 0
+		for i in t.allBranches():
+			joint = WN.create("joint", n=i.name)
+			i.value = joint
+			if not i.parent:
+				continue
+
+			parentJoint = i.parent.value
+			joint.setParent(parentJoint)
+
+			# set position
+			multMap = {"L_": -1, "R_": 1, "C_": 0}
+			mult = multMap.get(i.name[:2], 0)
+			joint.translate.set(mult * 1, y, 0)
+
+
 
 
 	def __init__(self):

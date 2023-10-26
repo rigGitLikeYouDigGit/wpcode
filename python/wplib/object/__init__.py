@@ -20,4 +20,4 @@ from .stringlike import StringLike
 
 from .traversable import Traversable, TraversableParams
 
-from .visit import Visitor
+from .visitor import DeepVisitor, VisitObjectData, VisitPassParams, VisitTypeFunctionRegister, visitFunctionRegister

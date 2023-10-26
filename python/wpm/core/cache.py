@@ -100,10 +100,11 @@ class APICache:
 			return node
 		else:
 			try:
-				return node.object() # supports MFnBase and EdNode
+				return node.object() # supports MFnBase and WN
 			except:
 				pass
 
+		# cmds call here is VERY cringe
 		uid = cmds.ls(node, uuid=1)[0]
 
 		if self.mObjRegister.get(uid):

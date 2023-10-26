@@ -7,7 +7,7 @@ from enum import Enum
 
 from wplib.serial.adaptor import SerialAdaptor, EncoderBase
 
-from wplib.serial.register import SerialRegister
+from wplib.serial.main import SerialRegister
 
 def _enumSerialData(obj:Enum):
 	return obj.value
@@ -25,11 +25,11 @@ class EnumAdaptor(SerialAdaptor):
 	@SerialAdaptor.encoderVersion(1)
 	class Encoder(EncoderBase):
 		@classmethod
-		def encode(cls, obj: Enum):
+		def encodeObject(cls, obj: Enum):
 			return {"data" : obj.value}
 
 		@classmethod
-		def decode(cls, serialCls:type[Enum], serialData:dict) ->Enum:
+		def decodeObject(cls, serialCls:type[Enum], serialData:dict) ->Enum:
 			return serialCls._value2member_map_[serialData["data"]]
 
 

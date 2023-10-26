@@ -4,9 +4,10 @@ import typing as T
 import pprint, copy
 
 from dataclasses import dataclass
+from collections import namedtuple
 
 from wplib.sequence import flatten, resolveSeqIndex
-from wplib.object import Signal, Traversable, TraversableParams, EventDispatcher, EventBase
+from wplib.object import Signal, Traversable, TraversableParams, EventDispatcher, EventBase, DeepVisitor
 from wplib import TypeNamespace, log
 from wplib.sentinel import Sentinel
 from wplib.string import incrementName
@@ -963,7 +964,7 @@ class TreeInterface(Traversable,
 		the whole point of this system is to separate serialisation
 		from the main class, but just trying to get something quick"""
 		@classmethod
-		def encode(cls, obj:TreeInterface, **kwargs):
+		def encodeObject(cls, obj:TreeInterface, **kwargs):
 			nested = True
 			data = obj._serialiseNested() if nested else obj._serialiseFlat()
 			# add root data
@@ -972,7 +973,7 @@ class TreeInterface(Traversable,
 			return data
 
 		@classmethod
-		def decode(cls, serialCls: type[TreeInterface], serialData: dict) -> TreeInterface:
+		def decodeObject(cls, serialCls: type[TreeInterface], serialData: dict) -> TreeInterface:
 			#print("tree interface decode")
 			preserveUid = False
 			preserveType = False
@@ -984,6 +985,8 @@ class TreeInterface(Traversable,
 				tree = serialCls._deserialiseNested(serialData, preserveUid=preserveUid, preserveType=preserveType)
 			elif layoutMode == serialCls.serialKeys().flatMode:
 				tree = serialCls._deserialiseFlat(serialData, preserveUid=preserveUid, preserveType=preserveType)
+			else:
+				raise ValueError(f"Unknown layout mode {layoutMode} for data {serialData}")
 			# cls._setCaching(True)
 			# tree.setCachedHierarchyDataDirty(True, True)
 			return tree
@@ -1110,3 +1113,36 @@ class TreeInterface(Traversable,
 	def display(self, nested=True):
 		print(self.displayStr(nested))
 	# endregion
+
+
+# region DeepVisitor integration
+# register tree functions with type catalogue
+TreeTie = namedtuple("TreeTie", "name value aux")
+
+ChildType = DeepVisitor.ChildType
+
+class TreeBranch(ChildType.base()):
+	pass
+class TreeName(ChildType.base()):
+	pass
+class TreeValue(ChildType.base()):
+	pass
+class TreeAuxProperties(ChildType.base()):
+	pass
+for i in [TreeBranch, TreeName, TreeValue, TreeAuxProperties,
+          ]:
+	ChildType.addMember(i)
+
+def _treeChildObjectsFn(tree:TreeInterface):
+	return (
+		(tree.name, ChildType.TreeName),
+		(tree.value, ChildType.TreeValue),
+		(tree.auxProperties, ChildType.TreeAuxProperties),
+		*((i, ChildType.TreeBranch) for i in tree.branches)
+	)
+
+DeepVisitor.getDefaultVisitTypeRegister().registerChildObjectsFnForType(
+	TreeInterface, _treeChildObjectsFn
+)
+
+# endregion

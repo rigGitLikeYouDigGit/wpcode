@@ -33,10 +33,45 @@ def apiTypeDataMap():
 def mfnDataConstantTypeMap():
 	return getCache().mfnDataConstantTypeMap
 
-def toMFn(obj: (om.MObject, str, om.MFn))->om.MFnDependencyNode:
+#mfnT = T.TypeVar('mfnT', bound=om.MFnBase)
+# test to access all members of all MFn types
+
+if T.TYPE_CHECKING:
+	class MFMFnT(om.MFnDependencyNode,
+	             # give
+	             om.MFnDagNode,
+	             om.MFnAttribute,
+	             om.MFnNumericAttribute,
+	             # me
+	             om.MFnTypedAttribute,
+	             om.MFnUnitAttribute,
+	             om.MFnMatrixAttribute,
+	             om.MFnCompoundAttribute,
+	             om.MFnMessageAttribute,
+	             om.MFnEnumAttribute,
+	             # e v e r y t h i n g
+	             om.MFnMesh,
+	             om.MFnNurbsCurve,
+	             om.MFnNurbsSurface,
+	             om.MFnLattice,
+	             om.MFnSet,
+	             om.MFnSkinCluster,
+	             om.MFnIkJoint,
+	             om.MFnData
+	             ):
+		pass
+
+def getMFn(obj: (om.MObject, str, om.MFn))->MFMFnT:
 	"""return mfn function set initialised on the given object
 	returns most specialised mfn possible for given object"""
 	return getCache().getMFn(obj)
+
+MFnT = T.TypeVar('MFnT', bound=om.MFnBase)
+def asMFn(obj, mfnT:T.Type[MFnT])->MFnT:
+	"""return mfn function set initialised on the given object
+	returns most specialised mfn possible for given object"""
+	return mfnT(getCache().getMObject(obj))
+
 
 def getMFnType(obj: om.MObject) -> T.Type[om.MFnBase]:
 	"""returns the highest available MFn
@@ -44,7 +79,7 @@ def getMFnType(obj: om.MObject) -> T.Type[om.MFnBase]:
 	above"""
 	return getCache().getMFnType(obj)
 
-def toMObject(node)->om.MObject:
+def getMObject(node)->om.MObject:
 	"""this is specialised for dg nodes -
 	component MObjects will have their own functions anyway if needed
 	"""
@@ -56,20 +91,20 @@ def nodeTypeFromMObject(mobj:om.MObject):
 	return getCache().nodeTypeFromMObject(mobj)
 
 # region specific mfn functions
-# dissuaded other than for explicit function use, since toMFn is superior
+# dissuaded other than for explicit function use, since getMFn is superior
 def toMFnDep(obj)->om.MFnDependencyNode:
-	return om.MFnDependencyNode(toMObject(obj))
+	return om.MFnDependencyNode(getMObject(obj))
 def toMFnDag(obj)->om.MFnDagNode:
-	return om.MFnDagNode(toMObject(obj))
+	return om.MFnDagNode(getMObject(obj))
 def toMFnTransform(obj)->om.MFnTransform:
-	return om.MFnTransform(toMObject(obj))
+	return om.MFnTransform(getMObject(obj))
 
 def toMFnMesh(obj)->om.MFnMesh:
-	return om.MFnMesh(toMObject(obj))
+	return om.MFnMesh(getMObject(obj))
 def toMFnCurve(obj)->om.MFnNurbsCurve:
-	return om.MFnNurbsCurve(toMObject(obj))
+	return om.MFnNurbsCurve(getMObject(obj))
 def toMFnSurface(obj)->om.MFnNurbsSurface:
-	return om.MFnNurbsSurface(toMObject(obj))
+	return om.MFnNurbsSurface(getMObject(obj))
 
 #endregion
 

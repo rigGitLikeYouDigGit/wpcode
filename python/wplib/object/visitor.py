@@ -1,13 +1,17 @@
 
 from __future__ import annotations
+
+import types
 import typing as T
-from wplib import log
+import inspect
 from types import FunctionType
 from collections import defaultdict
 from dataclasses import dataclass
 from collections import deque, namedtuple
 from typing import TypedDict
 
+from wplib import log
+from wplib.log import getDefinitionStrLink
 #from wplib.sentinel import Sentinel
 from wplib.inheritance import superClassLookup, SuperClassLookupMap
 from wplib.object.namespace import TypeNamespace
@@ -35,16 +39,6 @@ class ChildType(TypeNamespace):
 	class ObjectAttribute(_Base):
 		pass
 
-	class TreeBranch(_Base):
-		pass
-	class TreeName(_Base):
-		pass
-	class TreeValue(_Base):
-		pass
-	class TreeAuxProperties(_Base):
-		pass
-
-
 
 """
 consider case of visiting dict items -
@@ -64,18 +58,14 @@ set up special processing for it
 ??
 
 """
-from wptree import TreeInterface
-
-
-
 
 #region get child objects
 
 MapItemTie = namedtuple("MapItemTie", "key value")
 
-TreeTie = namedtuple("TreeTie", "name value aux")
 
 typeChildObjectsFnMap = {
+	type(None) : lambda obj: (),
 	MAP_TYPES : lambda obj: (
 			(MapItemTie(*i), ChildType.MapItem)
 	             for i in obj.items()
@@ -87,12 +77,6 @@ typeChildObjectsFnMap = {
 	LITERAL_TYPES : lambda obj: (),
 
 
-	TreeInterface : lambda obj: (
-			(obj.name, ChildType.TreeName),
-			(obj.value, ChildType.TreeValue),
-			(obj.auxProperties, ChildType.TreeAuxProperties),
-			*((i, ChildType.TreeBranch) for i in obj.branches)
-		),
 
 }
 # endregion
@@ -104,14 +88,17 @@ def _updateMap(parentObj:dict, childObj:tuple, childType):
 	return parentObj
 
 typeUpdateFnMap = {
+	type(None) : lambda parentObj, childObj, childType: childObj,
 	SEQ_TYPES : lambda parentObj, childObj, childType: parentObj + (childObj,),
 	MAP_TYPES : _updateMap,
+
 }
 # endregion
 
 # region creating new
 childTypeItemMapType = T.Mapping[ChildType.T, list[T.Any]]
 typeNewFnMap = {
+	type(None) : lambda baseParent, childTypeItemMap: None,
 	object : lambda baseParent, childTypeItemMap: type(baseParent)(
 		childTypeItemMap.popitem()[1]),
 	MAP_TYPES : lambda baseParent, childTypeItemMap: dict(childTypeItemMap[ChildType.MapItem]),
@@ -139,7 +126,7 @@ class VisitTypeFunctionRegister:
 	def registerUpdateFnForType(self, type, fn):
 		self.typeUpdateFnMap.updateClassMap({type:fn})
 
-	def registerNewFnForType(self, type, fn):
+	def registerNewFromArgsFnForType(self, type, fn):
 		self.typeNewFnMap.updateClassMap({type:fn})
 
 	def getChildObjectsFnForType(self, type):
@@ -148,11 +135,11 @@ class VisitTypeFunctionRegister:
 	def getUpdateFnForType(self, type):
 		return self.typeUpdateFnMap.lookup(type)
 
-	def getNewFnForType(self, type):
+	def getNewFromArgsFnForType(self, type):
 		return self.typeNewFnMap.lookup(type)
 
 
-baseVisitTypeFunctionRegister = VisitTypeFunctionRegister(
+visitFunctionRegister = VisitTypeFunctionRegister(
 	typeChildObjectsFnMap=typeChildObjectsFnMap,
 	typeUpdateFnMap=typeUpdateFnMap,
 	typeNewFnMap=typeNewFnMap,
@@ -174,15 +161,46 @@ class VisitPassParams:
 	depthFirst:bool = True
 	runVisitFn:bool = True # if false, only yield objects to visit
 	transformVisitedObjects:bool = False # if true, modifies visited objects - yields (original, transformed) pairs
+	visitFn:visitFnType = None # if given, overrides visitor's visit function
 
 
 	pass
 
 
+class DeepVisitOp:
+	@classmethod
+	def visit(cls,
+	          obj:T.Any,
+	              visitor:DeepVisitor,
+	              visitObjectData:VisitObjectData,
+	              visitPassParams:VisitPassParams,
+	              )->T.Any:
+		"""template function to override for custom transform"""
+		raise NotImplementedError
+
 
 
 class DeepVisitor:
-	"""base class for recursive visit and transform operations"""
+	"""base class for visit and transform operations over all elements
+	of a data structure.
+
+	For now a transformation cannot add or remove elements - maybe add later
+	using extensions to visitData.
+
+	Run filter function over all elements for now, leave any filtering to
+	client code.
+	"""
+
+	ChildType = ChildType
+	VisitObjectData = VisitObjectData
+	VisitPassParams = VisitPassParams
+	DeepVisitOp = DeepVisitOp
+
+	@classmethod
+	def getDefaultVisitTypeRegister(cls,
+	                                        )->VisitTypeFunctionRegister:
+		"""get default type function register"""
+		return visitFunctionRegister
 
 
 	@classmethod
@@ -203,15 +221,23 @@ class DeepVisitor:
 		"""get default function for getting next objects to visit"""
 		return
 
+	@classmethod
+	def checkVisitFnSignature(cls, fn:visitFnType):
+		"""check that the given function has the correct signature"""
+		fnId = f"\n{fn} def {getDefinitionStrLink(fn)} \n"
+		if not isinstance(fn, (types.FunctionType, types.MethodType)):
+			raise TypeError(f"visit function " + fnId + " is not a function")
+		# if fn.__code__.co_argcount != 4:
+		# 	raise TypeError(f"visit function {fn} does not have 4 arguments")
+		argSeq = ("obj", "visitor", "visitObjectData", "visitPassParams")
+		#if fn.__code__.co_varnames[-4:] != argSeq:
+		# if not (set(argSeq) <= set(fn.__code__.co_varnames)):
+		# 	raise TypeError(f"visit function " + fnId + f"does not have correct argument names\n{argSeq} \n{argSeq[-4:]}\n{fn.__code__.co_varnames}")
+		return True
 
 	def __init__(self,
-				visitSingleObjectFn:callable[
-					T.Any,
-					DeepVisitor,
-					VisitObjectData,
-					VisitPassParams,
-					[]]=None,
-				 visitTypeFunctionRegister: VisitTypeFunctionRegister=baseVisitTypeFunctionRegister,
+	             visitSingleObjectFn:visitFnType=None,
+	             visitTypeFunctionRegister: VisitTypeFunctionRegister=visitFunctionRegister,
 	             #nextVisitDestinationsFn:callable=None,
 	             ):
 		"""initialize the visitor with functions
@@ -220,6 +246,8 @@ class DeepVisitor:
 		"""
 		self.visitTypeFunctionRegister = visitTypeFunctionRegister
 		self.visitSingleObjectFn = visitSingleObjectFn or self.visitSingleObject
+		self.checkVisitFnSignature(self.visitSingleObjectFn)
+
 		#self.nextVisitDestinationsFn = nextVisitDestinationsFn or self.nextVisitDestinations
 
 
@@ -374,7 +402,7 @@ class DeepVisitor:
 				visitData['copyResult'] = visitData['visitResult']
 				continue
 
-			newObjFn = self.visitTypeFunctionRegister.getNewFnForType(
+			newObjFn = self.visitTypeFunctionRegister.getNewFromArgsFnForType(
 				type(visitData['visitResult'])
 			)
 
@@ -395,44 +423,32 @@ class DeepVisitor:
 	def dispatchPass(self,
 	                 fromObj:T.Any,
 	                 passParams:VisitPassParams,
+	                 visitFn:visitFnType=None,
 	                 ):
 		"""dispatch a single pass of the visitor
 		"""
+		# allowing LOADS of override levels for setting visit function here,
+		# unnecessary
+		if visitFn: # set visit function if given
+			passParams.visitFn = visitFn
+		else:
+			passParams.visitFn = passParams.visitFn or self.visitSingleObjectFn
+		self.checkVisitFnSignature(passParams.visitFn)
+
 		if passParams.transformVisitedObjects:
 			result = self._transform(fromObj, passParams)
 			return result
 		else:
-			yield from self._visitAll(fromObj, passParams)
+			return self._visitAll(fromObj, passParams)
 
 
+visitFnType = T.Callable[
+	[T.Any,
+	 DeepVisitor,
+	 VisitObjectData,
+	 VisitPassParams],
+	T.Any]
 
-
-		pass
-
-
-def listBuildRecursive(obj:list):
-	result = []
-	for i in obj:
-		if isinstance(i, list):
-			result.append(listBuildRecursive(i))
-		else:
-			result.append(i + 2)
-	return result
-
-
-def listBuildIterative(obj:list):
-	result = []
-	toVisit = deque()
-	toVisit.append((obj, result))
-	while toVisit:
-		obj, result = toVisit.pop()
-		for i in obj:
-			if isinstance(i, list):
-				result.append([])
-				toVisit.append((i, result[-1]))
-			else:
-				result.append(i + 2)
-	return result
 
 
 if __name__ == '__main__':
@@ -443,7 +459,7 @@ if __name__ == '__main__':
 		return obj
 
 	visitor = DeepVisitor(
-		visitTypeFunctionRegister=baseVisitTypeFunctionRegister,
+		visitTypeFunctionRegister=visitFunctionRegister,
 		visitSingleObjectFn=printArgsVisit)
 
 	structure = {
@@ -458,24 +474,26 @@ if __name__ == '__main__':
 
 
 	def addOneTransform(obj, visitor, visitData, visitParams):
-		print("addOneTransform", obj)
+		#print("addOneTransform", obj)
 		if isinstance(obj, int):
 			obj += 1
 		return obj
 
 	visitor = DeepVisitor(
-		visitTypeFunctionRegister=baseVisitTypeFunctionRegister,
+		visitTypeFunctionRegister=visitFunctionRegister,
 		visitSingleObjectFn=addOneTransform)
 
 	structure = [
 		1, [2, [3, 4], 2], 1
 	]
 	print("structure", structure)
-	newStructure = visitor._transform(structure, VisitPassParams())
+	newStructure = visitor.dispatchPass(structure, VisitPassParams(
+		transformVisitedObjects=False))
 	print("newStructure", newStructure)
 
 	print("structure", structure)
-	newStructure = visitor._transform(structure, VisitPassParams(
+	newStructure = visitor.dispatchPass(structure, VisitPassParams(
+		transformVisitedObjects=True,
 		topDown=False
 	))
 	print("newStructure", newStructure)

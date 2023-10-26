@@ -8,13 +8,23 @@ from wplib import CodeRef, inheritance
 from .constant import ENCODE_DATA_KEY, FORMAT_DATA_KEY
 
 class EncoderBase:
+	"""defines one single generation of encoder -
+	an adaptor may have many encoders defined within its
+	scope, each handling a different format version of data.
+	"""
+
+	# attributes set by decorator
+	_versionIndex = None
+	_isEncoder = False
+
+
 	@classmethod
-	def encode(cls, obj:T.Any, **kwargs)->dict:
+	def encodeObject(cls, obj:T.Any, **kwargs)->dict:
 		"""Encode the given object into a dict.
 		"""
 		raise NotImplementedError()
 	@classmethod
-	def decode(cls, serialCls:type, serialData:dict)->T.Any:
+	def decodeObject(cls, serialCls:type, serialData:dict)->T.Any:
 		"""Decode the given dict into an object.
 		"""
 		raise NotImplementedError()
@@ -33,8 +43,8 @@ def encoderVersion(index:int):
 	"""
 	assert index > 0, f"Version index must be greater than 0, not {index}"
 	def _inner(cls:type[EncoderBase]):
-		assert "encode" in cls.__dict__, f"Encoder {cls} does not define encode()"
-		assert "decode" in cls.__dict__, f"Encoder {cls} does not define decode()"
+		assert "encodeObject" in cls.__dict__, f"Encoder {cls} does not define encodeObject()"
+		assert "decodeObject" in cls.__dict__, f"Encoder {cls} does not define decodeObject()"
 		cls.__name__ = f"{cls.__name__}_V{index}"
 		cls._versionIndex = index
 		cls._isEncoder = True
@@ -65,8 +75,11 @@ class SerialAdaptor:
 	def serialType(cls)->type:
 		"""Return the type that this adaptor serialises -
 		by defult, the adaptor class itself.
+		This allows inheriting from adaptor directly -
+		this shouldn't be done
 		"""
-		return cls
+		raise NotImplementedError()
+		#return cls
 
 	@classmethod
 	def getFormatDataToSerialise(cls, version:int, objToSerialise)->dict:
@@ -147,7 +160,7 @@ class SerialAdaptor:
 		encoder = cls.getEncoder(versionIndex=encoderVersion)
 		#print("found encoder", encoder, "for type", type(obj))
 		return {
-			**encoder.encode(obj, **kwargs),
+			**encoder.encodeObject(obj, **kwargs),
 			FORMAT_DATA_KEY : cls.getFormatDataToSerialise(encoder.getVersion(),
 			                                               obj)
 		}
@@ -167,6 +180,6 @@ class SerialAdaptor:
 		serialType = CodeRef.resolve(formatData[cls.VERSION_DATA_TYPE_KEY])
 
 		# decode
-		return encoder.decode(
+		return encoder.decodeObject(
 			serialType, serialData
 		)

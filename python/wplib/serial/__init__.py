@@ -50,10 +50,9 @@ require any changes to these classes
 """
 
 from .adaptor import SerialAdaptor, EncoderBase
-from .register import SerialRegister
 
 # import and register all default types
-from .applied import *
+from . import applied as _applied
 
 # import the custom base class
 from .main import Serialisable

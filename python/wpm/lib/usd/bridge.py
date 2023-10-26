@@ -301,12 +301,12 @@ def _nodeToUsdPrim(mfn:om.MFnDependencyNode, stage:Usd.Stage, pathTokens:list[st
 	prim = converterCls.toUsdPrim(mfn, stage, pathTokens)
 	if isinstance(mfn, om.MFnTransform):
 		for childId in range(mfn.childCount()):
-			_nodeToUsdPrim(core.toMFn(mfn.child(childId)), stage, list(pathTokens))
+			_nodeToUsdPrim(core.getMFn(mfn.child(childId)), stage, list(pathTokens))
 
 def _usdPrimToMFn(prim:Usd.Prim, stage:Usd.Stage, parentMfn=None)->om.MFn:
 	"""return a new MFn and create maya node matching given prim,
 	recreating any children"""
-	mfn = toMFnMap[prim.GetTypeName()].toMFn(prim, stage, parentMfn)
+	mfn = toMFnMap[prim.GetTypeName()].getMFn(prim, stage, parentMfn)
 	for child in prim.GetChildren():
 		_usdPrimToMFn(child, stage, mfn)
 	return mfn
@@ -319,7 +319,7 @@ def saveMayaNodeToUsd(mfn:om.MFnDependencyNode, stage:Usd.Stage=None, filePath:P
 	    otherwise return the stage
 	"""
 
-	mfn = core.toMFn(mfn)
+	mfn = core.getMFn(mfn)
 	stage : Usd.Stage = stage or Usd.Stage.CreateInMemory()
 	primPathTokens = []
 	_nodeToUsdPrim(mfn, stage, primPathTokens)

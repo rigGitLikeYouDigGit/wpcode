@@ -10,7 +10,7 @@ from .patch import cmds, om, omr, oma, omui
 from .api import (
 	MObjectRegister, apiTypeMap, apiTypeCodeMap, apiCodeNameMap, apiTypeDataMap,
 	mfnDataConstantTypeMap,
-	toMFn, getCache, toMObject, getMFnType, toMFnDag, toMFnDep, toMFnMesh,
+	getMFn, asMFn, getCache, getMObject, getMFnType, toMFnDag, toMFnDep, toMFnMesh,
 	toMFnCurve, toMFnSurface, toMFnTransform,
 	isDag, isShape, isTransform,
 	classConstantValueToNameMap,

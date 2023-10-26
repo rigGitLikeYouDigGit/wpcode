@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing as T
 
 from wpm import om
-from wpm.core import CallbackOwner, toMObject
+from wpm.core import CallbackOwner, getMObject
 from wpm.lib import hierarchy as h
 
 """simple class tied to lifespan of specific maya node - 
@@ -47,7 +47,7 @@ class NodeLifespanTracker(CallbackOwner):
 
 	def attachToNode(self, node: om.MObject):
 		"""attach to node, set up callbacks"""
-		node = toMObject(node)
+		node = getMObject(node)
 		self.removeAllOwnedCallbacks()
 		self._nodeHandle = om.MObjectHandle(node)
 

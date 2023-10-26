@@ -26,7 +26,7 @@ def shadingGroupPlugsFromMaterial(materialNode:om.MObject)->T.List[om.MPlug]:
 
 	We also assume that only .outColor is taken into account by group
 	"""
-	return om.MFnDependencyNode(core.toMObject(materialNode)).findPlug(
+	return om.MFnDependencyNode(core.getMObject(materialNode)).findPlug(
 		"outColor", False
 	).destinations()
 

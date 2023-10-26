@@ -23,11 +23,11 @@ class TypeAdaptor(SerialAdaptor):
 	@SerialAdaptor.encoderVersion(1)
 	class Encoder(EncoderBase):
 		@classmethod
-		def encode(cls, obj: type):
+		def encodeObject(cls, obj: type):
 			return {"data" : CodeRef.get(obj)}
 
 		@classmethod
-		def decode(cls, serialCls:type, serialData:dict) ->Enum:
+		def decodeObject(cls, serialCls:type, serialData:dict) ->Enum:
 			return CodeRef.resolve(serialData["data"])
 
 
