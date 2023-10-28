@@ -8,6 +8,7 @@ from wplib.inheritance import SuperClassLookupMap
 
 from .adaptor import SerialAdaptor
 
+
 from wplib.object.visitor import visitFunctionRegister, VisitObjectData, DeepVisitor
 from ..object import VisitPassParams
 
@@ -87,6 +88,7 @@ class SerialiseOp(DeepVisitor.DeepVisitOp):
 		"""Transform to apply to each object during serialisation.
 		affects only single layer of object, visitor handles continuation
 		"""
+		#print("serialise", obj)
 		if obj is None:
 			return None
 		# literals can be serialised just so
@@ -119,6 +121,7 @@ def serialiseRecursive(obj)->dict:
 		transformVisitedObjects=True,
 		visitFn=SerialiseOp.visit
 	)
+	#print("serialise", obj)
 	return DeepVisitor().dispatchPass(obj, visitParams)
 
 
@@ -142,13 +145,20 @@ class DeserialiseOp(DeepVisitor.DeepVisitOp):
 			return obj
 
 		if isinstance(obj, MAP_TYPES):
-			#print("get", lib.getDataCodeRefStr(obj))
+			#print("get", CodeRef.getDataCodeRefStr(obj))
 			codeRef = SerialAdaptor.getDataCodeRefStr(obj)
-			if codeRef is not None:
+			#log("code ref", codeRef)
+			if codeRef is not None: # found ref, deserialise type
+
+				visitObjectData["makeNewObjFromVisitResult"] = False
+
 				serialType = CodeRef.resolve(codeRef)
-				#print(f"Found code ref {codeRef} -> {serialType}")
+				log(f"Found code ref {codeRef} -> {serialType}")
 				if issubclass(serialType, SerialAdaptor):
-					return serialType.decode(obj)
+					log("is serial adaptor", serialType)
+					result = serialType.decode(obj)
+					log("result", result)
+					return result
 				# retrieve adaptor for the given data
 				adaptorCls = SerialRegister.adaptorForData(obj)
 				if adaptorCls is None:
@@ -175,7 +185,9 @@ def deserialiseRecursive(obj:dict)->T.Any:
 		transformVisitedObjects=True,
 		visitFn=DeserialiseOp.visit
 	)
-	return DeepVisitor().dispatchPass(obj, visitParams)
+	result = DeepVisitor().dispatchPass(obj, visitParams)
+	log("deserialiseRec", result)
+	return result
 
 
 

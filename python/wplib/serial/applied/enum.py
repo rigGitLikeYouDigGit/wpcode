@@ -25,11 +25,12 @@ class EnumAdaptor(SerialAdaptor):
 	@SerialAdaptor.encoderVersion(1)
 	class Encoder(EncoderBase):
 		@classmethod
-		def encodeObject(cls, obj: Enum):
+		def encodeObject(cls, obj: Enum,  encodeParams:dict):
 			return {"data" : obj.value}
 
 		@classmethod
-		def decodeObject(cls, serialCls:type[Enum], serialData:dict) ->Enum:
+		def decodeObject(cls, serialCls:type[Enum], serialData:dict,
+		                 decodeParams:dict) ->Enum:
 			return serialCls._value2member_map_[serialData["data"]]
 
 

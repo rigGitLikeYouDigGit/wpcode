@@ -59,18 +59,18 @@ class TreeInterface(Traversable,
 	@classmethod
 	def serialKeys(cls):
 		class SerialKeys:
-			name = "?NAME"
-			value = "?VALUE"
-			uid = "?UID"
-			children = "?CHILDREN"
-			address = "?ADDRESS"
-			properties = "?PROPERTIES"
-			type = "?TYPE"
-			rootData = "?ROOT_DATA"
-			format = "?FORMAT_VERSION"
+			name = "@NAME"
+			value = "@VALUE"
+			uid = "@UID"
+			children = "@CHILDREN"
+			address = "@ADDRESS"
+			properties = "@PROPERTIES"
+			type = "@TYPE"
+			rootData = "@ROOT_DATA"
+			format = "@FORMAT_VERSION"
 
 			# layout constants
-			layout = "?LAYOUT"
+			layout = "@LAYOUT"
 			nestedMode = 0
 			flatMode = 1
 		return SerialKeys
@@ -809,9 +809,11 @@ class TreeInterface(Traversable,
 
 	def _rootData(self)->dict:
 		"""Returns any data needed to describe the whole tree
-		in its serialised state - eventually put format information in here"""
+		in its serialised state -
+		nothing related to format of information, that should all be kept
+		in encoder classes"""
 		return {
-			self.serialKeys().format : 0
+			#self.serialKeys().format : 0
 		}
 
 	def _baseSerialData(self)->dict:
@@ -957,14 +959,14 @@ class TreeInterface(Traversable,
 	# 	#cls._setCaching(True)
 	# 	#tree.setCachedHierarchyDataDirty(True, True)
 	# 	return tree
-	uniqueAdapterName = "treeInterface"
+	uniqueAdapterName = "wpTreeInterface"
 	@Serialisable.encoderVersion(1)
 	class Encoder(EncoderBase):
 		"""placing here in a very very temp way -
 		the whole point of this system is to separate serialisation
 		from the main class, but just trying to get something quick"""
 		@classmethod
-		def encodeObject(cls, obj:TreeInterface, **kwargs):
+		def encodeObject(cls, obj:TreeInterface, encodeParams:dict):
 			nested = True
 			data = obj._serialiseNested() if nested else obj._serialiseFlat()
 			# add root data
@@ -973,7 +975,8 @@ class TreeInterface(Traversable,
 			return data
 
 		@classmethod
-		def decodeObject(cls, serialCls: type[TreeInterface], serialData: dict) -> TreeInterface:
+		def decodeObject(cls, serialCls: type[TreeInterface], serialData: dict,
+		                 decodeParams:dict) -> TreeInterface:
 			#print("tree interface decode")
 			preserveUid = False
 			preserveType = False

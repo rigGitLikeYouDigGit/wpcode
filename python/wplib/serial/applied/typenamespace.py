@@ -18,11 +18,12 @@ class TypeNamespaceAdaptor(SerialAdaptor):
 	@SerialAdaptor.encoderVersion(1)
 	class Encoder(EncoderBase):
 		@classmethod
-		def encodeObject(cls, obj: TypeNamespace.base()):
+		def encodeObject(cls, obj: TypeNamespace.base(),  encodeParams:dict):
 			return {"data" : obj.clsName()}
 
 		@classmethod
-		def decodeObject(cls, serialCls:type[TypeNamespace], serialData:dict) ->TypeNamespace:
+		def decodeObject(cls, serialCls:type[TypeNamespace], serialData:dict,
+		                 decodeParams:dict) ->TypeNamespace:
 			return serialCls.members()[serialData["data"]]
 
 

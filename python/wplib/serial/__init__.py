@@ -47,6 +47,28 @@ balls.
 
 We just use string code refs to serialised types - if this ever needs upgrading, shouldn't
 require any changes to these classes
+
+
+Tree shows weakness of encoder system - structure of data tied to structure of object,
+headings, properties etc. you would need to encapsulate EVERYTHING
+
+
+can it be simplified? whole versioning system only matters for loading - 
+
+# in main object
+def deserialise(data, dataVersion):
+	
+	if dataVersion == 1:
+		# load version 1 to latest, current object version
+	elif dataVersion == 2:
+		# load version 2 to latest, current object version
+		
+wasted a lot of time but this is better and so much simpler,
+this is fine
+		
+
+
+
 """
 
 from .adaptor import SerialAdaptor, EncoderBase

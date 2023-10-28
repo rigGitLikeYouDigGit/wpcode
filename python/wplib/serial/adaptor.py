@@ -17,14 +17,25 @@ class EncoderBase:
 	_versionIndex = None
 	_isEncoder = False
 
+	@classmethod
+	def defaultEncodeParams(cls)->dict:
+		"""Return the default encode params for this encoder.
+		"""
+		return {}
 
 	@classmethod
-	def encodeObject(cls, obj:T.Any, **kwargs)->dict:
+	def defaultDecodeParams(cls)->dict:
+		"""Return the default decode params for this encoder.
+		"""
+		return {}
+
+	@classmethod
+	def encodeObject(cls, obj:T.Any, encodeParams:dict)->dict:
 		"""Encode the given object into a dict.
 		"""
 		raise NotImplementedError()
 	@classmethod
-	def decodeObject(cls, serialCls:type, serialData:dict)->T.Any:
+	def decodeObject(cls, serialCls:type, serialData:dict, decodeParams:dict)->T.Any:
 		"""Decode the given dict into an object.
 		"""
 		raise NotImplementedError()
@@ -149,7 +160,7 @@ class SerialAdaptor:
 
 	# main methods
 	@classmethod
-	def encode(cls, obj, encoderVersion:int=None, **kwargs)->dict:
+	def encode(cls, obj, encoderVersion:int=None, encodeParams:dict=None)->dict:
 		"""Encode the object into a dict - if no version is specified,
 		use the latest. (Latest should probably always be used when saving).
 
@@ -158,15 +169,18 @@ class SerialAdaptor:
 		which gets tedious to read.
 		"""
 		encoder = cls.getEncoder(versionIndex=encoderVersion)
+
+		encodeParams = {**encoder.defaultEncodeParams(), **(encodeParams or {})}
+
 		#print("found encoder", encoder, "for type", type(obj))
 		return {
-			**encoder.encodeObject(obj, **kwargs),
+			**encoder.encodeObject(obj, encodeParams),
 			FORMAT_DATA_KEY : cls.getFormatDataToSerialise(encoder.getVersion(),
 			                                               obj)
 		}
 
 	@classmethod
-	def decode(cls, serialData:dict)->serialType():
+	def decode(cls, serialData:dict, decodeParams:dict=None)->serialType():
 		"""Decode the object from a dict.
 		"""
 		assert FORMAT_DATA_KEY in serialData, f"Serial data missing format data key {FORMAT_DATA_KEY}"
@@ -175,11 +189,13 @@ class SerialAdaptor:
 		# get the encoder
 		encoder = cls.encoderVersionMap()[formatData[cls.VERSION_DATA_VERSION_KEY]]
 
+		decodeParams = {**encoder.defaultDecodeParams(), **(decodeParams or {})}
+
 		# resolve the type
 		# catch coderef exception here
 		serialType = CodeRef.resolve(formatData[cls.VERSION_DATA_TYPE_KEY])
 
 		# decode
 		return encoder.decodeObject(
-			serialType, serialData
+			serialType, serialData, decodeParams
 		)

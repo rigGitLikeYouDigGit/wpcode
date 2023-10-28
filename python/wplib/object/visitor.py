@@ -96,12 +96,22 @@ typeUpdateFnMap = {
 # endregion
 
 # region creating new
+
+def _newMap(baseParent, childTypeItemMap:dict[ChildType.T, list[T.Any]]):
+	log("newMap", childTypeItemMap)
+	return dict(childTypeItemMap[ChildType.MapItem])
+
 childTypeItemMapType = T.Mapping[ChildType.T, list[T.Any]]
 typeNewFnMap = {
 	type(None) : lambda baseParent, childTypeItemMap: None,
 	object : lambda baseParent, childTypeItemMap: type(baseParent)(
-		childTypeItemMap.popitem()[1]),
+		(childTypeItemMap.popitem()[1])),
+	MapItemTie : lambda baseParent, childTypeItemMap: type(baseParent)(
+		childTypeItemMap[ChildType.MapKey][0], childTypeItemMap[ChildType.MapValue][0]),
+	SEQ_TYPES : lambda baseParent, childTypeItemMap: type(baseParent)(
+		childTypeItemMap[ChildType.SequenceElement]),
 	MAP_TYPES : lambda baseParent, childTypeItemMap: dict(childTypeItemMap[ChildType.MapItem]),
+	# MAP_TYPES : _newMap,
 
 }
 # endregion
@@ -152,6 +162,7 @@ class VisitObjectData(TypedDict):
 	copyResult : T.Any # copy of final result
 	childType : ChildType.T # type of current object
 	childDatas : list[VisitObjectData] # tuple of child data for current object
+	makeNewObjFromVisitResult : bool # if true, make new object from visit result - if false, use visit result as is
 
 
 @dataclass
@@ -277,7 +288,7 @@ class DeepVisitor:
 			toIter = visitData["base"]
 			if visitParams.topDown:
 				if visitParams.runVisitFn:
-					result = self.visitSingleObjectFn(
+					result = visitParams.visitFn(
 						visitData["base"], self, visitData, visitParams)
 					visitData["visitResult"] = result
 
@@ -313,7 +324,7 @@ class DeepVisitor:
 		for visitData in reversed(visited):
 			if visitParams.runVisitFn:
 				# run visit function
-				result = self.visitSingleObjectFn(
+				result = visitParams.visitFn(
 					visitData["base"], self, visitData, visitParams)
 				visitData["visitResult"] = result
 				# yield base and result
@@ -345,9 +356,11 @@ class DeepVisitor:
 			copyResult=None,
 			childType=None,
 			childDatas=[],
+			makeNewObjFromVisitResult=True
 		)
 
 		toVisit.append(visitData)
+
 
 
 		while toVisit:
@@ -358,13 +371,14 @@ class DeepVisitor:
 			# visit object
 			toIter = visitData["base"]
 			if visitParams.topDown:
-				result = self.visitSingleObjectFn(
+				result = visitParams.visitFn(
 					visitData["base"], self, visitData, visitParams)
 				visitData["visitResult"] = result
 
 				# # yield base and result
 				# yield (visitData["base"], result)
 				toIter = result
+				#log("base", visitData["base"], "result", result)
 
 			visited.append(visitData)
 
@@ -382,6 +396,7 @@ class DeepVisitor:
 					copyResult=None,
 					childType=childType,
 					childDatas=[],
+					makeNewObjFromVisitResult=True
 				)
 				# add ref to child data
 				visitData["childDatas"].append(nextVisitData)
@@ -394,11 +409,12 @@ class DeepVisitor:
 
 			# if bottom up, do visiting now
 			if not visitParams.topDown:
-				result = self.visitSingleObjectFn(
+				result = visitParams.visitFn(
 					visitData["base"], self, visitData, visitParams)
 				visitData["visitResult"] = result
 
-			if not visitData['childDatas']:
+
+			if not visitData['childDatas'] or not visitData['makeNewObjFromVisitResult']:
 				visitData['copyResult'] = visitData['visitResult']
 				continue
 
@@ -412,8 +428,12 @@ class DeepVisitor:
 				childTypeToChildObjectsMap[childData['childType']].append(childData['copyResult'])
 
 			newObjFn : callable[[T.Any, dict[ChildType.T(), T.Any]], T.Any]
-			visitData['copyResult'] = newObjFn(visitData["visitResult"],
-			                                   childTypeToChildObjectsMap)
+			try:
+				visitData['copyResult'] = newObjFn(visitData["visitResult"],
+				                                   childTypeToChildObjectsMap)
+			except Exception as e:
+				log(f"Error creating new object from {visitData['visitResult']} and {childTypeToChildObjectsMap}")
+				raise e
 
 		return visited[0]['copyResult']
 

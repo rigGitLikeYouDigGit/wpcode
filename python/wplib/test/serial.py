@@ -24,7 +24,13 @@ class TestNode(unittest.TestCase):
 		t = Tree("root")
 		#t("nodeA", create=True)
 		serialData = t.serialise()
-		pprint.pprint(serialData)
+		#pprint.pprint(serialData)
+		print(serialData)
 		deserialData = Tree.deserialise(serialData)
+		print(deserialData)
 		self.assertIsInstance(deserialData, Tree)
+		self.assertEqual(t.name, deserialData.name)
+
+		newSerialData = deserialData.serialise()
+		self.assertEqual(str(serialData), str(newSerialData))
 
