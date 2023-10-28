@@ -66,12 +66,14 @@ def deserialise(data, dataVersion):
 wasted a lot of time but this is better and so much simpler,
 this is fine
 		
-
+we leave humans to specify current data version for saving,
+later might try some crazy tracking in the repo to auto-detect
+changes to certain functions
 
 
 """
 
-from .adaptor import SerialAdaptor, EncoderBase
+from .adaptor import SerialAdaptor
 
 # import and register all default types
 from . import applied as _applied

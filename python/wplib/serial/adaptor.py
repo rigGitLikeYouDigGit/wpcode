@@ -7,60 +7,7 @@ from wplib import CodeRef, inheritance
 
 from .constant import ENCODE_DATA_KEY, FORMAT_DATA_KEY
 
-class EncoderBase:
-	"""defines one single generation of encoder -
-	an adaptor may have many encoders defined within its
-	scope, each handling a different format version of data.
-	"""
 
-	# attributes set by decorator
-	_versionIndex = None
-	_isEncoder = False
-
-	@classmethod
-	def defaultEncodeParams(cls)->dict:
-		"""Return the default encode params for this encoder.
-		"""
-		return {}
-
-	@classmethod
-	def defaultDecodeParams(cls)->dict:
-		"""Return the default decode params for this encoder.
-		"""
-		return {}
-
-	@classmethod
-	def encodeObject(cls, obj:T.Any, encodeParams:dict)->dict:
-		"""Encode the given object into a dict.
-		"""
-		raise NotImplementedError()
-	@classmethod
-	def decodeObject(cls, serialCls:type, serialData:dict, decodeParams:dict)->T.Any:
-		"""Decode the given dict into an object.
-		"""
-		raise NotImplementedError()
-
-	@classmethod
-	def getVersion(cls)->int:
-		"""Return the version of this encoder.
-		"""
-		return cls._versionIndex
-
-
-def encoderVersion(index:int):
-	"""Decorate internally-defined Encoder classes with this -
-	classes must define classmethods for encode() and decode().
-	Beyond that, do whatever
-	"""
-	assert index > 0, f"Version index must be greater than 0, not {index}"
-	def _inner(cls:type[EncoderBase]):
-		assert "encodeObject" in cls.__dict__, f"Encoder {cls} does not define encodeObject()"
-		assert "decodeObject" in cls.__dict__, f"Encoder {cls} does not define decodeObject()"
-		cls.__name__ = f"{cls.__name__}_V{index}"
-		cls._versionIndex = index
-		cls._isEncoder = True
-		return cls
-	return _inner
 
 class SerialAdaptor:
 	"""Helper class to be used with external types,
@@ -80,7 +27,8 @@ class SerialAdaptor:
 	VERSION_DATA_VERSION_KEY = "version"
 	VERSION_DATA_TYPE_KEY = "type"
 
-	encoderVersion = encoderVersion
+	# version this up whenever a meaningful change in format is committed
+	LATEST_DATA_VERSION = 1
 
 	@classmethod
 	def serialType(cls)->type:
@@ -114,70 +62,46 @@ class SerialAdaptor:
 		"""
 		return cls.getFormatData(data).get(cls.VERSION_DATA_TYPE_KEY, None)
 
-	@classmethod
-	def encoderVersionMap(cls)->dict[int, T.Type[EncoderBase]]:
-		"""Return a map of version-index to encoder class.
-		"""
-		encoders = {}
-		#print("get version map for", cls)
-		for k, v in inheritance.mroMergedDict(cls).items():
-		#for k, v in cls.__dict__.items():
-			if not isinstance(v, type):
-				continue
-			if getattr(v, "_isEncoder", False):
-				encoders[v._versionIndex] = v
-		#print("returning encoders", encoders)
-		return encoders
 
 	@classmethod
-	def latestEncoderVersion(cls)->int:
-		"""Return the latest encoder class version.
-		"""
-		return max(cls.encoderVersionMap().keys())
+	def defaultEncodeParams(cls)->dict:
+		return {}
 
 	@classmethod
-	def getEncoder(cls, versionIndex:int=None)->T.Type[EncoderBase]:
-		"""by default, retrieve the latest"""
-		#print("encoder map", cls.encoderVersionMap())
-		if versionIndex is None:
-			return cls.encoderVersionMap()[max(cls.encoderVersionMap().keys())]
-		return cls.encoderVersionMap()[versionIndex]
-
-
-	@classmethod
-	def checkIsValid(cls)->bool:
-		"""Check that the class has been defined correctly.
-		"""
-		# if cls.encoderBaseCls is None:
-		# 	raise ValidationError(f"Encoder base class not set for {cls}")
-		if not isinstance(cls.uniqueAdapterName, str) :
-			raise ValidationError(f"Unique adapter name not set for {cls}")
-		# if not issubclass(cls.encoderBaseCls, EncoderBase):
-		# 	raise ValidationError(f"Encoder base class {cls.encoderBaseCls} is not a subclass of {EncoderBase}")
-		if not cls.encoderVersionMap():
-			raise ValidationError(f"No encoders defined for {cls}, no versionMap derived")
-		return True
+	def defaultDecodeParams(cls)->dict:
+		return {}
 
 	# main methods
+
 	@classmethod
-	def encode(cls, obj, encoderVersion:int=None, encodeParams:dict=None)->dict:
-		"""Encode the object into a dict - if no version is specified,
-		use the latest. (Latest should probably always be used when saving).
-
-		mixing in the key for format data sets off my spidey-sense, but the alternative
-		is creating a new container level of dict for each new type in a hierarchy,
-		which gets tedious to read.
+	def _encodeObject(cls, obj, encodeParams:dict):
+		"""Encode the given object into a dict.
 		"""
-		encoder = cls.getEncoder(versionIndex=encoderVersion)
+		raise NotImplementedError()
 
-		encodeParams = {**encoder.defaultEncodeParams(), **(encodeParams or {})}
+	@classmethod
+	def encode(cls, obj, encodeParams:dict=None)->dict:
+		"""Encode outer object into a dict - if no version is specified,
+		use the latest. No recursion needed, visitor will handle that.
+
+		"""
+		encodeParams = {**cls.defaultEncodeParams(), **(encodeParams or {})}
 
 		#print("found encoder", encoder, "for type", type(obj))
 		return {
-			**encoder.encodeObject(obj, encodeParams),
-			FORMAT_DATA_KEY : cls.getFormatDataToSerialise(encoder.getVersion(),
+			**cls._encodeObject(obj, encodeParams),
+			FORMAT_DATA_KEY : cls.getFormatDataToSerialise(cls.LATEST_DATA_VERSION,
 			                                               obj)
 		}
+
+	@classmethod
+	def _decodeObject(cls, serialType:type, serialData:dict, decodeParams:dict, formatVersion=-1):
+		"""Decode the given object from a dict.
+		if dataVersion is not specified, defaults to latest -
+		add in cases here however necessary to preserve support for older data formats
+
+		"""
+		raise NotImplementedError()
 
 	@classmethod
 	def decode(cls, serialData:dict, decodeParams:dict=None)->serialType():
@@ -186,16 +110,12 @@ class SerialAdaptor:
 		assert FORMAT_DATA_KEY in serialData, f"Serial data missing format data key {FORMAT_DATA_KEY}"
 		# get the version data
 		formatData = serialData[FORMAT_DATA_KEY]
-		# get the encoder
-		encoder = cls.encoderVersionMap()[formatData[cls.VERSION_DATA_VERSION_KEY]]
-
-		decodeParams = {**encoder.defaultDecodeParams(), **(decodeParams or {})}
+		dataVersion = formatData.get(cls.VERSION_DATA_VERSION_KEY, -1)
+		decodeParams = {**cls.defaultDecodeParams(), **(decodeParams or {})}
 
 		# resolve the type
 		# catch coderef exception here
 		serialType = CodeRef.resolve(formatData[cls.VERSION_DATA_TYPE_KEY])
 
 		# decode
-		return encoder.decodeObject(
-			serialType, serialData, decodeParams
-		)
+		return cls._decodeObject(serialType, serialData, decodeParams, dataVersion)

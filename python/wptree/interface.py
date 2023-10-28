@@ -13,7 +13,7 @@ from wplib.sentinel import Sentinel
 from wplib.string import incrementName
 from wplib import CodeRef
 
-from wplib.serial import Serialisable, SerialAdaptor, EncoderBase
+from wplib.serial import Serialisable, SerialAdaptor
 
 from wptree.delta import TreeDeltas
 from wptree.treedescriptor import TreePropertyDescriptor
@@ -960,39 +960,39 @@ class TreeInterface(Traversable,
 	# 	#tree.setCachedHierarchyDataDirty(True, True)
 	# 	return tree
 	uniqueAdapterName = "wpTreeInterface"
-	@Serialisable.encoderVersion(1)
-	class Encoder(EncoderBase):
-		"""placing here in a very very temp way -
-		the whole point of this system is to separate serialisation
-		from the main class, but just trying to get something quick"""
-		@classmethod
-		def encodeObject(cls, obj:TreeInterface, encodeParams:dict):
-			nested = True
-			data = obj._serialiseNested() if nested else obj._serialiseFlat()
-			# add root data
-			data[obj.serialKeys().rootData] = obj._rootData()
-			data[obj.serialKeys().layout] = obj.serialKeys().nestedMode if nested else obj.serialKeys().flatMode
-			return data
+	# @Serialisable.encoderVersion(1)
+	# class Encoder(EncoderBase):
+	# 	"""placing here in a very very temp way -
+	# 	the whole point of this system is to separate serialisation
+	# 	from the main class, but just trying to get something quick"""
+	@classmethod
+	def _encodeObject(cls, obj:TreeInterface, encodeParams:dict):
+		nested = True
+		data = obj._serialiseNested() if nested else obj._serialiseFlat()
+		# add root data
+		data[obj.serialKeys().rootData] = obj._rootData()
+		data[obj.serialKeys().layout] = obj.serialKeys().nestedMode if nested else obj.serialKeys().flatMode
+		return data
 
-		@classmethod
-		def decodeObject(cls, serialCls: type[TreeInterface], serialData: dict,
-		                 decodeParams:dict) -> TreeInterface:
-			#print("tree interface decode")
-			preserveUid = False
-			preserveType = False
-			rootData = serialData[serialCls.serialKeys().rootData]  # not used yet
+	@classmethod
+	def _decodeObject(cls, serialCls: type[TreeInterface], serialData: dict,
+	                 decodeParams:dict, formatVersion=-1) -> TreeInterface:
+		#print("tree interface decode")
+		preserveUid = False
+		preserveType = False
+		rootData = serialData[serialCls.serialKeys().rootData]  # not used yet
 
-			# cls._setCaching(False)
-			layoutMode = serialData.get(serialCls.serialKeys().layout, serialCls.serialKeys().nestedMode)
-			if layoutMode == serialCls.serialKeys().nestedMode:
-				tree = serialCls._deserialiseNested(serialData, preserveUid=preserveUid, preserveType=preserveType)
-			elif layoutMode == serialCls.serialKeys().flatMode:
-				tree = serialCls._deserialiseFlat(serialData, preserveUid=preserveUid, preserveType=preserveType)
-			else:
-				raise ValueError(f"Unknown layout mode {layoutMode} for data {serialData}")
-			# cls._setCaching(True)
-			# tree.setCachedHierarchyDataDirty(True, True)
-			return tree
+		# cls._setCaching(False)
+		layoutMode = serialData.get(serialCls.serialKeys().layout, serialCls.serialKeys().nestedMode)
+		if layoutMode == serialCls.serialKeys().nestedMode:
+			tree = serialCls._deserialiseNested(serialData, preserveUid=preserveUid, preserveType=preserveType)
+		elif layoutMode == serialCls.serialKeys().flatMode:
+			tree = serialCls._deserialiseFlat(serialData, preserveUid=preserveUid, preserveType=preserveType)
+		else:
+			raise ValueError(f"Unknown layout mode {layoutMode} for data {serialData}")
+		# cls._setCaching(True)
+		# tree.setCachedHierarchyDataDirty(True, True)
+		return tree
 
 	#endregion
 	# region literal definitions

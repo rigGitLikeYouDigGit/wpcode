@@ -34,7 +34,7 @@ class SerialRegister:
 
 	@classmethod
 	def registerAdaptor(cls, adaptor:T.Type[SerialAdaptor]):
-		adaptor.checkIsValid(), f"Adaptor {adaptor} is not valid"
+		#adaptor.checkIsValid(), f"Adaptor {adaptor} is not valid"
 
 		items = set(cls.typeAdaptorMap.classMap.items())
 
@@ -112,7 +112,7 @@ class SerialiseOp(DeepVisitor.DeepVisitOp):
 # 	SerialiseOp.visit
 # )
 
-def serialiseRecursive(obj)->dict:
+def serialiseRecursive(obj, params:dict)->dict:
 	"""top-level function to set off visit pass"""
 	visitParams = DeepVisitor.VisitPassParams(
 		topDown=True,
@@ -176,7 +176,7 @@ class DeserialiseOp(DeepVisitor.DeepVisitOp):
 # 	return visitLeavesUp(data, deserialiseTransform)
 
 
-def deserialiseRecursive(obj:dict)->T.Any:
+def deserialiseRecursive(obj:dict, params:dict)->T.Any:
 	"""top-level function to set off visit pass"""
 	visitParams = DeepVisitor.VisitPassParams(
 		topDown=False,
@@ -202,34 +202,16 @@ class Serialisable(SerialAdaptor):
 	def serialType(cls) ->type:
 		return cls
 
-	# EncoderBase = EncoderBase
-	# @version(1)
-	# class Encoder(EncoderBase):
-	# 	"""Specialise encoder versions here for this class
-	# 	"""
-	# 	encodeType = None
-	#
-	# 	@classmethod
-	# 	def encode(cls, obj:Serialisable):
-	# 		"""serialise a single level of outer object
-	# 		called from top down"""
-	# 		raise NotImplementedError
-	#
-	# 	@classmethod
-	# 	def decode(cls, serialCls:type[Serialisable], serialData:dict) ->Serialisable:
-	# 		"""deserialise a single level of outer object
-	# 		called from leaves up"""
-	# 		raise NotImplementedError
-
-
-	def serialise(self, **kwargs)->dict:
+	def serialise(self, params:dict=None)->dict:
 		"""top level method to get serialised representation"""
-		return serialiseRecursive(self)
+		params = params or self.defaultEncodeParams()
+		return serialiseRecursive(self, params)
 
 	@classmethod
-	def deserialise(cls, data:dict)->Serialisable:
+	def deserialise(cls, data:dict, params=None)->Serialisable:
 		"""top level method to get deserialised representation"""
-		return deserialiseRecursive(data)
+		params = params or cls.defaultDecodeParams()
+		return deserialiseRecursive(data, params)
 
 	def __init_subclass__(cls, **kwargs):
 		super(Serialisable).__init_subclass__(**kwargs)
