@@ -173,6 +173,7 @@ class VisitPassParams:
 	runVisitFn:bool = True # if false, only yield objects to visit
 	transformVisitedObjects:bool = False # if true, modifies visited objects - yields (original, transformed) pairs
 	visitFn:visitFnType = None # if given, overrides visitor's visit function
+	visitKwargs:dict = None # if given, kwargs to pass to visit function
 
 
 	pass
@@ -362,7 +363,7 @@ class DeepVisitor:
 		toVisit.append(visitData)
 
 
-
+		#print("visitParams", visitParams)
 		while toVisit:
 			#log("toVisit", toVisit)
 
@@ -434,7 +435,7 @@ class DeepVisitor:
 			except Exception as e:
 				log(f"Error creating new object from {visitData['visitResult']} and {childTypeToChildObjectsMap}")
 				raise e
-
+		#log("visited", visited)
 		return visited[0]['copyResult']
 
 
@@ -444,6 +445,7 @@ class DeepVisitor:
 	                 fromObj:T.Any,
 	                 passParams:VisitPassParams,
 	                 visitFn:visitFnType=None,
+	                 **kwargs
 	                 ):
 		"""dispatch a single pass of the visitor
 		"""
@@ -454,6 +456,9 @@ class DeepVisitor:
 		else:
 			passParams.visitFn = passParams.visitFn or self.visitSingleObjectFn
 		self.checkVisitFnSignature(passParams.visitFn)
+
+		passParams.visitKwargs = passParams.visitKwargs or {}
+		passParams.visitKwargs.update(kwargs)
 
 		if passParams.transformVisitedObjects:
 			result = self._transform(fromObj, passParams)

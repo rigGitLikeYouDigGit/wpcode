@@ -2,7 +2,6 @@
 import pprint
 import unittest
 
-from wplib.serial.main import serialiseRecursive, deserialiseRecursive
 
 from wptree import Tree
 

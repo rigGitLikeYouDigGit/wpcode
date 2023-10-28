@@ -864,15 +864,6 @@ class TreeInterface(Traversable,
 		data[self.serialKeys().layout] = self.serialKeys().flatMode
 		return data
 
-	# def serialise(self, nested=True)->dict:
-	# 	"""main entrypoint for serialisation -
-	# 	we assume that this tree should act as the root for this serialisation,
-	# 	so this tree will give its own root data"""
-	# 	data = self._serialiseNested() if nested else self._serialiseFlat()
-	# 	# add root data
-	# 	data[self.serialKeys().rootData] = self._rootData()
-	# 	data[self.serialKeys().layout] = self.serialKeys().nestedMode if nested else self.serialKeys().flatMode
-	# 	return data
 
 	def serialiseSingle(self)->dict:
 		"""ignores children, returns only serial data for this branch"""
@@ -944,27 +935,16 @@ class TreeInterface(Traversable,
 			firstBranch(address[:-1]).addChild(branch)
 		return firstBranch
 
-	# @classmethod
-	# def deserialise(cls, data:dict, preserveUid=False, preserveType=True)->cls:
-	# 	"""main entrypoint"""
-	# 	##print("deserialise main")
-	# 	rootData = data[cls.serialKeys().rootData] # not used yet
-	#
-	# 	#cls._setCaching(False)
-	# 	layoutMode = data.get(cls.serialKeys().layout, cls.serialKeys().nestedMode)
-	# 	if layoutMode == cls.serialKeys().nestedMode:
-	# 		tree = cls._deserialiseNested(data, preserveUid=preserveUid, preserveType=preserveType)
-	# 	elif layoutMode == cls.serialKeys().flatMode:
-	# 		tree = cls._deserialiseFlat(data, preserveUid=preserveUid, preserveType=preserveType)
-	# 	#cls._setCaching(True)
-	# 	#tree.setCachedHierarchyDataDirty(True, True)
-	# 	return tree
+
 	uniqueAdapterName = "wpTreeInterface"
-	# @Serialisable.encoderVersion(1)
-	# class Encoder(EncoderBase):
-	# 	"""placing here in a very very temp way -
-	# 	the whole point of this system is to separate serialisation
-	# 	from the main class, but just trying to get something quick"""
+
+	@classmethod
+	def defaultDecodeParams(cls) ->dict:
+		return {
+			"preserveUid" : True,
+			"preserveType" : True,
+		}
+
 	@classmethod
 	def _encodeObject(cls, obj:TreeInterface, encodeParams:dict):
 		nested = True
@@ -978,8 +958,12 @@ class TreeInterface(Traversable,
 	def _decodeObject(cls, serialCls: type[TreeInterface], serialData: dict,
 	                 decodeParams:dict, formatVersion=-1) -> TreeInterface:
 		#print("tree interface decode")
-		preserveUid = False
-		preserveType = False
+
+		# todo: maybe have outer layer of params indexed by object type?
+		preserveUid = decodeParams["preserveUid"]
+		preserveType = decodeParams["preserveType"]
+		# preserveUid = False
+		# preserveType = False
 		rootData = serialData[serialCls.serialKeys().rootData]  # not used yet
 
 		# cls._setCaching(False)

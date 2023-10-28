@@ -83,11 +83,12 @@ class SerialiseOp(DeepVisitor.DeepVisitOp):
 	          obj:T.Any,
 	              visitor:DeepVisitor=None,
 	              visitData:VisitObjectData=None,
-	              visitParams:VisitPassParams=None,
+	              visitPassParams:VisitPassParams=None,
 	              ) ->T.Any:
 		"""Transform to apply to each object during serialisation.
 		affects only single layer of object, visitor handles continuation
 		"""
+		serialParams: dict = visitPassParams.visitKwargs["serialParams"]
 		#print("serialise", obj)
 		if obj is None:
 			return None
@@ -99,30 +100,30 @@ class SerialiseOp(DeepVisitor.DeepVisitOp):
 			return obj
 
 		if isinstance(obj, SerialAdaptor):
-			return obj.encode(obj)
+			return obj.encode(obj, encodeParams=serialParams)
 
 		# retrieve adaptor for the given data
 		adaptorCls = SerialRegister.adaptorForClass(type(obj))
 		if adaptorCls is None:
 			raise Exception(f"No adaptor for {obj}, class {type(obj)}")
-		return adaptorCls.encode(obj)
+		return adaptorCls.encode(obj, encodeParams=serialParams)
 
 
 # serialiseVisitor = DeepVisitor(
 # 	SerialiseOp.visit
 # )
 
-def serialiseRecursive(obj, params:dict)->dict:
-	"""top-level function to set off visit pass"""
-	visitParams = DeepVisitor.VisitPassParams(
-		topDown=True,
-		depthFirst=True,
-		runVisitFn=True,
-		transformVisitedObjects=True,
-		visitFn=SerialiseOp.visit
-	)
-	#print("serialise", obj)
-	return DeepVisitor().dispatchPass(obj, visitParams)
+# def serialiseRecursive(obj, params:dict)->dict:
+# 	"""top-level function to set off visit pass"""
+# 	visitParams = DeepVisitor.VisitPassParams(
+# 		topDown=True,
+# 		depthFirst=True,
+# 		runVisitFn=True,
+# 		transformVisitedObjects=True,
+# 		visitFn=SerialiseOp.visit
+# 	)
+# 	#print("serialise", obj)
+# 	return DeepVisitor().dispatchPass(obj, visitParams)
 
 
 
@@ -140,6 +141,9 @@ class DeserialiseOp(DeepVisitor.DeepVisitOp):
 		"""Transform to apply to each object during deserialisation.
 		"""
 		#print("deserialise", obj)
+
+		serialParams : dict = visitPassParams.visitKwargs["serialParams"]
+
 		# literals can be serialised just so
 		if isinstance(obj, LITERAL_TYPES):
 			return obj
@@ -153,17 +157,17 @@ class DeserialiseOp(DeepVisitor.DeepVisitOp):
 				visitObjectData["makeNewObjFromVisitResult"] = False
 
 				serialType = CodeRef.resolve(codeRef)
-				log(f"Found code ref {codeRef} -> {serialType}")
+				#log(f"Found code ref {codeRef} -> {serialType}")
 				if issubclass(serialType, SerialAdaptor):
-					log("is serial adaptor", serialType)
-					result = serialType.decode(obj)
-					log("result", result)
+					#log("is serial adaptor", serialType)
+					result = serialType.decode(obj, decodeParams=serialParams)
+					#log("result", result)
 					return result
 				# retrieve adaptor for the given data
 				adaptorCls = SerialRegister.adaptorForData(obj)
 				if adaptorCls is None:
 					raise Exception(f"No adaptor for class {type(obj)}")
-				return adaptorCls.decode(obj)
+				return adaptorCls.decode(obj, decodeParams=serialParams)
 
 		return obj
 
@@ -176,18 +180,18 @@ class DeserialiseOp(DeepVisitor.DeepVisitOp):
 # 	return visitLeavesUp(data, deserialiseTransform)
 
 
-def deserialiseRecursive(obj:dict, params:dict)->T.Any:
-	"""top-level function to set off visit pass"""
-	visitParams = DeepVisitor.VisitPassParams(
-		topDown=False,
-		depthFirst=True,
-		runVisitFn=True,
-		transformVisitedObjects=True,
-		visitFn=DeserialiseOp.visit
-	)
-	result = DeepVisitor().dispatchPass(obj, visitParams)
-	log("deserialiseRec", result)
-	return result
+# def deserialiseRecursive(obj:dict, params:dict)->T.Any:
+# 	"""top-level function to set off visit pass"""
+# 	visitParams = DeepVisitor.VisitPassParams(
+# 		topDown=False,
+# 		depthFirst=True,
+# 		runVisitFn=True,
+# 		transformVisitedObjects=True,
+# 		visitFn=DeserialiseOp.visit
+# 	)
+# 	result = DeepVisitor().dispatchPass(obj, visitParams)
+# 	log("deserialiseRec", result)
+# 	return result
 
 
 
@@ -202,16 +206,42 @@ class Serialisable(SerialAdaptor):
 	def serialType(cls) ->type:
 		return cls
 
+	#@classmethod
 	def serialise(self, params:dict=None)->dict:
 		"""top level method to get serialised representation"""
-		params = params or self.defaultEncodeParams()
-		return serialiseRecursive(self, params)
+		obj = self
+		if not isinstance(self, Serialisable):
+			# called as class method on random object, serialise anyway
+			params = params or Serialisable.defaultEncodeParams()
+		else:
+			params = params or self.defaultEncodeParams()
+		visitParams = DeepVisitor.VisitPassParams(
+			topDown=True,
+			depthFirst=True,
+			runVisitFn=True,
+			transformVisitedObjects=True,
+			visitFn=SerialiseOp.visit
+		)
+		result = DeepVisitor().dispatchPass(obj, visitParams, serialParams=params)
+		#log("serialiseRec", result)
+		return result
+		#return serialiseRecursive(self, params)
 
 	@classmethod
 	def deserialise(cls, data:dict, params=None)->Serialisable:
 		"""top level method to get deserialised representation"""
 		params = params or cls.defaultDecodeParams()
-		return deserialiseRecursive(data, params)
+
+		visitParams = DeepVisitor.VisitPassParams(
+			topDown=False,
+			depthFirst=True,
+			runVisitFn=True,
+			transformVisitedObjects=True,
+			visitFn=DeserialiseOp.visit
+		)
+		result = DeepVisitor().dispatchPass(data, visitParams, serialParams=params)
+		log("deserialiseRec", result)
+		return result
 
 	def __init_subclass__(cls, **kwargs):
 		super(Serialisable).__init_subclass__(**kwargs)
