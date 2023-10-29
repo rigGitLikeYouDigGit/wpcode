@@ -22,6 +22,13 @@ though.
 
 
 Here we rely on __qualname__, and will do until we encounter issues.
+
+
+To avoid spam in dense info, use a simpler tag in main body of data, with
+separate map to full definition
+
+"T<LookupCreate>" : 
+
 """
 
 MODULE_KEY = "module"

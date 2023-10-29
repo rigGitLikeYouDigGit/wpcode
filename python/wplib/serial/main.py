@@ -1,6 +1,6 @@
 from __future__ import annotations
 import typing as T
-
+import pprint
 
 from wplib.constant import IMMUTABLE_TYPES, LITERAL_TYPES, MAP_TYPES, SEQ_TYPES
 from wplib import CodeRef, inheritance, log
@@ -54,7 +54,7 @@ class SerialRegister:
 			print("missing:")
 			print(cls.typeAdaptorMap)
 			print(forCls)
-			print(inheritance.superClassLookup(cls.typeAdaptorMap, forCls, default=None))
+			print(inheritance.superClassLookup(cls.typeAdaptorMap.classMap, forCls, default=None))
 		return result
 
 	# @classmethod
@@ -92,6 +92,10 @@ class SerialiseOp(DeepVisitor.DeepVisitOp):
 		#print("serialise", obj)
 		if obj is None:
 			return None
+
+		if isinstance(obj, type):
+			return "T:" + CodeRef.get(obj)
+
 		# literals can be serialised just so
 		if isinstance(obj, LITERAL_TYPES):
 			return obj
@@ -105,25 +109,9 @@ class SerialiseOp(DeepVisitor.DeepVisitOp):
 		# retrieve adaptor for the given data
 		adaptorCls = SerialRegister.adaptorForClass(type(obj))
 		if adaptorCls is None:
+			pprint.pprint(SerialRegister.typeAdaptorMap.classMap)
 			raise Exception(f"No adaptor for {obj}, class {type(obj)}")
 		return adaptorCls.encode(obj, encodeParams=serialParams)
-
-
-# serialiseVisitor = DeepVisitor(
-# 	SerialiseOp.visit
-# )
-
-# def serialiseRecursive(obj, params:dict)->dict:
-# 	"""top-level function to set off visit pass"""
-# 	visitParams = DeepVisitor.VisitPassParams(
-# 		topDown=True,
-# 		depthFirst=True,
-# 		runVisitFn=True,
-# 		transformVisitedObjects=True,
-# 		visitFn=SerialiseOp.visit
-# 	)
-# 	#print("serialise", obj)
-# 	return DeepVisitor().dispatchPass(obj, visitParams)
 
 
 
@@ -144,6 +132,10 @@ class DeserialiseOp(DeepVisitor.DeepVisitOp):
 
 		serialParams : dict = visitPassParams.visitKwargs["serialParams"]
 
+		if isinstance(obj, str):
+			if obj.startswith("T:"):
+				return CodeRef.resolve(obj[2:])
+
 		# literals can be serialised just so
 		if isinstance(obj, LITERAL_TYPES):
 			return obj
@@ -152,48 +144,26 @@ class DeserialiseOp(DeepVisitor.DeepVisitOp):
 			#print("get", CodeRef.getDataCodeRefStr(obj))
 			codeRef = SerialAdaptor.getDataCodeRefStr(obj)
 			#log("code ref", codeRef)
-			if codeRef is not None: # found ref, deserialise type
 
-				visitObjectData["makeNewObjFromVisitResult"] = False
+			if codeRef is None: # it's just a dictionary
+				return obj
 
-				serialType = CodeRef.resolve(codeRef)
-				#log(f"Found code ref {codeRef} -> {serialType}")
-				if issubclass(serialType, SerialAdaptor):
-					#log("is serial adaptor", serialType)
-					result = serialType.decode(obj, decodeParams=serialParams)
-					#log("result", result)
-					return result
-				# retrieve adaptor for the given data
-				adaptorCls = SerialRegister.adaptorForData(obj)
-				if adaptorCls is None:
-					raise Exception(f"No adaptor for class {type(obj)}")
-				return adaptorCls.decode(obj, decodeParams=serialParams)
+			visitObjectData["makeNewObjFromVisitResult"] = False
+
+			serialType = CodeRef.resolve(codeRef)
+			#log(f"Found code ref {codeRef} -> {serialType}")
+			if issubclass(serialType, SerialAdaptor):
+				#log("is serial adaptor", serialType)
+				result = serialType.decode(obj, decodeParams=serialParams)
+				#log("result", result)
+				return result
+			# retrieve adaptor for the given data
+			adaptorCls = SerialRegister.adaptorForData(obj)
+			if adaptorCls is None:
+				raise Exception(f"No adaptor for class {type(obj)}")
+			return adaptorCls.decode(obj, decodeParams=serialParams)
 
 		return obj
-
-
-
-# def deserialiseRecursive(data:dict):
-# 	"""Deserialise the given data, recursively visiting
-# 	any objects that are Visitable.
-# 	"""
-# 	return visitLeavesUp(data, deserialiseTransform)
-
-
-# def deserialiseRecursive(obj:dict, params:dict)->T.Any:
-# 	"""top-level function to set off visit pass"""
-# 	visitParams = DeepVisitor.VisitPassParams(
-# 		topDown=False,
-# 		depthFirst=True,
-# 		runVisitFn=True,
-# 		transformVisitedObjects=True,
-# 		visitFn=DeserialiseOp.visit
-# 	)
-# 	result = DeepVisitor().dispatchPass(obj, visitParams)
-# 	log("deserialiseRec", result)
-# 	return result
-
-
 
 
 
@@ -240,7 +210,7 @@ class Serialisable(SerialAdaptor):
 			visitFn=DeserialiseOp.visit
 		)
 		result = DeepVisitor().dispatchPass(data, visitParams, serialParams=params)
-		log("deserialiseRec", result)
+		#log("deserialiseRec", result)
 		return result
 
 	def __init_subclass__(cls, **kwargs):
@@ -250,5 +220,6 @@ class Serialisable(SerialAdaptor):
 		log("registered", cls)
 
 
-
+# register builtin types
+import wplib.serial.applied
 

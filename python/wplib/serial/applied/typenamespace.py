@@ -8,10 +8,22 @@ from wplib.serial.main import SerialAdaptor, SerialRegister
 
 from wplib.object.namespace import TypeNamespace
 
+from wplib.coderef import CodeRef
+
 
 class TypeNamespaceAdaptor(SerialAdaptor):
 
 	uniqueAdapterName = "typeNamespace"
+
+	@classmethod
+	def serialType(cls) ->type:
+		return TypeNamespace
+
+	@classmethod
+	def encode(cls, obj, encodeParams:dict=None) ->dict:
+		codeStr = CodeRef.get(obj)
+
+		return "T:"+codeStr
 
 	# @SerialAdaptor.encoderVersion(1)
 	# class Encoder(EncoderBase):
@@ -24,8 +36,7 @@ class TypeNamespaceAdaptor(SerialAdaptor):
 	                 decodeParams:dict, formatVersion=-1) ->TypeNamespace:
 		return serialCls.members()[serialData["data"]]
 
-
 SerialRegister.registerAdaptor(TypeNamespaceAdaptor)
 
-
+#raise
 

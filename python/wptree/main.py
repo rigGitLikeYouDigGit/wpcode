@@ -10,8 +10,10 @@ import pprint, copy, textwrap, ast
 
 import typing as T
 
+from wplib import Sentinel
 from wplib.object.element import UidElement
 from wptree.reference import TreeReference
+
 
 
 from wptree.interface import TreeInterface, TreeType
@@ -39,8 +41,16 @@ class Tree(TreeInterface,
 
 
 	def __init__(self, name: str, value=None,
-	             uid=None):
-		"""initialise real internal values for interface to affect"""
+	             uid=None,
+	             # add aux properties
+	             lookupCreate=True,
+	             default=Sentinel.Empty,
+	             desc="",
+	             ):
+		"""initialise real internal values for interface to affect.
+
+		LookupCreate on by default here? Freedom vs safety - freedom wins
+		"""
 
 		UidElement.__init__(self, uid)
 		TreeInterface.__init__(self)
@@ -50,6 +60,11 @@ class Tree(TreeInterface,
 		self._parent: TreeInterface = None
 		self._branches: T.List[TreeType] = []  # direct list of child branch objects, main target for overriding
 		self._properties = self.defaultAuxProperties()
+
+		self.lookupCreate = lookupCreate
+		if default is not Sentinel.Empty:
+			self.default = default
+		self.description = desc
 
 	def _getRawParent(self) ->TreeType:
 		"""return raw parent object, without any wrapping"""

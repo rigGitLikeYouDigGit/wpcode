@@ -2,4 +2,7 @@
 # from .typenamespace import TypeNamespaceAdaptor
 # from .type import TypeAdaptor
 
-from . import *
+from wplib.serial.applied.enum import *
+from wplib.serial.applied.typenamespace import *
+from wplib.serial.applied.type import *
+

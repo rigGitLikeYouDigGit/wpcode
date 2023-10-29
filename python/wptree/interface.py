@@ -92,13 +92,13 @@ class TreeInterface(Traversable,
 			"""description of branch"""
 
 	_DEFAULT_PROP_KEY = "_default"
-	default = TreePropertyDescriptor(
+	default = TreePropertyDescriptor( # don't need a sentinel here, trees can be None by default
 		AuxKeys.Default, default=None, inherited=True)
 
-	lookupCreate = TreePropertyDescriptor(
+	lookupCreate : bool = TreePropertyDescriptor(
 		AuxKeys.LookupCreate, default=False, inherited=True)
 
-	description = TreePropertyDescriptor(
+	description : str = TreePropertyDescriptor(
 		AuxKeys.Description, default="", inherited=False	)
 
 	@classmethod
@@ -120,22 +120,6 @@ class TreeInterface(Traversable,
 		EventDispatcher.__init__(self)
 		#self._signalComponent : TreeSignalComponent = None
 
-	# def getSignalComponent(self, create=True)->TreeSignalComponent:
-	# 	"""deferred creation so we don't create a load of
-	# 	signals for every single branch"""
-	# 	if self._signalComponent:
-	# 		return self._signalComponent
-	#
-	# 	# need to implement cached parent data (properly) at some point
-	# 	if self.parent:
-	# 		parentComp = self.parent.getSignalComponent(create=False)
-	# 		if parentComp:
-	# 			return parentComp
-	#
-	# 	if not create:
-	# 		return None
-	# 	self._signalComponent = self.defaultSignalCls()(self)
-	# 	return self._signalComponent
 
 	def _nextEventDestinations(self, forEvent:EventBase, key:str) ->list[EventDispatcher]:
 		"""return only parent"""

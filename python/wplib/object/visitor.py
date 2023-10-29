@@ -1,7 +1,7 @@
 
 from __future__ import annotations
 
-import types
+import types, pprint
 import typing as T
 import inspect
 from types import FunctionType
@@ -98,7 +98,7 @@ typeUpdateFnMap = {
 # region creating new
 
 def _newMap(baseParent, childTypeItemMap:dict[ChildType.T, list[T.Any]]):
-	log("newMap", childTypeItemMap)
+	#log("newMap", childTypeItemMap)
 	return dict(childTypeItemMap[ChildType.MapItem])
 
 childTypeItemMapType = T.Mapping[ChildType.T, list[T.Any]]
@@ -110,8 +110,8 @@ typeNewFnMap = {
 		childTypeItemMap[ChildType.MapKey][0], childTypeItemMap[ChildType.MapValue][0]),
 	SEQ_TYPES : lambda baseParent, childTypeItemMap: type(baseParent)(
 		childTypeItemMap[ChildType.SequenceElement]),
-	MAP_TYPES : lambda baseParent, childTypeItemMap: dict(childTypeItemMap[ChildType.MapItem]),
-	# MAP_TYPES : _newMap,
+	#MAP_TYPES : lambda baseParent, childTypeItemMap: dict(childTypeItemMap[ChildType.MapItem]),
+	MAP_TYPES : _newMap,
 
 }
 # endregion
@@ -433,7 +433,7 @@ class DeepVisitor:
 				visitData['copyResult'] = newObjFn(visitData["visitResult"],
 				                                   childTypeToChildObjectsMap)
 			except Exception as e:
-				log(f"Error creating new object from {visitData['visitResult']} and {childTypeToChildObjectsMap}")
+				log(f"Error creating new object from {visitData['visitResult']} \n and {pprint.pformat(childTypeToChildObjectsMap, indent=4, compact=False)}")
 				raise e
 		#log("visited", visited)
 		return visited[0]['copyResult']
