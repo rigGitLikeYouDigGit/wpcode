@@ -11,6 +11,8 @@ from .eventdispatcher import EventDispatcher, EventBase
 
 from .hashable import HashableMixin, UnHashableDict, UnHashableSet, HashFunctions, toHash
 
+from .metamagicdelegator import ClassMagicMethodMixin
+
 from .plugin import PluginBase, PluginRegister
 
 

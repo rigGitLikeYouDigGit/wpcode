@@ -9,16 +9,20 @@ from .interface import TreeInterface
 
 def overlayTreeInPlace(baseTree:TreeInterface, overlay:TreeInterface,
 				 resolveValueFn=lambda baseBranch, overlayBranch: overlayBranch.value,
-                       				 addMissingBranches=True,
+                       				 mode="union"
 				 )->TreeInterface:
-	"""apply overlay to baseTree in place"""
+	"""apply overlay to baseTree in place
+	if mode == "union", add all missing branches found in overlay to base tree
+	if mode == "intersection", only update branches that exist in base tree
+
+	"""
 	for overlayBranch in overlay.allBranches(includeSelf=False,
 	                                  depthFirst=True,
 		topDown=True):
 
 		lookupBranch = baseTree.getBranch(overlayBranch.relAddress(fromBranch=overlay))
 		if lookupBranch is None:
-			if addMissingBranches:
+			if mode == "union":
 				baseTree.addChild(overlayBranch)
 			else:
 				continue
@@ -28,15 +32,16 @@ def overlayTreeInPlace(baseTree:TreeInterface, overlay:TreeInterface,
 
 
 
-def overlayTrees(baseTree:TreeInterface, *overlays:TreeInterface,
+def overlayTrees(overlays:list[TreeInterface],
                  resolveValueFn=lambda branchA, branchB: branchB.value,
-                 addMissingBranches=True,
+                 mode="union",
                  )->TreeInterface:
 	"""return new tree with overlay applied to baseTree"""
+	baseTree = overlays[0]
 	resultTree = baseTree.copy()
-	for overlay in overlays:
+	for overlay in overlays[1:]:
 		overlayTreeInPlace(resultTree, overlay, resolveValueFn=resolveValueFn,
-		                   addMissingBranches=addMissingBranches)
+		                   mode=mode)
 	return resultTree
 
 

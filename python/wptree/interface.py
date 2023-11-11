@@ -96,7 +96,7 @@ class TreeInterface(Traversable,
 		AuxKeys.Default, default=None, inherited=True)
 
 	lookupCreate : bool = TreePropertyDescriptor(
-		AuxKeys.LookupCreate, default=False, inherited=True)
+		AuxKeys.LookupCreate, default=True, inherited=True)
 
 	description : str = TreePropertyDescriptor(
 		AuxKeys.Description, default="", inherited=False	)
@@ -415,7 +415,7 @@ class TreeInterface(Traversable,
 		params : TreeTraversalParams = self.defaultTraverseParamCls()()
 		create = kwargs.pop("create", None)
 		if create is None:
-			create = self.getInherited(self.AuxKeys.LookupCreate, default=False)
+			create = self.lookupCreate
 		params.create = create
 		return params
 

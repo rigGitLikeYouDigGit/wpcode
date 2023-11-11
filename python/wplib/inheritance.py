@@ -5,6 +5,9 @@ import typing as T
 from wplib import log
 from wplib.sentinel import Sentinel
 
+def clsSuper(cls:type)->type:
+	"""return the superclass of cls"""
+	return cls.__mro__[1]
 
 def leafParentBases(*desiredBases:tuple[type])->list[type]:
 	"""given selection of superclasses to inherit from,
@@ -136,5 +139,7 @@ def mroMergedDict(cls):
 # annotation decorators
 def overrideThis(fn:T.Callable)->T.Callable:
 	"""decorator to mark a method as needing to be overridden
+	they actually added something like this as a PEP, maybe I'm not
+	insane after all
 	"""
 	return fn

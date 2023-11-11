@@ -118,7 +118,7 @@ class DirtyNode:
 			return
 		self.dirtyState = True
 		# remove cached value
-		self._cachedValue = Sentinel.FailToFind
+		#self._cachedValue = Sentinel.FailToFind
 		self._onSetDirty()
 
 	def flagNodeDirtyAndPropagate(self):

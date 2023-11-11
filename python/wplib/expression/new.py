@@ -12,44 +12,51 @@ import ast, pprint, re
 from types import FunctionType, ModuleType, MethodType, MethodWrapperType
 from dataclasses import dataclass
 
+from wplib.log import log
 from wplib.constant import IMMUTABLE_TYPES, LITERAL_TYPES, MAP_TYPES, SEQ_TYPES
 from wplib.sentinel import Sentinel
 from wplib import astlib as wpast
 #from wplib.object.serialisable import Serialisable, compileFunctionFromString, serialise
-from wplib.object import Visitor
-from wplib.object.visit import Visitable, getVisitDestinations, Visitor, recursiveVisitCopy
+from wplib.object import DeepVisitor
 
 from wplib.expression import syntax, function as libfn, constant as expconstant
 from wplib.expression.error import CompilationError, EvaluationError, ExpSyntaxError
 from wplib.expression.evaluator import ExpEvaluator
 from wplib.expression.syntax import ExpSyntaxProcessor, SyntaxPasses
 
-from wplib.serial import Serialisable, EncoderBase
+from wplib.serial import Serialisable
 
 if T.TYPE_CHECKING:
 	pass
 
 
 
-@dataclass
-class ExpressionScope:
-	"""object collecting variables accessible within the scope of
-	and evaluated expression.
+""" eval expressions leaves-up,
+BUT if a callable expression is found and eval'd,
+dispatch another pass down into it, leaves up again
 
-	instance of this object will be added to globals as __scope__.
-
-	Direct access to it is not recommended, write helper functions or
-	syntax passes instead.
-
-	I think this is just duplication of evaluator.
+"""
 
 
-	"""
-	exp : Expression = None
-	# node : ChimaeraNode = None
-	# graph : ChimaeraGraph = None
-
-	token = "__scope__"
+# @dataclass
+# class ExpressionScope:
+# 	"""object collecting variables accessible within the scope of
+# 	and evaluated expression.
+#
+# 	instance of this object will be added to globals as __scope__.
+#
+# 	Direct access to it is not recommended, write helper functions or
+# 	syntax passes instead.
+#
+# 	I think this is just duplication of evaluator.
+#
+#
+# 	"""
+# 	exp : Expression = None
+# 	# node : ChimaeraNode = None
+# 	# graph : ChimaeraGraph = None
+#
+# 	token = "__scope__"
 
 
 @dataclass
@@ -154,20 +161,51 @@ def transformEvaluateExpStructure(
 			**visitData["callArgsKwargs"][1]
 		)
 
-	# if obj is string, check if it contains expression syntax
-	# if isinstance(parsedObj, Expression):
-	# 	# evaluate expression
-	# 	result = parsedObj.eval()
-	# 	visitData["parentExp"] = parsedObj
-	# 	# visit result - excessive, but only way to account
-	# 	# for expressions returning other expressions
-	# 	parsedResult = transformParseExpStructure(result, visitData)
-	# 	#return recursiveVisitEvaluateExpStructure(parsedResult, parsedObj)
-	#
-	# 	# don't need to manually recurse here to eval - outer visit will
-	# 	# run this eval function over parsed result
-	# 	return parsedResult
+
 	return parsedObj
+
+
+VisitObjectData = DeepVisitor.VisitObjectData
+VisitPassParams = DeepVisitor.VisitPassParams
+
+class ParseExpVisitOp(DeepVisitor.DeepVisitOp):
+	"""visit op to parse expression syntax in structure
+	"""
+	@classmethod
+	def visit(cls,
+	          obj:T.Any,
+	          visitor:DeepVisitor=None,
+	          visitData:VisitObjectData=None,
+	          visitPassParams:VisitPassParams=None,
+	          ) ->T.Any:
+		"""Transform to apply to each object during serialisation.
+		affects only single layer of object, visitor handles continuation
+		"""
+		parentExp = visitData["parentExp"]
+
+		# if obj is string, check if it contains expression syntax
+		#print("transformParseExpStructure", obj)
+
+		if not isinstance(obj, str):
+			return obj
+
+		#print("defines", parentExp.policy.syntaxProcessor.stringDefinesExpressionFn(obj))
+		if not parentExp.policy.syntaxProcessor.stringIsExpressionFn(obj):
+			return obj
+		processor = parentExp.policy.syntaxProcessor
+		# parse string to frozen lambda
+		parsedStr = processor.parseRawExpString(obj)
+		parsedAst = processor.parseStringToAST(parsedStr)
+		processedAst = processor.processAST(parsedAst)
+
+		parseGlobals = parentExp.getParseGlobals()
+
+		#print("compiling with globals", parentExp.getParseGlobals())
+		compiledFn = processor.compileFinalASTToFunction(
+			processedAst, parentExp.getParseGlobals())
+		# create expression object with function
+		return compiledFn
+
 
 
 VT = T.TypeVar("VT")
@@ -447,23 +485,23 @@ class Expression(Serialisable, T.Generic[VT]):
 		pprint.pprint(self._parsedStructure)
 
 	# region serialisation
-	uniqueAdapterName = "Expression"
-	@Serialisable.encoderVersion(1)
-	class Encoder(EncoderBase):
+	uniqueAdapterName = "wpExpression"
+	# @Serialisable.encoderVersion(1)
+	# class Encoder(EncoderBase):
 
-		@classmethod
-		def encode(cls, obj: Expression) -> dict:
-			"""encode expression to dict"""
-			return {
-				"name": obj.name,
-				"structure": obj.rawStructure()
-			}
+	@classmethod
+	def _encodeObject(cls, obj, encodeParams:dict):
+		"""encode expression to dict"""
+		return {
+			"name": obj.name,
+			"structure": obj.rawStructure()
+		}
 
-		@classmethod
-		def decode(cls, serialCls: Expression, serialData: dict) -> Expression:
-			obj = Expression(name=serialData["name"])
-			obj.setStructure(serialData["structure"])
-			return obj
+	@classmethod
+	def _decodeObject(cls, serialType:type, serialData:dict, decodeParams:dict, formatVersion=-1):
+		obj = Expression(name=serialData["name"])
+		obj.setStructure(serialData["structure"])
+		return obj
 
 
 if __name__ == '__main__':
@@ -539,7 +577,7 @@ if __name__ == '__main__':
 		[mayaPass, ensureLambdaPass
 		 ],
 		syntaxAstPasses=[mayaPass, resolveNamePass],
-		stringDefinesExpressionFn=lambda s : True
+		#stringDefinesExpressionFn=lambda s : True
 	)
 
 	class MayaSetEvaluator(ExpEvaluator):

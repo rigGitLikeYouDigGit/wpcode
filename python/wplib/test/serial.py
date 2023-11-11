@@ -41,3 +41,6 @@ class TestNode(unittest.TestCase):
 		#print(loadedTree)
 		newSerialData = loadedTree.serialise()
 		self.assertEqual(str(serialData), str(newSerialData))
+
+		pprint.pprint(newSerialData)
+

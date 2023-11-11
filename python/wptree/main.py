@@ -43,7 +43,7 @@ class Tree(TreeInterface,
 	def __init__(self, name: str, value=None,
 	             uid=None,
 	             # add aux properties
-	             lookupCreate=True,
+	             lookupCreate=None,
 	             default=Sentinel.Empty,
 	             desc="",
 	             ):
@@ -61,10 +61,12 @@ class Tree(TreeInterface,
 		self._branches: T.List[TreeType] = []  # direct list of child branch objects, main target for overriding
 		self._properties = self.defaultAuxProperties()
 
-		self.lookupCreate = lookupCreate
+		if lookupCreate is not None:
+			self.lookupCreate = lookupCreate
 		if default is not Sentinel.Empty:
 			self.default = default
-		self.description = desc
+		if desc:
+			self.description = desc
 
 	def _getRawParent(self) ->TreeType:
 		"""return raw parent object, without any wrapping"""

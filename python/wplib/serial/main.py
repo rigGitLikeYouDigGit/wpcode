@@ -217,7 +217,7 @@ class Serialisable(SerialAdaptor):
 		super(Serialisable).__init_subclass__(**kwargs)
 		# register the class
 		SerialRegister.registerAdaptor(cls)
-		log("registered", cls)
+		#log("registered serialisable", cls)
 
 
 # register builtin types
