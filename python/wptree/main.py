@@ -68,6 +68,9 @@ class Tree(TreeInterface,
 		if desc:
 			self.description = desc
 
+	def __hash__(self):
+		return hash(self.uid)
+
 	def _getRawParent(self) ->TreeType:
 		"""return raw parent object, without any wrapping"""
 		return self._parent

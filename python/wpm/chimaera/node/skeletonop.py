@@ -39,7 +39,7 @@ class Transform:
 	"""data object for transform
 	TEMP TEMP TEMP just a sketch for tree value
 	"""
-	matrix : np.ndarray
+	matrix : np.ndarray = np.identity(4)
 
 class SkeletonOp(PlugNode):
 	"""Node for creating joint hierarchies.
@@ -65,7 +65,7 @@ class SkeletonOp(PlugNode):
 		"""create data from joint tree -
 		skip root"""
 		for branch in jointTree.allBranches(includeSelf=False):
-			data = Transform(np.identity(4))
+			data = Transform()
 			branch.value = data
 		return jointTree
 

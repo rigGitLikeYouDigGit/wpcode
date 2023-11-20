@@ -18,12 +18,14 @@ from wpm.constant import GraphTraversal, GraphDirection, GraphLevel
 from ..bases import NodeBase
 from ..callbackowner import CallbackOwner
 from ..patch import cmds, om
-from ..api import toMObject, getMFnType
+from ..api import getMObject, getMFn, asMFn, getMFnType
 from .. import api, attr
 
 from ..plug import PlugTree
 from ..namespace import NamespaceTree, getNamespaceTree
 
+if T.TYPE_CHECKING:
+	from ..api import MFMFnT
 
 """
 
@@ -72,7 +74,7 @@ class NodeMeta(type):
 			return node
 
 		if isinstance(node, str):
-			mobj = toMObject(node)
+			mobj = getMObject(node)
 			if mobj is None:
 				raise RuntimeError("No MObject found for {}".format(mobj))
 		elif isinstance(node, om.MObject):
@@ -293,7 +295,7 @@ class WN(StringLike, # short for WePresentNode
 
 
 	@property
-	def MFn(self)->(om.MFnDependencyNode, om.MFnDagNode, om.MFnTransform, om.MFnMesh, om.MFnNurbsCurve):
+	def MFn(self)->MFMFnT:
 		"""return the best-matching function set """
 		if self._MFn is not None:
 			return self._MFn
@@ -360,7 +362,7 @@ class WN(StringLike, # short for WePresentNode
 		return WN(obj)
 
 	@classmethod
-	def create(cls, type=None, n="", parent=None, dgMod:om.MDGModifier=None):
+	def create(cls, type=None, n="", parent=None, dgMod:om.MDGModifier=None)->cls:
 		"""any subsequent wrapper class will create its own node type
 		If modifier object is passed, add operation to it but do not execute yet.
 		Otherwise create and execute a separate modifier each time.
@@ -437,10 +439,11 @@ class WN(StringLike, # short for WePresentNode
 	def getParent(self)->WN:
 		if not self.MFn.parentCount():
 			return None
-		apiType = self.MFn.parent(0).clsApiType()
-		if api.apiCodeNameMap()[apiType] == "kWorld":
+		obj = self.MFn.parent(0)
+		# if parent is world, return None
+		if obj.isNull():
 			return None
-		return WN(self.MFn.parent(0))
+		return WN(obj)
 	@property
 	def parent(self)->WN:
 		return self.getParent()
@@ -526,19 +529,29 @@ class WN(StringLike, # short for WePresentNode
 	# endregion
 
 	#region hierarchy
+	def setParent(self, targetParent=None, *args, **kwargs):
+		"""reparents node under target dag
+		replace with api call"""
+
+		mfnDag : om.MFnDagNode = self.MFn
+		if targetParent is None:
+			mfnDag.parent(om.MObject.kNullObj)
+			return
+
+
+		om.MFnDagNode(getMObject(targetParent)).addChild(mfnDag.object())
+
 	def parentTo(self, targetParent=None, *args, **kwargs):
 		"""reparents node under target dag
 		replace with api call"""
-		if not self.isDag():
-			return
+
+		mfnDag : om.MFnDagNode = self.MFn
 		if targetParent is None:
-			print("self is {}".format(self()))
-			try:
-				cmds.parent(str(self), world=True, relative=True)
-			except:
-				pass
+			mfnDag.parent(om.MObject.kNullObj)
 			return
-		cmds.parent(self, str(targetParent), *args, **kwargs)
+
+		getMFn(targetParent).addChild(mfnDag.object())
+
 
 	def addChildNodes(self, newChildren, relative=True):
 		nodes = map(WN, toSeq(newChildren))

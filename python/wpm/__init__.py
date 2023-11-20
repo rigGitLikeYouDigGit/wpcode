@@ -47,4 +47,5 @@ from .core import (
 # use to denote function arguments to accept either static values or plugs
 PLUG_VAL = (PlugTree, object)
 
+from wplib import log
 

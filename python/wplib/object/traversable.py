@@ -121,7 +121,7 @@ class Traversable:
 
 		#print("traverse", path, first, body, separator)
 
-		body = ((body,) if body else ()) + path[1:]
+		body = ((body,) if body else ()) + tuple(path[1:])
 
 
 		# look up target from separator and token
