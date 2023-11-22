@@ -157,6 +157,14 @@ root : [(node uid, attribute, path), (node uid, attribute, path), (node uid, att
 	
 etc
 
+
+pendulum swings
+now use instance node classes, not class methods
+handle dynamic node types changing somehow
+it's worth it for easier writing in compute context - 
+self.controlGrp, self.markNode, self.setOutput, etc
+
+
 """
 
 
@@ -216,157 +224,157 @@ def resolveIncomingTree(
 
 
 
-
-class _NodeTypeBase(ClassMagicMethodMixin):
-	"""Archetype for a kind of node -
-	anything specific to a node's type should be defined here
-	as class methods.
-
-	Types shouldn't be instantiated, only inherited from.
-	"""
-
-	# region node type identification and retrieval
-
-	nodeTypeRegister : dict[str, type[_NodeTypeBase]] = {}
-
-	@classmethod
-	def prefix(cls)->tuple[str]:
-		"""return the prefix for this node type -
-		maybe use to define domain-specific node types.
-		c : chimaera (always available)
-		m : maya
-		h : houdini
-		b : blender
-		n : nuke
-		"""
-		return ("c", )
-
-	@classmethod
-	def typeName(cls)->str:
-		raise NotImplementedError
-
-	@staticmethod
-	def registerNodeType(cls:type[_NodeTypeBase]):
-		"""register the given node type -
-		deal with prefixes some other time"""
-		cls.nodeTypeRegister[cls.typeName()] = cls
-
-	@classmethod
-	def __init_subclass__(cls, **kwargs):
-		super().__init_subclass__(**kwargs)
-		cls.registerNodeType(cls)
-
-	@staticmethod
-	def getNodeType(lookup:str)->type[_NodeTypeBase]:
-		"""return the node type for the given lookup string.
-		Later maybe allow searching somehow
-		"""
-		return _NodeTypeBase.nodeTypeRegister[lookup]
-	# endregion
-
-	@classmethod
-	def compute(cls, node:ChimaeraNode#, inputData:Tree
-	            )->Tree:
-		""" OVERRIDE THIS
-
-		active function of node, operating on incoming data.
-		look up some specific headings of params if wanted -
-		preIncoming, postIncoming, etc
-		each of these can act to override at different
-		points.
-
-		If none is found, overlay all of params on value.
-
-		The output of compute is exactly what comes out
-		as a node's resolved value - if any extra overriding
-		has to happen, do it here
-		"""
-		#log("base compute")
-		#log("input")
-		inputData = node.value.incomingTreeResolved()
-		#inputData.display()
-
-		#log("composed")
-		inputData = node.value.incomingComposed()
-		#inputData.display()
-
-		assert isinstance(inputData, Tree)
-
-		#node.params.resolve().display()
-
-
-		return treelib.overlayTrees([inputData, node.value.defined()])
-
-	# region node attributes
-	@classmethod
-	def _getNewNodeAttrData(cls, attrName:str,
-	                        incoming=("T", ),
-	                        defined=())->Tree:
-		"""return the data tree for a newly created node attribute -
-		by default this is also the live default value for a node's evaluation"""
-		empty = getEmptyNodeAttributeData(attrName, incoming=incoming, defined=defined)
-		return empty
-
-	@classmethod
-	def getTypeNodeAttrInput(cls, attrName:str)->Tree:
-		"""return the default input for a node attribute of this type"""
-		#return cls._getNewNodeAttrData(attrName)
-		return getEmptyTree()
-
-	@classmethod
-	def newNodeData(cls, name:str, uid="")->Tree:
-		"""return the default data for a node of this type"""
-		t = Tree(name)
-		if uid:
-			t.setElementId(uid)
-		t.addChild(cls._getNewNodeAttrData("type",
-		                                   incoming=(),
-		                                   defined=(cls.typeName(),)
-		                                   ))
-		t.addChild(cls._getNewNodeAttrData("nodes",
-		                                   defined=(),
-		                                   incoming=("T",)
-		                                   ))
-		#t.addChild( cls._getNewNodeAttrData("edges", incoming="T") )
-		t.addChild(cls._getNewNodeAttrData("value",
-		                                   incoming=("T",),
-		                                   defined=( ),
-		                                   ))
-		t.addChild(cls._getNewNodeAttrData("params"))
-		t.addChild(cls._getNewNodeAttrData("storage"))
-		return t
-	# endregion
-
-	# region node creation
-
-	@classmethod
-	def create(cls, name:str, uid="")->ChimaeraNode:
-		"""create a new node of this type"""
-		print("create", name, uid)
-		return ChimaeraNode(
-			cls.newNodeData(name, uid=uid)
-		)
-
-
-	@staticmethod
-	def __new__(cls, name:str, *args, **kwargs)->ChimaeraNode:
-		try:
-			cls.typeName()
-		except NotImplementedError:
-			raise NotImplementedError("Node type must define a typeName")
-		log("nodeType call", cls, name, args, kwargs)
-		return cls.create(name, *args, **kwargs)
-	# endregion
-
-class NodeType(_NodeTypeBase):
-
-	@classmethod
-	def typeName(cls) ->str:
-		return "base"
-
-	if T.TYPE_CHECKING:
-		def __new__(cls, name: str, *args, **kwargs) -> ChimaeraNode:
-			pass
+#
+# class _NodeTypeBase(ClassMagicMethodMixin):
+# 	"""Archetype for a kind of node -
+# 	anything specific to a node's type should be defined here
+# 	as class methods.
+#
+# 	Types shouldn't be instantiated, only inherited from.
+# 	"""
+#
+# 	# region node type identification and retrieval
+#
+# 	nodeTypeRegister : dict[str, type[_NodeTypeBase]] = {}
+#
+# 	@classmethod
+# 	def prefix(cls)->tuple[str]:
+# 		"""return the prefix for this node type -
+# 		maybe use to define domain-specific node types.
+# 		c : chimaera (always available)
+# 		m : maya
+# 		h : houdini
+# 		b : blender
+# 		n : nuke
+# 		"""
+# 		return ("c", )
+#
+# 	@classmethod
+# 	def typeName(cls)->str:
+# 		raise NotImplementedError
+#
+# 	@staticmethod
+# 	def registerNodeType(cls:type[_NodeTypeBase]):
+# 		"""register the given node type -
+# 		deal with prefixes some other time"""
+# 		cls.nodeTypeRegister[cls.typeName()] = cls
+#
+# 	@classmethod
+# 	def __init_subclass__(cls, **kwargs):
+# 		super().__init_subclass__(**kwargs)
+# 		cls.registerNodeType(cls)
+#
+# 	@staticmethod
+# 	def getNodeType(lookup:str)->type[_NodeTypeBase]:
+# 		"""return the node type for the given lookup string.
+# 		Later maybe allow searching somehow
+# 		"""
+# 		return _NodeTypeBase.nodeTypeRegister[lookup]
+# 	# endregion
+#
+# 	@classmethod
+# 	def compute(cls, node:ChimaeraNode#, inputData:Tree
+# 	            )->Tree:
+# 		""" OVERRIDE THIS
+#
+# 		active function of node, operating on incoming data.
+# 		look up some specific headings of params if wanted -
+# 		preIncoming, postIncoming, etc
+# 		each of these can act to override at different
+# 		points.
+#
+# 		If none is found, overlay all of params on value.
+#
+# 		The output of compute is exactly what comes out
+# 		as a node's resolved value - if any extra overriding
+# 		has to happen, do it here
+# 		"""
+# 		#log("base compute")
+# 		#log("input")
+# 		inputData = node.value.incomingTreeResolved()
+# 		#inputData.display()
+#
+# 		#log("composed")
+# 		inputData = node.value.incomingComposed()
+# 		#inputData.display()
+#
+# 		assert isinstance(inputData, Tree)
+#
+# 		#node.params.resolve().display()
+#
+#
+# 		return treelib.overlayTrees([inputData, node.value.defined()])
+#
+# 	# region node attributes
+# 	@classmethod
+# 	def _getNewNodeAttrData(cls, attrName:str,
+# 	                        incoming=("T", ),
+# 	                        defined=())->Tree:
+# 		"""return the data tree for a newly created node attribute -
+# 		by default this is also the live default value for a node's evaluation"""
+# 		empty = getEmptyNodeAttributeData(attrName, incoming=incoming, defined=defined)
+# 		return empty
+#
+# 	@classmethod
+# 	def getTypeNodeAttrInput(cls, attrName:str)->Tree:
+# 		"""return the default input for a node attribute of this type"""
+# 		#return cls._getNewNodeAttrData(attrName)
+# 		return getEmptyTree()
+#
+# 	@classmethod
+# 	def newNodeData(cls, name:str, uid="")->Tree:
+# 		"""return the default data for a node of this type"""
+# 		t = Tree(name)
+# 		if uid:
+# 			t.setElementId(uid)
+# 		t.addChild(cls._getNewNodeAttrData("type",
+# 		                                   incoming=(),
+# 		                                   defined=(cls.typeName(),)
+# 		                                   ))
+# 		t.addChild(cls._getNewNodeAttrData("nodes",
+# 		                                   defined=(),
+# 		                                   incoming=("T",)
+# 		                                   ))
+# 		#t.addChild( cls._getNewNodeAttrData("edges", incoming="T") )
+# 		t.addChild(cls._getNewNodeAttrData("value",
+# 		                                   incoming=("T",),
+# 		                                   defined=( ),
+# 		                                   ))
+# 		t.addChild(cls._getNewNodeAttrData("params"))
+# 		t.addChild(cls._getNewNodeAttrData("storage"))
+# 		return t
+# 	# endregion
+#
+# 	# region node creation
+#
+# 	@classmethod
+# 	def create(cls, name:str, uid="")->ChimaeraNode:
+# 		"""create a new node of this type"""
+# 		print("create", name, uid)
+# 		return ChimaeraNode(
+# 			cls.newNodeData(name, uid=uid)
+# 		)
+#
+#
+# 	@staticmethod
+# 	def __new__(cls, name:str, *args, **kwargs)->ChimaeraNode:
+# 		try:
+# 			cls.typeName()
+# 		except NotImplementedError:
+# 			raise NotImplementedError("Node type must define a typeName")
+# 		log("nodeType call", cls, name, args, kwargs)
+# 		return cls.create(name, *args, **kwargs)
+# 	# endregion
+#
+# class NodeType(_NodeTypeBase):
+#
+# 	@classmethod
+# 	def typeName(cls) ->str:
+# 		return "base"
+#
+# 	if T.TYPE_CHECKING:
+# 		def __new__(cls, name: str, *args, **kwargs) -> ChimaeraNode:
+# 			pass
 
 
 class NodeAttrWrapper:
@@ -472,9 +480,14 @@ class NodeAttrWrapper:
 
 			# T E M P
 			# use directly defined type for now to avoid recursion
-			return _NodeTypeBase.getNodeType(self.defined().value[0])
+			return ChimaeraNode.getNodeType(self.defined().value[0])
 
 		return self.resolve()
+
+	# @staticmethod
+	# def resolveNodeTypeMROFromTree(tree:Tree)->list[type[_NodeTypeBase]]:
+	# 	"""return the node type mro for the given tree"""
+	# 	return [NodeType.getNodeType(i) for i in tree.value]
 
 	# endregion
 
@@ -491,15 +504,177 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin):
 		can be overridden within branches by expression
 	"""
 
+	# region node type identification and retrieval
+
+	nodeTypeRegister : dict[str, type[_NodeTypeBase]] = {}
+
+	@classmethod
+	def prefix(cls)->tuple[str]:
+		"""return the prefix for this node type -
+		maybe use to define domain-specific node types.
+		c : chimaera (always available)
+		m : maya
+		h : houdini
+		b : blender
+		n : nuke
+		"""
+		return ("c", )
+
+	@classmethod
+	def typeName(cls)->str:
+		return "base"
+
+	@staticmethod
+	def registerNodeType(cls:type[ChimaeraNode]):
+		"""register the given node type -
+		deal with prefixes some other time"""
+		cls.nodeTypeRegister[cls.typeName()] = cls
+
+	@classmethod
+	def __init_subclass__(cls, **kwargs):
+		super().__init_subclass__(**kwargs)
+		cls.registerNodeType(cls)
+
+
+	@staticmethod
+	def getNodeTypeFromDataTree(data:Tree):
+		"""get the right node type to use for
+		a data tree"""
+		return ChimaeraNode.nodeTypeRegister[data["type", "defined"][0]]
+
+	@staticmethod
+	def getNodeType(lookup:(str, ChimaeraNode, Tree))->type[ChimaeraNode]:
+		"""return the node type for the given lookup string.
+		Later maybe allow searching somehow
+		"""
+
+		if isinstance(lookup, str):
+			return ChimaeraNode.nodeTypeRegister[lookup]
+
+		if isinstance(lookup, ChimaeraNode):
+			return lookup.type()
+
+		if isinstance(lookup, Tree):
+			return ChimaeraNode.getNodeTypeFromDataTree(lookup)
+
+
+	# region node attributes
+	@classmethod
+	def _getNewNodeAttrData(cls, attrName:str,
+	                        incoming=("T", ),
+	                        defined=())->Tree:
+		"""return the data tree for a newly created node attribute -
+		by default this is also the live default value for a node's evaluation"""
+		empty = getEmptyNodeAttributeData(attrName, incoming=incoming, defined=defined)
+		return empty
+
+	@classmethod
+	def getTypeNodeAttrInput(cls, attrName:str)->Tree:
+		"""return the default input for a node attribute of this type"""
+		return getEmptyTree()
+
+	@classmethod
+	def newNodeData(cls, name:str, uid="")->Tree:
+		"""return the default data for a node of this type"""
+		t = Tree(name)
+		if uid:
+			t.setElementId(uid)
+		t.addChild(cls._getNewNodeAttrData("type",
+		                                   incoming=(),
+		                                   defined=(cls.typeName(),)
+		                                   ))
+		t.addChild(cls._getNewNodeAttrData("nodes",
+		                                   defined=(),
+		                                   incoming=("T",)
+		                                   ))
+		#t.addChild( cls._getNewNodeAttrData("edges", incoming="T") )
+		t.addChild(cls._getNewNodeAttrData("value",
+		                                   incoming=("T",),
+		                                   defined=( ),
+		                                   ))
+		t.addChild(cls._getNewNodeAttrData("params"))
+		t.addChild(cls._getNewNodeAttrData("storage"))
+		return t
+	# endregion
+
+	# region node creation
+
+	@classmethod
+	def create(cls, name:str, uid="")->ChimaeraNode:
+		"""create a new node of this type"""
+		print("create", name, uid)
+		return cls(
+			cls.newNodeData(name, uid=uid)
+		)
+
+
+
 	# region uid registering
 	indexInstanceMap = {} # global map of all initialised nodes
 
 
+	@classmethod
+	def __class_call__(cls,
+	                   *dataOrNodeOrName:(str, Tree, ChimaeraNode),
+	                   uid:str=None,
+	                   )->ChimaeraNode:
+		"""retrieve existing node for data, or instantiate new wrapper
+				specify only one of:
+		data - create object around existing data tree
+		uid - retrieve existing data tree for object
+		name - create new data tree with given name
+		"""
+
+		if not any((dataOrNodeOrName, uid)):
+			raise ValueError("Must specify one of name, data or uid")
+		assert not all((dataOrNodeOrName, uid)), "Must specify only one of name, data or uid"
+
+		if isinstance(dataOrNodeOrName[0], ChimaeraNode):
+			# get node type
+			nodeType = cls.getNodeTypeFromDataTree(dataOrNodeOrName[0])
+			if nodeType == cls:
+				return dataOrNodeOrName[0]
+
+			return type(clsSuper(nodeType)).__call__(nodeType, dataOrNodeOrName[0]._data)
+
+
+		if isinstance(dataOrNodeOrName[0], Tree):
+			# check if node already exists
+			lookup = cls.indexInstanceMap.get(dataOrNodeOrName[0].uid, None)
+			if lookup is not None:
+				return lookup
+
+			# get node type
+			nodeType = cls.getNodeTypeFromDataTree(dataOrNodeOrName[0])
+
+			return type(clsSuper(nodeType)).__call__(nodeType, dataOrNodeOrName[0])
+
+		if isinstance(dataOrNodeOrName[0], str):
+			name = dataOrNodeOrName[0]
+			data = cls.newNodeData(name, uid)
+			return type(clsSuper(cls)).__call__(cls, data)
+
+		if uid is not None:
+			# check if node already exists
+			lookupNode = cls.indexInstanceMap.get(uid, None)
+			if lookupNode is not None:
+				return lookupNode
+
+			# create new node object around data
+			lookupData = Tree.getByIndex(uid)
+			if lookupData:
+				return type(clsSuper(cls)).__call__(cls, lookupData)
+
+		raise ValueError(f"Must specify one of name, data or uid - invalid args \n {dataOrNodeOrName}, {uid} ")
+
+
 	def __init__(self, data:Tree=None):
 		"""create a node from the given data -
-		must be a tree with uid as name"""
-		if isinstance(data, ChimaeraNode):
-			data = data._data
+		must be a tree with uid as name
+
+		"""
+
+
 		super().__init__(uid=data.uid)
 		self._data : Tree = data
 
@@ -513,6 +688,12 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin):
 		self.storage = self._newAttrInterface("storage")
 		self.value = self._newAttrInterface("value")
 
+	if T.TYPE_CHECKING: # better typing for call override
+		def __init__(self,
+		             *dataOrNodeOrName: (str, Tree, ChimaeraNode),
+		             uid: str = None,
+		             ):
+			pass
 
 	def _newAttrInterface(self, name:str)->NodeAttrWrapper:
 		"""create a new interface wrapper for the given attribute name"""
@@ -528,9 +709,9 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin):
 	def name(self)->str:
 		return self._data.name
 
-	def nodeTypeMRO(self)->list[type[_NodeTypeBase]]:
-		"""return the node type mro for this node"""
-		return self.type.resolveToList()
+	# def nodeTypeMRO(self)->list[type[_NodeTypeBase]]:
+	# 	"""return the node type mro for this node"""
+	# 	return self.type.resolveToList()
 
 	# region child nodes
 	def parent(self)->ChimaeraNode:
@@ -597,16 +778,7 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin):
 	# region edges
 	# endregion
 
-
-	@classmethod
-	def __class_call__(cls, data:Tree)->ChimaeraNode:
-		"""retrieve existing node for data, or instantiate new wrapper
-		"""
-		# check if node already exists
-		lookup = cls.indexInstanceMap.get(data.uid, None)
-		if lookup is not None:
-			return lookup
-		return type(clsSuper(cls)).__call__(cls, data)
+ChimaeraNode.registerNodeType(ChimaeraNode)
 
 
 
@@ -616,7 +788,7 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin):
 
 if __name__ == '__main__':
 
-	graph : ChimaeraNode = NodeType("graph")
+	graph : ChimaeraNode = ChimaeraNode("graph")
 	print(graph)
 
 	newNode = ChimaeraNode(graph._data)
@@ -642,8 +814,8 @@ if __name__ == '__main__':
 	# graph.value.incomingTreeResolved().display()
 
 
-	nodeA = NodeType("nodeA")
-	nodeB = NodeType("nodeB")
+	nodeA = ChimaeraNode("nodeA")
+	nodeB = ChimaeraNode("nodeB")
 	graph.addNode(nodeA)
 
 	assert nodeA.parent() is graph
@@ -656,41 +828,41 @@ if __name__ == '__main__':
 	# print(nodeA in nodes)
 	# print(nodeB in nodes)
 
-	# set up string join operation
-	nodeA.value.defined().value = "start"
-	nodeB.value.defined().value = "end"
-
-	class StringJoinOp(NodeType):
-
-		@classmethod
-		def compute(cls, node:ChimaeraNode#, inputData:Tree
-	            ) ->Tree:
-			"""active function of node, operating on incoming data.
-			join incoming strings
-			"""
-			log("string op compute")
-			joinToken = node.params()["joinToken"]
-
-			# this could be done with just a list connection to single
-			# tree level, but this is more descriptive
-			incoming = node.value.incomingTreeResolved()
-			aValue = incoming["a"]
-			bValue = incoming["b"]
-			result = aValue + joinToken + bValue
-			return Tree("root", value=result)
-
-
-	opNode : ChimaeraNode = StringOp(name="opNode")
-	graph.addNode(opNode)
-
-	# connect nodes
-	opNode.value.incomingTreeRaw()["a"] = nodeA.uid
-	opNode.value.incomingTreeRaw()["b"] = nodeB.uid
-
-	# get result
-	result = opNode.value.resolve()
-
-	log("result")
+	# # set up string join operation
+	# nodeA.value.defined().value = "start"
+	# nodeB.value.defined().value = "end"
+	#
+	# class StringJoinOp(NodeType):
+	#
+	# 	@classmethod
+	# 	def compute(cls, node:ChimaeraNode#, inputData:Tree
+	#             ) ->Tree:
+	# 		"""active function of node, operating on incoming data.
+	# 		join incoming strings
+	# 		"""
+	# 		log("string op compute")
+	# 		joinToken = node.params()["joinToken"]
+	#
+	# 		# this could be done with just a list connection to single
+	# 		# tree level, but this is more descriptive
+	# 		incoming = node.value.incomingTreeResolved()
+	# 		aValue = incoming["a"]
+	# 		bValue = incoming["b"]
+	# 		result = aValue + joinToken + bValue
+	# 		return Tree("root", value=result)
+	#
+	#
+	# opNode : ChimaeraNode = StringOp(name="opNode")
+	# graph.addNode(opNode)
+	#
+	# # connect nodes
+	# opNode.value.incomingTreeRaw()["a"] = nodeA.uid
+	# opNode.value.incomingTreeRaw()["b"] = nodeB.uid
+	#
+	# # get result
+	# result = opNode.value.resolve()
+	#
+	# log("result")
 
 
 
