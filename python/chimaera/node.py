@@ -4,7 +4,10 @@ import typing as T
 
 import fnmatch
 
-from wplib import log
+from collections import namedtuple
+
+from wplib import log, Sentinel, TypeNamespace
+from wplib.constant import MAP_TYPES, SEQ_TYPES, STR_TYPES, LITERAL_TYPES, IMMUTABLE_TYPES
 from wplib.uid import getUid4
 from wplib.inheritance import clsSuper
 from wplib.object import UidElement, ClassMagicMethodMixin
@@ -165,7 +168,172 @@ it's worth it for easier writing in compute context -
 self.controlGrp, self.markNode, self.setOutput, etc
 
 
+
+
+RESOLVE INCOMING CONNECTIONS:
+
+tree starts out with simple string values - list expressions, uids, etc
+
+root : [ "T" ]
+	+ trunk : [ "uid", "n:ctl*nodes", "uid.p[branch, leaf]" ]
+		+ branch : [ "n:overrideNode"[trunk, branch, leaf] ]
+
+expand all node expressions
+resolve to tree[list[tuples]] of (node uid, attribute, path)
+
+root : [ ("T", "value", ()) ]
+	+ trunk : [ ("uid", "value", ()), 
+					(ctlA uid, "value", ()),
+					(ctlB uid, "value", ()),
+					(other uid, "params", ("branch", "leaf")),
+					 ]
+		+ branch : [ (overrideNode uid, "value", ("trunk", "branch", "leaf")) ]
+
+this tree gives definitive list of nodes and attributes to be used as input
+
+convert to tree[list[trees]] of rich trees
+
+root : [ type default value tree ]
+	+ trunk : [ value tree, 
+					ctlA value tree,
+					ctlB value tree,
+					otherValueTree(branch, leaf)
+					 ]
+		+ branch : [ overrideNode value("trunk", "branch", "leaf") ]
+
+
+resolve THAT tree top-down, with lists resolving from left to right
+
+raw tree("trunk", "branch") will index into outer result tree("trunk", "branch"),
+and use that as the base tree for overlaying with value of raw tree("trunk", "branch") 
+
 """
+
+
+if T.TYPE_CHECKING:
+	class NodeAttrRef(namedtuple):
+		uid : str
+		attr : str = "value"
+		path : tuple[(str, int, slice), ...] = ()
+else:
+	NodeAttrRef = namedtuple("NodeAttrRef", "uid attr path")
+
+
+
+def expandIncomingTree(rawTree:Tree,
+                       attrWrapper:NodeAttrWrapper,
+                       parentNode:ChimaeraNode,
+                       graph:ChimaeraNode)->Tree:
+	"""expand the incoming tree for this attribute -
+
+	filtering actual tree with path requires explicitly
+	defining tree to use - ".p[branch, leaf]" etc
+	if .p or .v is not defined, will slice nodes found by
+	uid matching
+
+	STILL need a general solution to evaluate normal python code
+	within these that RESOLVES to a node expression, path etc
+
+	path is always () for now, get back to it later
+
+	return tree[list[tuple[
+		str node uid,
+		str attribute,
+		tuple[str] path
+		]]]"""
+	#assert graph
+	for branch in rawTree.allBranches(includeSelf=True):
+		rawValue = branch.value
+		if not isinstance(rawValue, SEQ_TYPES):
+			rawValue = [rawValue]
+		resultTuples : list[NodeAttrRef] = []
+		for i in rawValue: # individual string expressions
+
+			# separate nodes / node terms from path if given
+			nodeExpr = i.split(".")[0]
+			pathTokens = i.split(".")[1:]
+
+			attr = "value"
+			if pathTokens:
+				attr = pathTokens
+
+			# expand node lists to individual uids
+			if nodeExpr == "T":
+				resultTuples.append( NodeAttrRef("T", attrWrapper.name(), ()) )
+				continue
+
+			if graph is not None:
+				for node in graph.getNodes(nodeExpr):
+					resultTuples.append( NodeAttrRef(node.uid, attr, ()) )
+		branch.value = resultTuples
+
+def populateExpandedTree(expandedTree:Tree[list[NodeAttrRef]],
+                         attrWrapper:NodeAttrWrapper,
+						 parentNode:ChimaeraNode,
+						 graph:ChimaeraNode)->Tree:
+	"""populate the expanded tree with rich trees -
+	expand each node attr ref into a rich tree"""
+
+	for branch in expandedTree.allBranches(includeSelf=True):
+		newValue = []
+		for i in branch.value: #type:NodeAttrRef
+			#log("populateExpandedTree", i, i.uid)
+
+			if i.uid == "T":
+				newValue.append(parentNode.getAttrInputFromType(
+					attrWrapper.name(), parentNode))
+				continue
+			newValue.append(graph.getNodes(i.uid)[0]._attrMap[i.attr].resolve())
+		# branch.value = [graph.getNodes(i.uid)[0]._attrMap[i.attr].resolve() for i in branch.value]
+		branch.value = newValue
+
+def overlayPopulatedTree(populatedTree:Tree[list[Tree]],
+                         attrWrapper:NodeAttrWrapper,
+                         parentNode:ChimaeraNode,
+                         graph:ChimaeraNode)->Tree:
+	"""overlay the populated tree -
+	overlay each tree in populated branch value, left to right
+	then for any child branches in populated tree,
+	overlay the result branch at that path with the overlaid result
+	"""
+	resultTree = Tree("root")
+	for populatedBranch in populatedTree.allBranches(includeSelf=True,
+	                                        depthFirst=True,
+	                                        topDown=True):
+		resultBranch = resultTree(
+			populatedBranch.address(
+			includeSelf=True, includeRoot=False, uid=False),
+						create=True)
+		for i in populatedBranch.value:
+			resultBranch = treelib.overlayTreeInPlace(resultBranch, i,
+			                                          mode="union")
+	return resultTree
+
+
+
+def resolveIncomingTree(
+		rawTree:Tree,
+		attrWrapper:NodeAttrWrapper,
+		parentNode:ChimaeraNode,
+		graph:ChimaeraNode)->Tree:
+	"""resolve the incoming tree for this attribute -
+	replace string references with trees to compose"""
+	resultTree = rawTree.copy()
+
+	# expand expressions to tuples of (node uid, attribute, path)
+	expandIncomingTree(resultTree, attrWrapper, parentNode, graph)
+
+	# populate expanded tree with rich attribute trees
+	populateExpandedTree(resultTree, attrWrapper, parentNode, graph)
+	# this tree is cached so we don't have to resolve a load of node addresses
+	# every time -
+	# if the incoming data is filtered by dynamic expression, we can't cache :(
+	# not sure how to detect this
+	cacheTree = resultTree.copy()
+
+	# overlay rich trees into final incoming data stream
+	return overlayPopulatedTree(resultTree, attrWrapper, parentNode, graph)
+
 
 
 
@@ -178,203 +346,6 @@ def getEmptyNodeAttributeData(name: str, incoming=("T", ), defined=())->Tree:
 	t["incoming"] = list(incoming)
 	t["defined"] = list(defined)
 	return t
-
-
-def resolveIncomingTree(
-		rawTree:Tree,
-		attrWrapper:NodeAttrWrapper,
-		parentNode:ChimaeraNode,
-		graph:ChimaeraNode)->Tree:
-	"""resolve the incoming tree for this attribute -
-	replace string references with trees to compose"""
-	baseList = rawTree.value
-	newTree = rawTree.copy()
-	resultList = []
-	nodeType : NodeType = parentNode.type()
-	for i in baseList:
-		if isinstance(i, Tree):
-			resultList.append(i)
-			continue
-
-		# check for incoming value from node type
-		if i == "T":
-			resultList.append( nodeType.getTypeNodeAttrInput(attrWrapper.name()) )
-			continue
-
-		# value may be "uid" or "uid.attr"
-		# if "uid.attr", resolve attr
-		# if "uid", resolve node
-		uid, *attr = i.split(".")
-
-		if graph is None: # nodes have no parent, only uids allowed
-			try:
-				nodes = [ChimaeraNode.getByIndex(uid)]
-			except Exception as e:
-				log(f"error resolving node uid {uid}")
-				log(f"node {parentNode} has no parent, only node uids can be used for connections")
-				raise e
-		else:
-			nodes = graph.getNodes(uid)
-		if not attr: # default to value
-			attr = "value"
-		# resolve attributes to be used as input
-		resultList.extend( [n._attrMap[attr].resolve() for n in nodes] )
-	rawTree.value = resultList
-	return rawTree
-
-
-
-#
-# class _NodeTypeBase(ClassMagicMethodMixin):
-# 	"""Archetype for a kind of node -
-# 	anything specific to a node's type should be defined here
-# 	as class methods.
-#
-# 	Types shouldn't be instantiated, only inherited from.
-# 	"""
-#
-# 	# region node type identification and retrieval
-#
-# 	nodeTypeRegister : dict[str, type[_NodeTypeBase]] = {}
-#
-# 	@classmethod
-# 	def prefix(cls)->tuple[str]:
-# 		"""return the prefix for this node type -
-# 		maybe use to define domain-specific node types.
-# 		c : chimaera (always available)
-# 		m : maya
-# 		h : houdini
-# 		b : blender
-# 		n : nuke
-# 		"""
-# 		return ("c", )
-#
-# 	@classmethod
-# 	def typeName(cls)->str:
-# 		raise NotImplementedError
-#
-# 	@staticmethod
-# 	def registerNodeType(cls:type[_NodeTypeBase]):
-# 		"""register the given node type -
-# 		deal with prefixes some other time"""
-# 		cls.nodeTypeRegister[cls.typeName()] = cls
-#
-# 	@classmethod
-# 	def __init_subclass__(cls, **kwargs):
-# 		super().__init_subclass__(**kwargs)
-# 		cls.registerNodeType(cls)
-#
-# 	@staticmethod
-# 	def getNodeType(lookup:str)->type[_NodeTypeBase]:
-# 		"""return the node type for the given lookup string.
-# 		Later maybe allow searching somehow
-# 		"""
-# 		return _NodeTypeBase.nodeTypeRegister[lookup]
-# 	# endregion
-#
-# 	@classmethod
-# 	def compute(cls, node:ChimaeraNode#, inputData:Tree
-# 	            )->Tree:
-# 		""" OVERRIDE THIS
-#
-# 		active function of node, operating on incoming data.
-# 		look up some specific headings of params if wanted -
-# 		preIncoming, postIncoming, etc
-# 		each of these can act to override at different
-# 		points.
-#
-# 		If none is found, overlay all of params on value.
-#
-# 		The output of compute is exactly what comes out
-# 		as a node's resolved value - if any extra overriding
-# 		has to happen, do it here
-# 		"""
-# 		#log("base compute")
-# 		#log("input")
-# 		inputData = node.value.incomingTreeResolved()
-# 		#inputData.display()
-#
-# 		#log("composed")
-# 		inputData = node.value.incomingComposed()
-# 		#inputData.display()
-#
-# 		assert isinstance(inputData, Tree)
-#
-# 		#node.params.resolve().display()
-#
-#
-# 		return treelib.overlayTrees([inputData, node.value.defined()])
-#
-# 	# region node attributes
-# 	@classmethod
-# 	def _getNewNodeAttrData(cls, attrName:str,
-# 	                        incoming=("T", ),
-# 	                        defined=())->Tree:
-# 		"""return the data tree for a newly created node attribute -
-# 		by default this is also the live default value for a node's evaluation"""
-# 		empty = getEmptyNodeAttributeData(attrName, incoming=incoming, defined=defined)
-# 		return empty
-#
-# 	@classmethod
-# 	def getTypeNodeAttrInput(cls, attrName:str)->Tree:
-# 		"""return the default input for a node attribute of this type"""
-# 		#return cls._getNewNodeAttrData(attrName)
-# 		return getEmptyTree()
-#
-# 	@classmethod
-# 	def newNodeData(cls, name:str, uid="")->Tree:
-# 		"""return the default data for a node of this type"""
-# 		t = Tree(name)
-# 		if uid:
-# 			t.setElementId(uid)
-# 		t.addChild(cls._getNewNodeAttrData("type",
-# 		                                   incoming=(),
-# 		                                   defined=(cls.typeName(),)
-# 		                                   ))
-# 		t.addChild(cls._getNewNodeAttrData("nodes",
-# 		                                   defined=(),
-# 		                                   incoming=("T",)
-# 		                                   ))
-# 		#t.addChild( cls._getNewNodeAttrData("edges", incoming="T") )
-# 		t.addChild(cls._getNewNodeAttrData("value",
-# 		                                   incoming=("T",),
-# 		                                   defined=( ),
-# 		                                   ))
-# 		t.addChild(cls._getNewNodeAttrData("params"))
-# 		t.addChild(cls._getNewNodeAttrData("storage"))
-# 		return t
-# 	# endregion
-#
-# 	# region node creation
-#
-# 	@classmethod
-# 	def create(cls, name:str, uid="")->ChimaeraNode:
-# 		"""create a new node of this type"""
-# 		print("create", name, uid)
-# 		return ChimaeraNode(
-# 			cls.newNodeData(name, uid=uid)
-# 		)
-#
-#
-# 	@staticmethod
-# 	def __new__(cls, name:str, *args, **kwargs)->ChimaeraNode:
-# 		try:
-# 			cls.typeName()
-# 		except NotImplementedError:
-# 			raise NotImplementedError("Node type must define a typeName")
-# 		log("nodeType call", cls, name, args, kwargs)
-# 		return cls.create(name, *args, **kwargs)
-# 	# endregion
-#
-# class NodeType(_NodeTypeBase):
-#
-# 	@classmethod
-# 	def typeName(cls) ->str:
-# 		return "base"
-#
-# 	if T.TYPE_CHECKING:
-# 		def __new__(cls, name: str, *args, **kwargs) -> ChimaeraNode:
-# 			pass
 
 
 class NodeAttrWrapper:
@@ -401,6 +372,8 @@ class NodeAttrWrapper:
 
 	def incomingTreeResolved(self)->Tree:
 		"""incoming with rich trees resolved"""
+		#print("SELF", self, self.node, self.node.parent())
+		#assert self.node.parent(), f"node {self.node} has no parent"
 		return resolveIncomingTree(self.incomingTreeRaw(),
 		                           self,
 		                           self.node,
@@ -410,19 +383,20 @@ class NodeAttrWrapper:
 		"""composed final tree of incoming data"""
 
 		baseTree = self.incomingTreeResolved()
-		resultList = baseTree.value
-		# overlay all incoming trees for this level of input tree
-		# TODO: proper node EvaluationReport / error system to give details
-		assert all(isinstance(i, Tree) for i in
-		           resultList), f"resultList {resultList} \n for attr {self} not all trees"
-		try:
-			resultTree = treelib.overlayTrees(resultList)
-			# no recursion yet
-			return resultTree
-		except Exception as e:
-			log("error composing incoming tree")
-			self.incomingTreeResolved().display()
-			raise e
+		return baseTree
+		# resultList = baseTree.value
+		# # overlay all incoming trees for this level of input tree
+		# # TODO: proper node EvaluationReport / error system to give details
+		# assert all(isinstance(i, Tree) for i in
+		#            resultList), f"resultList {resultList} \n for attr {self} not all trees"
+		# try:
+		# 	resultTree = treelib.overlayTrees(resultList)
+		# 	# no recursion yet
+		# 	return resultTree
+		# except Exception as e:
+		# 	log("error composing incoming tree")
+		# 	self.incomingTreeResolved().display()
+		# 	raise e
 
 
 	def setIncoming(self, value:(str, list[str])):
@@ -443,13 +417,16 @@ class NodeAttrWrapper:
 		be overridden at any level of tree
 		"""
 
+		#log("RESOLVE")
+		#log("attr", self.name(), self.node)
+
 		if self.name() == "value":
 			# send to nodeType compute
-			return self.node.type().compute(
-				self.node,
-				#self.incomingComposed()
+			return self.node.compute(
+				self.incomingComposed()
 			)
-
+		if not self.node.parent():
+			return self.defined()
 		incoming = self.incomingComposed()
 
 		defined = self.defined()
@@ -532,6 +509,7 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin):
 
 	@classmethod
 	def __init_subclass__(cls, **kwargs):
+		"""register a derived ChimaeraNode type"""
 		super().__init_subclass__(**kwargs)
 		cls.registerNodeType(cls)
 
@@ -559,19 +537,17 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin):
 
 
 	# region node attributes
-	@classmethod
-	def _getNewNodeAttrData(cls, attrName:str,
-	                        incoming=("T", ),
-	                        defined=())->Tree:
-		"""return the data tree for a newly created node attribute -
-		by default this is also the live default value for a node's evaluation"""
-		empty = getEmptyNodeAttributeData(attrName, incoming=incoming, defined=defined)
-		return empty
 
 	@classmethod
-	def getTypeNodeAttrInput(cls, attrName:str)->Tree:
-		"""return the default input for a node attribute of this type"""
-		return getEmptyTree()
+	def getNewNodeAttrTree(cls, attrName:str,
+	                       incoming=("T", ),
+	                       defined=())->Tree:
+		"""return the data tree for a newly created node attribute -
+		by default this is also the live default value for a node's evaluation.
+		probably don't override this
+		"""
+		empty = getEmptyNodeAttributeData(attrName, incoming=incoming, defined=defined)
+		return empty
 
 	@classmethod
 	def newNodeData(cls, name:str, uid="")->Tree:
@@ -579,93 +555,169 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin):
 		t = Tree(name)
 		if uid:
 			t.setElementId(uid)
-		t.addChild(cls._getNewNodeAttrData("type",
-		                                   incoming=(),
-		                                   defined=(cls.typeName(),)
-		                                   ))
-		t.addChild(cls._getNewNodeAttrData("nodes",
-		                                   defined=(),
-		                                   incoming=("T",)
-		                                   ))
-		#t.addChild( cls._getNewNodeAttrData("edges", incoming="T") )
-		t.addChild(cls._getNewNodeAttrData("value",
-		                                   incoming=("T",),
-		                                   defined=( ),
-		                                   ))
-		t.addChild(cls._getNewNodeAttrData("params"))
-		t.addChild(cls._getNewNodeAttrData("storage"))
+		t.addChild(cls.getNewNodeAttrTree("type",
+		                                  incoming=(),
+		                                  defined=(cls.typeName(),)
+		                                  ))
+		t.addChild(cls.getNewNodeAttrTree("nodes",
+		                                  defined=(),
+		                                  incoming=("T",)
+		                                  ))
+		#t.addChild( cls.getNewNodeAttrTree("edges", incoming="T") )
+		t.addChild(cls.getNewNodeAttrTree("value",
+		                                  incoming=("T",),
+		                                  defined=( ),
+		                                  ))
+		t.addChild(cls.getNewNodeAttrTree("params"))
+		t.addChild(cls.getNewNodeAttrTree("storage"))
 		return t
+
+
+	@classmethod
+	def getDefaultParams(cls, forNode:ChimaeraNode):
+		"""return the default params tree for this node type.
+		could be REALLY adaptive and pass in the node instance to
+		these methods, but maybe we shouldn't
+		"""
+		return getEmptyTree()
+
+	@classmethod
+	def getDefaultStorage(cls, forNode:ChimaeraNode):
+		"""return the default storage tree for this node type"""
+		return getEmptyTree()
+
+	@classmethod
+	def getAttrInputFromType(cls, attrName:str, forNode:ChimaeraNode)->Tree:
+		"""return the default input for a node attribute of this type"""
+		if attrName == "params":
+			return cls.getDefaultParams(forNode)
+		if attrName == "storage":
+			return cls.getDefaultStorage(forNode)
+		return getEmptyTree()
+
+
+	@classmethod
+	def getDefaultAttrInput(cls, attrName:str)->Tree:
+		"""return the default input for a node attribute of this type"""
+		return getEmptyTree()
+
 	# endregion
 
 	# region node creation
 
+	class _MasterGraph:pass
+	_defaultGraph : ChimaeraNode = None
 	@classmethod
-	def create(cls, name:str, uid="")->ChimaeraNode:
+	def defaultGraph(cls)->ChimaeraNode:
+		"""return the default graph node -
+		used for creating new nodes
+		"""
+		if cls._defaultGraph is None:
+			cls._defaultGraph = ChimaeraNode("graph", parent=cls._MasterGraph)
+		return cls._defaultGraph
+
+
+	@classmethod
+	def create(cls, name:str, uid="", parent:ChimaeraNode=None)->ChimaeraNode:
 		"""create a new node of this type"""
-		print("create", name, uid)
-		return cls(
+		print("CREATE")
+		newNodeData =  cls(
 			cls.newNodeData(name, uid=uid)
 		)
+		# if parent is None:
+		# 	parent = cls.defaultGraph()
+		# parent.addNode(newNodeData)
+		return newNodeData
 
 
 
 	# region uid registering
 	indexInstanceMap = {} # global map of all initialised nodes
 
-
 	@classmethod
-	def __class_call__(cls,
-	                   *dataOrNodeOrName:(str, Tree, ChimaeraNode),
-	                   uid:str=None,
-	                   )->ChimaeraNode:
-		"""retrieve existing node for data, or instantiate new wrapper
-				specify only one of:
-		data - create object around existing data tree
-		uid - retrieve existing data tree for object
-		name - create new data tree with given name
-		"""
+	def _nodeFromClsCall(cls,
+	                     *dataOrNodeOrName: (str, Tree, ChimaeraNode),
+	                     uid: str = None,
+	                     ) -> (ChimaeraNode, bool):
+		"""create a node from the given data -
+		handle all specific logic for retrieving from different params
 
-		if not any((dataOrNodeOrName, uid)):
-			raise ValueError("Must specify one of name, data or uid")
-		assert not all((dataOrNodeOrName, uid)), "Must specify only one of name, data or uid"
+		bool is whether node is new or not
+		"""
 
 		if isinstance(dataOrNodeOrName[0], ChimaeraNode):
 			# get node type
-			nodeType = cls.getNodeTypeFromDataTree(dataOrNodeOrName[0])
+			nodeType = cls.getNodeTypeFromDataTree(dataOrNodeOrName[0].tree)
 			if nodeType == cls:
-				return dataOrNodeOrName[0]
+				return dataOrNodeOrName[0], False
 
-			return type(clsSuper(nodeType)).__call__(nodeType, dataOrNodeOrName[0]._data)
+			return type(clsSuper(nodeType)).__call__(nodeType, dataOrNodeOrName[0].tree), False
+			# return type(clsSuper(nodeType)).__call__(nodeType, dataOrNodeOrName[0].tree)
 
 
 		if isinstance(dataOrNodeOrName[0], Tree):
 			# check if node already exists
 			lookup = cls.indexInstanceMap.get(dataOrNodeOrName[0].uid, None)
 			if lookup is not None:
-				return lookup
+				return lookup, False
 
 			# get node type
 			nodeType = cls.getNodeTypeFromDataTree(dataOrNodeOrName[0])
+			#print("retrieve node type", nodeType)
 
-			return type(clsSuper(nodeType)).__call__(nodeType, dataOrNodeOrName[0])
+			#return type(clsSuper(nodeType)).__call__(nodeType, dataOrNodeOrName[0])
+			return type.__call__(nodeType, dataOrNodeOrName[0]) , False
 
 		if isinstance(dataOrNodeOrName[0], str):
 			name = dataOrNodeOrName[0]
 			data = cls.newNodeData(name, uid)
-			return type(clsSuper(cls)).__call__(cls, data)
+			return type(clsSuper(cls)).__call__(cls, data), True
 
 		if uid is not None:
 			# check if node already exists
 			lookupNode = cls.indexInstanceMap.get(uid, None)
 			if lookupNode is not None:
-				return lookupNode
+				return lookupNode, False
 
 			# create new node object around data
 			lookupData = Tree.getByIndex(uid)
 			if lookupData:
-				return type(clsSuper(cls)).__call__(cls, lookupData)
+				return type(clsSuper(cls)).__call__(cls, lookupData), False
 
 		raise ValueError(f"Must specify one of name, data or uid - invalid args \n {dataOrNodeOrName}, {uid} ")
+
+	@classmethod
+	def __class_call__(cls,
+	                   *dataOrNodeOrName:(str, Tree, ChimaeraNode),
+	                   uid:str=None,
+	                   parent=None
+	                   )->ChimaeraNode:
+		"""retrieve existing node for data, or instantiate new wrapper
+				specify only one of:
+		data - create object around existing data tree
+		uid - retrieve existing data tree for object
+		name - create new data tree with given name
+
+		don't know why first arg is starred, remove it
+		"""
+
+		if not any((dataOrNodeOrName, uid)):
+			raise ValueError("Must specify one of name, data or uid")
+		assert not all((dataOrNodeOrName, uid)), "Must specify only one of name, data or uid"
+
+		node, isNew = cls._nodeFromClsCall(*dataOrNodeOrName, uid=uid)
+		if not isNew:
+			return node
+		if parent is cls._MasterGraph: # don't parent top graph
+			return node
+
+		if parent is None:
+			parent = cls.defaultGraph()
+			parent.addNode(node, force=True)
+			return node
+		parent.addNode(node)
+		return node
+
 
 
 	def __init__(self, data:Tree=None):
@@ -674,9 +726,8 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin):
 
 		"""
 
-
 		super().__init__(uid=data.uid)
-		self._data : Tree = data
+		self.tree : Tree = data
 
 		# map just used for caching attribute wrappers, no hard data stored here
 		self._attrMap : dict[str, NodeAttrWrapper] = {}
@@ -692,22 +743,30 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin):
 		def __init__(self,
 		             *dataOrNodeOrName: (str, Tree, ChimaeraNode),
 		             uid: str = None,
+		             parent:ChimaeraNode=None
 		             ):
 			pass
 
+	def __repr__(self):
+		return f"<{self.__class__.__name__}({self.tree.name})>"
+
+
+	def attrMap(self)->dict[str, NodeAttrWrapper]:
+		return self._attrMap
+
 	def _newAttrInterface(self, name:str)->NodeAttrWrapper:
 		"""create a new interface wrapper for the given attribute name"""
-		self._attrMap[name] = NodeAttrWrapper(self._data(name, create=False),
+		self._attrMap[name] = NodeAttrWrapper(self.tree(name, create=False),
 		                                      node=self)
 		return self._attrMap[name]
 
 
 	def getElementId(self) ->keyT:
-		return self._data.uid
+		return self.tree.uid
 
 	@property
 	def name(self)->str:
-		return self._data.name
+		return self.tree.name
 
 	# def nodeTypeMRO(self)->list[type[_NodeTypeBase]]:
 	# 	"""return the node type mro for this node"""
@@ -730,19 +789,22 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin):
 		parent.parent.parent is graphRoot
 
 		"""
-		if not self._data.parent: # top node of graph
+		if not self.tree.parent: # top node of graph
 			return None
 		# parent of this graph will be the "nodes" branch -
 		# we want the parent of that
 
-		return ChimaeraNode(self._data.parent.parent.parent )
+		return ChimaeraNode(self.tree.parent.parent.parent)
 
-	def addNode(self, nodeData:(ChimaeraNode, Tree)):
+	def addNode(self, nodeData:(ChimaeraNode, Tree), force=False):
 		if isinstance(nodeData, ChimaeraNode):
-			nodeData = nodeData._data
+			nodeData = nodeData.tree
 
-		assert nodeData.name not in self.nodes.defined().keys(), f"Node {nodeData.name} already exists in graph {self}"
-		self.nodes.defined().addChild(nodeData)
+		# print("ADD NODE")
+		# print(self, nodeData, self.nodes.defined())
+
+		# assert nodeData.name not in self.nodes.defined().keys(), f"Node {nodeData.name} already exists in graph {self}"
+		self.nodes.defined().addChild(nodeData, force=force)
 
 	def children(self)->list[ChimaeraNode]:
 		"""return the children of this node"""
@@ -750,7 +812,7 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin):
 
 	def nameUidMap(self)->dict[str, str]:
 		"""return a map of node names to uids"""
-		return {n.name : n.uid for n in self._data("nodes").branches}
+		return {n.name : n.uid for n in self.tree("nodes").branches}
 
 	def nodeMap(self)->dict[str, ChimaeraNode]:
 		combinedMap = {}
@@ -762,8 +824,43 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin):
 	def getNodes(self, pattern:str)->list[ChimaeraNode]:
 		"""return all nodes matching the given pattern -
 		combine names and uids into map, match against keys"""
+		#log("getNodes", pattern, self.nodeMap().keys())
 		matches = fnmatch.filter(self.nodeMap().keys(), pattern)
 		return [self.nodeMap()[i] for i in matches]
+
+
+	def compute(self, inputData:Tree
+	            )->Tree:
+		""" OVERRIDE THIS
+
+		active function of node, operating on incoming data.
+		look up some specific headings of params if wanted -
+		preIncoming, postIncoming, etc
+		each of these can act to override at different
+		points.
+
+		If none is found, overlay all of params on value.
+
+		The output of compute is exactly what comes out
+		as a node's resolved value - if any extra overriding
+		has to happen, do it here
+
+		inputData is value.incomingComposed()
+		"""
+		#log("base compute")
+		#log("input")
+		#inputData = self.value.incomingTreeResolved()
+		#inputData.display()
+
+		#log("composed")
+		# inputData = self.value.incomingComposed()
+		# #inputData.display()
+		#
+		# assert isinstance(inputData, Tree)
+
+
+		# override with final defined tree
+		return treelib.overlayTrees([inputData, self.value.defined()])
 
 
 	# def getNode(self, node:(str, ChimaeraNode, Tree)):
@@ -788,12 +885,12 @@ ChimaeraNode.registerNodeType(ChimaeraNode)
 
 if __name__ == '__main__':
 
-	graph : ChimaeraNode = ChimaeraNode("graph")
-	print(graph)
+	testGraph : ChimaeraNode = ChimaeraNode("graph")
+	print(testGraph)
 
-	newNode = ChimaeraNode(graph._data)
+	newNode = ChimaeraNode(testGraph.tree)
 	print(newNode)
-	print(newNode is graph)
+	print(newNode is testGraph)
 
 	#print(newNode.type())
 
@@ -816,10 +913,10 @@ if __name__ == '__main__':
 
 	nodeA = ChimaeraNode("nodeA")
 	nodeB = ChimaeraNode("nodeB")
-	graph.addNode(nodeA)
+	testGraph.addNode(nodeA)
 
-	assert nodeA.parent() is graph
-	graph.addNode(nodeB)
+	assert nodeA.parent() is testGraph
+	testGraph.addNode(nodeB)
 
 
 	# nodes = graph.getNodes("node*")

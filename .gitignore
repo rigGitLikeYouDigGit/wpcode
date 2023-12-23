@@ -323,3 +323,4 @@ python/gsheetpy/notes.md
 python/gsheetpy/credentials.json
 python/gsheetpy/client_secret_973132948585-q2mf0lm3a3g3t042a7upsk7mfs04409b.apps.googleusercontent.com.json
 python/gsheetpy/__init__.py
+external/*

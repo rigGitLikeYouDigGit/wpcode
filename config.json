@@ -1,6 +1,16 @@
 {
-    "blenderExePath" : "F:/mass_downloads/blender-3.6.0-alpha+main.45104ddd14bb-windows.amd64-release/blender-3.6.0-alpha+main.45104ddd14bb-windows.amd64-release/blender.exe"
-
-
+    "maya" : {
+        "exe" : "C:/Program Files/Autodesk/Maya2023/bin/maya.exe",
+        "env" : {
+            "MAYA_PLUG_IN_PATH" : [
+                "$WEPRESENT_ROOT/code/maya/plugin"
+            ],
+            "PYTHONPATH" : [
+                "$WEPRESENT_ROOT/code/python",
+                "$WEPRESENT_ROOT/code/external/python",
+                "C:/Python39/Lib/site-packages"
+            ]
+        }
+    }
 
 }

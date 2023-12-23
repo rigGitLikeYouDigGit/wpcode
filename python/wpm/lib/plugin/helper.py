@@ -19,80 +19,92 @@ class MayaPluginAid:
 	should be relatively robust to reloading - unloadPlugin() here
 	should catch a plugin of the same name even if all the related python files have been reloaded since it was initialised in maya
 
-	ALSO handles handing out node type ids - each individual plugin gets its own
-	range of 16 ids - it's enough for now
+	studio id prefix allows 256 total nodes in a studio's plugin namespace
+	register nodes with an id between 0 and 255
 
-	ids can really mess stuff up if they ever change incorrectly - for now we do
-	asserts around them as the first operation, but really we need a more robust
-	solution
+	IDs are managed ENTIRELY from this aid object - node wrappers do not
+	define them
 	"""
 
-	registeredPlugins : dict[str, MayaPluginAid] = {}  # dict of { plugin name : [ registered plugin classes ] }
+	#registeredPlugins : dict[str, MayaPluginAid] = {}  # dict of { plugin name : [ registered plugin classes ] }
 
-	pluginIdInstanceMap : dict[int, MayaPluginAid] = {}
+	#pluginIdInstanceMap : dict[int, MayaPluginAid] = {}
+
+	@classmethod
+	def studioIdPrefix(cls)->int:
+		"""OVERRIDE
+		return the prefix for studio plugin ids,
+		used as a namespace for plugin node ids"""
+		raise NotImplementedError
 
 
 	def __init__(self, name:str,
-	             studioLocalPluginId:int,
+	             #studioLocalPluginId:int,
 	             pluginPath:(str, Path),
-	             nodeClasses: tuple[pluginNodeType] = (),
+	             nodeClasses: dict[int, type[PluginNodeTemplate]] = {},
 	             drawOverrideClasses: dict[pluginNodeType,
 	                                      pluginDrawOverrideType] = {},
 	             useOldApi:bool = False
 	             ):
 		"""
 		:param name: string name of plugin
-		:param studioLocalPluginId: local id of this overall plugin, used for
-			building node type ids - must be between 0 and 12
-		:param pluginPath: file path to this plugin's main file
+
+		:param pluginPath: file path to this plugin's main file -
+			should usually be the same file that initialises a PluginAid object,
+			with separate initializePlugin() and uninitializedPlugin() functions at module level
+
 		:param nodeClasses: tuple of node classes to register with this plugin
 		:param drawOverrideClasses: dict of [ nodeClass : drawOverride for that class ]
 		"""
 		self.name = name
-		self.studioLocalPluginId = studioLocalPluginId
+		#self.studioLocalPluginId = studioLocalPluginId
 
 		self.pluginPath : Path = Path(pluginPath)
-		self.nodeClasses = nodeClasses
-		self.drawOverrideClasses = drawOverrideClasses
+		self.nodeClasses = dict(nodeClasses)
+		self.drawOverrideClasses = dict(drawOverrideClasses)
 
 		self.useOldApi = useOldApi
 
 		self._mfnPlugin : om.MFnPlugin = None
 
-	def nodeClsTypeId(self, cls:T.Type[pluginNodeType])->om.MTypeId:
+
+
+	def nodeClsTypeId(self, cls:T.Type[PluginNodeTemplate], nodeId:int)->om.MTypeId:
+
+
 		if self.useOldApi:
 			from maya import OpenMaya as omOld
-			return omOld.MTypeId(PY_PLUGIN_START_ID + 16 * self.studioLocalPluginId + cls.kNodeLocalId)
-		return om.MTypeId(WP_PLUGIN_NAMESPACE,
-		                  PY_PLUGIN_START_ID + 16 * self.studioLocalPluginId + cls.kNodeLocalId)
+			return omOld.MTypeId(WP_PLUGIN_NAMESPACE, nodeId)
+		return om.MTypeId(WP_PLUGIN_NAMESPACE, nodeId)
 
-	def _registerNode(self, cls: T.Type[pluginNodeType],
-	                  ):
-		assert cls.kNodeLocalId > -1, "node {} must define its own plugin-local id".format(cls)
-		nodeId = self.nodeClsTypeId(cls)
+	def _registerNode(self, cls: T.Type[PluginNodeTemplate],
+	                  localNodeId:int):
+		assert 0 < localNodeId and localNodeId < 256, "node {} must define its own plugin-local id between 0 and 256".format(cls)
+		nodeId = self.nodeClsTypeId(cls, localNodeId)
 		try:
 			if cls.kDrawClassification:
-				self._mfnPlugin.registerNode(cls.kNodeName, nodeId, lambda: cls(), cls.initialiseNode,
-				                    cls.kNodeType, cls.kDrawClassification
+				self._mfnPlugin.registerNode(cls.typeName(), nodeId, lambda: cls(), cls.initialiseNode,
+				                    cls.kNodeType(), cls.kDrawClassification
 				                    )
 			else:
-				self._mfnPlugin.registerNode(cls.kNodeName, nodeId, lambda: cls(), cls.initialiseNode,
-				                    cls.kNodeType
+				self._mfnPlugin.registerNode(cls.typeName(), nodeId, lambda: cls(), cls.initialiseNode,
+				                    cls.kNodeType()
 				                    )
 		except:
-			print('Failed to register node: ' + cls.kNodeName)
+			print('Failed to register node: ' + cls.kNodeName())
 			traceback.print_exc()
 
-	def _deregisterNode(self, cls: T.Type[pluginNodeType]):
-		nodeId = self.nodeClsTypeId(cls)
+	def _deregisterNode(self, cls: T.Type[PluginNodeTemplate]):
+		nodeLocalId = {v:k for k,v in self.nodeClasses.items()}[cls]
+		nodeId = self.nodeClsTypeId(cls, nodeLocalId)
 		try:
 			self._mfnPlugin.deregisterNode(nodeId)
 		except:
-			print('Failed to deregister node: ' + cls.kNodeName)
+			print('Failed to deregister node: ' + cls.kNodeName())
 			traceback.print_exc()
 
 	def _registerDrawOverride(self, drawOverrideCls: T.Type[pluginDrawOverrideType],
-	                          forNodeCls: T.Type[pluginNodeType]):
+	                          forNodeCls: T.Type[PluginNodeTemplate]):
 		"""register a drawOverride for a specific node class"""
 		assert forNodeCls.kDrawClassification, "Node to be drawn must define a draw classification \nsuch as 'drawdb/geometry/<nodeName>"
 		try:
@@ -106,7 +118,7 @@ class MayaPluginAid:
 			traceback.print_exc()
 
 	def _deregisterDrawOverride(self, drawOverrideCls: T.Type[pluginDrawOverrideType],
-	                          forNodeCls: T.Type[pluginNodeType]):
+	                          forNodeCls: T.Type[PluginNodeTemplate]):
 		try:
 			omr.MDrawRegistry.deregisterDrawOverrideCreator(
 				forNodeCls.kDrawClassification,
@@ -123,13 +135,13 @@ class MayaPluginAid:
 		self._mfnPlugin = om.MFnPlugin(pluginMObject)
 
 		try:
-			# add this plugin to global register
-			assert self.studioLocalPluginId not in self.pluginIdInstanceMap, f"{self} tried to register duplicate local plugin index {self.studioLocalPluginId}\n existing indices: {self.pluginIdInstanceMap} "
-			self.pluginIdInstanceMap[self.studioLocalPluginId] = self
+			# # add this plugin to global register
+			# assert self.studioLocalPluginId not in self.pluginIdInstanceMap, f"{self} tried to register duplicate local plugin index {self.studioLocalPluginId}\n existing indices: {self.pluginIdInstanceMap} "
+			# self.pluginIdInstanceMap[self.studioLocalPluginId] = self
 
 			# register nodes
-			for i in self.nodeClasses:
-				self._registerNode(i)
+			for localId, nodeCls in self.nodeClasses.items():
+				self._registerNode(nodeCls, localId)
 
 			# register draw overrides
 			for nodeCls, drawOverrideCls in self.drawOverrideClasses.items():
@@ -146,8 +158,8 @@ class MayaPluginAid:
 		for nodeCls, drawOverrideCls in self.drawOverrideClasses.items():
 			self._deregisterDrawOverride(drawOverrideCls, forNodeCls=nodeCls)
 
-		for i in self.nodeClasses:
-			self._deregisterNode(i)
+		for nodeCls in self.nodeClasses.values():
+			self._deregisterNode(nodeCls)
 
 	def initialisePluginOldApi(self, pluginMObject:om.MObject):
 		import maya.OpenMaya as omOld
@@ -156,7 +168,7 @@ class MayaPluginAid:
 		for i in self.nodeClasses:
 			assert i.kNodeLocalId > -1, "node {} must define its own plugin-local id".format(i)
 			nodeTypeId = self.nodeClsTypeId(i)
-			self._mfnPlugin.registerNode(i.kNodeName, nodeTypeId, i.nodeCreator, i.initialiseNode, i.kNodeType)
+			self._mfnPlugin.registerNode(i.kNodeName(), nodeTypeId, i.nodeCreator, i.initialiseNode, i.kNodeType())
 
 	def uninitialisePluginOldApi(self, pluginMObject:om.MObject):
 		""""""
@@ -198,7 +210,10 @@ class MayaPluginAid:
 	def unloadPlugin(self):
 		if self.isLoaded():
 			cmds.unloadPlugin(self.name, force=1)
-		assert not self.isLoaded(), "unloading plugin {} did not properly unload it in Maya".format((self.name, self.pluginPath, self))
+		assert not self.isLoaded(), "unloading plugin {} did not properly unload it in Maya\n good luck lol".format((self.name, self.pluginPath, self))
 
-
+	def testPlugin(self):
+		"""create all nodes, run all node test functions"""
+		for nodeCls in self.nodeClasses.values():
+			nodeCls.testNode()
 

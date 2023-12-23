@@ -24,7 +24,7 @@ import maya.OpenMaya as omOld
 
 from wpm.lib.tracker import NodeLifespanTracker
 from wpm.lib.plugin import MayaPluginAid, NodeParamData, PluginNodeTemplate
-from wpm.plugin.activeset.settracker import ActiveSetLifespanTracker
+from wpmplugin.activeset.settracker import ActiveSetLifespanTracker
 
 class ActiveSetNode(ompx.MPxObjectSet, PluginNodeTemplate):
 	kNodeName = "wpActiveSet"

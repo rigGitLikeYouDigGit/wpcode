@@ -6,41 +6,59 @@ import typing as T
 import unittest
 
 from wplib import log
-from chimaera import ChimaeraNode, NodeType
+from chimaera import ChimaeraNode
 
 class TestNode(unittest.TestCase):
 	""" tests for basic chimaeraNode behaviour """
 
 	def test_nodeTyping(self):
 		"""Check that the type system and syntax is consistent -
-		NodeTypes returning ChimaeraNode objects, and so on."""
+		ChimaeraNode calls returning appropriate objects"""
 
 		#self.assertRaises(TypeError, lambda: ChimaeraNode("test"))
 
 		# initialisation from type
-		node = NodeType("test")
+		node = ChimaeraNode("test")
 		self.assertIsInstance(node, ChimaeraNode)
+		self.assertIs(type(node),  ChimaeraNode)
 
 		# globally unique instances
 		node2 = ChimaeraNode(node)
 		self.assertIs(node, node2)
-		node3 = ChimaeraNode(node._data)
+		node3 = ChimaeraNode(node.tree)
 		self.assertIs(node, node3)
 
 		# no parent
-		self.assertIsNone(node.parent())
+		self.assertIs(node.parent(), node.defaultGraph())
 
 		# no children
 		self.assertEqual(len(node.children()), 0)
 
 
 		# test adding child node
-		child = NodeType("child")
-		self.assertIsNone(child.parent())
+		child = ChimaeraNode("child")
+		self.assertIs(child.parent(), node.defaultGraph())
 
 		node.addNode(child)
 		self.assertIs(child.parent(), node)
 		self.assertEqual(len(node.children()), 1)
+
+		# test derived node types
+		class NewType(ChimaeraNode):
+
+			@classmethod
+			def typeName(cls) ->str:
+				return "newType"
+		newNode = NewType("newNode")
+		self.assertIsInstance(newNode, NewType)
+		self.assertIsInstance(newNode, ChimaeraNode)
+		chimNode = ChimaeraNode(newNode)
+		self.assertIs(chimNode, newNode)
+
+
+	def test_nodeRetrieval(self):
+		node = ChimaeraNode("test")
+		node = ChimaeraNode("test")
 
 
 	def test_nodeValue(self):
@@ -68,10 +86,10 @@ class TestNode(unittest.TestCase):
 
 		"""
 
-		node = NodeType("test")
+		node = ChimaeraNode("test")
 		node.value.defined().value = "testValue"
-		log(node.value.defined())
-		log(node.value, node.value.resolve())
+		#log(node.value.defined())
+		#log(node.value, node.value.resolve())
 
 		self.assertEqual(node.value.resolve().value, "testValue")
 		self.assertEqual(node.value().value, "testValue")
@@ -82,9 +100,9 @@ class TestNode(unittest.TestCase):
 		by adding UIDs to incoming trees
 		"""
 
-		a = NodeType("a")
-		b = NodeType("b")
-		out = NodeType("out")
+		a = ChimaeraNode("a")
+		b = ChimaeraNode("b")
+		out = ChimaeraNode("out")
 
 		out.value.incomingTreeRaw().value = [
 			a.uid, b.uid
@@ -93,7 +111,7 @@ class TestNode(unittest.TestCase):
 		self.assertEqual(len(out.value.incomingTreeRaw().value), 2)
 
 		# uid connections should work globally
-		out.value.incomingTreeResolved().display()
+		#out.value.incomingTreeResolved().display()
 
 
 	def test_nodeCompute(self):

@@ -118,6 +118,7 @@ class TreeInterface(Traversable,
 
 	def __init__(self):
 		EventDispatcher.__init__(self)
+		self.scratch = {}
 		#self._signalComponent : TreeSignalComponent = None
 
 
@@ -673,7 +674,7 @@ class TreeInterface(Traversable,
 	def remove(self, address:(keyT, TreeInterface, None)=None,
 	           ):
 		"""removes address, or just removes the tree if no address is given"""
-		log("remove", address, self, self.parent)
+		#log("remove", address, self, self.parent)
 		result = None
 		if address:
 			branch = self.getBranch(address)

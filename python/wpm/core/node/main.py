@@ -362,11 +362,17 @@ class WN(StringLike, # short for WePresentNode
 		return WN(obj)
 
 	@classmethod
-	def create(cls, type=None, n="", parent=None, dgMod:om.MDGModifier=None)->cls:
+	def create(cls, type=None, n="", parent=None, dgMod:om.MDGModifier=None, existOk=True)->WN:
 		"""any subsequent wrapper class will create its own node type
 		If modifier object is passed, add operation to it but do not execute yet.
 		Otherwise create and execute a separate modifier each time.
 		:rtype cls"""
+
+		# initialise wrapper on existing node
+		if existOk and n:
+			if cmds.objExists(n):
+				return cls(n)
+
 		nodeType = type or cls.clsApiType
 		name = n or nodeType
 
@@ -471,30 +477,6 @@ class WN(StringLike, # short for WePresentNode
 	def childMap(self)->T.Dict[str, WN]:
 		return {c.name: c for c in self.children()}
 
-	# def getBranch(self, *args:(str, tuple[str]))->WN:
-	# 	return self.getComponent(TreeBranchLookupComponent).getBranch(args)
-
-	@property
-	def nodeInfo(self):
-		"""return specific info for node class"""
-		# this should be overwritten by specific subclasses
-		test = self.allInfo.get(self.nodeType())
-		if test: return test
-		else: return self.allInfo.get(self._instanceNodeType())
-
-	@property
-	def outWorld(self):
-		"""do a procedural thing here to help custom declaration of node info"""
-		return self() + "." + self.nodeInfo.get("outWorld")
-
-	@property
-	def outLocal(self):
-		return self() + "." + self.nodeInfo.get("outLocal")
-
-	@property
-	def inShape(self):
-		plug = "{}.{}".format(self, self.nodeInfo.get("inShape") )
-		return plug
 
 	# convenient plug attributes - no shorthand for now
 	translate = AttrDescriptor("translate")

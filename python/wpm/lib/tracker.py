@@ -165,6 +165,9 @@ class NodeHierarchyTracker(NodeLifespanTracker):
 	TODO: add a filter for node types, and a whitelist for node names
 	TODO: add mechanism to limit frequency of specific callbacks (like mesh editing)
 
+	TODO: keep a tree updated with node hierarchy, and provide a way to query it,
+	with branch values being DATA OBJECTS for that node
+
 	"""
 
 	CHILD_CALLBACK_KEY = "childCallback"

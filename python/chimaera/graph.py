@@ -8,7 +8,7 @@ from wplib import log
 
 from wptree import Tree, TreeInterface
 
-from chimaera import ChimaeraNode, NodeType
+from chimaera import ChimaeraNode
 
 """experiments in chimaera graph execution - 
 rich structure of the graph itself is already captured in
@@ -23,5 +23,15 @@ based on their inputs and connections -
 a tree is marked clean if it and all its branches are clean
 
 """
+
+def inputNodes(node:ChimaeraNode)->set[str]:
+	"""get all node uids that are inputs to this node
+	"""
+	uids = set()
+	for key, wrapper in node._attrMap.items():
+		for branch in wrapper.incomingTreeResolved():
+			uids.update(branch.value)
+	return uids
+
 
 

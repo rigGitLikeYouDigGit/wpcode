@@ -1,7 +1,15 @@
 from __future__ import annotations
 import typing as T
 
+from collections import namedtuple
+from dataclasses import dataclass
+
+from wplib import log
+from wplib.sequence import flatten
+
 from maya.api import OpenMaya as om, OpenMayaRender as omr, OpenMayaUI as omui, OpenMayaAnim as oma
+
+
 
 
 class NodeParamData:
@@ -9,15 +17,52 @@ class NodeParamData:
 	to be extracted from maya nodes and then passed around as argument"""
 	pass
 
+
+@dataclass
+class PluginNodeIdData:
+	"""a struct for storing a node id and its associated data
+	(struct is overkill but type registration is critical,
+	fine to make it verbose)"""
+	nodeName: str
+	nodeType : int = om.MPxNode.kDependNode
+
+
+
 class PluginNodeTemplate:
 	"""convenience base class for hinting common functions;
 	we also provide suggested methods for different stages of
 	computation, to help avoid compute() becoming unreadable
+
+	Example:
+		class MyNode(om.MPxNode, PluginNodeTemplate):
+			@classmethod
+			def pluginNodeIdData(cls)->PluginNodeIdData:
+				return PluginNodeIdData("myNode", om.MPxNode.kDependNode)
+
+		class MyOldApiNode(omMPx.MPxNode, PluginNodeTemplate):
+			pass
+
 	"""
-	kNodeName : str
-	#kNodeId : om.MTypeId = None
-	kNodeLocalId = -1 # should range from 0 to 16 within a single plugin
-	kNodeType = om.MPxNode.kDependNode
+	# kNodeName : str
+	# #kNodeId : om.MTypeId = None
+	# kNodeLocalId = -1 # should range from 0 to 16 within a single plugin
+	# kNodeType = om.MPxNode.kDependNode
+
+	@classmethod
+	def pluginNodeIdData(cls)->PluginNodeIdData:
+		"""return a unique id for this node type"""
+		raise NotImplementedError
+
+	@classmethod
+	def typeName(cls):
+		return cls.pluginNodeIdData().nodeName
+
+	@classmethod
+	def kNodeName(cls):
+		return cls.pluginNodeIdData().nodeName
+	@classmethod
+	def kNodeType(cls):
+		return cls.pluginNodeIdData().nodeType
 
 	kDrawClassification = "" # used to match up nodes with their draw overrides
 
@@ -31,7 +76,7 @@ class PluginNodeTemplate:
 	def __str__(self):
 		return "<{} - {}>".format(self.__class__, self.name())
 
-	# if False:
+	# region VITAL METHODS
 	@classmethod
 	def initialiseNode(cls):
 		"""required method - this is where you set up
@@ -49,10 +94,14 @@ class PluginNodeTemplate:
 		called directly after node data mobject and
 		user wrapper have been constructed and linked"""
 
+	def compute(self, pPlug:om.MPlug, pData:om.MDataBlock):
+		"""runs maya node computation on inputs"""
+
+	#endregion
+
 	def gatherParams(self, pPlug:om.MPlug, pData:om.MDataBlock)->paramDataCls:
 		"""run on every compute even when bound
 		gather node params and return param object"""
-
 
 	def applyParams(self, pPlug: om.MPlug, pData: om.MDataBlock,
 	                paramData: paramDataCls):
@@ -61,16 +110,8 @@ class PluginNodeTemplate:
 	def setOutputs(self, pPlug:om.MPlug, pData:om.MDataBlock, paramData:paramDataCls=None):
 		"""apply node data results to node output plugs"""
 
-	def compute(self, pPlug:om.MPlug, pData:om.MDataBlock):
-		"""runs maya node computation on inputs"""
-
 	def evaluate(self, pPlug:om.MPlug, pData:om.MDataBlock, paramData:paramDataCls=None):
 		"""marks actual node logic, apart from maya datahandle boilerplate"""
-
-	def thisMFn(self):
-		"""shortcut to return an MFnDependencyNode affecting this
-		node"""
-		return om.MFnDependencyNode(self.thisMObject())
 
 	def syncAbstractData(self, pPlug:om.MPlug, pData:om.MDataBlock):
 		"""sometimes useful if multiple nodes form an abstract structure,
@@ -82,6 +123,7 @@ class PluginNodeTemplate:
 		the normal bind states are Off, Bind, Bound and Live
 		"""
 
+	# region other node methods
 	def legalConnection(self, plug: om.MPlug,
 	                    otherPlug: om.MPlug,
 	                    asSrc: bool) -> (bool, None):
@@ -101,11 +143,25 @@ class PluginNodeTemplate:
 		with thisPlug being the source if asSrc"""
 		pass
 
+	# region node utils
+	def thisMFn(self):
+		"""shortcut to return an MFnDependencyNode affecting this
+		node"""
+		return om.MFnDependencyNode(self.thisMObject())
+
+	@classmethod
+	def addAttributes(cls, *args:list[om.MObject]):
+		"""add attributes to this node"""
+		for mObj in flatten(args):
+			cls.addAttribute(mObj)
+
+
 	@classmethod
 	def setAttributesAffect(cls,
 	                        drivers: T.List[om.MObject],
 	                        drivens: T.List[om.MObject],
 	                        ):
+		log("setAttributesAffect", cls, drivers, drivens)
 		for driver in drivers:
 			for driven in drivens:
 				cls.attributeAffects(driver, driven)
@@ -152,6 +208,18 @@ class PluginNodeTemplate:
 
 	#endregion
 
+	@classmethod
+	def testNode(cls):
+		"""run any tests to verify this node is working properly"""
+		from maya import cmds
+		newNode = cmds.createNode(cls.typeName())
+		print("NEW NODE", newNode, cmds.nodeType(newNode))
+		assert newNode, "failed to create node of type {}".format(cls.typeName())
+		assert cmds.nodeType(newNode) == cls.typeName(), "node type mismatch"
+
+	pass
+
+
 pluginNodeType = (PluginNodeTemplate, om.MPxNode)
 
 
@@ -174,5 +242,4 @@ class PluginDrawOverrideTemplate:
 		newNode = cls(obj)
 		return newNode
 
-	pass
 

@@ -2,7 +2,7 @@
 from __future__ import annotations
 import typing as T
 
-# standardising type checking forstrings vs lists vs maps
+# standardising type checking for strings vs lists vs maps
 STR_TYPES = (str,) # check first
 MAP_TYPES = (dict,)
 SEQ_TYPES = (list, tuple, set,)
