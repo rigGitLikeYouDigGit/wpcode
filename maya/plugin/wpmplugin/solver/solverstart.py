@@ -20,6 +20,8 @@ class WpSolverStart(PluginNodeTemplate, om.MPxNode):
 	currently no type / structure checking on plugs -
 	literal copies"""
 
+	dataHandleList = []
+
 	# inputs
 	aResetFrame : om.MObject
 	aThisFrame : om.MObject
@@ -30,6 +32,10 @@ class WpSolverStart(PluginNodeTemplate, om.MPxNode):
 	# root compound object
 	# copy data from this compound plug into loop input
 	aInputData : om.MObject
+
+	# intermediate received data from solver end
+	# DO NOT set attributeAffects on this
+	aReceivedData : om.MObject
 
 	# outputs
 	aFrameArray: om.MObject  # array of data copies from previous frames
@@ -70,6 +76,12 @@ class WpSolverStart(PluginNodeTemplate, om.MPxNode):
 		tFn.readable = False
 		tFn.writable = True
 
+		cls.aReceivedData = tFn.create("receivedData", "receivedData", om.MFnData.kAny)
+		tFn.array = True
+		tFn.usesArrayDataBuilder = True
+		tFn.readable = True
+		tFn.writable = False
+
 		cls.aFrameArray = cFn.create("frameArray", "frameArray")
 		cFn.array = True
 		cFn.usesArrayDataBuilder = True
@@ -88,7 +100,7 @@ class WpSolverStart(PluginNodeTemplate, om.MPxNode):
 		cls.driverMObjects = [cls.aResetFrame, cls.aThisFrame, cls.aFramesToStore, cls.aInputData]
 		cls.drivenMObjects = [cls.aFrameArray, cls.aBalanceWheel]
 
-		cls.addAttributes(cls.drivenMObjects, cls.driverMObjects)
+		cls.addAttributes(cls.drivenMObjects, cls.driverMObjects, cls.aReceivedData)
 		cls.setAttributesAffect(cls.driverMObjects, cls.drivenMObjects)
 
 		# cls.setExistWithoutInConnections(cls, True)
@@ -127,6 +139,10 @@ class WpSolverStart(PluginNodeTemplate, om.MPxNode):
 				inputDataADH.jumpToPhysicalElement(n)
 				frameADH.outputValue().copy(inputDataADH.inputValue())
 
+		# copy to receivedData
+		receivedDataADH = pData.outputArrayValue(self.aReceivedData)
+		receivedDataADH.copy(inputDataADH)
+
 
 	def _getSolverEndNode(self, pData:om.MDataBlock)->om.MObject:
 		"""return the solver end node"""
@@ -145,6 +161,15 @@ class WpSolverStart(PluginNodeTemplate, om.MPxNode):
 		frameDataPlug = endFn.findPlug("frameData", True)
 		frameDataHandle = om.MArrayDataHandle(frameDataPlug.asMDataHandle())
 		return frameDataHandle
+
+	def _setFromClsData(self, pData:om.MDataBlock):
+		if not self.dataHandleList:
+			print("no CLS data handle datas")
+			return
+		receivedADH : om.MArrayDataHandle = pData.outputArrayValue(self.aReceivedData)
+		for i in range(len(self.dataHandleList)):
+			attr.jumpToElement(receivedADH, i)
+			attr.writeDHGeneral(receivedADH.outputValue(), self.dataHandleList[i])
 
 	def _shuffleFrameDatas(self, pData:om.MDataBlock, newFrameDH:om.MArrayDataHandle):
 		"""
@@ -219,13 +244,20 @@ class WpSolverStart(PluginNodeTemplate, om.MPxNode):
 		pData.setClean(pPlug)
 		#return
 
-		# get end node
-		endNode = self._getSolverEndNode(pData)
-		if endNode is None:
-			print("no end node connected")
-			return
-		endDH = self._getSolverEndDH(pData, endNode)
-		self._shuffleFrameDatas(pData, endDH)
+		# # get end node
+		# endNode = self._getSolverEndNode(pData)
+		# if endNode is None:
+		# 	print("no end node connected")
+		# 	return
+		# endDH = self._getSolverEndDH(pData, endNode)
+		# self._shuffleFrameDatas(pData, endDH)
+
+		# new version - copy whatever is in receivedData
+
+		self._setFromClsData(pData)
+		receivedDataADH = pData.outputArrayValue(self.aReceivedData)
+		self._shuffleFrameDatas(pData, receivedDataADH)
+
 
 	@classmethod
 	def testNode(cls):
@@ -248,15 +280,21 @@ class WpSolverStart(PluginNodeTemplate, om.MPxNode):
 		cmds.setAttr(checkAdl + ".input2", 1)
 		print("passthrough", cmds.getAttr(checkAdl + ".output"))
 
+		# check received
+		receivedAdl = cmds.createNode("addDoubleLinear")
+		cmds.connectAttr(solverStart + ".receivedData[0]", receivedAdl + ".input1")
+
 		# set up full solver system
 		cmds.connectAttr(checkAdl + ".output", solverEnd + ".frameData[0]")
 		print("resetFrame out", cmds.getAttr(solverEnd + ".frameData[0]"))
-
 		# change the current frame
 		cmds.setAttr(solverStart + ".thisFrame", 1)
+		print("next frame out", cmds.getAttr(solverEnd + ".frameData[0]"))
+		return
+
 		# check that new value is one more than previous
 		print("next frame add", cmds.getAttr(checkAdl + ".output"))
-		print("next frame out", cmds.getAttr(solverEnd + ".frameData[0]"))
+
 
 		cube = cmds.polyCube()[0]
 		cmds.connectAttr(solverEnd + ".frameData[0]", cube + ".ty")

@@ -150,7 +150,7 @@ class PluginNodeTemplate:
 		return om.MFnDependencyNode(self.thisMObject())
 
 	@classmethod
-	def addAttributes(cls, *args:list[om.MObject]):
+	def addAttributes(cls, *args:(om.MObject, list[om.MObject])):
 		"""add attributes to this node"""
 		for mObj in flatten(args):
 			cls.addAttribute(mObj)
