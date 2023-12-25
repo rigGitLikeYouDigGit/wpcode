@@ -15,6 +15,7 @@ from wpm import WN
 from wpm.lib.plugin import PluginNodeTemplate, WpPluginAid
 
 from wpmplugin.testNode import TestNode
+from wpmplugin.solver import WpSolverStart, WpSolverEnd
 
 thisFilePath = WP_ROOT_PATH / "code" / "maya" / "plugin" / "wpmplugin" / "__init__.py"
 
@@ -23,7 +24,9 @@ wpPyPlugin = WpPluginAid(
 	"wpPy",
 	pluginPath=str(thisFilePath),
 	nodeClasses={
-		1 : TestNode
+		1 : TestNode,
+		2 : WpSolverStart,
+		3 : WpSolverEnd
 	}
 )
 
