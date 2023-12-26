@@ -4,6 +4,9 @@ import typing as T
 from maya.api import OpenMaya as om, OpenMayaRender as omr, OpenMayaUI as omui, OpenMayaAnim as oma
 from wpm.lib.plugin import PluginNodeTemplate, PluginNodeIdData, attr
 
+from wpmplugin.solver.lib import SolverFrameData, getSolverFrameData, makeFrameCompound
+from wpmplugin.solver.solverstart import WpSolverStart
+
 """
 end node for solver - 
 not much computation
@@ -20,9 +23,9 @@ class WpSolverEnd(PluginNodeTemplate, om.MPxNode):
 
 	# inputs
 	aFrameData : om.MObject  # array object containing data for a single frame
+	aFloat : om.MObject  # float attribute
 	aBalanceWheel : om.MObject # bool attribute to flag that a node has been eval'd
 
-	aBalanceWheel : om.MObject # bool attribute to flag that a node has been eval'd
 
 	@classmethod
 	def pluginNodeIdData(cls) -> PluginNodeIdData:
@@ -34,8 +37,10 @@ class WpSolverEnd(PluginNodeTemplate, om.MPxNode):
 		tFn = om.MFnTypedAttribute()
 		cFn = om.MFnCompoundAttribute()
 
-		cls.aFrameData = tFn.create("frameData", "frameData", om.MFnData.kAny)
-		tFn.array = True
+		data = makeFrameCompound("frameData", readable=True, writable=True, array=False,
+		                         floatArrName="frameFloat")
+		cls.aFrameData = data["compound"]
+		cls.aFloat = data["float"]
 
 		cls.aBalanceWheel = attr.makeBalanceWheelAttr("solverStart", readable=False, writable=True)
 
@@ -67,15 +72,13 @@ class WpSolverEnd(PluginNodeTemplate, om.MPxNode):
 
 	def _setSolverStartClsData(self, pData:om.MDataBlock):
 		"""set the receivedData data handle from the start node"""
-		from wpmplugin.solver.solverstart import WpSolverStart
-		arrayDH = pData.inputArrayValue(self.aFrameData)
-		data = []
-		for i in range(len(arrayDH)):
-			attr.jumpToElement(arrayDH, i)
-			data.append(attr.readDHGeneral(arrayDH.inputValue()))
-			print("element", i, arrayDH.inputValue().asDouble())
-		print("setting data", data)
-		WpSolverStart.dataHandleList = data
+		arrayDH = pData.outputValue(self.aFrameData)
+		frameData = getSolverFrameData(
+			arrayDH, self.aFloat,
+			getOutputValues=False,
+		)
+		print("setting frame data", frameData.float)
+		WpSolverStart.sentFrameData = frameData
 
 
 
@@ -83,10 +86,12 @@ class WpSolverEnd(PluginNodeTemplate, om.MPxNode):
 		"""copy frame data from end node to start node"""
 		if pData.isClean(pPlug):
 			return
-
+		#return
 		self._setSolverStartClsData(pData)
 
 		pData.setClean(pPlug)
+		#pData.setClean(self.aFrameData)
+		return
 
 		# # get the solver start node
 		# startNode = self._getSolverStartNode(pData)

@@ -5,6 +5,8 @@ import typing as T
 from maya.api import OpenMaya as om, OpenMayaRender as omr, OpenMayaUI as omui, OpenMayaAnim as oma
 from wpm.lib.plugin import PluginNodeTemplate, PluginNodeIdData, attr
 
+from wpmplugin.solver.lib import makeFrameCompound, SolverFrameData, getSolverFrameData, setSolverFrameData
+
 """
 start node for solver - 
 handles initial values, resetting,
@@ -21,6 +23,7 @@ class WpSolverStart(PluginNodeTemplate, om.MPxNode):
 	literal copies"""
 
 	dataHandleList = []
+	sentFrameData = SolverFrameData(float=(0,))
 
 	# inputs
 	aResetFrame : om.MObject
@@ -32,14 +35,16 @@ class WpSolverStart(PluginNodeTemplate, om.MPxNode):
 	# root compound object
 	# copy data from this compound plug into loop input
 	aInputData : om.MObject
+	aInputFloat : om.MObject
 
 	# intermediate received data from solver end
 	# DO NOT set attributeAffects on this
 	aReceivedData : om.MObject
 
 	# outputs
-	aFrameArray: om.MObject  # array of data copies from previous frames
+	#aFrameArray: om.MObject  # array of data copies from previous frames
 	aFrameData : om.MObject  # array object containing data for a single frame
+	aFrameFloat : om.MObject
 
 	aBalanceWheel : om.MObject # bool attribute to flag that a node has been eval'd
 
@@ -70,37 +75,50 @@ class WpSolverStart(PluginNodeTemplate, om.MPxNode):
 		nFn.keyable = True
 		nFn.setMin(1)
 
-		cls.aInputData = tFn.create("inputData", "inputData", om.MFnData.kAny)
-		tFn.array = True
-		tFn.usesArrayDataBuilder = True
-		tFn.readable = False
-		tFn.writable = True
+		inData = makeFrameCompound(
+			"inputData",
+			floatArrName="inputFloat",
+			readable=False, writable=True,
 
-		cls.aReceivedData = tFn.create("receivedData", "receivedData", om.MFnData.kAny)
-		tFn.array = True
-		tFn.usesArrayDataBuilder = True
-		tFn.readable = True
-		tFn.writable = False
+		array=False)
+		cls.aInputData = inData["compound"]
+		cls.aInputFloat = inData["float"]
+		# cls.aInputData = tFn.create("inputData", "inputData", om.MFnData.kAny)
+		# tFn.array = True
+		# tFn.usesArrayDataBuilder = True
+		# tFn.readable = False
+		# tFn.writable = True
 
-		cls.aFrameArray = cFn.create("frameArray", "frameArray")
-		cFn.array = True
-		cFn.usesArrayDataBuilder = True
-		cFn.readable = True
-		cFn.writable = False
+		# cls.aReceivedData = tFn.create("receivedData", "receivedData", om.MFnData.kAny)
+		# tFn.array = True
+		# tFn.usesArrayDataBuilder = True
+		# tFn.readable = True
+		# tFn.writable = False
 
-		cls.aFrameData = tFn.create("frameData", "frameData", om.MFnData.kAny)
-		tFn.array = True
-		tFn.usesArrayDataBuilder = True
-		tFn.readable = True
-		tFn.writable = False
-		cFn.addChild(cls.aFrameData)
+		# cls.aFrameArray = cFn.create("frameArray", "frameArray")
+		# cFn.array = True
+		# cFn.usesArrayDataBuilder = True
+		# cFn.readable = True
+		# cFn.writable = False
+
+		frameData = makeFrameCompound(
+			"frameData", readable=True, writable=False,
+			array=True,
+			floatArrName="frameFloat"
+		)
+		cls.aFrameData = frameData["compound"]
+		cls.aFrameFloat = frameData["float"]
+
 
 		cls.aBalanceWheel = attr.makeBalanceWheelAttr("solverEnd", writable=False)
 
 		cls.driverMObjects = [cls.aResetFrame, cls.aThisFrame, cls.aFramesToStore, cls.aInputData]
-		cls.drivenMObjects = [cls.aFrameArray, cls.aBalanceWheel]
+		cls.drivenMObjects = [cls.aFrameData, cls.aBalanceWheel]
 
-		cls.addAttributes(cls.drivenMObjects, cls.driverMObjects, cls.aReceivedData)
+		cls.addAttributes(cls.drivenMObjects,
+		                  cls.driverMObjects,
+		                  #cls.aReceivedData
+		                  )
 		cls.setAttributesAffect(cls.driverMObjects, cls.drivenMObjects)
 
 		# cls.setExistWithoutInConnections(cls, True)
@@ -110,38 +128,39 @@ class WpSolverStart(PluginNodeTemplate, om.MPxNode):
 	def _reset(self, pData:om.MDataBlock):
 		"""reset the solver - copy data from input to frameArray"""
 		# get input data
-		inputDataADH = pData.inputArrayValue(self.aInputData)
+		inputDataADH = pData.inputValue(self.aInputData)
 		# init if empty
-		attr.jumpToElement(inputDataADH, 0, elementIsArray=False)
+		#attr.jumpToElement(inputDataADH, 0, elementIsArray=False)
+
+		inputFrameData = getSolverFrameData(
+			inputDataADH,
+			floatMObject=self.aInputFloat,
+			getOutputValues=False
+		)
+
+		WpSolverStart.sentFrameData = inputFrameData
 
 		# get frames to store
 		framesToStore = pData.inputValue(self.aFramesToStore).asInt()
-		#return
-		# get frameArray
-		frameArrayHandle : om.MArrayDataHandle = pData.outputArrayValue(self.aFrameArray)
+
+		# get frameData array
+		frameDataArrayHandle : om.MArrayDataHandle = pData.outputArrayValue(self.aFrameData)
 
 		# grow frame array if needed
-		for i in range(framesToStore - len(frameArrayHandle.builder())):
-			attr.jumpToElement(frameArrayHandle, i, elementIsArray=True)
+		for i in range(framesToStore - len(frameDataArrayHandle.builder())):
+			attr.jumpToElement(frameDataArrayHandle, i, elementIsArray=True)
 
 		# reset all frames
-		# copy constructor for MArrayDataHandle doesn't seem to work here -
-		# so we can't just call the .copy() method on array children of compound attrs
 		for i in range(framesToStore):
-			print("reset frame", i)
-			print("test src numeric value", inputDataADH.inputValue().asDouble())
-			attr.jumpToElement(frameArrayHandle, i, elementIsArray=True)
-			frameADH = om.MArrayDataHandle(
-				frameArrayHandle.outputValue().child(self.aFrameData)
-			)
-			for n in range(len(inputDataADH)):
-				frameADH.jumpToPhysicalElement(n)
-				inputDataADH.jumpToPhysicalElement(n)
-				frameADH.outputValue().copy(inputDataADH.inputValue())
+			#print("reset frame", i)
+			#print("test src numeric value", inputDataADH.inputValue().asDouble())
+			attr.jumpToElement(frameDataArrayHandle, i, elementIsArray=True)
+			setSolverFrameData(frameDataArrayHandle.outputValue(),
+			                   inputFrameData,
+			                   floatMObject=self.aFrameFloat,
 
-		# copy to receivedData
-		receivedDataADH = pData.outputArrayValue(self.aReceivedData)
-		receivedDataADH.copy(inputDataADH)
+			                   )
+
 
 
 	def _getSolverEndNode(self, pData:om.MDataBlock)->om.MObject:
@@ -171,45 +190,41 @@ class WpSolverStart(PluginNodeTemplate, om.MPxNode):
 			attr.jumpToElement(receivedADH, i)
 			attr.writeDHGeneral(receivedADH.outputValue(), self.dataHandleList[i])
 
-	def _shuffleFrameDatas(self, pData:om.MDataBlock, newFrameDH:om.MArrayDataHandle):
+	def _shuffleFrameDatas(self, pData:om.MDataBlock):
 		"""
 		shuffle current entries of frameArray down one,
 		then retrieve data from end node and copy into first slot of frameArray,
 		"""
 		framesToStore = pData.inputValue(self.aFramesToStore).asInt()
-		loadFrameArrayDH : om.MArrayDataHandle = pData.outputArrayValue(self.aFrameArray)
-		setFrameArrayDH : om.MArrayDataHandle = pData.outputArrayValue(self.aFrameArray)
+		loadFrameArrayDH : om.MArrayDataHandle = pData.outputArrayValue(self.aFrameData)
+		setFrameArrayDH : om.MArrayDataHandle = pData.outputArrayValue(self.aFrameData)
 
 		for i in range(framesToStore):
 			if i == 0:
 				continue
 			fromIdx = framesToStore - i
+			toIdx = fromIdx - 1
 			loadFrameArrayDH.jumpToPhysicalElement(fromIdx)
-			setFrameArrayDH.jumpToPhysicalElement(i)
+			setFrameArrayDH.jumpToPhysicalElement(toIdx)
 
-			loadFrameDataADH = om.MArrayDataHandle(
-				loadFrameArrayDH.child(self.aFrameData))
-			setFrameDataADH = om.MArrayDataHandle(
-				setFrameArrayDH.child(self.aFrameData))
-			for n in range(len(loadFrameDataADH)):
-				loadFrameDataADH.jumpToPhysicalElement(n)
-				setFrameDataADH.jumpToPhysicalElement(n)
-				setFrameDataADH.outputValue().copy(loadFrameDataADH.outputValue())
+			frameData = getSolverFrameData(
+				loadFrameArrayDH.outputValue(),
+				floatMObject=self.aFrameFloat,
+				getOutputValues=True
+			)
 
-			# setFrameArrayDH.outputValue().copy(loadFrameArrayDH.outputValue())
+			setSolverFrameData(
+				setFrameArrayDH.outputValue(),
+				frameData,
+				floatMObject=self.aFrameFloat,
+			)
 
 		# copy new frame data into first slot
 		setFrameArrayDH.jumpToPhysicalElement(0)
-		setFrameDataADH = om.MArrayDataHandle(
-			setFrameArrayDH.outputValue().child(self.aFrameData))
-		# newFrameDataADH = om.MArrayDataHandle(
-		# 	newFrameDH.child(self.aFrameData))
-		for n in range(len(newFrameDH)):
-			setFrameDataADH.jumpToPhysicalElement(n)
-			newFrameDH.jumpToPhysicalElement(n)
-			# newFrameDataADH.jumpToPhysicalElement(n)
-			setFrameDataADH.outputValue().copy(newFrameDH.outputValue())
-		# setFrameArrayDH.outputValue().copy(newFrameDH)
+		setSolverFrameData(setFrameArrayDH.outputValue(),
+		                   self.sentFrameData,
+		                   floatMObject=self.aFrameFloat,
+		                   )
 
 		setFrameArrayDH.setClean()
 
@@ -236,13 +251,13 @@ class WpSolverStart(PluginNodeTemplate, om.MPxNode):
 		if resetFrame == currentFrame:
 			print("reset solver")
 			self._reset(pData)
-			pData.setClean(self.aFrameArray)
+			#pData.setClean(self.aFrameArray)
 			pData.setClean(self.aBalanceWheel)
 			pData.setClean(self.aFrameData)
 			pData.setClean(pPlug)
 			return
-		pData.setClean(pPlug)
-		#return
+		# pData.setClean(pPlug)
+		# return
 
 		# # get end node
 		# endNode = self._getSolverEndNode(pData)
@@ -254,9 +269,13 @@ class WpSolverStart(PluginNodeTemplate, om.MPxNode):
 
 		# new version - copy whatever is in receivedData
 
-		self._setFromClsData(pData)
-		receivedDataADH = pData.outputArrayValue(self.aReceivedData)
-		self._shuffleFrameDatas(pData, receivedDataADH)
+		# self._setFromClsData(pData)
+		# receivedDataADH = pData.outputArrayValue(self.aReceivedData)
+		self._shuffleFrameDatas(pData)
+		pData.setClean(self.aBalanceWheel)
+		pData.setClean(self.aFrameData)
+		pData.setClean(pPlug)
+		return
 
 
 	@classmethod
@@ -267,38 +286,34 @@ class WpSolverStart(PluginNodeTemplate, om.MPxNode):
 
 		solverEnd = cmds.createNode("wpSolverEnd")
 		cmds.connectAttr(solverStart + ".solverEnd", solverEnd + ".solverStart")
-
+		#return
 		# add basic solver input data
 		adl = cmds.createNode("addDoubleLinear")
 		cmds.setAttr(adl + ".input1", 2)
-		cmds.connectAttr(adl + ".output", solverStart + ".inputData[0]")
+		cmds.connectAttr(adl + ".output", solverStart + ".inputData.inputFloat[0]")
 
 
 		# check copying through to frame array
 		checkAdl = cmds.createNode("addDoubleLinear")
-		cmds.connectAttr(solverStart + ".frameArray[0].frameData[0]", checkAdl + ".input1")
+		cmds.connectAttr(solverStart + ".frameData[0].frameFloat[0]", checkAdl + ".input1")
 		cmds.setAttr(checkAdl + ".input2", 1)
 		print("passthrough", cmds.getAttr(checkAdl + ".output"))
 
-		# check received
-		receivedAdl = cmds.createNode("addDoubleLinear")
-		cmds.connectAttr(solverStart + ".receivedData[0]", receivedAdl + ".input1")
-
 		# set up full solver system
-		cmds.connectAttr(checkAdl + ".output", solverEnd + ".frameData[0]")
-		print("resetFrame out", cmds.getAttr(solverEnd + ".frameData[0]"))
+		cmds.connectAttr(checkAdl + ".output", solverEnd + ".frameData.frameFloat[0]")
+		print("resetFrame out", cmds.getAttr(solverEnd + ".frameData.frameFloat[0]"))
 		# change the current frame
 		cmds.setAttr(solverStart + ".thisFrame", 1)
-		print("next frame out", cmds.getAttr(solverEnd + ".frameData[0]"))
-		return
+		print("next frame out", cmds.getAttr(solverEnd + ".frameData.frameFloat[0]"))
+		#return
 
 		# check that new value is one more than previous
 		print("next frame add", cmds.getAttr(checkAdl + ".output"))
 
 
 		cube = cmds.polyCube()[0]
-		cmds.connectAttr(solverEnd + ".frameData[0]", cube + ".ty")
-
+		cmds.connectAttr(solverEnd + ".frameData.frameFloat[0]", cube + ".ty")
+		#return
 		# connect time to solver
 		cmds.setAttr(solverStart + ".resetFrame", 1)
 		cmds.setAttr(solverStart + ".thisFrame", 1)
