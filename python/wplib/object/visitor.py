@@ -13,7 +13,8 @@ from typing import TypedDict
 from wplib import log
 from wplib.log import getDefinitionStrLink
 #from wplib.sentinel import Sentinel
-from wplib.inheritance import superClassLookup, SuperClassLookupMap
+from wplib.object import Adaptor
+from wplib.inheritance import superClassLookup, SuperClassLookupMap, isNamedTupleInstance, isNamedTupleClass
 from wplib.object.namespace import TypeNamespace
 from wplib.constant import MAP_TYPES, SEQ_TYPES, LITERAL_TYPES
 
@@ -63,7 +64,7 @@ set up special processing for it
 
 MapItemTie = namedtuple("MapItemTie", "key value")
 
-
+#childTypeItemMapType = T.Mapping[ChildType.T, list[T.Any]]
 typeChildObjectsFnMap = {
 	type(None) : lambda obj: (),
 	MAP_TYPES : lambda obj: (
@@ -75,8 +76,6 @@ typeChildObjectsFnMap = {
 	SEQ_TYPES : lambda obj: ((i, ChildType.SequenceElement) for i in obj),
 
 	LITERAL_TYPES : lambda obj: (),
-
-
 
 }
 # endregion
@@ -101,6 +100,20 @@ def _newMap(baseParent, childTypeItemMap:dict[ChildType.T, list[T.Any]]):
 	#log("newMap", childTypeItemMap)
 	return dict(childTypeItemMap[ChildType.MapItem])
 
+def _newSeq(baseParent, childTypeItemMap:dict[ChildType.T, list[T.Any]]):
+	#log("newSeq", childTypeItemMap)
+	#return tuple(childTypeItemMap[ChildType.SequenceElement])
+	if isNamedTupleInstance(baseParent):
+		return type(baseParent)(*childTypeItemMap[ChildType.SequenceElement])
+	#newType = type(baseParent)
+
+	return type(baseParent)(childTypeItemMap[ChildType.SequenceElement])
+
+# def _newTuple(baseParent, childTypeItemMap:dict[ChildType.T, list[T.Any]]):
+# 	if isNamedTupleInstance(baseParent):
+# 		return type(baseParent)(*childTypeItemMap[ChildType.SequenceElement])
+# 	return tuple(childTypeItemMap[ChildType.SequenceElement])
+
 childTypeItemMapType = T.Mapping[ChildType.T, list[T.Any]]
 typeNewFnMap = {
 	type(None) : lambda baseParent, childTypeItemMap: None,
@@ -108,13 +121,114 @@ typeNewFnMap = {
 		(childTypeItemMap.popitem()[1])),
 	MapItemTie : lambda baseParent, childTypeItemMap: type(baseParent)(
 		childTypeItemMap[ChildType.MapKey][0], childTypeItemMap[ChildType.MapValue][0]),
-	SEQ_TYPES : lambda baseParent, childTypeItemMap: type(baseParent)(
-		childTypeItemMap[ChildType.SequenceElement]),
+
+	SEQ_TYPES : _newSeq,
 	#MAP_TYPES : lambda baseParent, childTypeItemMap: dict(childTypeItemMap[ChildType.MapItem]),
 	MAP_TYPES : _newMap,
 
 }
 # endregion
+
+# test new adaptor system
+class VisitAdaptor(Adaptor):
+	"""adaptor for visit system - defines how to traverse and regenerate
+	registered objects.
+
+	It would make sense to combine this with pathing functions for the Traversable system"""
+	# new base class, declare new map
+	adaptorTypeMap = Adaptor.makeNewTypeMap()
+	# declare abstract methods
+	@classmethod
+	def childObjects(cls, obj:T.Any)->T.Iterable[tuple[T.Any, ChildType.T]]:
+		"""return iterable of (childObject, childType) pairs"""
+		raise NotImplementedError
+
+	@classmethod
+	def newObj(cls, baseObj:T.Any, childTypeItemMap:dict[ChildType.T, list[T.Any]])->T.Any:
+		"""create new object from base object and child type item map,
+		a child type item map is a dict of {childType : [list of child objects of that type]}
+		"""
+		raise NotImplementedError
+
+class NoneVisitAdaptor(VisitAdaptor):
+	forTypes = (type(None),)
+	@classmethod
+	def childObjects(cls, obj:T.Any) ->T.Iterable[tuple[T.Any, ChildType.T]]:
+		return ()
+
+class LiteralVisitAdaptor(VisitAdaptor):
+	forTypes = LITERAL_TYPES
+	@classmethod
+	def childObjects(cls, obj:T.Any) ->T.Iterable[tuple[T.Any, ChildType.T]]:
+		return ()
+
+class MapVisitAdaptor(VisitAdaptor):
+	forTypes = MAP_TYPES
+	@classmethod
+	def childObjects(cls, obj:T.Any) ->T.Iterable[tuple[T.Any, ChildType.T]]:
+		return (
+			(MapItemTie(*i), ChildType.MapItem)
+	             for i in obj.items()
+		)
+	@classmethod
+	def newObj(cls, baseObj:T.Any, childTypeItemMap:dict[ChildType.T, list[T.Any]])->T.Any:
+		return dict(childTypeItemMap[ChildType.MapItem])
+
+class MapItemTieVisitAdaptor(VisitAdaptor):
+	forTypes = (MapItemTie,)
+	@classmethod
+	def childObjects(cls, obj:T.Any) ->T.Iterable[tuple[T.Any, ChildType.T]]:
+		return ((obj[0], ChildType.MapKey), (obj[1], ChildType.MapValue))
+	@classmethod
+	def newObj(cls, baseObj:T.Any, childTypeItemMap:dict[ChildType.T, list[T.Any]])->T.Any:
+		return type(baseObj)(
+			childTypeItemMap[ChildType.MapKey][0], childTypeItemMap[ChildType.MapValue][0])
+
+class SeqVisitAdaptor(VisitAdaptor):
+	forTypes = SEQ_TYPES
+	@classmethod
+	def childObjects(cls, obj:T.Any) ->T.Iterable[tuple[T.Any, ChildType.T]]:
+		return ((i, ChildType.SequenceElement) for i in obj)
+	@classmethod
+	def newObj(cls, baseObj:T.Any, childTypeItemMap:dict[ChildType.T, list[T.Any]])->T.Any:
+		if isNamedTupleInstance(baseObj):
+			return type(baseObj)(*childTypeItemMap[ChildType.SequenceElement])
+
+		return type(baseObj)(childTypeItemMap[ChildType.SequenceElement])
+
+class VisitableBase:
+	"""custom base interface for custom types -
+	we associate an adaptor type for these later"""
+	def childObjects(self):
+		raise NotImplementedError
+	@classmethod
+	def newObj(cls, baseObj, childTypeItemMap):
+		raise NotImplementedError
+
+class VisitableVisitAdaptor(VisitAdaptor):
+	"""integrate derived subclasses with adaptor system
+	"""
+	forTypes = (VisitableBase,)
+	@classmethod
+	def childObjects(cls, obj:T.Any) ->T.Iterable[tuple[T.Any, ChildType.T]]:
+		return obj.childObjects()
+	@classmethod
+	def newObj(cls, baseObj:T.Any, childTypeItemMap:dict[ChildType.T, list[T.Any]])->T.Any:
+		return baseObj.newObj(baseObj, childTypeItemMap)
+
+
+# just do this basic function
+def transformTestTopDown(target):
+	# first transform object (not recursively in serialisation
+	result = transform(target)
+	# get children of result
+	childTypeItemMapType = getChildren(result)
+
+	# return a new object (NOT the exact object returned from transform - bit weird)
+	return newFn(
+		origObj=result,
+	    children={k : transformTest(v) for k, v in childTypeItemMapType} )
+
 
 # collect all in single class
 class VisitTypeFunctionRegister:
@@ -180,8 +294,11 @@ class VisitPassParams:
 
 
 class DeepVisitOp:
-	@classmethod
-	def visit(cls,
+
+	def __init__(self):
+		pass
+
+	def visit(self,
 	          obj:T.Any,
 	              visitor:DeepVisitor,
 	              visitObjectData:VisitObjectData,
@@ -405,23 +522,38 @@ class DeepVisitor:
 				toVisit.append(nextVisitData)
 
 		# reconstruct objects, bottom up
+		from wptree import Tree
 		for visitData in reversed(visited):
 			visitData : VisitObjectData
 
+			result = None
 			# if bottom up, do visiting now
 			if not visitParams.topDown:
 				result = visitParams.visitFn(
 					visitData["base"], self, visitData, visitParams)
+				if isinstance(result, Tree):
+					log("TREE")
+					print("visitData")
+					print(visitData["childDatas"])
+					print(visitData["makeNewObjFromVisitResult"])
 				visitData["visitResult"] = result
 
 
 			if not visitData['childDatas'] or not visitData['makeNewObjFromVisitResult']:
+				try:
+					if isinstance(result, Tree):
+						log("continuing")
+				except:
+					pass
 				visitData['copyResult'] = visitData['visitResult']
 				continue
 
 			newObjFn = self.visitTypeFunctionRegister.getNewFromArgsFnForType(
 				type(visitData['visitResult'])
 			)
+
+			if isinstance(result, Tree):
+				log("newObjFn", newObjFn)
 
 			# build map of {childType : [ list of child objects of that type]}
 			childTypeToChildObjectsMap = defaultdict(list)
@@ -432,12 +564,44 @@ class DeepVisitor:
 			try:
 				visitData['copyResult'] = newObjFn(visitData["visitResult"],
 				                                   childTypeToChildObjectsMap)
+				if isinstance(result, Tree):
+					log("copyResult", visitData['copyResult'])
 			except Exception as e:
 				log(f"Error creating new object from {visitData['visitResult']} \n and {pprint.pformat(childTypeToChildObjectsMap, indent=4, compact=False)}")
+				pprint.pprint(visitData)
+				log("newObjFn", newObjFn, )
+				pprint.pprint(inspect.signature(newObjFn))
 				raise e
 		#log("visited", visited)
+		print("returning", visited[0]['copyResult'])
 		return visited[0]['copyResult']
 
+
+	def _transformRecursiveTopDown(self,
+	               parentObj,
+	               visitParams:VisitPassParams,
+	                               visitData:VisitObjectData=None,
+	               ):
+		"""doing this without recursion is beyond me for now"""
+		# visitData = visitData or VisitObjectData(
+		# 	base=parentObj,
+		# 	visitResult=None,
+		# 	copyResult=None,
+		# 	childType=None,
+		# 	childDatas=[],
+		# 	makeNewObjFromVisitResult=True
+		# )
+		visitData = {}
+		result = visitParams.visitFn(
+			parentObj, self, visitData, visitParams)
+
+		# get next objects to visit
+		childObjectsFn = self.visitTypeFunctionRegister.getChildObjectsFnForType(
+			type(result)
+		)
+		nextObjTies = childObjectsFn(result)
+		for obj in nextObjTies:
+			self._transformRecursiveTopDown(obj, visitParams, visitData)
 
 
 
@@ -451,7 +615,7 @@ class DeepVisitor:
 		"""
 		# allowing LOADS of override levels for setting visit function here,
 		# unnecessary
-		if visitFn: # set visit function if given
+		if visitFn is not None: # set visit function if given
 			passParams.visitFn = visitFn
 		else:
 			passParams.visitFn = passParams.visitFn or self.visitSingleObjectFn

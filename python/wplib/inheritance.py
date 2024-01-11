@@ -5,6 +5,16 @@ import typing as T
 from wplib import log
 from wplib.sentinel import Sentinel
 
+# function to detect namedtuple instances - can be annoying otherwise
+# NB: namedtuples also can't initialise around sequences, like normal tuples can
+def isNamedTupleInstance(obj:T.Any)->bool:
+	"""detect if obj is a namedtuple instance"""
+	return isinstance(obj, tuple) and hasattr(obj, "_fields")
+
+def isNamedTupleClass(cls:T.Any)->bool:
+	"""detect if cls is a namedtuple class"""
+	return issubclass(cls, tuple) and hasattr(cls, "_fields")
+
 def clsSuper(cls:type)->type:
 	"""return the superclass of cls"""
 	return cls.__mro__[1]
@@ -26,7 +36,8 @@ def leafParentBases(*desiredBases:tuple[type])->list[type]:
 
 
 def containsSuperClass(classSeq:T.Sequence[type], lookup:(type, object))->(type, None):
-	"""returns any items in the sequence which are superclasses of lookup"""
+	"""returns first item in sequence that is a superclass of lookup,
+	sort sequence externally to put most specific classes first"""
 	if not isinstance(lookup, type):
 		lookup = type(lookup)
 	for i in classSeq:
@@ -75,7 +86,7 @@ class SuperClassLookupMap:
 			       reverse=True)
 		)
 
-	def updateClassMap(self, classMap:dict[type, T.Any]):
+	def updateClassMap(self, classMap:dict[(type, tuple[type, ...]), T.Any]):
 		"""register a map of {type : value}"""
 		self.classMap.update(self._expandTypeTupleKeys(classMap))
 		self._sortMap()
