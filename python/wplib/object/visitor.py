@@ -41,94 +41,6 @@ class ChildType(TypeNamespace):
 		pass
 
 
-"""
-consider case of visiting dict items -
-it's useful to see key and value together,
-while it's also useful to know when a contained object
-is used as a key or value
-
-how do we chain multiple levels of iteration like this?
-could do a hack : return a custom tuple type, and
-set up special processing for it
-
-
-[
-(item, MapItem), 
-((item[0], MapKey), (item[1], MapValue))
-]
-??
-
-"""
-
-#region get child objects
-
-MapItemTie = namedtuple("MapItemTie", "key value")
-
-#childTypeItemMapType = T.Mapping[ChildType.T, list[T.Any]]
-typeChildObjectsFnMap = {
-	type(None) : lambda obj: (),
-	MAP_TYPES : lambda obj: (
-			(MapItemTie(*i), ChildType.MapItem)
-	             for i in obj.items()
-	),
-	MapItemTie : lambda obj: ((obj[0], ChildType.MapKey), (obj[1], ChildType.MapValue)),
-
-	SEQ_TYPES : lambda obj: ((i, ChildType.SequenceElement) for i in obj),
-
-	LITERAL_TYPES : lambda obj: (),
-
-}
-# endregion
-
-# region updating
-# need to return values in case of immutable types
-def _updateMap(parentObj:dict, childObj:tuple, childType):
-	parentObj[childObj[0]] = childObj[1]
-	return parentObj
-
-typeUpdateFnMap = {
-	type(None) : lambda parentObj, childObj, childType: childObj,
-	SEQ_TYPES : lambda parentObj, childObj, childType: parentObj + (childObj,),
-	MAP_TYPES : _updateMap,
-
-}
-# endregion
-
-# region creating new
-
-def _newMap(baseParent, childTypeItemMap:dict[ChildType.T, list[T.Any]]):
-	#log("newMap", childTypeItemMap)
-	return dict(childTypeItemMap[ChildType.MapItem])
-
-def _newSeq(baseParent, childTypeItemMap:dict[ChildType.T, list[T.Any]]):
-	#log("newSeq", childTypeItemMap)
-	#return tuple(childTypeItemMap[ChildType.SequenceElement])
-	if isNamedTupleInstance(baseParent):
-		return type(baseParent)(*childTypeItemMap[ChildType.SequenceElement])
-	#newType = type(baseParent)
-
-	return type(baseParent)(childTypeItemMap[ChildType.SequenceElement])
-
-# def _newTuple(baseParent, childTypeItemMap:dict[ChildType.T, list[T.Any]]):
-# 	if isNamedTupleInstance(baseParent):
-# 		return type(baseParent)(*childTypeItemMap[ChildType.SequenceElement])
-# 	return tuple(childTypeItemMap[ChildType.SequenceElement])
-
-childTypeItemMapType = T.Mapping[ChildType.T, list[T.Any]]
-typeNewFnMap = {
-	type(None) : lambda baseParent, childTypeItemMap: None,
-	object : lambda baseParent, childTypeItemMap: type(baseParent)(
-		(childTypeItemMap.popitem()[1])),
-	MapItemTie : lambda baseParent, childTypeItemMap: type(baseParent)(
-		childTypeItemMap[ChildType.MapKey][0], childTypeItemMap[ChildType.MapValue][0]),
-
-	SEQ_TYPES : _newSeq,
-	#MAP_TYPES : lambda baseParent, childTypeItemMap: dict(childTypeItemMap[ChildType.MapItem]),
-	MAP_TYPES : _newMap,
-
-}
-# endregion
-
 # test new adaptor system
 class VisitAdaptor(Adaptor):
 	"""adaptor for visit system - defines how to traverse and regenerate
@@ -148,41 +60,40 @@ class VisitAdaptor(Adaptor):
 		"""create new object from base object and child type item map,
 		a child type item map is a dict of {childType : [list of child objects of that type]}
 		"""
-		raise NotImplementedError
+		raise NotImplementedError("newObj not implemented "
+		                          "for type", type(baseObj),
+		                          " adaptor: ", cls)
 
 class NoneVisitAdaptor(VisitAdaptor):
 	forTypes = (type(None),)
 	@classmethod
 	def childObjects(cls, obj:T.Any) ->T.Iterable[tuple[T.Any, ChildType.T]]:
 		return ()
+	@classmethod
+	def newObj(cls, baseObj:T.Any, childTypeItemMap:dict[ChildType.T, list[T.Any]])->T.Any:
+		return None
 
 class LiteralVisitAdaptor(VisitAdaptor):
 	forTypes = LITERAL_TYPES
 	@classmethod
 	def childObjects(cls, obj:T.Any) ->T.Iterable[tuple[T.Any, ChildType.T]]:
 		return ()
+	@classmethod
+	def newObj(cls, baseObj:T.Any, childTypeItemMap:dict[ChildType.T, list[T.Any]])->T.Any:
+		return baseObj
 
 class MapVisitAdaptor(VisitAdaptor):
 	forTypes = MAP_TYPES
 	@classmethod
 	def childObjects(cls, obj:T.Any) ->T.Iterable[tuple[T.Any, ChildType.T]]:
 		return (
-			(MapItemTie(*i), ChildType.MapItem)
+			(i, ChildType.MapItem)
 	             for i in obj.items()
 		)
 	@classmethod
 	def newObj(cls, baseObj:T.Any, childTypeItemMap:dict[ChildType.T, list[T.Any]])->T.Any:
 		return dict(childTypeItemMap[ChildType.MapItem])
 
-class MapItemTieVisitAdaptor(VisitAdaptor):
-	forTypes = (MapItemTie,)
-	@classmethod
-	def childObjects(cls, obj:T.Any) ->T.Iterable[tuple[T.Any, ChildType.T]]:
-		return ((obj[0], ChildType.MapKey), (obj[1], ChildType.MapValue))
-	@classmethod
-	def newObj(cls, baseObj:T.Any, childTypeItemMap:dict[ChildType.T, list[T.Any]])->T.Any:
-		return type(baseObj)(
-			childTypeItemMap[ChildType.MapKey][0], childTypeItemMap[ChildType.MapValue][0])
 
 class SeqVisitAdaptor(VisitAdaptor):
 	forTypes = SEQ_TYPES
@@ -217,66 +128,15 @@ class VisitableVisitAdaptor(VisitAdaptor):
 		return baseObj.newObj(baseObj, childTypeItemMap)
 
 
-# just do this basic function
-def transformTestTopDown(target):
-	# first transform object (not recursively in serialisation
-	result = transform(target)
-	# get children of result
-	childTypeItemMapType = getChildren(result)
-
-	# return a new object (NOT the exact object returned from transform - bit weird)
-	return newFn(
-		origObj=result,
-	    children={k : transformTest(v) for k, v in childTypeItemMapType} )
-
-
-# collect all in single class
-class VisitTypeFunctionRegister:
-	"""register functions for visiting types"""
-
-	def __init__(self,
-	             typeChildObjectsFnMap:dict[T.Type, T.Callable]=None,
-	             typeUpdateFnMap:dict[T.Type, T.Callable]=None,
-	             typeNewFnMap:dict[T.Type, T.Callable]=None,
-
-	             ):
-		self.typeChildObjectsFnMap = SuperClassLookupMap(typeChildObjectsFnMap)
-		self.typeUpdateFnMap = SuperClassLookupMap(typeUpdateFnMap)
-		self.typeNewFnMap = SuperClassLookupMap(typeNewFnMap)
-
-	def registerChildObjectsFnForType(self, type, fn):
-		self.typeChildObjectsFnMap.updateClassMap({type:fn})
-
-	def registerUpdateFnForType(self, type, fn):
-		self.typeUpdateFnMap.updateClassMap({type:fn})
-
-	def registerNewFromArgsFnForType(self, type, fn):
-		self.typeNewFnMap.updateClassMap({type:fn})
-
-	def getChildObjectsFnForType(self, type):
-		return self.typeChildObjectsFnMap.lookup(type)
-
-	def getUpdateFnForType(self, type):
-		return self.typeUpdateFnMap.lookup(type)
-
-	def getNewFromArgsFnForType(self, type):
-		return self.typeNewFnMap.lookup(type)
-
-
-visitFunctionRegister = VisitTypeFunctionRegister(
-	typeChildObjectsFnMap=typeChildObjectsFnMap,
-	typeUpdateFnMap=typeUpdateFnMap,
-	typeNewFnMap=typeNewFnMap,
-)
 
 
 class VisitObjectData(TypedDict):
 	base : T.Any # root object of the visit
 	visitResult : T.Any # temp result of the visit
-	copyResult : T.Any # copy of final result
+	#copyResult : T.Any # copy of final result
 	childType : ChildType.T # type of current object
-	childDatas : list[VisitObjectData] # tuple of child data for current object
-	makeNewObjFromVisitResult : bool # if true, make new object from visit result - if false, use visit result as is
+	#childDatas : list[VisitObjectData] # tuple of child data for current object
+	#makeNewObjFromVisitResult : bool # if true, make new object from visit result - if false, use visit result as is
 
 
 @dataclass
@@ -288,15 +148,14 @@ class VisitPassParams:
 	transformVisitedObjects:bool = False # if true, modifies visited objects - yields (original, transformed) pairs
 	visitFn:visitFnType = None # if given, overrides visitor's visit function
 	visitKwargs:dict = None # if given, kwargs to pass to visit function
+	yieldChildType:bool = False # if true, yield child type as well as child object
 
 
 	pass
 
 
 class DeepVisitOp:
-
-	def __init__(self):
-		pass
+	"""helper class to define operations on visited objects"""
 
 	def visit(self,
 	          obj:T.Any,
@@ -318,37 +177,14 @@ class DeepVisitor:
 
 	Run filter function over all elements for now, leave any filtering to
 	client code.
+
+	Might also be useful to have a lazy generator / structure that evaluates only when pathed into?
 	"""
 
 	ChildType = ChildType
 	VisitObjectData = VisitObjectData
 	VisitPassParams = VisitPassParams
 	DeepVisitOp = DeepVisitOp
-
-	@classmethod
-	def getDefaultVisitTypeRegister(cls,
-	                                        )->VisitTypeFunctionRegister:
-		"""get default type function register"""
-		return visitFunctionRegister
-
-
-	@classmethod
-	def visitSingleObject(cls,
-	                      obj,
-	                      visitor:DeepVisitor,
-	                      visitObjectData:VisitObjectData=None,
-	                      visitPassParams:VisitPassParams=None,
-	                      )->None:
-		"""visit a single object - if needed,
-		populate VisitResult and modify VisitParams
-		"""
-		return obj
-
-	@classmethod
-	def getNextVisitDestinationsFn(cls,
-	                          )->callable:
-		"""get default function for getting next objects to visit"""
-		return
 
 	@classmethod
 	def checkVisitFnSignature(cls, fn:visitFnType):
@@ -364,244 +200,90 @@ class DeepVisitor:
 		# 	raise TypeError(f"visit function " + fnId + f"does not have correct argument names\n{argSeq} \n{argSeq[-4:]}\n{fn.__code__.co_varnames}")
 		return True
 
-	def __init__(self,
-	             visitSingleObjectFn:visitFnType=None,
-	             visitTypeFunctionRegister: VisitTypeFunctionRegister=visitFunctionRegister,
-	             #nextVisitDestinationsFn:callable=None,
-	             ):
-		"""initialize the visitor with functions
-		to handle visiting single objects and
-		getting next objects to visit
-		"""
-		self.visitTypeFunctionRegister = visitTypeFunctionRegister
-		self.visitSingleObjectFn = visitSingleObjectFn or self.visitSingleObject
-		self.checkVisitFnSignature(self.visitSingleObjectFn)
-
-		#self.nextVisitDestinationsFn = nextVisitDestinationsFn or self.nextVisitDestinations
-
-
-	def _visitAll(self,
-	              parentObj,
-	              visitParams:VisitPassParams,
-	              )->T.Generator[tuple, None, None]:
-		"""visit objects in a flat top-down manner,
-		no readback, no transformation"""
-		toVisit = deque()
-		visited = []
-
-		visitData = VisitObjectData(
-			base=parentObj,
-			visitResult=None,
-			copyResult=None,
-			childType=None,
-			childDatas=[],
-		)
-
-		toVisit.append(visitData)
-
-		while toVisit:
-			visitData = toVisit.pop() #type: VisitObjectData
-
-			# visit object
-			toIter = visitData["base"]
-			if visitParams.topDown:
-				if visitParams.runVisitFn:
-					result = visitParams.visitFn(
-						visitData["base"], self, visitData, visitParams)
-					visitData["visitResult"] = result
-
-					# yield base and result
-					yield (visitData["base"], result)
-					toIter = result
-				else:
-					yield visitData["base"]
-
-			visited.append(visitData)
-
-			# get next objects to visit
-			childObjectsFn = self.visitTypeFunctionRegister.getChildObjectsFnForType(type(toIter))
-			nextObjTies = childObjectsFn(toIter)
-
-			# build new visit datas for next objects
-			for nextObj, childType in nextObjTies:
-				nextVisitData = VisitObjectData(
-					base=parentObj,
-					visitResult=None,
-					copyResult=None,
-					childType=childType,
-					childDatas=[],
-				)
-				toVisit.append(nextVisitData)
-
-		# if top down, we're done
-		if visitParams.topDown:
-			return
-
-		# if bottom up, we need to iterate over visited array
-		# and yield results
-		for visitData in reversed(visited):
-			if visitParams.runVisitFn:
-				# run visit function
-				result = visitParams.visitFn(
-					visitData["base"], self, visitData, visitParams)
-				visitData["visitResult"] = result
-				# yield base and result
-				yield (visitData["base"], result)
+	# separate method for every permutation of iteration direction - excessive but readable
+	def _iterRecursiveTopDownDepthFirst(self,
+	                                    parentObj:T.Any,
+	                                    visitParams:VisitPassParams,
+	                                    )->T.Generator[tuple, None, None]:
+		"""iterate over all objects top-down"""
+		#yield parentObj
+		nextObjs = VisitAdaptor.adaptorForType(
+			type(parentObj)).childObjects(parentObj)
+		for nextObj, childType in nextObjs:
+			if visitParams.yieldChildType:
+				yield childType, nextObj
 			else:
-				yield visitData["base"]
+				yield nextObj
+			yield from self._iterRecursiveTopDownDepthFirst(nextObj, visitParams)
+
+	def _iterRecursiveTopDownBreadthFirst(self,
+	                                      parentObj:T.Any,
+	                                      visitParams:VisitPassParams,
+	                                      )->T.Generator[tuple, None, None]:
+		"""iterate over all objects top-down"""
+		nextObjs = VisitAdaptor.adaptorForType(
+			type(parentObj)).childObjects(parentObj)
+		for nextObj, childType in nextObjs:
+			if visitParams.yieldChildType:
+				yield childType, nextObj
+			else:
+				yield nextObj
+		for nextObj, childType in nextObjs:
+			yield from self._iterRecursiveTopDownBreadthFirst(nextObj, visitParams)
+
+	def _applyRecursiveTopDownDepthFirst(
+			self,
+			parentObj:T.Any,
+			visitParams:VisitPassParams,
+			)->T.Generator[tuple, None, None]:
+		nextObjs = VisitAdaptor.adaptorForType(
+			type(parentObj)).childObjects(parentObj)
+		for nextObj, childType in nextObjs:
+			visitData = VisitObjectData(
+				base=parentObj,
+				visitResult=None,
+				childType=childType,
+			)
+			yield nextObj, visitParams.visitFn(
+				nextObj, self, visitData, visitParams)
+			yield from self._iterRecursiveTopDownDepthFirst(nextObj, visitParams)
 
 
+	def _transformRecursiveTopDownDepthFirst(
+			self,
+			parentObj:T.Any,
+			visitParams:VisitPassParams,
+			childType:ChildType.T=None
+			)->T.Any:
+		"""transform all objects top-down"""
 
-	def _transform(self,
-	               parentObj,
-	               visitParams:VisitPassParams,
-	               ):
-		"""iterate over objects without recursion
-
-		does this need multiple passes? one to collect objects,
-		one to visit them?
-
-		need at least 2 passes - top down to process objects and collect
-		results, bottom up to reconstruct new objects
-		"""
-
-		toVisit = deque()
-		visited = []
-
+		# transform
 		visitData = VisitObjectData(
 			base=parentObj,
 			visitResult=None,
-			copyResult=None,
-			childType=None,
-			childDatas=[],
-			makeNewObjFromVisitResult=True
+			childType=childType,
 		)
-
-		toVisit.append(visitData)
-
-
-		#print("visitParams", visitParams)
-		while toVisit:
-			#log("toVisit", toVisit)
-
-			visitData = toVisit.pop() #type: VisitObjectData
-
-			# visit object
-			toIter = visitData["base"]
-			if visitParams.topDown:
-				result = visitParams.visitFn(
-					visitData["base"], self, visitData, visitParams)
-				visitData["visitResult"] = result
-
-				# # yield base and result
-				# yield (visitData["base"], result)
-				toIter = result
-				#log("base", visitData["base"], "result", result)
-
-			visited.append(visitData)
-
-			# get next objects to visit
-			childObjectsFn = self.visitTypeFunctionRegister.getChildObjectsFnForType(
-				type(toIter)
-			)
-			nextObjTies = childObjectsFn(toIter)
-
-			# build new visit datas for next objects
-			for nextObj, childType in nextObjTies:
-				nextVisitData = VisitObjectData(
-					base=nextObj,
-					visitResult=None,
-					copyResult=None,
-					childType=childType,
-					childDatas=[],
-					makeNewObjFromVisitResult=True
-				)
-				# add ref to child data
-				visitData["childDatas"].append(nextVisitData)
-				# add new data to be visited next
-				toVisit.append(nextVisitData)
-
-		# reconstruct objects, bottom up
-		from wptree import Tree
-		for visitData in reversed(visited):
-			visitData : VisitObjectData
-
-			result = None
-			# if bottom up, do visiting now
-			if not visitParams.topDown:
-				result = visitParams.visitFn(
-					visitData["base"], self, visitData, visitParams)
-				if isinstance(result, Tree):
-					log("TREE")
-					print("visitData")
-					print(visitData["childDatas"])
-					print(visitData["makeNewObjFromVisitResult"])
-				visitData["visitResult"] = result
-
-
-			if not visitData['childDatas'] or not visitData['makeNewObjFromVisitResult']:
-				try:
-					if isinstance(result, Tree):
-						log("continuing")
-				except:
-					pass
-				visitData['copyResult'] = visitData['visitResult']
-				continue
-
-			newObjFn = self.visitTypeFunctionRegister.getNewFromArgsFnForType(
-				type(visitData['visitResult'])
-			)
-
-			if isinstance(result, Tree):
-				log("newObjFn", newObjFn)
-
-			# build map of {childType : [ list of child objects of that type]}
-			childTypeToChildObjectsMap = defaultdict(list)
-			for childData in visitData['childDatas']:
-				childTypeToChildObjectsMap[childData['childType']].append(childData['copyResult'])
-
-			newObjFn : callable[[T.Any, dict[ChildType.T(), T.Any]], T.Any]
-			try:
-				visitData['copyResult'] = newObjFn(visitData["visitResult"],
-				                                   childTypeToChildObjectsMap)
-				if isinstance(result, Tree):
-					log("copyResult", visitData['copyResult'])
-			except Exception as e:
-				log(f"Error creating new object from {visitData['visitResult']} \n and {pprint.pformat(childTypeToChildObjectsMap, indent=4, compact=False)}")
-				pprint.pprint(visitData)
-				log("newObjFn", newObjFn, )
-				pprint.pprint(inspect.signature(newObjFn))
-				raise e
-		#log("visited", visited)
-		print("returning", visited[0]['copyResult'])
-		return visited[0]['copyResult']
-
-
-	def _transformRecursiveTopDown(self,
-	               parentObj,
-	               visitParams:VisitPassParams,
-	                               visitData:VisitObjectData=None,
-	               ):
-		"""doing this without recursion is beyond me for now"""
-		# visitData = visitData or VisitObjectData(
-		# 	base=parentObj,
-		# 	visitResult=None,
-		# 	copyResult=None,
-		# 	childType=None,
-		# 	childDatas=[],
-		# 	makeNewObjFromVisitResult=True
-		# )
-		visitData = {}
 		result = visitParams.visitFn(
 			parentObj, self, visitData, visitParams)
 
-		# get next objects to visit
-		childObjectsFn = self.visitTypeFunctionRegister.getChildObjectsFnForType(
-			type(result)
-		)
-		nextObjTies = childObjectsFn(result)
-		for obj in nextObjTies:
-			self._transformRecursiveTopDown(obj, visitParams, visitData)
+		# get child objects
+		resultObjs = defaultdict(list)
+		nextObjs = VisitAdaptor.adaptorForType(
+			type(result)).childObjects(result)
+		for nextObj, childType in nextObjs:
+			# transform child objects
+			resultObjs[childType].append(self._transformRecursiveTopDownDepthFirst(
+				nextObj, visitParams, childType)
+				 )
+		# create new object from transformed child objects
+		#print("resultObjs", resultObjs)
+		newObj = VisitAdaptor.adaptorForType(
+			type(result)).newObj(result, dict(resultObjs))
+		#print("newObj", newObj)
+		return newObj
+
+
+
 
 
 
@@ -613,23 +295,20 @@ class DeepVisitor:
 	                 ):
 		"""dispatch a single pass of the visitor
 		"""
-		# allowing LOADS of override levels for setting visit function here,
-		# unnecessary
-		if visitFn is not None: # set visit function if given
-			passParams.visitFn = visitFn
-		else:
-			passParams.visitFn = passParams.visitFn or self.visitSingleObjectFn
+
+
+		if passParams.visitFn is None:
+			return self._iterRecursiveTopDownDepthFirst(fromObj, passParams)
+
 		self.checkVisitFnSignature(passParams.visitFn)
 
 		passParams.visitKwargs = passParams.visitKwargs or {}
 		passParams.visitKwargs.update(kwargs)
 
-		if passParams.transformVisitedObjects:
-			result = self._transform(fromObj, passParams)
-			return result
-		else:
-			return self._visitAll(fromObj, passParams)
-
+		if not passParams.transformVisitedObjects:
+			return self._applyRecursiveTopDownDepthFirst(fromObj, passParams)
+		return self._transformRecursiveTopDownDepthFirst(
+			fromObj, passParams, childType=None)
 
 visitFnType = T.Callable[
 	[T.Any,
