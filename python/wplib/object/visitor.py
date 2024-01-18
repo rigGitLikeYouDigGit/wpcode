@@ -92,7 +92,7 @@ class MapVisitAdaptor(VisitAdaptor):
 		)
 	@classmethod
 	def newObj(cls, baseObj:T.Any, childTypeItemMap:dict[ChildType.T, list[T.Any]])->T.Any:
-		return dict(childTypeItemMap[ChildType.MapItem])
+		return dict(childTypeItemMap.get(ChildType.MapItem, ()))
 
 
 class SeqVisitAdaptor(VisitAdaptor):
@@ -104,7 +104,9 @@ class SeqVisitAdaptor(VisitAdaptor):
 	def newObj(cls, baseObj:T.Any, childTypeItemMap:dict[ChildType.T, list[T.Any]])->T.Any:
 		if isNamedTupleInstance(baseObj):
 			return type(baseObj)(*childTypeItemMap[ChildType.SequenceElement])
-
+		print("baseObj", baseObj)
+		print("childTypeItemMap", childTypeItemMap)
+		print(type(baseObj))
 		return type(baseObj)(childTypeItemMap[ChildType.SequenceElement])
 
 class VisitableBase:
@@ -265,9 +267,13 @@ class DeepVisitor:
 		)
 		result = visitParams.visitFn(
 			parentObj, self, visitData, visitParams)
+		if result is None:
+			return result
 
 		# get child objects
 		resultObjs = defaultdict(list)
+		adaptor = VisitAdaptor.adaptorForType(type(result))
+		assert adaptor, f"no visit adaptor for type {type(result)}"
 		nextObjs = VisitAdaptor.adaptorForType(
 			type(result)).childObjects(result)
 		for nextObj, childType in nextObjs:
@@ -277,12 +283,53 @@ class DeepVisitor:
 				 )
 		# create new object from transformed child objects
 		#print("resultObjs", resultObjs)
-		newObj = VisitAdaptor.adaptorForType(
-			type(result)).newObj(result, dict(resultObjs))
+		adaptor = VisitAdaptor.adaptorForType(
+			type(result))
+		try:
+			newObj = adaptor.newObj(result, resultObjs)
+		except Exception as e:
+			print("base", parentObj)
+			print("result", result)
+			print("resultObjs", resultObjs)
+			raise e
+
 		#print("newObj", newObj)
 		return newObj
 
+	def _transformRecursiveBottomUpDepthFirst(
+			self,
+			parentObj:T.Any,
+			visitParams:VisitPassParams,
+			childType:ChildType.T=None
+			)->T.Any:
+		"""transform all objects top-down"""
 
+		# transform
+		visitData = VisitObjectData(
+			base=parentObj,
+			visitResult=None,
+			childType=childType,
+		)
+		nextObjs = VisitAdaptor.adaptorForType(
+			type(parentObj)).childObjects(parentObj)
+		# get child objects
+		resultObjs = defaultdict(list)
+		for nextObj, childType in nextObjs:
+			resultObjs[childType].append(self._transformRecursiveBottomUpDepthFirst(
+				nextObj, visitParams, childType)
+				 )
+
+		adaptor = VisitAdaptor.adaptorForType(parentObj)
+		try:
+			newObj = adaptor.newObj(parentObj, resultObjs)
+		except Exception as e:
+			print("Cannot make new object:")
+			print("base", parentObj)
+			print("resultObjs", resultObjs)
+			raise e
+
+		return visitParams.visitFn(
+			newObj, self, visitData, visitParams)
 
 
 
@@ -307,8 +354,12 @@ class DeepVisitor:
 
 		if not passParams.transformVisitedObjects:
 			return self._applyRecursiveTopDownDepthFirst(fromObj, passParams)
-		return self._transformRecursiveTopDownDepthFirst(
-			fromObj, passParams, childType=None)
+		if passParams.topDown:
+			return self._transformRecursiveTopDownDepthFirst(
+				fromObj, passParams, childType=None)
+		else:
+			return self._transformRecursiveBottomUpDepthFirst(
+				fromObj, passParams, childType=None)
 
 visitFnType = T.Callable[
 	[T.Any,

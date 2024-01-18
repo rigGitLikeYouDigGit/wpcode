@@ -54,7 +54,12 @@ class CodeRef:
 		"""Return a code ref string of the form,
 		"module.path:object.path"
 		"""
-		return MODULE_MEMBER_SEP.join([obj.__module__, obj.__qualname__])
+		try:
+			return MODULE_MEMBER_SEP.join([obj.__module__,
+			                               obj.__qualname__])
+		except AttributeError:
+			return MODULE_MEMBER_SEP.join([obj.__module__,
+			                               obj.__class__.__name__])
 
 	@staticmethod
 	def resolve(refStr:str)->T.Any:

@@ -930,12 +930,12 @@ class TreeInterface(Traversable,
 			"preserveType" : True,
 		}
 
-	@classmethod
-	def _encodeObject(cls, obj:TreeInterface, encodeParams:dict):
+
+	def encode(self, encodeParams:dict=None)->dict:
 		nested = True
-		data = obj._serialiseNested() if nested else obj._serialiseFlat()
+		data = self._serialiseNested() if nested else self._serialiseFlat()
 		# add root data
-		data[obj.serialKeys().rootData] = obj._rootData()
+		data[self.serialKeys().rootData] = obj._rootData()
 		data[obj.serialKeys().layout] = obj.serialKeys().nestedMode if nested else obj.serialKeys().flatMode
 		return data
 

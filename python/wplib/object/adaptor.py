@@ -22,7 +22,6 @@ class Adaptor:
 	use 2 parts : a base Adaptor, and a base class mixin for custom types
 	"""
 
-	#_typeMap : dict[tuple[type, ...], type[Adaptor]] = None
 	adaptorTypeMap : SuperClassLookupMap = None
 
 	# reflexive = True # if true, adaptor is registered against itself
@@ -43,7 +42,7 @@ class Adaptor:
 		"""
 		#log("registerAdaptor", adaptor, forTypes)
 		#log(adaptor.adaptorTypeMap)
-		assert adaptor.adaptorTypeMap, "Must declare empty _typeMap on Adaptor superclass of {}".format(adaptor)
+		assert adaptor.adaptorTypeMap, "Must declare empty adaptorTypeMap on Adaptor superclass of {}".format(adaptor)
 		adaptor.adaptorTypeMap.updateClassMap({forTypes : adaptor})
 
 	@classmethod

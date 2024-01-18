@@ -1,7 +1,11 @@
 
+from .adaptor import Adaptor
+
 from .builtinextension import UserSet, PostDecMethodWrapper
 
 from .namespace import TypeNamespace, Sentinel
+
+from .cache import CacheObj
 
 from .decorator import UserDecorator
 from .dirtygraph import DirtyGraph, DirtyNode
@@ -22,4 +26,4 @@ from .stringlike import StringLike
 
 from .traversable import Traversable, TraversableParams
 
-from .visitor import DeepVisitor, VisitObjectData, VisitPassParams, VisitTypeFunctionRegister, visitFunctionRegister
+from .visitor import DeepVisitor, VisitObjectData, VisitPassParams, VisitableBase, VisitAdaptor
