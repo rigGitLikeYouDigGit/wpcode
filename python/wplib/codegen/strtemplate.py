@@ -11,6 +11,7 @@ class StringCodeTemplate:
 		raise NotImplementedError
 
 class FunctionTemplate(StringCodeTemplate):
+	"""template for a function declaration"""
 
 	def __init__(self,
 	             fnName,
@@ -64,4 +65,25 @@ class FunctionTemplate(StringCodeTemplate):
 		return f"""def {self.fnName}({self.formatArgsAndKwargs()})->{self.returnType}:\n\t{self.fnBody}"""
 
 
+class ClassTemplate(StringCodeTemplate):
+	"""template for a class declaration"""
+
+	def __init__(self,
+	             className,
+	             classBaseClasses,
+	             classBody,
+	             ):
+		self.className = className
+		self.classBaseClasses = classBaseClasses
+		self.classBody = classBody
+
+	def formatBaseClasses(self):
+		"""format the base classes"""
+		result = ""
+		for baseClass in self.classBaseClasses:
+			result += f"{baseClass}, "
+		return result[:-2]
+
+	def resultString(self):
+		return f"""class {self.className}({self.formatBaseClasses()}):\n\t{self.classBody}"""
 

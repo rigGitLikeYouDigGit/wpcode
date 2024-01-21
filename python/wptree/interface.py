@@ -13,7 +13,9 @@ from wplib.sentinel import Sentinel
 from wplib.string import incrementName
 from wplib import CodeRef
 
+from wplib.object import VisitAdaptor, Visitable
 from wplib.serial import Serialisable, SerialAdaptor
+
 
 from wptree.delta import TreeDeltas
 from wptree.treedescriptor import TreePropertyDescriptor
@@ -23,6 +25,36 @@ from wptree.treedescriptor import TreePropertyDescriptor
 Ignoring tree auxProperties / traits for now, not sure how best
 to override them
 """
+
+# region DeepVisitor integration
+# register tree functions with type catalogue
+TreeTie = namedtuple("TreeTie", "name value aux")
+
+ChildType = DeepVisitor.ChildType
+
+class TreeBranch(ChildType.base()):
+	pass
+class TreeName(ChildType.base()):
+	pass
+class TreeValue(ChildType.base()):
+	pass
+class TreeAuxProperties(ChildType.base()):
+	pass
+for i in [TreeBranch, TreeName, TreeValue, TreeAuxProperties,
+          ]:
+	ChildType.addMember(i)
+
+def _treeChildObjectsFn(tree:TreeInterface):
+	return (
+		(tree.name, ChildType.TreeName),
+		(tree.value, ChildType.TreeValue),
+		(tree.auxProperties, ChildType.TreeAuxProperties),
+		*((i, ChildType.TreeBranch) for i in tree.branches)
+	)
+
+# endregion
+
+
 
 @dataclass
 class TreeTraversalParams(TraversableParams):
@@ -51,29 +83,43 @@ keyT = Traversable.keyT
 TreeType = T.TypeVar("TreeType", bound="TreeInterface")
 class TreeInterface(Traversable,
                     Serialisable,
+                    Visitable,
                     EventDispatcher
                     ):
+	"""base class for tree-like objects -
+	no requirements for internal storage or structure,
+	only interface around name, value, branches and properties
+	"""
+
+	def childObjects(self):
+		return (
+			(self.name, ChildType.TreeName),
+			(self.value, ChildType.TreeValue),
+			(self.auxProperties, ChildType.TreeAuxProperties),
+			*((i, ChildType.TreeBranch) for i in self.branches)
+		)
 
 
+	class SerialKeys:
+		name = "@NAME"
+		value = "@VALUE"
+		uid = "@UID"
+		children = "@CHILDREN"
+		address = "@ADDRESS"
+		properties = "@PROPERTIES"
+		type = "@TYPE"
+		rootData = "@ROOT_DATA"
+		format = "@FORMAT_VERSION"
+
+		# layout constants
+		layout = "@LAYOUT"
+		nestedMode = 0
+		flatMode = 1
 
 	@classmethod
 	def serialKeys(cls):
-		class SerialKeys:
-			name = "@NAME"
-			value = "@VALUE"
-			uid = "@UID"
-			children = "@CHILDREN"
-			address = "@ADDRESS"
-			properties = "@PROPERTIES"
-			type = "@TYPE"
-			rootData = "@ROOT_DATA"
-			format = "@FORMAT_VERSION"
 
-			# layout constants
-			layout = "@LAYOUT"
-			nestedMode = 0
-			flatMode = 1
-		return SerialKeys
+		return cls.SerialKeys
 
 	class SignalKeys:
 		NameChanged = "nameChanged"
@@ -803,32 +849,35 @@ class TreeInterface(Traversable,
 
 	def _baseSerialData(self)->dict:
 		"""return name, value, auxProperties for this branch only"""
-		data = { self.serialKeys().name : self.getName(),
+		serialKeys = self.serialKeys()
+		data = { serialKeys.name : self.getName()
 		         }
 		#if self.value != self.default:
-		data[self.serialKeys().value] = self._getRawValue()
+		data[serialKeys.value] = self._getRawValue()
 		if self.auxProperties != self.defaultAuxProperties():
-			data[self.serialKeys().properties] = self.auxProperties
+			data[serialKeys.properties] = self.auxProperties
 
 		# check if type differs from parent - if so define it
 		if self.parent and self.parent.__class__ != self.__class__:
 			typeData = CodeRef.get(self.__class__)
-			data[self.serialKeys().type] = typeData
+			data[serialKeys.type] = typeData
 
-		data[self.serialKeys().uid] = self.uid
+		data[serialKeys.uid] = self.uid
 
 		return data
 
 
 	def _serialiseFlat(self):
 		"""return flat representation of tree, using address
-		this does not properly account for parent types"""
+		"""
 		data = { tuple(self.address()) : self._baseSerialData()}
-		for i in self.branches:
+		#for i in self.branches:
+		for i in self.allBranches(includeSelf=False):
 			data[tuple(i.address())] = i._baseSerialData()
 		return data
 
 	def _serialiseNested(self):
+		"""inner function to call for main process"""
 		data = self._baseSerialData()
 		#print("serialiseNested", self, self.branches)
 		if self.branches:
@@ -836,6 +885,7 @@ class TreeInterface(Traversable,
 		return data
 
 	def _serialiseNestedOuter(self):
+		"""outer function to call for main process"""
 		data = self._serialiseNested()
 		# add root data
 		data[self.serialKeys().rootData] = self._rootData()
@@ -861,14 +911,15 @@ class TreeInterface(Traversable,
 
 	@classmethod
 	def _deserialiseFromData(cls, baseData:dict, preserveUid=False, loadType=True)->cls:
-		"""given a block defining name, value, auxProperties, regenerate a tree"""
+		"""given a block defining name, value, auxProperties, regenerate a single tree"""
+		serialKeys = cls.serialKeys()
 		# check if a specific tree subtype is needed
 		if isinstance(loadType, type):
 			treeCls = loadType
 		# if loadType is True, load saved type
-		elif loadType and cls.serialKeys().type in baseData:
+		elif loadType and serialKeys.type in baseData:
 			# retrieve the reference to type, resolve it to get the actual type
-			treeCls = CodeRef.resolve(baseData[cls.serialKeys().type])
+			treeCls = CodeRef.resolve(baseData[serialKeys.type])
 		else:
 			treeCls = cls
 
@@ -935,28 +986,26 @@ class TreeInterface(Traversable,
 		nested = True
 		data = self._serialiseNested() if nested else self._serialiseFlat()
 		# add root data
-		data[self.serialKeys().rootData] = obj._rootData()
-		data[obj.serialKeys().layout] = obj.serialKeys().nestedMode if nested else obj.serialKeys().flatMode
+		data[self.serialKeys().rootData] = self._rootData()
+		data[self.serialKeys().layout] = self.serialKeys().nestedMode if nested else self.serialKeys().flatMode
 		return data
 
 	@classmethod
-	def _decodeObject(cls, serialCls: type[TreeInterface], serialData: dict,
+	def decode(cls, serialData: dict,
 	                 decodeParams:dict, formatVersion=-1) -> TreeInterface:
 		#print("tree interface decode")
 
 		# todo: maybe have outer layer of params indexed by object type?
 		preserveUid = decodeParams["preserveUid"]
 		preserveType = decodeParams["preserveType"]
-		# preserveUid = False
-		# preserveType = False
-		rootData = serialData[serialCls.serialKeys().rootData]  # not used yet
+		rootData = serialData[cls.serialKeys().rootData]  # not used yet
 
 		# cls._setCaching(False)
-		layoutMode = serialData.get(serialCls.serialKeys().layout, serialCls.serialKeys().nestedMode)
-		if layoutMode == serialCls.serialKeys().nestedMode:
-			tree = serialCls._deserialiseNested(serialData, preserveUid=preserveUid, preserveType=preserveType)
-		elif layoutMode == serialCls.serialKeys().flatMode:
-			tree = serialCls._deserialiseFlat(serialData, preserveUid=preserveUid, preserveType=preserveType)
+		layoutMode = serialData.get(cls.serialKeys().layout, cls.serialKeys().nestedMode)
+		if layoutMode == cls.serialKeys().nestedMode:
+			tree = cls._deserialiseNested(serialData, preserveUid=preserveUid, preserveType=preserveType)
+		elif layoutMode == cls.serialKeys().flatMode:
+			tree = cls._deserialiseFlat(serialData, preserveUid=preserveUid, preserveType=preserveType)
 		else:
 			raise ValueError(f"Unknown layout mode {layoutMode} for data {serialData}")
 		# cls._setCaching(True)
@@ -1087,34 +1136,4 @@ class TreeInterface(Traversable,
 	# endregion
 
 
-# region DeepVisitor integration
-# register tree functions with type catalogue
-TreeTie = namedtuple("TreeTie", "name value aux")
 
-ChildType = DeepVisitor.ChildType
-
-class TreeBranch(ChildType.base()):
-	pass
-class TreeName(ChildType.base()):
-	pass
-class TreeValue(ChildType.base()):
-	pass
-class TreeAuxProperties(ChildType.base()):
-	pass
-for i in [TreeBranch, TreeName, TreeValue, TreeAuxProperties,
-          ]:
-	ChildType.addMember(i)
-
-def _treeChildObjectsFn(tree:TreeInterface):
-	return (
-		(tree.name, ChildType.TreeName),
-		(tree.value, ChildType.TreeValue),
-		(tree.auxProperties, ChildType.TreeAuxProperties),
-		*((i, ChildType.TreeBranch) for i in tree.branches)
-	)
-
-DeepVisitor.getDefaultVisitTypeRegister().registerChildObjectsFnForType(
-	TreeInterface, _treeChildObjectsFn
-)
-
-# endregion

@@ -29,7 +29,10 @@ class LiteralSerialAdaptor(SerialAdaptor):
 	def encode(cls, obj, encodeParams:dict=None) ->dict:
 		return obj
 	@classmethod
-	def decode(cls, serialData:dict, decodeParams:dict=None) ->T.Any:
+	def decode(cls,
+	           serialData:dict,
+	           serialType: type,
+	           decodeParams:dict=None) ->T.Any:
 		return serialData
 
 class NamedTupleSerialAdaptor(SerialAdaptor):
@@ -44,7 +47,10 @@ class TypeAdaptor(SerialAdaptor):
 	def encode(cls, obj, encodeParams:dict=None) ->dict:
 		return {"data" : CodeRef.get(obj)}
 	@classmethod
-	def decode(cls, serialData:dict, decodeParams:dict=None) ->T.Any:
+	def decode(cls,
+	           serialData:dict,
+	           serialType:type,
+	           decodeParams:dict=None) ->T.Any:
 		return CodeRef.resolve(serialData["data"])
 
 
@@ -63,7 +69,10 @@ class EnumSerialAdaptor(SerialAdaptor):
 		return {"value" : obj.value, "type" : obj.__class__}
 
 	@classmethod
-	def decode(cls, serialData:dict, decodeParams:dict)->Enum:
+	def decode(cls,
+	           serialData:dict,
+	           serialType:type,
+	           decodeParams:dict)->Enum:
 		return serialData["type"]._value2member_map_[serialData["value"]]
 
 class TypeNamespaceAdaptor(SerialAdaptor):
@@ -80,5 +89,8 @@ class TypeNamespaceAdaptor(SerialAdaptor):
 		return "T:"+codeStr
 
 	@classmethod
-	def decode(cls, serialData:str, decodeParams:dict=None) ->TypeNamespace:
+	def decode(cls,
+	           serialData:str,
+	           serialType:type,
+	           decodeParams:dict=None) ->TypeNamespace:
 		return CodeRef.resolve(serialData[2:])

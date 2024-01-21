@@ -104,15 +104,12 @@ class SeqVisitAdaptor(VisitAdaptor):
 	def newObj(cls, baseObj:T.Any, childTypeItemMap:dict[ChildType.T, list[T.Any]])->T.Any:
 		if isNamedTupleInstance(baseObj):
 			return type(baseObj)(*childTypeItemMap[ChildType.SequenceElement])
-		print("baseObj", baseObj)
-		print("childTypeItemMap", childTypeItemMap)
-		print(type(baseObj))
 		return type(baseObj)(childTypeItemMap[ChildType.SequenceElement])
 
-class VisitableBase:
+class Visitable:
 	"""custom base interface for custom types -
 	we associate an adaptor type for these later"""
-	def childObjects(self):
+	def childObjects(self)->T.Iterable[tuple[T.Any, ChildType.T]]:
 		raise NotImplementedError
 	@classmethod
 	def newObj(cls, baseObj, childTypeItemMap):
@@ -121,7 +118,7 @@ class VisitableBase:
 class VisitableVisitAdaptor(VisitAdaptor):
 	"""integrate derived subclasses with adaptor system
 	"""
-	forTypes = (VisitableBase,)
+	forTypes = (Visitable,)
 	@classmethod
 	def childObjects(cls, obj:T.Any) ->T.Iterable[tuple[T.Any, ChildType.T]]:
 		return obj.childObjects()
@@ -282,12 +279,12 @@ class DeepVisitor:
 				nextObj, visitParams, childType)
 				 )
 		# create new object from transformed child objects
-		#print("resultObjs", resultObjs)
 		adaptor = VisitAdaptor.adaptorForType(
 			type(result))
 		try:
 			newObj = adaptor.newObj(result, resultObjs)
 		except Exception as e:
+			print("error making new object:")
 			print("base", parentObj)
 			print("result", result)
 			print("resultObjs", resultObjs)
@@ -374,7 +371,6 @@ if __name__ == '__main__':
 
 	def printArgsVisit(obj, visitor, visitData, visitParams):
 		#print(obj, visitor, visitData, visitParams)
-		print(obj, visitData["childType"])
 		return obj
 
 	visitor = DeepVisitor(

@@ -31,8 +31,8 @@ class CustomObj(Serialisable):
 
 
 
-class TestNode(unittest.TestCase):
-	""" test for basic Chimaera node evaluation and referencing """
+class TestSerial(unittest.TestCase):
+	""" test for serialisation loading and saving """
 
 	def _checkRoundTrip(self, obj):
 		serialData = Serialisable.serialise(obj)
@@ -104,7 +104,7 @@ class TestNode(unittest.TestCase):
 
 	def test_tree(self):
 
-
+		from wptree import Tree
 
 		# obj = {
 		# 	"nodeA" : {

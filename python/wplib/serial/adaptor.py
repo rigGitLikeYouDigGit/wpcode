@@ -46,13 +46,28 @@ class SerialAdaptor(Adaptor):
 		return {cls.TYPE_KEY : CodeRef.get(forObj)}
 
 	@classmethod
+	def defaultEncodeParams(cls, forObj)->dict:
+		"""Get the default encode params. These are combined with any given by user and passed to encode().
+		"""
+		return {}
+
+	@classmethod
+	def defaultDecodeParams(cls, forSerialisedType:type)->dict:
+		"""Get the default decode params.
+		"""
+		return {}
+
+	@classmethod
 	def encode(cls, obj, encodeParams:dict=None)->dict:
 		"""Encode the given object into a dict.
 		"""
 		raise NotImplementedError()
 
 	@classmethod
-	def decode(cls, serialData:dict, decodeParams:dict=None)->T.Any:
+	def decode(cls,
+	           serialData:dict,
+	           serialType:type,
+	           decodeParams:dict=None)->T.Any:
 		"""Decode the object from a dict.
 		"""
 		raise NotImplementedError()
@@ -66,8 +81,14 @@ class SerialAdaptor(Adaptor):
 		return data.get(cls.TYPE_KEY, None)
 
 	@classmethod
+	def typeForData(cls, data:dict)->type:
+		"""Get the type serialised in the
+		given data dict
+		"""
+		return CodeRef.resolve(cls.getDataCodeRefStr(data))
+
+	@classmethod
 	def adaptorForData(cls, data:dict)->SerialAdaptor:
 		"""Get the adaptor for the given data dict.
 		"""
-		return cls.adaptorForType(CodeRef.resolve(SerialAdaptor.getDataCodeRefStr(data)
-		                                          ))
+		return cls.adaptorForType(cls.typeForData(data))
