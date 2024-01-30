@@ -332,7 +332,7 @@ class TreeInterface(Traversable,
 		"""OVERRIDE for backend"""
 		return self._getRawParent()
 
-	def _setParent(self, parentBranch:TreeInterface):
+	def _setParent(self, parentBranch:(TreeInterface, None)):
 		"""should be internal to addChild(), not to be used in client code
 		set to None to remove branch from parent"""
 		raise NotImplementedError
@@ -391,12 +391,12 @@ class TreeInterface(Traversable,
 
 
 	#region traversal
-	#TODO: make more robust syntax for traversal
 	separatorChars = {
-		"/": "hierarchy",
-		# "." : "attribute"
+		"child" : "/",
+		"attribute" : ".",
+		#"parent" : "^",
 	}
-	parentChar = ".."
+	parentChar = "^"
 
 	@classmethod
 	def defaultTraverseParamCls(cls) ->T.Type[TreeTraversalParams]:
@@ -469,15 +469,16 @@ class TreeInterface(Traversable,
 	def __call__(self, *path:keyT,
 	             create=None,
 	             traverseParams:defaultTraverseParamCls()=None,
-	             **kwargs)->TreeType:
+	             **kwargs)->TreeInterface:
 		""" index into tree hierarchy via address sequence,
 		return matching branch"""
 		#print("call", self, path)
 
 		try:
-			return super(TreeInterface, self).__call__(
-				path, create=create, traverseParams=traverseParams, **kwargs
-			)
+			# path = flatten(path)
+			if traverseParams is None:
+				traverseParams = self.buildTraverseParamsFromRawKwargs(**kwargs)
+			return self.traverse(path, traverseParams, **kwargs)
 		except Exception as e:
 			print("unable to index path", path)
 			raise e
@@ -620,11 +621,11 @@ class TreeInterface(Traversable,
 		for i in range(len(trunk)):
 			s += trunk[i].name
 			if i != (len(trunk) - 1):
-				s += trunk[i].separatorChars["hierarchy"]
+				s += trunk[i].separatorChars["child"]
 
 		return s
 
-	def commonParent(self, otherBranch: TreeType)->TreeType:
+	def commonParent(self, otherBranch: TreeType)->(TreeType, None):
 		""" return the lowest common parent between given branches
 		or None
 		if one branch is direct parent of the other,
@@ -690,6 +691,32 @@ class TreeInterface(Traversable,
 		"""iterate over branches"""
 		return self.getBranches().__iter__()
 
+	# region breakpoints
+	"""keep embedded version very simple,
+	more complexity can be handled in a tools lib.
+	another approach is to use trees as values of other
+	trees - not everything has to be contiguous
+	"""
+	def breakPoints(self):
+		"""return a list of breakpoints for this tree"""
+		return self.auxProperties.get("breakpoint", {})
+	def getBreakPointBranch(self, key="main"):
+		"""return breakpoint for given key"""
+		test = self
+		while test:
+			if test.breakPoints().get(key):
+				return test
+			test = test.getParent()
+		return None
+
+	def setBreakPoint(self, key="main", val=True):
+		"""set breakpoint for given key"""
+		if not self.auxProperties.get("breakpoint"):
+			self.auxProperties["breakpoint"] = {}
+		self.auxProperties["breakpoint"][key] = val
+
+
+	# endregion
 
 	# region structure changes - parenting, removing
 
@@ -830,8 +857,10 @@ class TreeInterface(Traversable,
 		targetType = toType or type(self)
 		if copyUid:
 			# prevent any immediate damage being done to uid structure
-			with self.ignoreUidChangesInBlock():
-				return targetType.deserialise(self.serialise(), preserveUid=True)
+			#with self.ignoreUidChangesInBlock():
+			return targetType.deserialise(
+				self.serialise(),
+				serialParams={"preserveUid" : True})
 				# if usePickle: return pickle.loads(pickle.dumps(self))
 				# elif useDeepcopy: return copy.deepcopy(self, )
 				# else: return self.deserialise(self.serialise(), preserveUid=True)

@@ -1,7 +1,6 @@
 import unittest
 
-from tree import TreeInterface
-from tree.core import TreeBase
+from wptree import TreeInterface, Tree
 
 class TestMainTree(unittest.TestCase):
 	""" test for main tree interface methods -
@@ -9,6 +8,7 @@ class TestMainTree(unittest.TestCase):
 	against consistent syntax"""
 
 	treeCls = TreeInterface
+	treeCls = Tree
 
 	def setUp(self):
 		""" construct a basic test tree """
@@ -63,8 +63,11 @@ class TestMainTree(unittest.TestCase):
 		              msg="error in list retrieval")
 
 		# string retrieval
+		print("asdafa")
+		print(self.tree("branchA/leafA"))
+		print(self.tree("branchA")("leafA"))
 		self.assertEqual( self.tree(
-			self.tree.separatorChar.join(["branchA", "leafA"])),
+			self.tree.separatorChars["child"].join(["branchA", "leafA"])),
 			self.tree("branchA")("leafA"),
 		                 msg="string address error")
 
@@ -74,14 +77,19 @@ class TestMainTree(unittest.TestCase):
 		                            "^", "^", "leafA", "superleafA"))
 
 	def test_treeLookupCreate(self):
-		self.assertRaises(LookupError, self.tree, "nonBranch")
+		# self.assertRaises(LookupError, self.tree, "nonBranch")
 		self.tree.lookupCreate = True
 		self.assertEqual(self.tree.lookupCreate, True)
 		self.assertIsInstance(self.tree("nonBranch"), TreeInterface)
 
 		newBranch = self.tree("nonBranch")
 		self.assertEqual(newBranch.lookupCreate, True)
-		self.assertIsNone(newBranch.getProperty(TreeInterface._LOOKUP_CREATE_KEY))
+		self.assertIsNone(newBranch.getAuxProperty(TreeInterface.AuxKeys.LookupCreate))
+
+		self.tree.lookupCreate = False
+		self.assertRaises(LookupError, self.tree, "nonBranch2")
+
+
 
 
 	def test_treeAddresses(self):
@@ -93,7 +101,7 @@ class TestMainTree(unittest.TestCase):
 		                  msg="address sequence error")
 		# string address
 		self.assertEqual(self.tree("branchA")("leafA").stringAddress(),
-		      self.tree.separatorChar.join(["branchA", "leafA"]),
+		      self.tree.separatorChars["child"].join(["branchA", "leafA"]),
 		                 msg="string address error")
 		# # uid address
 		# leafUidAddress = [self.tree("branchA").uid, self.tree("branchA", "leafA").uid]
