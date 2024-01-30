@@ -30,6 +30,8 @@ d is directly returned by encode() and passed to decode().
 - this costs in space and readability, but makes it easier to handle,
 a totally uniform data structure.
 
+more files than needed in this module to give more descriptive tracebacks
+
 """
 
 from .adaptor import SerialAdaptor
@@ -37,6 +39,9 @@ from .adaptor import SerialAdaptor
 # import and register all default types
 from . import applied as _applied
 
+# import main functions
+from .main import serialise, deserialise
+
 # import the custom base class
-from .main import Serialisable
+from .abc import Serialisable, SerialisableAdaptor
 
