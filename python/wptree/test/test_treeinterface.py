@@ -54,6 +54,7 @@ class TestMainTree(unittest.TestCase):
 		""" test retrieving values and branches
 		 using different methods """
 		# token retrieval
+
 		self.assertIs(self.tree("branchA", "leafA"),
 		              self.tree("branchA")("leafA"),
 		              msg="error in token retrieval")
@@ -63,12 +64,32 @@ class TestMainTree(unittest.TestCase):
 		              msg="error in list retrieval")
 
 		# string retrieval
-		print("asdafa")
-		print(self.tree("branchA/leafA"))
-		print(self.tree("branchA")("leafA"))
+		#print("asdafa")
+		#print(self.tree("branchA/leafA"))
+		#print(self.tree("branchA")("leafA"))
 		self.assertEqual( self.tree(
 			self.tree.separatorChars["child"].join(["branchA", "leafA"])),
 			self.tree("branchA")("leafA"),
+		                 msg="string address error")
+
+		# malformed address retrieval
+		self.assertIs(self.tree("branchA/leafA"),
+			self.tree("branchA")("leafA"),
+			msg="string address error")
+		self.assertIs(self.tree("/branchA/leafA"),
+		                 self.tree("branchA")("leafA"),
+		                 msg="string address error")
+		self.assertIs(self.tree("branchA/", "leafA"),
+		                 self.tree("branchA")("leafA"),
+		                 msg="string address error")
+		self.assertIs(self.tree("branchA", "/leafA"),
+		                 self.tree("branchA")("leafA"),
+		                 msg="string address error")
+		self.assertIs(self.tree("branchA//leafA"),
+		                 self.tree("branchA")("leafA"),
+		                 msg="string address error")
+		self.assertIs(self.tree("branchA/", "/leafA"),
+		                 self.tree("branchA")("leafA"),
 		                 msg="string address error")
 
 		# parent retrieval

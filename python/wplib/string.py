@@ -51,7 +51,14 @@ def splitAround(s:str, char:str, before=True, after=True)->list[str]:
 	indices = sorted((indices))
 	return list(filter(None,  splitIndices(s, indices)))
 
-
+def mergeRepeated(s:str, chars:str)->str:
+	"""merge repeated chars in string"""
+	res = ""
+	for c in s:
+		if res and res[-1] == c and c in chars:
+			continue
+		res += c
+	return res
 
 def multiSplit(s:str, separators:T.Iterable[str], preserveSepChars=False)->list[str]:
 	"""if preserveSepChars, each separator char will be returned as a separate token"""

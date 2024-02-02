@@ -6,7 +6,7 @@ import typing as T
 from dataclasses import dataclass
 
 from wplib.sequence import flatten
-from wplib.string import multiSplit, indicesOfAny, splitIndices
+from wplib.string import multiSplit, indicesOfAny, splitIndices, mergeRepeated
 
 """base for any object class that  
 can be traversed through path sequences - 
@@ -81,7 +81,8 @@ class Traversable:
 	def _getCharAndFirstTokenAndBody(self, path:(str, tuple[str]))->(str, str, str):
 		"""return (separator char, first token, rest of path body)
 		only look at first occurrence
-		this is a stupid system
+		this is a stupid system that probably doesn't handle
+		every edge case between sep chars yet
 		"""
 
 		sepChar = ""
@@ -89,21 +90,46 @@ class Traversable:
 		body = ""
 
 		tokens = list(flatten([path]))
+		#print("tokens", tokens)
 		if not tokens:
 			return None, None, None
-		fullStr = self.join(tokens)
-		if not fullStr[0] in self.separatorChars.values():
-			fullStr = self.defaultStartSeparator() + fullStr
-		#print("fullStr", fullStr)
-		sepChar = fullStr[0]
-		toSplitIndices = indicesOfAny(fullStr, self.separatorChars.values())
-		print("toSplitIndices", toSplitIndices)
-		toSplitIndices.append(len(fullStr))
-		firstToken = fullStr[1:toSplitIndices[1]]
-		# remove any leading separator chars
-		firstToken = "".join([i for i in firstToken if not i in self.separatorChars.values()])
-		body = fullStr[toSplitIndices[1]:]
-		return sepChar, firstToken, body
+
+		firstChunk : str = tokens.pop(0)
+
+		if firstChunk in self.separatorChars.values():
+			# use first token as separator
+			sepChar = firstChunk
+			#firstChunk = self.defaultStartSeparator() + tokens.pop(0)
+			firstChunk = tokens.pop(0)
+		elif firstChunk[0] in self.separatorChars.values():
+			sepChar = firstChunk[0]
+			firstChunk = firstChunk[1:]
+		else:
+			firstChunk = firstChunk
+			sepChar = self.defaultStartSeparator()
+
+		while firstChunk[0] in self.separatorChars.values():
+			firstChunk = firstChunk[1:]
+
+		#print(sepChar, firstChunk, tokens)
+		# firstToken, chunk = multiSplit(firstChunk, self.separatorChars.values(), preserveSepChars=True)
+		#firstChunk = mergeRepeated(firstChunk, self.separatorChars.values())
+		toSplitIndices = indicesOfAny(firstChunk, self.separatorChars.values())
+		#print("toSplitIndices", toSplitIndices)
+		toSplitIndices.append(len(firstChunk))
+		firstToken = firstChunk[:toSplitIndices[0]]
+
+		# separate rest of chunk into its own block, assume it starts with a
+		# separator char if it's not empty
+
+		#print("firstChunk", firstChunk, "toSplitIndices", toSplitIndices)
+		chunkBody = firstChunk[toSplitIndices[0]:]
+		if chunkBody:
+			tokens.insert(0, chunkBody)
+
+		assert sepChar
+		assert firstToken
+		return sepChar, firstToken, tokens
 
 
 	def splitTraversalPath(self, path:(str, tuple[str]))->list[str, ...]:
@@ -177,7 +203,7 @@ class Traversable:
 		#print("flattened path", path)
 		sepChar, firstToken, body = self._getCharAndFirstTokenAndBody(
 			path	)
-		print("sep, first, body:", sepChar, firstToken, body)
+		#print("sep, first, body:", sepChar, firstToken, body)
 
 		if traverseParams is None:
 			traverseParams = self.buildTraverseParamsFromRawKwargs(**kwargs)
