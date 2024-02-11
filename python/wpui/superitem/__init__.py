@@ -23,16 +23,24 @@ line widget for showing path to item, and for listing / collapsing
 from .base import (
 	SuperItem,
 	SuperModel,
-	SuperViewBase,
-	SuperDelegate,
+	# SuperViewBase,
+	# SuperDelegate,
 )
 
-from .stlplugin import (
-	ListSuperItem,
-	DictSuperItem,
-	NoneSuperItem,
-	LiteralSuperItem,
-	# StringSuperItem,
-	# FloatSuperItem
+from . import (
+	listitem,
+
+	literalitem,
+	# stringitem,
+	# floatitem
 )
+
+# from .stlplugin import (
+# 	ListSuperItem,
+# 	DictSuperItem,
+# 	NoneSuperItem,
+# 	LiteralSuperItem,
+# 	# StringSuperItem,
+# 	# FloatSuperItem
+# )
 

@@ -50,7 +50,9 @@ class VisitAdaptor(Adaptor):
 	"""adaptor for visit system - defines how to traverse and regenerate
 	registered objects.
 
-	It would make sense to combine this with pathing functions for the Traversable system"""
+	It would make sense to combine this with pathing
+	 functions for the Traversable system
+	  - do this now"""
 	ITEM_CHILD_LIST_T = ITEM_CHILD_LIST_T
 	ChildType = ChildType
 	# new base class, declare new map

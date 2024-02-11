@@ -13,40 +13,12 @@ from wpui.superitem import SuperItem
 
 if __name__ == '__main__':
 	import sys
+	import qt_material
+	app = QtWidgets.QApplication(sys.argv)
+	qt_material.apply_stylesheet(app, theme='dark_blue.xml')
 
-	structure = {
-		"root": {
-			"a": 1,
+	#model = SuperModel([1, 2, 3])
+	data = [1, 2, 3]
+	item = SuperItem.forData(data)
 
-			"b": (2, 3, {"key" : "asdaj"}, (333, 444,)),
-			# "branch": {
-			# 	(2, 4) : [1, {"key" : "val"}, "chips", 3],
-			# }
-		},
-		"root2": {
-			"a": 1,
-		}
-	}
-
-	structure = [
-		2,
-		3,
-		[1, 2, 3],
-		4,
-		[1, 2, 3, 4, 5,
-			[4, 4, 4],
-         7, 8,
-         [], 9, 0],
-		5,
-
-	]
-
-
-	app = QtWidgets.QApplication([])
-
-	item = SuperItem.forValue(structure)
-	w = item.getNewView()
-
-
-	w.show()
 	sys.exit(app.exec_())
