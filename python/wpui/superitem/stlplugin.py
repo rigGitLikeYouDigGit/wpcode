@@ -17,11 +17,11 @@ from wpui.model import iterAllItems
 
 """what if whole thing in one"""
 
-class SuperWidgetBase:
-	parentSuperItem : SuperItem
-
 
 class SuperListView(SuperViewBase, WPTableView):
+
+	forTypes = SEQ_TYPES
+
 	def __init__(self, *args, **kwargs):
 		WPTableView.__init__(self, *args, **kwargs)
 		SuperViewBase.__init__(self, *args, **kwargs)
@@ -47,7 +47,7 @@ class SuperListView(SuperViewBase, WPTableView):
 
 class ListSuperItem(SuperItem):
 
-	forCls = (list, tuple)
+	forTypes = SEQ_TYPES
 	viewCls = SuperListView
 
 	def makeChildItems(self):
@@ -80,6 +80,7 @@ class SuperDictModel(SuperModel):
 
 
 class SuperDictView(SuperViewBase, WPTableView):
+	forTypes = MAP_TYPES
 	def __init__(self, *args, **kwargs):
 		WPTableView.__init__(self, *args, **kwargs)
 		SuperViewBase.__init__(self, *args, **kwargs)
@@ -103,7 +104,7 @@ class SuperDictView(SuperViewBase, WPTableView):
 		SuperViewBase.setModel(self, model)
 
 class DictSuperItem(SuperItem):
-	forCls = dict
+	forTypes = MAP_TYPES
 	viewCls = SuperDictView
 	modelCls = SuperDictModel
 
@@ -126,7 +127,7 @@ class DictSuperItem(SuperItem):
 
 
 class NoneSuperItem(SuperItem):
-	forCls = type(None)
+	forTypes = (type(None),)
 	viewCls = None
 
 	def getResultValue(self):
@@ -150,8 +151,8 @@ class LiteralDelegate(SuperDelegate):
 
 class LiteralSuperItem(SuperItem):
 	"""For literal values, delegate to the delegate"""
+	forTypes = LITERAL_TYPES
 	viewCls = None
-	forCls = LITERAL_TYPES
 	delegateCls = LiteralDelegate
 	#
 	# def getNewView(self, parentQObject) ->viewCls:

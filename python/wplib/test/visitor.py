@@ -38,7 +38,7 @@ class TestVisitor(unittest.TestCase):
 		)
 		self.assertIsInstance(result, T.Generator)
 
-		expectResult = (('test', 'test'), 'test', 'test', ('key', [1, 2, 3]), 'key', [1, 2, 3], 1, 2, 3, ('test2', TestNamedTuple(a=1, b="two", c=3)), 'test2', TestNamedTuple(a=1, b="two", c=3), 1, 2, 3)
+		expectResult = (('test', 'test'), 'test', 'test', ('key', [1, 2, 3]), 'key', [1, 2, 3], 1, 2, 3, ('test2', TestNamedTuple(a=1, b="two", c=3)), 'test2', TestNamedTuple(a=1, b="two", c=3), 1, "two", 3)
 
 		self.assertEqual(tuple(result), expectResult)
 

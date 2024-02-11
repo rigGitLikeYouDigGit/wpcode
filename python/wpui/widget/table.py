@@ -90,6 +90,12 @@ class WPTreeView(QtWidgets.QTreeView):
 		"""return widget in corner of table"""
 		return getattr(self, "_tableCornerWidget", None)
 
+	def syncLayout(self, execute:bool=False):
+		"""sync layout of the table"""
+		self.scheduleDelayedItemsLayout()
+		if execute:
+			self.executeDelayedItemsLayout()
+
 	# these helpfully-named methods never get called
 	# def sizeHintForIndex(self, index):
 	# 	"""return the size hint for the index"""
@@ -110,7 +116,7 @@ class WPTreeView(QtWidgets.QTreeView):
 
 def getSinSize(t:float)->float:
 	"""update the size of the widget"""
-	return 100.0 * math.sin(t * 0.1)
+	return 100.0 * abs(math.sin(t * 0.5)) + 10
 
 class ResizableWidget(QtWidgets.QWidget):
 	"""test if resizing by item data works"""
@@ -118,16 +124,18 @@ class ResizableWidget(QtWidgets.QWidget):
 	def __init__(self, *args, **kwargs):
 		"""init"""
 		super().__init__(*args, **kwargs)
-		self._size = (100, 100)
+		#self._size = (100, 100)
+		self.setAutoFillBackground(True)
 
-	def setSizeHint(self, size:tuple):
-		"""set the size hint"""
-		self._size = size
-		self.updateGeometry()
+	# def setSizeHint(self, size:tuple):
+	# 	"""set the size hint"""
+	# 	self._size = size
+	# 	self.updateGeometry()
 
 	def sizeHint(self):
 		"""return the size hint"""
-		return QtCore.QSize(*self._size)
+		#print("size hint")
+		return QtCore.QSize(100, int(getSinSize(time.time())))
 
 
 _base = QtCore.QAbstractTableModel
@@ -160,12 +168,16 @@ def onClicked(*args, **kwargs):
 
 if __name__ == '__main__':
 	import sys
+	import qt_material
 	app = QtWidgets.QApplication(sys.argv)
+	qt_material.apply_stylesheet(app, theme='dark_blue.xml')
 
 	#widget = WPTableView()
-	widget = QtWidgets.QTreeView()
+	#widget = QtWidgets.QTreeView()
+	widget = WPTreeView()
 	#widget.setAnimated(True)
-	model = ResizableModel(parent=widget)
+	#model = ResizableModel(parent=widget)
+	model = QtGui.QStandardItemModel(parent=widget)
 
 	def _syncSize(*args, **kwargs):
 		#print("sync size", args, kwargs)
@@ -194,10 +206,10 @@ if __name__ == '__main__':
 			#widget.dataChanged(model.index(-1, -1), model.index(-1, -1))
 
 			#widget.updateGeometries()
-			
+
 			####### THIS IS IT
-			widget.scheduleDelayedItemsLayout()
-			widget.executeDelayedItemsLayout()
+			#widget.scheduleDelayedItemsLayout()
+			#widget.executeDelayedItemsLayout()
 			#######
 
 			#widget.viewport().update()
@@ -210,6 +222,9 @@ if __name__ == '__main__':
 
 			# widget.repaint() # crashes
 			# widget.viewport().repaint() # crashes
+
+			widget.syncLayout(execute=True)
+
 			time.sleep(0.041)
 
 	widget.setModel(model)
@@ -228,9 +243,14 @@ if __name__ == '__main__':
 	# add nested row
 	item = model.itemFromIndex(model.index(1, 0))
 	item.appendRow([
-		QtGui.QStandardItem("a"),
-		QtGui.QStandardItem("b"),
+		QtGui.QStandardItem("c"),
+		QtGui.QStandardItem("d"),
 	])
+
+	# set widget
+	nestedItem = model.itemFromIndex(model.index(1, 0)).child(0, 0)
+	embedWidget = ResizableWidget()
+	widget.setIndexWidget(nestedItem.index(), embedWidget)
 
 	model.appendRow([
 		QtGui.QStandardItem("a"),

@@ -6,7 +6,6 @@ import sys
 
 from PySide2 import QtCore, QtGui, QtWidgets
 
-from wplib.object import visit
 
 from wpui.layout import genAutoLayout
 from wpui.superitem import SuperItem

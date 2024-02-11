@@ -21,6 +21,7 @@ from wplib.constant import MAP_TYPES, SEQ_TYPES, LITERAL_TYPES
 #from wptree import Tree
 
 class ChildType(TypeNamespace):
+	"""Enum types to mark what kind of "child" each object is in a data structure"""
 
 	class _Base(TypeNamespace.base()):
 		pass
@@ -41,24 +42,28 @@ class ChildType(TypeNamespace):
 		pass
 
 
+# consistent type passed to all visit functions
+ITEM_CHILD_LIST_T = T.Iterable[tuple[T.Any, ChildType.T]]
+
 # test new adaptor system
 class VisitAdaptor(Adaptor):
 	"""adaptor for visit system - defines how to traverse and regenerate
 	registered objects.
 
 	It would make sense to combine this with pathing functions for the Traversable system"""
+	ITEM_CHILD_LIST_T = ITEM_CHILD_LIST_T
+	ChildType = ChildType
 	# new base class, declare new map
 	adaptorTypeMap = Adaptor.makeNewTypeMap()
 	# declare abstract methods
 	@classmethod
-	def childObjects(cls, obj:T.Any)->T.Iterable[tuple[T.Any, ChildType.T]]:
+	def childObjects(cls, obj:T.Any) ->ITEM_CHILD_LIST_T:
 		"""return iterable of (childObject, childType) pairs"""
 		raise NotImplementedError
 
 	@classmethod
-	def newObj(cls, baseObj:T.Any, childTypeItemMap:dict[ChildType.T, list[T.Any]])->T.Any:
+	def newObj(cls, baseObj: T.Any, itemChildTypeList: ITEM_CHILD_LIST_T) ->T.Any:
 		"""create new object from base object and child type item map,
-		a child type item map is a dict of {childType : [list of child objects of that type]}
 		"""
 		raise NotImplementedError("newObj not implemented "
 		                          "for type", type(baseObj),
@@ -67,49 +72,62 @@ class VisitAdaptor(Adaptor):
 class NoneVisitAdaptor(VisitAdaptor):
 	forTypes = (type(None),)
 	@classmethod
-	def childObjects(cls, obj:T.Any) ->T.Iterable[tuple[T.Any, ChildType.T]]:
+	def childObjects(cls, obj:T.Any) ->ITEM_CHILD_LIST_T:
 		return ()
 	@classmethod
-	def newObj(cls, baseObj:T.Any, childTypeItemMap:dict[ChildType.T, list[T.Any]])->T.Any:
+	def newObj(cls, baseObj: T.Any, itemChildTypeList: ITEM_CHILD_LIST_T) ->T.Any:
 		return None
 
 class LiteralVisitAdaptor(VisitAdaptor):
 	forTypes = LITERAL_TYPES
 	@classmethod
-	def childObjects(cls, obj:T.Any) ->T.Iterable[tuple[T.Any, ChildType.T]]:
+	def childObjects(cls, obj:T.Any) ->ITEM_CHILD_LIST_T:
 		return ()
 	@classmethod
-	def newObj(cls, baseObj:T.Any, childTypeItemMap:dict[ChildType.T, list[T.Any]])->T.Any:
+	def newObj(cls, baseObj: T.Any, itemChildTypeList: ITEM_CHILD_LIST_T) -> T.Any:
 		return baseObj
 
 class MapVisitAdaptor(VisitAdaptor):
+	"""we DO need a special type for dict items, since
+	otherwise we lose option to capture that relationship
+
+	option would be nice to turn this off as vast majority of dicts
+	don't needit
+	"""
 	forTypes = MAP_TYPES
 	@classmethod
-	def childObjects(cls, obj:T.Any) ->T.Iterable[tuple[T.Any, ChildType.T]]:
-		return (
-			(i, ChildType.MapItem)
-	             for i in obj.items()
-		)
+	def childObjects(cls, obj:T.Any) ->ITEM_CHILD_LIST_T:
+		return ((i, ChildType.MapItem) for i in obj.items())
+		result = []
+		for k, v in obj.items():
+			# result.append((k, ChildType.MapKey))
+			# result.append((v, ChildType.MapValue))
+			result.append((k, ChildType.MapItem))
+		return result
+
 	@classmethod
-	def newObj(cls, baseObj:T.Any, childTypeItemMap:dict[ChildType.T, list[T.Any]])->T.Any:
-		return dict(childTypeItemMap.get(ChildType.MapItem, ()))
+	def newObj(cls, baseObj: T.Any, itemChildTypeList: ITEM_CHILD_LIST_T) -> T.Any:
+		# return type(baseObj)({itemChildTypeList[i][0] : itemChildTypeList[i + 1][0]
+		#                       for i in range(0, len(itemChildTypeList), 2)})
+		return type(baseObj)(i[0] for i in itemChildTypeList)
 
 
 class SeqVisitAdaptor(VisitAdaptor):
 	forTypes = SEQ_TYPES
 	@classmethod
-	def childObjects(cls, obj:T.Any) ->T.Iterable[tuple[T.Any, ChildType.T]]:
+	def childObjects(cls, obj:T.Any) ->ITEM_CHILD_LIST_T:
 		return ((i, ChildType.SequenceElement) for i in obj)
 	@classmethod
-	def newObj(cls, baseObj:T.Any, childTypeItemMap:dict[ChildType.T, list[T.Any]])->T.Any:
+	def newObj(cls, baseObj: T.Any, itemChildTypeList: ITEM_CHILD_LIST_T) -> T.Any:
+		log("newObj", baseObj, itemChildTypeList)
 		if isNamedTupleInstance(baseObj):
-			return type(baseObj)(*childTypeItemMap[ChildType.SequenceElement])
-		return type(baseObj)(childTypeItemMap[ChildType.SequenceElement])
+			return type(baseObj)(*(i[0] for i in itemChildTypeList))
+		return type(baseObj)(i[0] for i in itemChildTypeList)
 
 class Visitable:
 	"""custom base interface for custom types -
 	we associate an adaptor type for these later"""
-	def childObjects(self)->T.Iterable[tuple[T.Any, ChildType.T]]:
+	def childObjects(self)->ITEM_CHILD_LIST_T:
 		raise NotImplementedError
 	@classmethod
 	def newObj(cls, baseObj, childTypeItemMap):
@@ -120,11 +138,11 @@ class VisitableVisitAdaptor(VisitAdaptor):
 	"""
 	forTypes = (Visitable,)
 	@classmethod
-	def childObjects(cls, obj:T.Any) ->T.Iterable[tuple[T.Any, ChildType.T]]:
+	def childObjects(cls, obj:T.Any) ->ITEM_CHILD_LIST_T:
 		return obj.childObjects()
 	@classmethod
-	def newObj(cls, baseObj:T.Any, childTypeItemMap:dict[ChildType.T, list[T.Any]])->T.Any:
-		return baseObj.newObj(baseObj, childTypeItemMap)
+	def newObj(cls, baseObj: T.Any, itemChildTypeList: ITEM_CHILD_LIST_T) -> T.Any:
+		return baseObj.newObj(baseObj, itemChildTypeList)
 
 
 
@@ -206,7 +224,7 @@ class DeepVisitor:
 	                                    )->T.Generator[tuple, None, None]:
 		"""iterate over all objects top-down"""
 		#yield parentObj
-		nextObjs = VisitAdaptor.adaptorForType(
+		nextObjs : ITEM_CHILD_LIST_T = VisitAdaptor.adaptorForType(
 			type(parentObj)).childObjects(parentObj)
 		for nextObj, childType in nextObjs:
 			if visitParams.yieldChildType:
@@ -220,7 +238,7 @@ class DeepVisitor:
 	                                      visitParams:VisitPassParams,
 	                                      )->T.Generator[tuple, None, None]:
 		"""iterate over all objects top-down"""
-		nextObjs = VisitAdaptor.adaptorForType(
+		nextObjs : ITEM_CHILD_LIST_T = VisitAdaptor.adaptorForType(
 			type(parentObj)).childObjects(parentObj)
 		for nextObj, childType in nextObjs:
 			if visitParams.yieldChildType:
@@ -235,7 +253,7 @@ class DeepVisitor:
 			parentObj:T.Any,
 			visitParams:VisitPassParams,
 			)->T.Generator[tuple, None, None]:
-		nextObjs = VisitAdaptor.adaptorForType(
+		nextObjs : ITEM_CHILD_LIST_T = VisitAdaptor.adaptorForType(
 			type(parentObj)).childObjects(parentObj)
 		for nextObj, childType in nextObjs:
 			visitData = VisitObjectData(
@@ -268,15 +286,19 @@ class DeepVisitor:
 			return result
 
 		# get child objects
-		resultObjs = defaultdict(list)
+		#resultObjs = defaultdict(list)
+
 		adaptor = VisitAdaptor.adaptorForType(type(result))
 		assert adaptor, f"no visit adaptor for type {type(result)}"
-		nextObjs = VisitAdaptor.adaptorForType(
+		nextObjs : ITEM_CHILD_LIST_T = VisitAdaptor.adaptorForType(
 			type(result)).childObjects(result)
+		resultObjs = []
 		for nextObj, childType in nextObjs:
 			# transform child objects
-			resultObjs[childType].append(self._transformRecursiveTopDownDepthFirst(
-				nextObj, visitParams, childType)
+			resultObjs.append(
+				(self._transformRecursiveTopDownDepthFirst(
+				nextObj, visitParams, childType),
+				 childType)
 				 )
 		# create new object from transformed child objects
 		adaptor = VisitAdaptor.adaptorForType(
@@ -307,13 +329,15 @@ class DeepVisitor:
 			visitResult=None,
 			childType=childType,
 		)
-		nextObjs = VisitAdaptor.adaptorForType(
+		nextObjs : ITEM_CHILD_LIST_T = VisitAdaptor.adaptorForType(
 			type(parentObj)).childObjects(parentObj)
 		# get child objects
-		resultObjs = defaultdict(list)
+		resultObjs = []
 		for nextObj, childType in nextObjs:
-			resultObjs[childType].append(self._transformRecursiveBottomUpDepthFirst(
-				nextObj, visitParams, childType)
+			resultObjs.append(
+				(self._transformRecursiveBottomUpDepthFirst(
+				nextObj, visitParams, childType),
+									 childType)
 				 )
 
 		adaptor = VisitAdaptor.adaptorForType(parentObj)
