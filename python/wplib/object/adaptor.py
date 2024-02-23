@@ -99,4 +99,5 @@ class Adaptor:
 		"""subclass hook to register against self"""
 		super().__init_subclass__(**kwargs)
 		if cls.forTypes:
+			assert isinstance(cls.forTypes, (tuple, set, list)), f"forTypes must be an iterable of types, not {cls.forTypes}"
 			cls.registerAdaptor(cls, cls.forTypes)

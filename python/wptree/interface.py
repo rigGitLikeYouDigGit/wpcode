@@ -79,6 +79,8 @@ class TreeTraversalParams(TraversableParams):
 # 		self.propertyChanged = Signal()
 # 		self.structureChanged = Signal()
 
+ITEM_CHILD_LIST_T = VisitAdaptor.ITEM_CHILD_LIST_T
+
 keyT = Traversable.keyT
 TreeType = T.TypeVar("TreeType", bound="TreeInterface")
 class TreeInterface(Traversable,
@@ -91,13 +93,29 @@ class TreeInterface(Traversable,
 	only interface around name, value, branches and properties
 	"""
 
-	def childObjects(self):
+	def childObjects(self)->ITEM_CHILD_LIST_T:
+		"""maximum delegation to this tree's children"""
 		return (
 			(self.name, ChildType.TreeName),
 			(self.value, ChildType.TreeValue),
 			(self.auxProperties, ChildType.TreeAuxProperties),
 			*((i, ChildType.TreeBranch) for i in self.branches)
 		)
+
+	@classmethod
+	def newObj(cls, baseObj:TreeInterface, itemChildTypeList:ITEM_CHILD_LIST_T):
+		"""create a new tree object from a base object and child type list
+		list of child branches should already have been regenerated
+		"""
+		tree = type(baseObj)(
+			name=itemChildTypeList[0][0],
+			value=itemChildTypeList[1][0]
+		)
+		tree._setRawAuxProperties(itemChildTypeList[2][0])
+		for branch, childType in itemChildTypeList[3:]:
+			tree.addChild(branch)
+		return tree
+
 
 
 	class SerialKeys:
@@ -368,6 +386,8 @@ class TreeInterface(Traversable,
 
 	# region auxProperties
 	# these were originally called just "properties" but this led to confusion
+	def _setRawAuxProperties(self, props:dict):
+		raise  NotImplementedError
 	def _getRawAuxProperties(self)->dict:
 		"""OVERRIDE for backend"""
 		raise NotImplementedError

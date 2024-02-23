@@ -109,6 +109,9 @@ class MapVisitAdaptor(VisitAdaptor):
 
 	@classmethod
 	def newObj(cls, baseObj: T.Any, itemChildTypeList: ITEM_CHILD_LIST_T) -> T.Any:
+		"""expects list of [
+			( (key , value ), ChildType.MapItem)
+			"""
 		# return type(baseObj)({itemChildTypeList[i][0] : itemChildTypeList[i + 1][0]
 		#                       for i in range(0, len(itemChildTypeList), 2)})
 		return type(baseObj)(i[0] for i in itemChildTypeList)
@@ -121,7 +124,7 @@ class SeqVisitAdaptor(VisitAdaptor):
 		return ((i, ChildType.SequenceElement) for i in obj)
 	@classmethod
 	def newObj(cls, baseObj: T.Any, itemChildTypeList: ITEM_CHILD_LIST_T) -> T.Any:
-		log("newObj", baseObj, itemChildTypeList)
+		#log("newObj", baseObj, itemChildTypeList)
 		if isNamedTupleInstance(baseObj):
 			return type(baseObj)(*(i[0] for i in itemChildTypeList))
 		return type(baseObj)(i[0] for i in itemChildTypeList)
@@ -132,7 +135,7 @@ class Visitable:
 	def childObjects(self)->ITEM_CHILD_LIST_T:
 		raise NotImplementedError
 	@classmethod
-	def newObj(cls, baseObj, childTypeItemMap):
+	def newObj(cls, baseObj, itemChildTypeList:ITEM_CHILD_LIST_T):
 		raise NotImplementedError
 
 class VisitableVisitAdaptor(VisitAdaptor):

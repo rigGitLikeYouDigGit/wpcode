@@ -99,6 +99,9 @@ class Tree(TreeInterface,
 		"""set raw name, without any wrapping"""
 		self._name = name
 
+	def _setRawAuxProperties(self, props:dict):
+		self._properties = dict(props)
+
 	def _getRawAuxProperties(self) ->dict:
 		"""return raw aux properties, without any wrapping"""
 		return self._properties

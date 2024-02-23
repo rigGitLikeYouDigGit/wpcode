@@ -201,3 +201,26 @@ class TestMainTree(unittest.TestCase):
 		self.tree["newName", "a", "b"] = "deepVal"
 		self.assertEqual(self.tree["newName", "a", "b"], "deepVal")
 
+
+	def test_treeVisit(self):
+		""" test basic visitor functionality """
+		from wplib.object import DeepVisitor
+		visitor = DeepVisitor()
+		visitResults = list(visitor.dispatchPass(
+			self.tree,
+			DeepVisitor.VisitPassParams())
+
+		                                          )
+		print("visitResults")
+		print(visitResults)
+		self.assertEqual(visitResults[:3], ["testRoot", "tree root", {}])
+		self.assertEqual(visitResults[4:7], ["branchA", "first branch", {}])
+
+	def test_treeSerialise(self):
+		""" test basic serialisation functionality """
+		serialised = self.tree.serialise()
+		print("serialised", serialised)
+		self.assertIsInstance(serialised, dict)
+
+		serialisedTree = self.treeCls.deserialise(serialised)
+		self.assertEqual(serialisedTree, self.tree)

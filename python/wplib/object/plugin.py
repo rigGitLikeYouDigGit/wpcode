@@ -10,6 +10,8 @@ class PluginBase:
 	This base should define all interface methods the
 	system can look for -
 	then each subsequent real plugin can override them
+
+	This is a subtly different use, compared to adaptors
 	"""
 
 	@classmethod
