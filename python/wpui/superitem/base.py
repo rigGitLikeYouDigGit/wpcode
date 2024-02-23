@@ -6,6 +6,9 @@ import typing as T
 
 from PySide2 import QtWidgets, QtCore, QtGui
 
+from dataclasses import dataclass
+
+from wplib import log
 from wplib.object import Adaptor, VisitAdaptor
 
 from wpui.model import iterAllItems
@@ -43,6 +46,25 @@ I don't trust anything anymore
 if T.TYPE_CHECKING:
 	pass
 
+def defaultGetModelClsFn(forObj:T.Any)->T.Type[SuperModel]:
+	"""return default model class for given object"""
+	return SuperModel.adaptorForObject(forObj)
+
+def defaultGetItemClsFn(forObj:T.Any)->T.Type[SuperItem]:
+	"""return default item class for given object"""
+	return SuperItem.adaptorForObject(forObj)
+
+@dataclass
+class SuperModelParams:
+	"""parametre class for model and/or ui behaviour
+	override getModelClsFn and getItemClsFn to
+	inject dependency when generating new item or model classes for
+	py object types
+	"""
+	getModelClsFn : T.Callable[[T.Any], T.Type[SuperModel]] = defaultGetModelClsFn
+	getItemClsFn : T.Callable[[T.Any], T.Type[SuperItem]] = defaultGetItemClsFn
+
+
 
 class SuperModel(QtGui.QStandardItemModel, Adaptor):
 	"""not the photographic kind, this is way better
@@ -68,11 +90,13 @@ class SuperModel(QtGui.QStandardItemModel, Adaptor):
 	def __init__(self,
 	             wpPyObj: T.Any,
 	             wpChildType : VisitAdaptor.ChildType.T() = None,
+	             parentSuperItem: T.Optional[SuperItem] = None,
 	             parent: T.Optional[QtCore.QObject] = None,
 	             ):
 		super(SuperModel, self).__init__(parent=parent)
 		self.wpChildType = wpChildType
 		self.wpPyObj = wpPyObj
+		self.wpParentSuperItem : SuperItem = parentSuperItem
 
 
 
@@ -95,13 +119,16 @@ class SuperItem(QtGui.QStandardItem, Adaptor):
 	             pyObj: T.Any,
 	             wpChildType : VisitAdaptor.ChildType.T() = None,
 	             parentQObj: QtCore.QObject = None,
+	             parentSuperItem: T.Optional[SuperItem] = None
 	             ):
 		super(SuperItem, self).__init__()
 		self.wpPyObj = pyObj
 		self.wpChildType = wpChildType
 		self.wpItemModel : SuperModel = None
 		self.wpParentQObj = parentQObj
-		self.wpVisitAdaptor = VisitAdaptor.adaptorForObject(pyObj)
+		#self.wpVisitAdaptor = VisitAdaptor.adaptorForObject(pyObj)
+		self.wpVisitAdaptor = self._getComponentTypeForObject(pyObj, component="visitor")
+		self.wpParentSuperItem : SuperItem = None
 
 
 		# check that item has a visitor class
@@ -109,15 +136,37 @@ class SuperItem(QtGui.QStandardItem, Adaptor):
 
 		if self._needsModel():
 			# build model
-			newModelType = SuperModel.adaptorForObject(pyObj)
+			# newModelType = SuperModel.adaptorForObject(pyObj)
+			newModelType = self._getComponentTypeForObject(pyObj, component="model")
 			assert newModelType, f"no SuperModel adaptor type for {pyObj, type(pyObj)}"
+			if self.wpParentQObj:
+				#log("PARENT", self.wpParentQObj, type(self.wpParentQObj))
+				assert isinstance(self.wpParentQObj, QtCore.QObject)
 			self.wpItemModel = newModelType(pyObj,
 			                        wpChildType=self.wpChildType,
-			                        parent=self.wpParentQObj)
+			                        parent=self.wpParentQObj,
+			                                parentSuperItem=self)
 			# build stuff
+			#log("GEN ITEMS FOR ", self.wpPyObj, self.wpChildType, self.wpVisitAdaptor)
 			itemChildTypeList: list[
 				tuple[QtGui.QStandardItem, VisitAdaptor.ChildType.T()]] = self._generateItemsFromPyObj()
 			self._insertItemsToModel(itemChildTypeList)
+
+	def _getComponentTypeForObject(self, forObj, component="model"):
+		"""return the type of object used for the given part of the system -
+		use this to inject dependency with params struct later.
+
+		By default we rely on adaptor lookup, which is limited to 1:1 relations
+		"""
+		if component == "model":
+			return SuperModel.adaptorForObject(forObj)
+		elif component == "item":
+			return SuperItem.adaptorForObject(forObj)
+		elif component == "visitor":
+			return VisitAdaptor.adaptorForObject(forObj)
+		else:
+			raise ValueError(f"unknown component type {component}")
+
 
 	def _generateItemsFromPyObj(self) -> list[tuple[SuperItem, VisitAdaptor.ChildType.T()]]:
 		""" OVERRIDE if you want
@@ -129,21 +178,33 @@ class SuperItem(QtGui.QStandardItem, Adaptor):
 
 		objects are initialised and parent connections made before
 		items are added to model - bit weird
+
+		we set childtype on object, and return it in tuples - might
+		be redundant
 		"""
 		resultItems = []
 		childObjs: VisitAdaptor.ITEM_CHILD_LIST_T = self.wpVisitAdaptor.childObjects(self.wpPyObj)
 		for obj, childType in childObjs:
-			childItemType = SuperItem.adaptorForObject(obj)
+			#childItemType = SuperItem.adaptorForObject(obj)
+			childItemType = self._getComponentTypeForObject(obj, component="item")
 			assert childItemType, f"no SuperItem adaptor type for {obj, type(obj)}"
+			#log("GEN ITEM", obj, childType, childItemType, self.wpItemModel, self)
 
 			# this will initialise and connect child models too
-			item = childItemType(obj, wpChildType=childType, parentQObj=self)
+			item = childItemType(obj, wpChildType=childType, parentQObj=self.wpItemModel,
+			                     parentSuperItem=self)
 			resultItems.append((item, childType))
 		return resultItems
 
 	def wpChildSuperItems(self)->list[SuperItem]:
 		"""return a list of all child items"""
-		return list(filter(lambda x: isinstance(x, SuperItem), iterAllItems(self.wpItemModel)))
+		return list(filter(lambda x: isinstance(x, SuperItem),
+		                   iterAllItems(model=self.wpItemModel)))
+
+	def wpResultObj(self)->T.Any:
+		"""retrieve new object from this item's child superItems"""
+		log("wpResultObj", self, self.wpPyObj, self.wpChildType)
+		raise NotImplementedError
 
 	def _insertItemsToModel(self,
 	                        items: list[tuple[QtGui.QStandardItem,
@@ -159,7 +220,7 @@ class SuperItem(QtGui.QStandardItem, Adaptor):
 		"""return True if this item needs a model -
 		False for strings, ints, primitive types
 		True for containers"""
-		return bool(VisitAdaptor.adaptorForObject(self.wpPyObj).childObjects(self.wpPyObj))
+		return bool(self.wpVisitAdaptor.childObjects(self.wpPyObj))
 
 
 	@classmethod

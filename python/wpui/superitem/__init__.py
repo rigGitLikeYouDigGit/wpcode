@@ -28,11 +28,12 @@ from .base import (
 )
 
 from . import (
-	listitem,
-
 	literalitem,
+	listitem,
+	dictitem,
 	# stringitem,
-	# floatitem
+	# floatitem,
+	tree
 )
 
 # from .stlplugin import (
