@@ -18,11 +18,15 @@ levels contain, etc
 
 line widget for showing path to item, and for listing / collapsing
 
+text option for editing full structure as json / serialised string
+
 """
 
 from .base import (
 	SuperItem,
 	SuperModel,
+	SuperItemWidget,
+SuperWidget, SuperItemView, SuperModelParams
 	# SuperViewBase,
 	# SuperDelegate,
 )

@@ -115,6 +115,14 @@ class SuperItem(QtGui.QStandardItem, Adaptor):
 
 	adaptorTypeMap = Adaptor.makeNewTypeMap()
 
+	@classmethod
+	def getBookendChars(cls, forInstance=None)->tuple[str, str]:
+		"""return the characters to use as bookends for this item -
+		"[", "]" for lists, "{", "}" for dicts, etc
+		"""
+		return ("", "")
+
+
 	def __init__(self,
 	             pyObj: T.Any,
 	             wpChildType : VisitAdaptor.ChildType.T() = None,
@@ -164,6 +172,10 @@ class SuperItem(QtGui.QStandardItem, Adaptor):
 			return SuperItem.adaptorForObject(forObj)
 		elif component == "visitor":
 			return VisitAdaptor.adaptorForObject(forObj)
+		elif component == "view":
+			return SuperItemView.adaptorForObject(forObj)
+		elif component == "widget":
+			return SuperItemWidget.adaptorForObject(forObj)
 		else:
 			raise ValueError(f"unknown component type {component}")
 
@@ -196,14 +208,15 @@ class SuperItem(QtGui.QStandardItem, Adaptor):
 			resultItems.append((item, childType))
 		return resultItems
 
-	def wpChildSuperItems(self)->list[SuperItem]:
+	def wpChildSuperItems(self)->list[tuple[SuperItem, VisitAdaptor.ChildType.T()]]:
 		"""return a list of all child items"""
-		return list(filter(lambda x: isinstance(x, SuperItem),
+		items = list(filter(lambda x: isinstance(x, SuperItem),
 		                   iterAllItems(model=self.wpItemModel)))
+		return [(i, i.wpChildType) for i in items]
 
 	def wpResultObj(self)->T.Any:
 		"""retrieve new object from this item's child superItems"""
-		log("wpResultObj", self, self.wpPyObj, self.wpChildType)
+		#log("wpResultObj", self, self.wpPyObj, self.wpChildType)
 		raise NotImplementedError
 
 	def _insertItemsToModel(self,
@@ -233,8 +246,57 @@ class SuperItem(QtGui.QStandardItem, Adaptor):
 		assert itemType, f"no SuperItem adaptor type for {data, type(data)}"
 		return itemType(data)
 
+	def getNewWidget(self)->QtWidgets.QWidget:
+		"""return a new view widget for this item"""
+		widgetType = self._getComponentTypeForObject(self.wpPyObj, component="widget")
+		assert widgetType, f"no SuperItemWidget type for {self.wpPyObj, type(self.wpPyObj)}"
+		w = widgetType(superItem=self, parent=self.wpParentQObj)
+		#w.setModel(self.wpItemModel)
+		return w
+
+# gui elements
+class SuperItemView(QtWidgets.QTreeView, Adaptor):
+	"""view for superitems - by default just display their model data
+	"""
+	adaptorTypeMap = Adaptor.makeNewTypeMap()
+	forTypes = (object, )
+	def __init__(self, superItem:SuperItem, parent=None):
+		super(SuperItemView, self).__init__(parent=parent)
+		self.superItem : SuperItem = superItem
 
 
+class SuperItemWidget(QtWidgets.QWidget, Adaptor):
+	"""widget for superitems, outer layer holding view and any
+	associated widgets
+	this object is set as indexWidget by any outer items
+	"""
+	adaptorTypeMap = Adaptor.makeNewTypeMap()
+	forTypes = (object, )
+	def __init__(self, superItem:SuperItem, parent=None):
+		super(SuperItemWidget, self).__init__(parent=parent)
+		self.superView : SuperItemView = None
+		self.superItem : SuperItem = superItem
+
+
+# main widget
+class SuperWidget(QtWidgets.QWidget, Adaptor):
+	"""top-level widget to display superItems"""
+
+	def __init__(self, parent=None):
+		super(SuperWidget, self).__init__(parent=parent)
+		self.topItem : SuperItem = None
+		self.itemWidget : SuperItemWidget = None
+		#self.layout : QtWidgets.QLayout = None
+
+	def setTopItem(self, item:SuperItem):
+		"""set the top item to display"""
+		self.topItem = item
+		self.itemWidget = item.getNewWidget()
+		#log("item widget", self.itemWidget)
+		self.itemWidget.setParent(self)
+		layout = QtWidgets.QVBoxLayout()
+		layout.addWidget(self.itemWidget)
+		self.setLayout(layout)
 
 
 

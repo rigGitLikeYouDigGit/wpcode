@@ -16,6 +16,15 @@ class DictSuperItem(SuperItem):
 	"""superitem for a dict"""
 	forTypes = MAP_TYPES
 
+	wpPyObj : dict
+
+	@classmethod
+	def getBookendChars(cls, forInstance=None) ->tuple[str, str]:
+		"""return the characters to use as bookends for this item -
+		"[", "]" for lists, "{", "}" for dicts, etc
+		"""
+		return ("{", "}")
+
 	def _generateItemsFromPyObj(self) -> list[tuple[SuperItem, VisitAdaptor.ChildType.T()]]:
 		"""generate items from pyObj
 		skip intermediate MapItem stage"""
