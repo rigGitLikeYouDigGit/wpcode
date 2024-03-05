@@ -83,7 +83,8 @@ class NodeMeta(type):
 				raise RuntimeError("MObject {} is null".format(mobj))
 
 		else:
-			print("mobj", node, type(node))
+			#print("mobj", node, type(node))
+			pass
 
 		# check if MObject is known
 		if mobj in NodeMeta.objMap:
