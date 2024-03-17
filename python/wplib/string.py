@@ -7,6 +7,7 @@ import string, re, fnmatch
 
 
 def cap(s:str): # fight me
+	"""capitalize first letter of string"""
 	return s[0].upper() + s[1:]
 
 def lowFirst(s:str):
@@ -52,7 +53,7 @@ def splitAround(s:str, char:str, before=True, after=True)->list[str]:
 	return list(filter(None,  splitIndices(s, indices)))
 
 def mergeRepeated(s:str, chars:str)->str:
-	"""merge repeated chars in string"""
+	"""merge blocks of repeated chars in string"""
 	res = ""
 	for c in s:
 		if res and res[-1] == c and c in chars:

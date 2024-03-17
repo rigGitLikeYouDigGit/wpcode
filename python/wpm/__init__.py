@@ -38,7 +38,8 @@ import typing as T
 from .core import (
 	cmds, om, oma, omui, omr, # wrapped maya modules
 	getCache, # api cache
-	WN, createWN, # node wrappers
+	#WN, createWN, # node wrappers
+	WN,
 	PlugTree,
 	getSceneGlobals, # scene wrappers
 

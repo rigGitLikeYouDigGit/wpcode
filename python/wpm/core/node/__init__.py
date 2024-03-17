@@ -5,9 +5,12 @@ from __future__ import annotations
 
 #print("node import cmds", cmds)
 
-from .main import WN
-from .objectset import ObjectSetNode
-from .remapvalue import RemapValue
+#from .main import WN
+#from .objectset import ObjectSetNode
+#from .remapvalue import RemapValue
+
+#from . import WN
+from .base import WN
 
 
 """package for defining custom wrappers around individual maya node types

@@ -8,9 +8,17 @@ import importlib
 
 # add any extra imports
 try:
-	{IMPORT_BLOCK}
+	if T.TYPE_CHECKING:
+		from transform import Transform
 except NameError:
 	pass
 
 
 
+
+
+if T.TYPE_CHECKING:
+	class Catalogue:
+		Transform:Transform = Transform
+
+		pass

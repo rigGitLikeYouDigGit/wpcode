@@ -55,6 +55,15 @@ class CodeGenProject:
 	def sourceDir(self)->Path:
 		return self.topPath / "source"
 
+	def topDirStructureIsValid(self):
+		"""check if the top dir structure is valid
+		"""
+		assert self.topPath.exists(), f"top path {self.topPath} does not exist"
+		assert self.sourceDir.exists(), f"source dir {self.sourceDir} does not exist"
+		assert (self.sourceDir / "__genInit__.py").exists(), f"source dir {self.sourceDir} does not contain __genInit__.py"
+		assert (self.sourceDir / "__modifiedInit__.py").exists(), f"source dir {self.sourceDir} does not contain __modifiedInit__.py"
+
+
 	def processTemplate(self, templateFile:Path,
 	                    newName:str,
 	                    newPath:Path,):
@@ -71,21 +80,39 @@ class CodeGenProject:
 		pass
 
 	def regenerate(self,
-
+					checkFirst=True
 	               ):
 		"""regenerate full project
 		"""
 		log(f"regenerating code for project {self.topPath}")
+		if checkFirst:
+			self.topDirStructureIsValid()
 		# first clear out old stuff
-		shutil.rmtree(self.refPath)
+		shutil.rmtree(self.refPath, ignore_errors=True)
 		self.refPath.mkdir()
-		shutil.rmtree(self.genPath)
+		shutil.rmtree(self.genPath, ignore_errors=True)
 		self.genPath.mkdir()
+
+		if not self.modifiedPath.exists():
+			self.modifiedPath.mkdir()
 		log(f"cleared old ref and gen folders")
 
 		# copy over init files
-		shutil.copy(self.sourceDir / "__genInit__.py", self.genPath / "__init__.py")
-		shutil.copy(self.sourceDir / "__modifiedInit__.py", self.modifiedPath / "__init__.py")
+		shutil.copy2(self.sourceDir / "__genInit__.py", self.genPath / "__init__.py",
+		            )
+		shutil.copy2(self.sourceDir / "__modifiedInit__.py", self.modifiedPath / "__init__.py")
+
+	def populateRefFolder(self, genFn:T.Callable[[CodeGenProject], None]):
+		"""populate ref folder with generated files -
+		no real need for coupling here
+		"""
+		genFn(self)
+
+	def mergeGenModified(self):
+		"""take files from ref to copy to gen, or merge with modified
+		for now just copy everything
+		"""
+		pass
 		#
 		# # first populate ref folder - all generated files
 		# for name in fileNames:

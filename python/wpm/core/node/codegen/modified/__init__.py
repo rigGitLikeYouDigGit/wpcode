@@ -7,6 +7,14 @@ import importlib
 
 # add any extra imports
 try:
-	{IMPORT_BLOCK}
+	if T.TYPE_CHECKING:
+
 except NameError:
 	pass
+
+
+if T.TYPE_CHECKING:
+	class Catalogue:
+
+
+		pass

@@ -20,6 +20,7 @@ from .api import (
 from .node import (
 	WN, createWN
 )
+#from . import WN
 
 from .plug import PlugTree
 
