@@ -24,10 +24,18 @@ class DemoWidget(QtWidgets.QWidget):
 		#view.setParent(self)
 		w = SuperWidget(parent=self)
 		w.setTopItem(self.rootItem)
+		#w.setFixedSize(500, 500)
+
+		# layout = QtWidgets.QVBoxLayout()
+		# layout.addWidget(self.btn)
+		# layout.addWidget(w)
+		# self.setLayout(layout)
 
 
-		self.layout = genAutoLayout(self)
-		self.setLayout(self.layout)
+		layout = genAutoLayout(self)
+		self.setLayout(layout)
+
+		self.resize(400, 400)
 
 	def onBtnClicked(self):
 		"""display the result in output"""

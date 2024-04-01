@@ -10,8 +10,10 @@ from dataclasses import dataclass
 
 from wplib import log
 from wplib.object import Adaptor, VisitAdaptor
+from wplib.serial import SerialAdaptor, Serialisable, serialise, deserialise
 
 from wpui.model import iterAllItems
+from wpui.typelabel import TypeLabel
 
 """what if whole thing in one
 
@@ -61,8 +63,32 @@ class SuperModelParams:
 	inject dependency when generating new item or model classes for
 	py object types
 	"""
-	getModelClsFn : T.Callable[[T.Any], T.Type[SuperModel]] = defaultGetModelClsFn
-	getItemClsFn : T.Callable[[T.Any], T.Type[SuperItem]] = defaultGetItemClsFn
+
+
+class DataNode:
+	def __init__(self, obj, parent=None):
+		self.obj = obj
+		self.parent = parent
+		self.children = []
+
+	def getPath(self):
+		"""return the path to this node"""
+		if self.parent:
+			return self.parent.getPath() + [self.obj]
+		return [self.obj]
+
+	def tokenChildMap(self):
+		"""return a map of children by token"""
+		return {str(c.obj):c for c in self.children}
+
+	def childTokenMap(self):
+		"""return a map of children by token"""
+		return {str(c.obj):c.obj for c in self.children}
+
+	def addChildren(self, *children):
+		"""add children to this node"""
+		for c in children:
+			self.children.append(c)
 
 
 
@@ -100,7 +126,8 @@ class SuperModel(QtGui.QStandardItemModel, Adaptor):
 
 
 
-class SuperItem(QtGui.QStandardItem, Adaptor):
+class SuperItem(QtGui.QStandardItem, Adaptor,
+                Serialisable):
 	"""inheriting from standardItem for the master object,
 	since that lets us reuse the model/item link
 	to map out structure.
@@ -115,12 +142,9 @@ class SuperItem(QtGui.QStandardItem, Adaptor):
 
 	adaptorTypeMap = Adaptor.makeNewTypeMap()
 
-	@classmethod
-	def getBookendChars(cls, forInstance=None)->tuple[str, str]:
-		"""return the characters to use as bookends for this item -
-		"[", "]" for lists, "{", "}" for dicts, etc
-		"""
-		return ("", "")
+	if T.TYPE_CHECKING:
+		def model(self)->SuperModel:
+			pass
 
 
 	def __init__(self,
@@ -132,33 +156,50 @@ class SuperItem(QtGui.QStandardItem, Adaptor):
 		super(SuperItem, self).__init__()
 		self.wpPyObj = pyObj
 		self.wpChildType = wpChildType
-		self.wpItemModel : SuperModel = None
+		self.wpChildModel : SuperModel = None
 		self.wpParentQObj = parentQObj
 		#self.wpVisitAdaptor = VisitAdaptor.adaptorForObject(pyObj)
 		self.wpVisitAdaptor = self._getComponentTypeForObject(pyObj, component="visitor")
-		self.wpParentSuperItem : SuperItem = None
+		self.wpParentSuperItem : SuperItem = parentSuperItem
+		self.syncChildItems()
 
-
+	def syncChildItems(self):
 		# check that item has a visitor class
 		assert self.wpVisitAdaptor, f"no VisitAdaptor for {self.wpPyObj, type(self.wpPyObj)}"
 
 		if self._needsModel():
 			# build model
 			# newModelType = SuperModel.adaptorForObject(pyObj)
-			newModelType = self._getComponentTypeForObject(pyObj, component="model")
-			assert newModelType, f"no SuperModel adaptor type for {pyObj, type(pyObj)}"
+			newModelType = self._getComponentTypeForObject(self.wpPyObj, component="model")
+			assert newModelType, f"no SuperModel adaptor type for {self.wpPyObj, type(self.wpPyObj)}"
 			if self.wpParentQObj:
 				#log("PARENT", self.wpParentQObj, type(self.wpParentQObj))
 				assert isinstance(self.wpParentQObj, QtCore.QObject)
-			self.wpItemModel = newModelType(pyObj,
-			                        wpChildType=self.wpChildType,
-			                        parent=self.wpParentQObj,
-			                                parentSuperItem=self)
+			self.wpChildModel = newModelType(self.wpPyObj,
+			                                 wpChildType=self.wpChildType,
+			                                 parent=self.wpParentQObj,
+			                                 parentSuperItem=self)
 			# build stuff
 			#log("GEN ITEMS FOR ", self.wpPyObj, self.wpChildType, self.wpVisitAdaptor)
 			itemChildTypeList: list[
 				tuple[QtGui.QStandardItem, VisitAdaptor.ChildType.T()]] = self._generateItemsFromPyObj()
 			self._insertItemsToModel(itemChildTypeList)
+
+	def wpDepth(self)->int:
+		"""return the depth of this item in the structure"""
+		if self.wpParentSuperItem:
+			return 1 + self.wpParentSuperItem.wpDepth()
+		return 0
+
+	def serialise(self, serialiseOp=None, serialParams=None) ->dict:
+		"""serialise this object"""
+		return serialise(self.wpPyObj, serialiseOp, serialParams)
+
+	@classmethod
+	def deserialise(cls, serialData:dict, deserialiseOp=None, serialParams=None):
+		"""deserialise this object"""
+		return deserialise( serialData, deserialiseOp, serialParams)
+
 
 	def _getComponentTypeForObject(self, forObj, component="model"):
 		"""return the type of object used for the given part of the system -
@@ -203,7 +244,7 @@ class SuperItem(QtGui.QStandardItem, Adaptor):
 			#log("GEN ITEM", obj, childType, childItemType, self.wpItemModel, self)
 
 			# this will initialise and connect child models too
-			item = childItemType(obj, wpChildType=childType, parentQObj=self.wpItemModel,
+			item = childItemType(obj, wpChildType=childType, parentQObj=self.wpChildModel,
 			                     parentSuperItem=self)
 			resultItems.append((item, childType))
 		return resultItems
@@ -211,7 +252,7 @@ class SuperItem(QtGui.QStandardItem, Adaptor):
 	def wpChildSuperItems(self)->list[tuple[SuperItem, VisitAdaptor.ChildType.T()]]:
 		"""return a list of all child items"""
 		items = list(filter(lambda x: isinstance(x, SuperItem),
-		                   iterAllItems(model=self.wpItemModel)))
+		                    iterAllItems(model=self.wpChildModel)))
 		return [(i, i.wpChildType) for i in items]
 
 	def wpResultObj(self)->T.Any:
@@ -226,7 +267,7 @@ class SuperItem(QtGui.QStandardItem, Adaptor):
 		OVERRIDE for things like maps, trees etc
 		insert items into the model"""
 		for item, childType in items:
-			self.wpItemModel.appendRow(item)
+			self.wpChildModel.appendRow(item)
 
 
 	def _needsModel(self)->bool:
@@ -257,12 +298,21 @@ class SuperItem(QtGui.QStandardItem, Adaptor):
 # gui elements
 class SuperItemView(QtWidgets.QTreeView, Adaptor):
 	"""view for superitems - by default just display their model data
+	TODO: consider saving selections and expanded states
 	"""
 	adaptorTypeMap = Adaptor.makeNewTypeMap()
 	forTypes = (object, )
 	def __init__(self, superItem:SuperItem, parent=None):
 		super(SuperItemView, self).__init__(parent=parent)
 		self.superItem : SuperItem = superItem
+		self.setAlternatingRowColors(True)
+
+	def syncItemLayout(self):
+		"""sync the layout of this view with the item model"""
+		# self.setModel(self.superItem.wpItemModel)
+		# self.expandAll()
+		self.scheduleDelayedItemsLayout()
+		self.executeDelayedItemsLayout()
 
 
 class SuperItemWidget(QtWidgets.QWidget, Adaptor):
@@ -277,26 +327,91 @@ class SuperItemWidget(QtWidgets.QWidget, Adaptor):
 		self.superView : SuperItemView = None
 		self.superItem : SuperItem = superItem
 
+		# add a type label
+		self.typeLabel = TypeLabel.forObj(superItem.wpPyObj, parent=self)
+		#self.typeLabel = QtWidgets.QLabel("test", parent=self)
+
+		# appearance - might have to put this in some kind of post-init
+		#self.setAutoFillBackground(True)
+		#self.makeLayout()
+
+	def makeLayout(self):
+		"""make the layout for this widget -
+		override if you need more complex widget layouts"""
+		layout = QtWidgets.QHBoxLayout()
+		layout.addWidget(self.typeLabel, alignment=QtCore.Qt.AlignTop)
+		layout.addWidget(self.superView)
+		self.setLayout(layout)
+		return
+
+
+
+		layout = QtWidgets.QGridLayout()
+
+		colId, rowId = 0, 0
+
+		layout.addWidget(self.typeLabel, rowId, colId, 1, 1); colId+=1;
+		layout.addWidget(self.superView, rowId, colId, 2, 1); colId += 1;
+		rowId +=1; colId = 0;
+		self.setLayout(layout)
+
+		# deranged test for drawing widget layout literally in code
+
+		# layout = QtWidgets.QGridLayout()
+		# layoutSpacing = [
+		# 	(   [ self.typeLabel    ],  [ self.superView, 1],       ),
+		# 	(   0,                      [ 1,              1],       ),
+		# 	(   0,                      0,                0,      ),
+		# 	(   [ self.superItem,       1,                1],       ),
+		# 	(   [ 1,                    1,                1],       ),
+		# ]
+
+
+class TestW(QtWidgets.QWidget):
+
+	def __init__(self, parent=None):
+		super().__init__(parent)
+		self.view = QtWidgets.QTreeView(self)
+		model = QtGui.QStandardItemModel(self)
+		self.view.setModel(model)
+
+		self.label = QtWidgets.QLabel("testW", self)
+
+
+		#self.view = QtWidgets.QWidget(self)
+		layout = QtWidgets.QVBoxLayout(self)
+		layout.addWidget(self.view)
+		layout.addWidget(self.label)
+
+		self.setLayout(layout)
 
 # main widget
 class SuperWidget(QtWidgets.QWidget, Adaptor):
-	"""top-level widget to display superItems"""
+	"""top-level widget to display a superItem view -
+	single embed in a host ui"""
 
 	def __init__(self, parent=None):
 		super(SuperWidget, self).__init__(parent=parent)
 		self.topItem : SuperItem = None
 		self.itemWidget : SuperItemWidget = None
+
+		#self.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
 		#self.layout : QtWidgets.QLayout = None
 
 	def setTopItem(self, item:SuperItem):
 		"""set the top item to display"""
 		self.topItem = item
 		self.itemWidget = item.getNewWidget()
+		#self.itemWidget = TestW(self)
+
 		#log("item widget", self.itemWidget)
 		self.itemWidget.setParent(self)
 		layout = QtWidgets.QVBoxLayout()
+		layout = QtWidgets.QHBoxLayout(self)
 		layout.addWidget(self.itemWidget)
 		self.setLayout(layout)
+
+		##self.setFixedSize(300, 300)
 
 
 

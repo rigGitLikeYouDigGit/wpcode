@@ -35,12 +35,12 @@ class DictSuperItem(SuperItem):
 			results.extend((
 				(keyItemType(
 					i[0], wpChildType=VisitAdaptor.ChildType.MapKey,
-				           parentQObj=self.wpItemModel,
+				           parentQObj=self.wpChildModel,
 				           parentSuperItem=self),
 				 VisitAdaptor.ChildType.MapKey),
 				(valueItemType(
 					i[1], wpChildType=VisitAdaptor.ChildType.MapValue,
-				           parentQObj=self.wpItemModel,
+				           parentQObj=self.wpChildModel,
 				           parentSuperItem=self),
 				    VisitAdaptor.ChildType.MapValue) )
 			)

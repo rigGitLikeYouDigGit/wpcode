@@ -37,6 +37,7 @@ class TestMainTree(unittest.TestCase):
 		data = {"a": 1, "b": [6, {"b": "d"}], "c": 3}
 		item = SuperItem.forData(data)
 		print("data", data)
+		print("item", item)
 		print("result", item.wpResultObj())
 		app.quit()
 		#app.exec_()

@@ -78,7 +78,7 @@ class Adaptor:
 		"""
 		#log("registerAdaptor", adaptor, forTypes)
 		#log(adaptor.adaptorTypeMap)
-		assert adaptor.adaptorTypeMap, "Must declare empty adaptorTypeMap on Adaptor superclass of {}".format(adaptor)
+		assert isinstance(cls.adaptorTypeMap, SuperClassLookupMap), "Must declare empty adaptorTypeMap on Adaptor superclass of {}".format(adaptor)
 		assert cls.checkIsValidAdaptor(), f"Adaptor {cls} failed valid check on registration"
 		adaptor.adaptorTypeMap.updateClassMap({tuple((set(forTypes))) : adaptor})
 
