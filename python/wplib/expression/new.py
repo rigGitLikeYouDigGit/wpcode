@@ -171,8 +171,8 @@ VisitPassParams = DeepVisitor.VisitPassParams
 class ParseExpVisitOp(DeepVisitor.DeepVisitOp):
 	"""visit op to parse expression syntax in structure
 	"""
-	@classmethod
-	def visit(cls,
+	#@classmethod
+	def visit(self,
 	          obj:T.Any,
 	          visitor:DeepVisitor=None,
 	          visitData:VisitObjectData=None,

@@ -12,12 +12,13 @@ class SerialiseOp(DeepVisitor.DeepVisitOp):
 	def visit(self,
 	          obj:T.Any,
 	              visitor:DeepVisitor=None,
-	              visitData:VisitObjectData=None,
-	              visitPassParams:VisitPassParams=None,
+	              visitObjectData:VisitObjectData=None,
+	              #visitPassParams:VisitPassParams=None,
 	              ) ->T.Any:
 		"""Transform to apply to each object during serialisation.
 		affects only single layer of object, visitor handles continuation
 		"""
+		visitPassParams:VisitPassParams = visitObjectData["visitPassParams"]
 		serialParams: dict = dict(visitPassParams.visitKwargs["serialParams"])
 		if obj is None:
 			return None
@@ -37,12 +38,13 @@ class DeserialiseOp(DeepVisitor.DeepVisitOp):
 	          obj:T.Any,
 	              visitor:DeepVisitor=None,
 	              visitObjectData:VisitObjectData=None,
-	              visitPassParams:VisitPassParams=None,
+	              #visitPassParams:VisitPassParams=None,
 	              ) ->T.Any:
 
 		"""Transform to apply to each object during deserialisation.
 		"""
 		#log("deserialise", obj)
+		visitPassParams:VisitPassParams = visitObjectData["visitPassParams"]
 
 		serialParams : dict = dict(visitPassParams.visitKwargs["serialParams"])
 

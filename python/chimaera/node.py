@@ -1,5 +1,7 @@
 
 from __future__ import annotations
+
+import pprint
 import typing as T
 
 import fnmatch
@@ -10,7 +12,8 @@ from wplib import log, Sentinel, TypeNamespace
 from wplib.constant import MAP_TYPES, SEQ_TYPES, STR_TYPES, LITERAL_TYPES, IMMUTABLE_TYPES
 from wplib.uid import getUid4
 from wplib.inheritance import clsSuper
-from wplib.object import UidElement, ClassMagicMethodMixin
+from wplib.object import UidElement, ClassMagicMethodMixin, CacheObj
+from wplib.serial import Serialisable
 
 from wptree import Tree
 
@@ -219,6 +222,9 @@ else:
 	NodeAttrRef = namedtuple("NodeAttrRef", "uid attr path")
 
 
+# test = tuple([1,2,3])
+# test = NodeAttrRef(("a", "b", "c"))
+# test = NodeAttrRef(["a", "b", "c"])
 
 def expandIncomingTree(rawTree:Tree,
                        attrWrapper:NodeAttrWrapper,
@@ -235,6 +241,8 @@ def expandIncomingTree(rawTree:Tree,
 	within these that RESOLVES to a node expression, path etc
 
 	path is always () for now, get back to it later
+
+	use THIS tree to determine node dependencies
 
 	return tree[list[tuple[
 		str node uid,
@@ -351,6 +359,8 @@ def getEmptyNodeAttributeData(name: str, incoming=("T", ), defined=())->Tree:
 class NodeAttrWrapper:
 	def __init__(self, attrData:Tree, node:ChimaeraNode):
 		self._tree = attrData
+
+		self._cachedIncomingExpandedTree : Tree = None
 		self.node = node
 
 	def name(self)->str:
@@ -366,37 +376,63 @@ class NodeAttrWrapper:
 	#endregion
 
 	# incoming connections
+	def clearCachedIncomingExpandedTree(self):
+		self._cachedIncomingExpandedTree = None
+	def cachedIncomingExpandedTree(self)->Tree:
+		"""return the cached incoming expanded tree"""
+		return self._cachedIncomingExpandedTree
+	def setCachedIncomingExpandedTree(self, value:Tree):
+		"""set the cached incoming expanded tree"""
+		self._cachedIncomingExpandedTree = value
+
 	def incomingTreeRaw(self)->Tree:
 		"""raw tree with string filters"""
 		return self._tree("incoming", create=False)
 
-	def incomingTreeResolved(self)->Tree:
-		"""incoming with rich trees resolved"""
+	def incomingTreeExpanded(self)->Tree:
+		"""incoming tree expanded to tuples of (node uid, attribute, path)
+		returns live reference to cached tree, copy if you want to modify
+		"""
+
+		if self.cachedIncomingExpandedTree() is None:
+
+			resultTree = self.incomingTreeRaw().copy()
+
+			# expand expressions to tuples of (node uid, attribute, path)
+			expandIncomingTree(resultTree, self, self.node, self.node.parent())
+			self.setCachedIncomingExpandedTree(resultTree)
+
+		return self.cachedIncomingExpandedTree()
+
+	def resolveIncomingTree(self, incomingExpandedTree)->Tree:
+		"""incoming tree resolved to final data"""
 		#print("SELF", self, self.node, self.node.parent())
-		#assert self.node.parent(), f"node {self.node} has no parent"
-		return resolveIncomingTree(self.incomingTreeRaw(),
-		                           self,
-		                           self.node,
-		                           self.node.parent())
 
-	def incomingComposed(self)->Tree:
-		"""composed final tree of incoming data"""
+		# use cached expanded tree if possible
+		# if self.cachedIncomingExpandedTree() is None:
+		# 	resultTree = self.incomingTreeRaw().copy()
+		#
+		# 	# expand expressions to tuples of (node uid, attribute, path)
+		# 	expandIncomingTree(resultTree, self, self.node, self.node.parent())
+		#
+		# 	self.setCachedIncomingExpandedTree(resultTree.copy())
 
-		baseTree = self.incomingTreeResolved()
-		return baseTree
-		# resultList = baseTree.value
-		# # overlay all incoming trees for this level of input tree
-		# # TODO: proper node EvaluationReport / error system to give details
-		# assert all(isinstance(i, Tree) for i in
-		#            resultList), f"resultList {resultList} \n for attr {self} not all trees"
-		# try:
-		# 	resultTree = treelib.overlayTrees(resultList)
-		# 	# no recursion yet
-		# 	return resultTree
-		# except Exception as e:
-		# 	log("error composing incoming tree")
-		# 	self.incomingTreeResolved().display()
-		# 	raise e
+		# expand expressions to tuples of (node uid, attribute, path)
+		incomingExpandedTree.display()
+		expandedTree = incomingExpandedTree.copy()
+
+		# populate expanded tree with rich attribute trees
+		populateExpandedTree(expandedTree, self, self.node, self.node.parent())
+		# this tree is cached so we don't have to resolve a load of node addresses
+		# every time -
+		# if the incoming data is filtered by dynamic expression, we can't cache :(
+		# not sure how to detect this
+
+		# overlay rich trees into final incoming data stream
+		return overlayPopulatedTree(expandedTree, self, self.node, self.node.parent())
+
+
+
 
 
 	def setIncoming(self, value:(str, list[str])):
@@ -423,11 +459,15 @@ class NodeAttrWrapper:
 		if self.name() == "value":
 			# send to nodeType compute
 			return self.node.compute(
-				self.incomingComposed()
+				self.resolveIncomingTree(
+					self.incomingTreeExpanded()
+				)
 			)
-		if not self.node.parent():
+		if not self.node.parent(): # unparented nodes can't do complex behaviour
 			return self.defined()
-		incoming = self.incomingComposed()
+		incoming = self.resolveIncomingTree(
+			self.incomingTreeExpanded()
+		)
 
 		defined = self.defined()
 
@@ -468,7 +508,7 @@ class NodeAttrWrapper:
 
 	# endregion
 
-class ChimaeraNode(UidElement, ClassMagicMethodMixin):
+class ChimaeraNode(UidElement, ClassMagicMethodMixin, Serialisable):
 	"""node's internal data is a tree -
 	this wrapper may be created and destroyed at will.
 
@@ -721,7 +761,11 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin):
 
 
 	def __init__(self, data:Tree=None):
-		"""create a node from the given data -
+		"""
+		class calls already coerced to data arg seen here -
+		no need for any further lookups
+
+		create a node from the given data -
 		must be a tree with uid as name
 
 		"""
@@ -849,7 +893,7 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin):
 		"""
 		#log("base compute")
 		#log("input")
-		#inputData = self.value.incomingTreeResolved()
+		#inputData = self.value.resolveIncomingTree()
 		#inputData.display()
 
 		#log("composed")
@@ -872,8 +916,30 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin):
 	# 		nameCheck = self.nameUidMap()
 	#endregion
 
-	# region edges
-	# endregion
+	# region serialisation
+	# def serialise(self, params:dict=None) ->dict:
+	# 	"""serialise this node"""
+	# 	return self.tree.serialise(params=params)
+
+	uniqueAdapterName = "ChimaeraNode"
+
+	@classmethod
+	def _encodeObject(cls, obj:ChimaeraNode, encodeParams:dict):
+		"""encode a node object"""
+		#return obj.tree.serialise(params=encodeParams)
+		print("PARAMS")
+		pprint.pprint(encodeParams)
+		return {"tree" : obj.tree}
+
+	@classmethod
+	def _decodeObject(cls, serialType: type, serialData: dict, decodeParams: dict, formatVersion=-1):
+		"""decode a node object"""
+		print("PARAMS")
+		pprint.pprint(decodeParams)
+		pprint.pprint(serialData)
+		assert isinstance(serialData["tree"], Tree)
+		return serialType(serialData["tree"])
+
 
 ChimaeraNode.registerNodeType(ChimaeraNode)
 
@@ -908,7 +974,7 @@ if __name__ == '__main__':
 	# log("incomingRaw")
 	# graph.value.incomingTreeRaw().display()
 	# log("incomingResolved")
-	# graph.value.incomingTreeResolved().display()
+	# graph.value.resolveIncomingTree().display()
 
 
 	nodeA = ChimaeraNode("nodeA")
@@ -942,7 +1008,7 @@ if __name__ == '__main__':
 	#
 	# 		# this could be done with just a list connection to single
 	# 		# tree level, but this is more descriptive
-	# 		incoming = node.value.incomingTreeResolved()
+	# 		incoming = node.value.resolveIncomingTree()
 	# 		aValue = incoming["a"]
 	# 		bValue = incoming["b"]
 	# 		result = aValue + joinToken + bValue

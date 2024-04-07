@@ -23,7 +23,10 @@ from .. import api, attr
 from ..plug import PlugTree
 from ..namespace import NamespaceTree, getNamespaceTree
 
-# NO TRUE IMPORTS for codegen
+# dynamic type lookups
+from . import codegen
+
+# NO TRUE IMPORTS for codegen submodules
 if T.TYPE_CHECKING:
 	from ..api import MFMFnT
 	from .codegen.gen import Catalogue as GenCatalogue

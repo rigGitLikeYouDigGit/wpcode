@@ -28,6 +28,7 @@ configPath = wpRoot / "code" / "config.json"
 with open(configPath, "r") as f:
 	config = json.load(f)
 
+
 # add any path variables to env
 envOverrides = config["maya"]["env"]
 for key, paths in envOverrides.items():

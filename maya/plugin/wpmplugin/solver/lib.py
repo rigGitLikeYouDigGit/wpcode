@@ -10,10 +10,12 @@ from wpm.lib.plugin import attr
 @dataclass
 class SolverFrameData:
 	"""data for a single frame of the solver"""
+	atFrame : int # frame number for this data
 	float : tuple[float] = ()
 
 def getSolverFrameData(
 		parentDH:om.MDataHandle,
+		atFrame:int,
 		floatMObject:om.MObject,
 
 		getOutputValues=True,
@@ -30,7 +32,9 @@ def getSolverFrameData(
 		attr.jumpToElement(floatArr, i)
 		floats.append(float(_getLeafDH(floatArr).asDouble()))
 
-	return SolverFrameData(float=tuple(floats))
+	return SolverFrameData(
+		atFrame=atFrame,
+		float=tuple(floats))
 
 
 def setSolverFrameData(

@@ -1,6 +1,8 @@
 
 
 from __future__ import annotations
+
+import pprint
 import typing as T
 
 import unittest
@@ -10,6 +12,11 @@ from chimaera import ChimaeraNode
 
 class TestNode(unittest.TestCase):
 	""" tests for basic chimaeraNode behaviour """
+
+	def test_attrCopying(self):
+		node = ChimaeraNode("test")
+		node.nodes.incomingTreeRaw().serialise()
+		node.nodes.resolve()
 
 	def test_nodeTyping(self):
 		"""Check that the type system and syntax is consistent -
@@ -111,13 +118,25 @@ class TestNode(unittest.TestCase):
 		self.assertEqual(len(out.value.incomingTreeRaw().value), 2)
 
 		# uid connections should work globally
-		#out.value.incomingTreeResolved().display()
+		#out.value.resolveIncomingTree().display()
 
 
 	def test_nodeCompute(self):
 		"""define a simple node type, compute stuff"""
 
 
+	def test_nodeSerialisation(self):
+		"""welcome to pain"""
 
+		baseNode = ChimaeraNode("test")
+		# node.value.defined().value = "testValue"
+		# node.value.incomingTreeRaw().value = [
+		# 	"test1", "test2"
+		# ]
+		serialData = baseNode.serialise()
+		#pprint.pprint(serialData, sort_dicts=False)
+
+		regen = ChimaeraNode.deserialise(serialData)
+		self.assertIsInstance(regen, ChimaeraNode)
 
 

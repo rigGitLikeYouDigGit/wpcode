@@ -192,6 +192,9 @@ def genNodeFileStr(project:CodeGenProject, data:NodeData,
 			childLines.append(Assign((childData.name + "_", childName), descriptorCall))
 			childLines.append(Assign((childData.shortName + "_", childName), descriptorCall))
 
+		# set node attr
+		childLines.append(Assign(("node", string.cap(nodeType)),))
+
 		classDef = ClassTemplate(
 			className=className,
 			classBaseClasses=("Plug",),

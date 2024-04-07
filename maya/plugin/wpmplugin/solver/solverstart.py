@@ -132,8 +132,11 @@ class WpSolverStart(PluginNodeTemplate, om.MPxNode):
 		# init if empty
 		#attr.jumpToElement(inputDataADH, 0, elementIsArray=False)
 
+		thisFrame = pData.inputValue(self.aThisFrame).asInt()
+
 		inputFrameData = getSolverFrameData(
 			inputDataADH,
+			atFrame=thisFrame,
 			floatMObject=self.aInputFloat,
 			getOutputValues=False
 		)
@@ -158,7 +161,6 @@ class WpSolverStart(PluginNodeTemplate, om.MPxNode):
 			setSolverFrameData(frameDataArrayHandle.outputValue(),
 			                   inputFrameData,
 			                   floatMObject=self.aFrameFloat,
-
 			                   )
 
 
@@ -173,22 +175,6 @@ class WpSolverStart(PluginNodeTemplate, om.MPxNode):
 		else:
 			return connectedPlugs[0].node()
 
-	def _getSolverEndDH(self, pData:om.MDataBlock, endNode:om.MObject)->om.MArrayDataHandle:
-		"""get the data from the end node
-		this might hard crash maya"""
-		endFn = om.MFnDependencyNode(endNode)
-		frameDataPlug = endFn.findPlug("frameData", True)
-		frameDataHandle = om.MArrayDataHandle(frameDataPlug.asMDataHandle())
-		return frameDataHandle
-
-	def _setFromClsData(self, pData:om.MDataBlock):
-		if not self.dataHandleList:
-			print("no CLS data handle datas")
-			return
-		receivedADH : om.MArrayDataHandle = pData.outputArrayValue(self.aReceivedData)
-		for i in range(len(self.dataHandleList)):
-			attr.jumpToElement(receivedADH, i)
-			attr.writeDHGeneral(receivedADH.outputValue(), self.dataHandleList[i])
 
 	def _shuffleFrameDatas(self, pData:om.MDataBlock):
 		"""
@@ -209,6 +195,7 @@ class WpSolverStart(PluginNodeTemplate, om.MPxNode):
 
 			frameData = getSolverFrameData(
 				loadFrameArrayDH.outputValue(),
+				-1,
 				floatMObject=self.aFrameFloat,
 				getOutputValues=True
 			)

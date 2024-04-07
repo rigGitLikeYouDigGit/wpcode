@@ -41,8 +41,8 @@ class TreeBranchItem(SuperItem):
 		nameItemType = self._getComponentTypeForObject(self.wpPyObj.name, "item")
 		nameItem = (
 			nameItemType(self.wpPyObj.name, wpChildType=VisitAdaptor.ChildType.TreeName,
-			              parentQObj=self.wpItemModel,
-			              parentSuperItem=self),
+			             parentQObj=self.wpChildModel,
+			             parentSuperItem=self),
 			VisitAdaptor.ChildType.TreeName
 		)
 		results.append(nameItem)
@@ -50,7 +50,7 @@ class TreeBranchItem(SuperItem):
 		valueItemType = self._getComponentTypeForObject(self.wpPyObj.value, "item")
 		valueItem = (
 			valueItemType(self.wpPyObj.value, wpChildType=VisitAdaptor.ChildType.TreeValue,
-			              parentQObj=self.wpItemModel,
+			              parentQObj=self.wpChildModel,
 			              parentSuperItem=self),
 			VisitAdaptor.ChildType.TreeValue
 		)
@@ -96,8 +96,8 @@ class TreeSuperItem(SuperItem):
 		for branch in self.wpPyObj.allBranches(includeSelf=True):
 			branchItemType : type[TreeBranchItem] = TreeBranchItem
 			branchItem = (branchItemType(branch, wpChildType=VisitAdaptor.ChildType.TreeBranch,
-				                parentQObj=self.wpItemModel,
-				                parentSuperItem=self),
+			                             parentQObj=self.wpChildModel,
+			                             parentSuperItem=self),
 				 VisitAdaptor.ChildType.TreeBranch,
 
 				 )
@@ -132,7 +132,7 @@ class TreeSuperItem(SuperItem):
 				if parentItem:
 					parentItem.insertRow(0, items[i][0])
 			else:
-				self.wpItemModel.appendRow(items[i][0])
+				self.wpChildModel.appendRow(items[i][0])
 
 
 

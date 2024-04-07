@@ -26,6 +26,7 @@ class WpSolverEnd(PluginNodeTemplate, om.MPxNode):
 	aFloat : om.MObject  # float attribute
 	aBalanceWheel : om.MObject # bool attribute to flag that a node has been eval'd
 
+	aThisFrame : om.MObject
 
 	@classmethod
 	def pluginNodeIdData(cls) -> PluginNodeIdData:
@@ -43,11 +44,15 @@ class WpSolverEnd(PluginNodeTemplate, om.MPxNode):
 		cls.aFloat = data["float"]
 
 		cls.aBalanceWheel = attr.makeBalanceWheelAttr("solverStart", readable=False, writable=True)
+		cls.aThisFrame = nFn.create("thisFrame", "thisFrame", om.MFnNumericData.kInt, 0)
+		nFn.keyable = True
 
-		cls.driverMObjects = [cls.aBalanceWheel]
+		cls.driverMObjects = [cls.aBalanceWheel, cls.aThisFrame]
 		cls.drivenMObjects = [cls.aFrameData]
 		cls.addAttributes(cls.drivenMObjects, cls.driverMObjects)
 		cls.setAttributesAffect(cls.driverMObjects, cls.drivenMObjects)
+
+
 
 
 		# cls.setExistWithoutInConnections(cls, True)

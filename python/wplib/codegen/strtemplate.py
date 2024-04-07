@@ -183,7 +183,7 @@ class Assign(StringCodeTemplate):
 
 	def __init__(self,
 	             left:argT,
-	             right:StringCodeTemplate,
+	             right:StringCodeTemplate=None,
 	             depth:int=0,
 	             ):
 		super().__init__(depth=depth)
@@ -191,7 +191,9 @@ class Assign(StringCodeTemplate):
 		self.right = right
 
 	def _resultString(self):
-		return f"{formatArg(self.left, space=True)} = {str(self.right)}"
+		if self.right:
+			return f"{formatArg(self.left, space=True)} = {str(self.right)}"
+		return f"{formatArg(self.left, space=True)}"
 
 	def childTemplates(self) ->T.Iterable[StringCodeTemplate]:
 		#return [self.right]

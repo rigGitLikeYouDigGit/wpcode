@@ -39,7 +39,8 @@ def getAttrData(obj:om.MObject):
 	data = AttrData(
 		name=baseFn.name,
 		type=baseFn.type(),
-		typeName=str(type(baseFn)),
+		#typeName=str(type(baseFn)),
+		typeName=baseFn.object().apiTypeStr(),
 		isArray=baseFn.array,
 		shortName=baseFn.shortName,
 		isInput=baseFn.writable,

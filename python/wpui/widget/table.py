@@ -262,29 +262,7 @@ if __name__ == '__main__':
 	t = threading.Thread(target=_syncSize, daemon=True).start()
 	print("thread started", t)
 
-	#widget.resizeRowsToContents()
 
-	# widget = WPTableView()
-	# model = QtGui.QStandardItemModel(parent=widget)
-	# model.setData(model.index(0, 0), "a")
-	# model.setData(model.index(0, 1), "b")
-	# model.setData(model.index(1, 0), "c")
-	# model.setHorizontalHeaderLabels(["A", "B"])
-	# model.setVerticalHeaderLabels(["1", "2"])
-	# widget.setModel(model)
-	# widget.show()
-	#
-	# widget.setTableCornerWidget(NLabel("test"))
-
-	#btn = widget.getBaseCornerButton()
-	# palette = btn.palette()
-	# palette.setColor(QtGui.QPalette.Button, QtCore.Qt.red)
-	# palette.setBrush(QtGui.QPalette.Base, QtGui.QBrush(QtCore.Qt.red))
-	# palette.setBrush(QtGui.QPalette.Background, QtGui.QBrush(QtCore.Qt.red))
-	# btn.setAutoFillBackground(True)
-	# btn.setPalette(palette)
-
-	#btn.clicked.connect(onClicked)
 
 
 	sys.exit(app.exec_())

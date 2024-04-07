@@ -23,6 +23,96 @@ class TestVisitor(unittest.TestCase):
 			"test2": TestNamedTuple(1,"two",3),
 		}
 
+	def test_visitorList(self):
+
+		baseList = [1, 2, 3]
+		visitor = DeepVisitor()
+		params = VisitPassParams(
+			topDown=True, depthFirst=True,
+		)
+		result = visitor.dispatchPass(
+			baseList,
+			params,
+			visitFn=None
+		)
+		self.assertIsInstance(result, T.Generator)
+		assert tuple(result) == (1, 2, 3)
+
+		params.yieldChildType = True
+		result = visitor.dispatchPass(
+			baseList,
+			params,
+			visitFn=None
+		)
+		self.assertIsInstance(result, T.Generator)
+		assert tuple(result) == (
+			( 0, 1, "["),
+			(1, 2, "["),
+			(2, 3, "["),
+		                         )
+
+		# test applying
+		params.visitFn = lambda obj, visitor, visitObjectData: obj + 1 if isinstance(obj, int) else obj
+		params.transformVisitedObjects = True
+		result = visitor.dispatchPass(
+			baseList,
+			params,
+		)
+		assert tuple(result) == (2, 3, 4)
+
+		params.topDown = False
+		result = visitor.dispatchPass(
+			baseList,
+			params,
+		)
+		assert tuple(result) == (2, 3, 4)
+
+	def test_visitorDict(self):
+
+		baseDict = {"a": 1, "b": 2, "c": 3}
+		visitor = DeepVisitor()
+		params = VisitPassParams(
+			topDown=True, depthFirst=True,
+		)
+		result = visitor.dispatchPass(
+			baseDict,
+			params,
+			visitFn=None
+		)
+		self.assertIsInstance(result, T.Generator)
+
+		# WE USE TIES FOR DICT
+		assert tuple(result) == (('a', 1), 'a', 1, ('b', 2), 'b', 2, ('c', 3), 'c', 3)
+
+		# params.yieldChildType = True
+		# result = visitor.dispatchPass(
+		# 	baseDict,
+		# 	params,
+		# 	visitFn=None
+		# )
+		# self.assertIsInstance(result, T.Generator)
+		# assert tuple(result) == (
+		# 	( "a", 1, "key"),
+		# 	(1, 2, "["),
+		# 	(2, 3, "["),
+		#                          )
+		#
+		# # test applying
+		# params.visitFn = lambda obj, visitor, visitObjectData: obj + 1 if isinstance(obj, int) else obj
+		# params.transformVisitedObjects = True
+		# result = visitor.dispatchPass(
+		# 	baseDict,
+		# 	params,
+		# )
+		# assert tuple(result) == ("a", 2, "b", 3, "c", 4)
+		#
+		# params.topDown = False
+		# result = visitor.dispatchPass(
+		# 	baseDict,
+		# 	params,
+		# )
+		# assert tuple(result) == ("a", 2, "b", 3, "c", 4)
+
 	def test_visitor(self):
 		"""basic function of visitor is just to iterate over a data structure"""
 
