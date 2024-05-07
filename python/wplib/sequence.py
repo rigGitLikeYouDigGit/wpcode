@@ -17,23 +17,17 @@ resolveSeqIndex = lambda index, length : (index if index >= 0 else length + inde
 # lambda to coerce values to iterable input
 toSeq = lambda x: x if isinstance(x, (*SEQUENCE_TYPES, *MAP_TYPES)) else (x, )
 
-# return empty sequence if original value is not
+# return empty sequence if original value bools true
 toSeqIf = lambda x: (x if isinstance(x, (*SEQUENCE_TYPES, *MAP_TYPES)) else (x,)) if x else ()
 
 # may need to be moved higher if we need stronger high-level coercion
-isSeq = lambda x: isinstance(x, tuple(SEQUENCE_TYPES))
+isSeq = lambda x: isinstance(x, tuple(SEQUENCE_TYPES)) and not isinstance(x, str)
 
-def toArgList(i, argType=str):
-	"""return a list of arguments, given a single value
-	"""
-	if isinstance(i, argType):
-		return [i]
-	return list(i)
 
 def strList(i)->list[str]:
 	if isinstance(i, str):
 		return [i]
-	return list(i)
+	return list(map(str, i))
 
 getFirst = lambda x: next(iter(x), None)
 

@@ -94,7 +94,11 @@ class SuperClassLookupMap:
 
 	def lookup(self, lookupCls:type, default=Sentinel.FailToFind):
 		"""lookup a value using lookupCls,
-		add found results to cache"""
+		add found results to cache.
+
+		Explicitly specify default=None to pass None from failure,
+		otherwise it will raise a KeyError
+		"""
 		#log(f"lookup {lookupCls} in {self.classMap}")
 		if lookupCls in self.cacheMap:
 			return self.cacheMap[lookupCls]
@@ -154,3 +158,9 @@ def overrideThis(fn:T.Callable)->T.Callable:
 	insane after all
 	"""
 	return fn
+
+
+# declare method as classmethod, unless called on a class instance
+# pattern is to have classes and class methods as general practice,
+# but then to override special cases with specific instances.
+
