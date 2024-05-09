@@ -57,14 +57,27 @@ class NamespaceElement(ClassMagicMethodMixin):
 class TypeNamespace(ClassMagicMethodMixin):
 	"""namespace container to hold discrete elements as types
 	this is like an Enum where each member can have arbitrary
-	extra attributes declared"""
+	extra attributes declared
+
+	To inherit and define your own:
+
+	class MyNamespace(TypeNamespace): # outer class
+
+		class _Base(TypeNamespace.base()): # define base class
+
+		class MyNamespaceElement(_Base): # define new element
+
+	# later, to define a new element outside of main class scope:
+	class MyExtraElement(MyNamespace.base()): # define new element
+
+	"""
 
 	# override the "_Base" member for the base class of any of
 	# your namespaces
 	_Base = NamespaceElement
 
 	@classmethod
-	def base(cls)->T.Type[_Base]:
+	def base(cls)->T.Type[_Base]: # inherit from this for the base of a new type namespace
 		return cls._Base
 
 

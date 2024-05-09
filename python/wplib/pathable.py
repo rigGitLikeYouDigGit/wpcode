@@ -3,11 +3,13 @@
 from __future__ import annotations
 import typing as T
 
+from copy import deepcopy
+
 from wplib.object import Adaptor
 from wplib.log import log
 from wplib.object import DeepVisitor, VisitAdaptor
 from wplib.typelib import isImmutable
-from wplib import sequence, Sentinel
+from wplib import sequence, Sentinel, TypeNamespace
 
 """if at first
 try
@@ -25,21 +27,38 @@ class Pathable(Adaptor):
 	immutable in the sense that whenever items change, a new object is created
 
 	'/' is valid, can be useful in string patterns, equivalent to a space between tokens
+
+	should the same path op be able to return a single object and/or a list of objects?
+	path[0] -> single object
+	path[:] -> list of objects
+	access flag is not optional - one=true returns a single result, one=false wraps it in a list
+	no no COMBINE results based on given operators - First by default
+
 	"""
+
+	class Combine(TypeNamespace):
+		"""operators to flatten multiple results into one"""
+		class _Base(TypeNamespace.base()):
+			@classmethod
+			def flatten(cls, results:list[T.Any])->T.Any:
+				"""flatten results"""
+				raise NotImplementedError(cls, f"no flatten for {cls}")
+
+		class First(_Base):
+			"""return the first result"""
+			@classmethod
+			def flatten(cls, results:(list[T.Any], list[Pathable]))->T.Any:
+				"""flatten results"""
+				return results[0]
+
 	adaptorTypeMap = Adaptor.makeNewTypeMap()
 
-	dispatchInit = True
+	dispatchInit = True # Pathable([1, 2, 3]) will return a specialised ListPathable object
 
-	keyType = T.Union[str, int]
-	keyType = T.Union[keyType, tuple[keyType, ...]]
+	keyT = T.Union[str, int]
+	keyT = T.Union[keyT, tuple[keyT, ...]]
+	pathT = T.List[keyT]
 
-	@classmethod
-	def startPath(cls, obj):
-		"""might add this back to the base class,
-		to dispatch the type lookup directly on base class call,
-		rather than have to do Adaptor.adaptorForObject(obj)(obj) etc
-		"""
-		return cls.adaptorForObject(obj)(obj)
 
 	def __init__(self, obj:dict, parent:DictPathable=None, key:T.Iterable[keyType]=None):
 		"""initialise with object and parent"""
@@ -51,7 +70,21 @@ class Pathable(Adaptor):
 		self.children = self._buildChildren() # only build lazily
 
 	def __repr__(self):
-		return f"<{self.__class__.__name__}({self.obj}, {self.path()})>"
+		try:
+			return f"<{self.__class__.__name__}({self.obj}, {self.path()})>"
+		except:
+			return f"<{self.__class__.__name__}({self.obj}, (PATH ERROR))>"
+
+	@property
+	def root(self)->Pathable:
+		"""get the root
+		the similarity between this thing and tree is not lost on me,
+		I don't know if there's merit in looking for yet more unification
+		"""
+		test = self
+		while test.parent:
+			test = test.parent
+		return test
 
 	def makeChildPathable(self, key:tuple[keyType], obj:T.Any)->Pathable:
 		"""make a child pathable object"""
@@ -74,31 +107,87 @@ class Pathable(Adaptor):
 
 	# path access
 	@classmethod
-	def access(cls, obj:(Adaptor, T.Iterable[Adaptor]), path:list[keyType], one=False, default=Sentinel.FailToFind):
+	def access(cls, obj:(Adaptor, T.Iterable[Adaptor]), path:pathT, one=False,
+	           values=True, default=Sentinel.FailToFind,
+	           combine:Combine.T()=Combine.First):
 		"""access an object at a path
 		outer function only serves to avoid recursion on linear paths -
 		DO NOT override this directly, we should delegate max logic
 		to the pathable objects
+
+		feed copy of whole path to each pathable object - let each consume the
+		first however many tokens and return the result
+
+		track which object returned which path, and match the next chunk of path
+		to the associated result
+
+		if values, return actual result values
+		if not, return Pathable objects
+
+
 		"""
 		toAccess = sequence.toSeq(obj)
-		while path:
-			token, *path = path
-			# if a slice is passed toAccess may shrink or grow -
-			# unsure how to handle slice access when only one branch fails
-			toAccess = sequence.flatten([i._processPathToken(token) for i in toAccess])
-		return toAccess
+
+		foundPathables = [] # end results of path access - unstructured
+		paths = [deepcopy(path) for i in range(len(toAccess))]
+		depthA = 0
+		while paths:
+			#newPaths = [None] * len(toAccess)
+			newPaths = []
+			newToAccess = []
+			log( " "* depthA + "outer iter", paths)
+			depthA += 1
+			depthB = 1
+			for pathId, (path, pathable) \
+					in enumerate(zip(paths, toAccess)):
+
+				log((" " * (depthA + depthB)), "path iter", path, pathable)
+				depthB += 1
+
+				newPathables, newPath = pathable._consumeFirstPathTokens(path)
+				if not newPath:
+					foundPathables.extend(newPathables)
+					continue
+				newPaths.append(newPath)
+				newToAccess.extend(newPathables)
+			paths = newPaths
+			toAccess = newToAccess
+
+		# combine / flatten results
+		results = foundPathables
+		# check if needed to error
+		if not results:
+			# format of default overrides one/many, since it's provided directly
+			if default is not Sentinel.FailToFind:
+				return default
+			raise KeyError(f"Path not found: {path}")
+
+		if values:
+			results = [r.obj for r in results]
+
+		if one is None: # shape explicitly not specified, return natural shape of result
+			# why would you ever do this
+			if len(results) == 1:
+				return results[0]
+			return results
+
+		if one:
+			return combine.flatten(results)
+		return results
 
 
-	def _processPathToken(self, token:T.Any)->T.Any:
+	def _consumeFirstPathTokens(self, path:pathT)->tuple[list[Pathable], pathT]:
 		"""process a path token"""
-		return self._childForKey(token)
-	def _childForKey(self, key:str)->Pathable:
-		"""get child object for key"""
-		#TODO: set NotImplemented errors to flag object type and args
-		raise NotImplementedError(self, f"no child for key {key}")
-	def __getitem__(self, *item):
-		"""get item by path"""
-		return self.access(self, item)
+		raise NotImplementedError(self, f"no _processPathToken for ", path)
+
+	def __getitem__(self, item):
+		"""get item by path -
+		list/single from getitem?
+		aaaaaaaa
+		"""
+		log("getitem", item)
+
+		return self.access(self, list(sequence.toSeq(item)))
 
 
 
@@ -122,18 +211,32 @@ class DictPathable(Pathable):
 	"""
 	forTypes = (dict,)
 
-
-
-	# cache children and path
-
 	def _buildChildren(self):
-		return [(self.makeChildPathable(("keys()", i), k),
-		         self.makeChildPathable((k,), v) )
-		        for i, (k, v) in enumerate(self.obj.items())]
+		# return [(self.makeChildPathable(("keys()", ), k),
+		#          self.makeChildPathable((k,), v) )
+		#         for i, (k, v) in enumerate(self.obj.items())]
+		items = { k : self.makeChildPathable((k,), v) for k, v in self.obj.items()}
+		items["keys()"] = self.makeChildPathable(("keys()",), list(self.obj.keys()))
+		return items
 
-	def _childForKey(self, key:str)->Pathable:
-		if key == "keys()":
+	def _consumeFirstPathTokens(self, path:pathT) ->tuple[list[Pathable], pathT]:
+		"""process a path token"""
+		token, *path = path
+		if token == "keys()":
+			return [self.children["keys()"]], path
+		return [self.children[token]], path
 
+
+class SeqPathable(Pathable):
+	forTypes = (list, tuple)
+	def _buildChildren(self):
+		return [self.makeChildPathable((i,), v) for i, v in enumerate(self.obj)]
+	def _consumeFirstPathTokens(self, path:pathT) ->tuple[list[Pathable], pathT]:
+		"""process a path token"""
+		token, *path = path
+		# if isinstance(token, int):
+		# 	return [self.children[token]], path
+		return [self.children[token]], path
 
 
 
@@ -198,6 +301,7 @@ if __name__ == '__main__':
 	path = Pathable(structure)
 
 	log("r1", path[1, "key1"])
+	log("r2", path["keys()", 0])
 
 	# structure = [
 	# 	"a",

@@ -54,10 +54,6 @@ class Adaptor:
 
 	adaptorTypeMap : SuperClassLookupMap = None
 
-	# reflexive = True # if true, adaptor is registered against itself
-	# # allows inheriting from adaptor directly into active objects
-	# testing full separation
-
 	@classmethod
 	def makeNewTypeMap(cls):
 		"""make a new type map for this class"""
@@ -101,3 +97,31 @@ class Adaptor:
 		if cls.forTypes:
 			assert isinstance(cls.forTypes, (tuple, set, list)), f"forTypes must be an iterable of types, not {cls.forTypes}"
 			cls.registerAdaptor(cls, cls.forTypes)
+
+
+	# region init shorthand
+	"""if dispatchInit is True, adaptor will dispatch a call 
+	to its base class, to the type-relevant adaptor subclass
+	
+	eg 
+	class MyAdaptorBase(Adaptor):pass
+	class MyListAdaptor(MyAdaptorBase):pass
+	
+	result = MyAdaptorBase([1,2,3], randomKwarg=1)
+	# dispatches to MyListAdaptor([1,2,3], randomKwarg=1)
+	"""
+	dispatchInit = False
+
+
+	@staticmethod
+	def __new__(cls, *args, **kwargs):
+		"""new"""
+		#log(f"Adaptor.__new__({cls, args, kwargs})")
+		if cls.dispatchInit and not cls.forTypes:
+			adaptorType = cls.adaptorForType(type(args[0]))
+			assert adaptorType, f"No adaptor for type {type(args[0])}"
+			return adaptorType(*args, **kwargs)
+		return object.__new__(cls)
+
+
+
