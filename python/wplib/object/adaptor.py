@@ -112,7 +112,6 @@ class Adaptor:
 	"""
 	dispatchInit = False
 
-
 	@staticmethod
 	def __new__(cls, *args, **kwargs):
 		"""new"""
@@ -122,6 +121,25 @@ class Adaptor:
 			assert adaptorType, f"No adaptor for type {type(args[0])}"
 			return adaptorType(*args, **kwargs)
 		return object.__new__(cls)
+	# endregion
 
+	# region copying
+	"""Adaptor seems like a decent solution to organise per-type behaviour
+	and overrides when we can't easily use mixins, but there is an issue - 
+	how do we specify per-USECASE overrides, on top of the per-TYPE overrides?
+	
+	without duplicating the whole thing, and redeclaring the whole thing
+	
+	SpecialAdaptor = BaseAdaptor.specialise( usage="myUsage", newBases=() )
+	
+	class SpecialListAdaptor(SpecialAdaptor.adaptorForType(list)):
+		# override some stuff
+		pass
+	???
+	
+	"""
+
+
+	# endregion
 
 

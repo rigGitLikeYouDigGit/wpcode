@@ -14,7 +14,7 @@ VisitPassParams = DeepVisitor.VisitPassParams
 
 
 class TestVisitor(unittest.TestCase):
-	""" tests for basic chimaeraNode behaviour """
+	""" """
 
 	def setUp(self):
 		self.rawData = {

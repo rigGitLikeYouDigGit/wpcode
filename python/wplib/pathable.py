@@ -34,6 +34,10 @@ class Pathable(Adaptor):
 	access flag is not optional - one=true returns a single result, one=false wraps it in a list
 	no no COMBINE results based on given operators - First by default
 
+	INHERITANCE is tough - to add new semantics for access and pathing,
+	you would need to subclass Pathable, and then redeclare every child class separately
+	very cringe
+
 	"""
 
 	class Combine(TypeNamespace):
@@ -60,7 +64,7 @@ class Pathable(Adaptor):
 	pathT = T.List[keyT]
 
 
-	def __init__(self, obj:dict, parent:DictPathable=None, key:T.Iterable[keyType]=None):
+	def __init__(self, obj, parent:DictPathable=None, key:T.Iterable[keyType]=None):
 		"""initialise with object and parent"""
 		self.parent = parent
 		self.obj = obj
@@ -107,9 +111,10 @@ class Pathable(Adaptor):
 
 	# path access
 	@classmethod
-	def access(cls, obj:(Adaptor, T.Iterable[Adaptor]), path:pathT, one=False,
+	def access(cls, obj:(Adaptor, T.Iterable[Adaptor]), path:pathT, one:(bool, None)=True,
 	           values=True, default=Sentinel.FailToFind,
-	           combine:Combine.T()=Combine.First):
+	           combine:Combine.T()=Combine.First)->(T.Any, list[T.Any],
+	                                                Pathable, list[Pathable]):
 		"""access an object at a path
 		outer function only serves to avoid recursion on linear paths -
 		DO NOT override this directly, we should delegate max logic
@@ -135,13 +140,13 @@ class Pathable(Adaptor):
 			#newPaths = [None] * len(toAccess)
 			newPaths = []
 			newToAccess = []
-			log( " "* depthA + "outer iter", paths)
+			#log( " "* depthA + "outer iter", paths)
 			depthA += 1
 			depthB = 1
 			for pathId, (path, pathable) \
 					in enumerate(zip(paths, toAccess)):
 
-				log((" " * (depthA + depthB)), "path iter", path, pathable)
+				#log((" " * (depthA + depthB)), "path iter", path, pathable)
 				depthB += 1
 
 				newPathables, newPath = pathable._consumeFirstPathTokens(path)
@@ -182,12 +187,16 @@ class Pathable(Adaptor):
 
 	def __getitem__(self, item):
 		"""get item by path -
-		list/single from getitem?
-		aaaaaaaa
-		"""
-		log("getitem", item)
+		getitem is faster and less safe version of access,
+		may variably return a single result or a list from a slice -
+		up to user to know what they're putting.
 
-		return self.access(self, list(sequence.toSeq(item)))
+		If any part of the path is not known, and may contain a slice,
+		prefer using access() to define return format explicitly
+		"""
+		#log("getitem", item)
+
+		return self.access(self, list(sequence.toSeq(item)), one=None)
 
 
 
@@ -260,34 +269,7 @@ class StringPathable(Pathable):
 	def _buildChildren(self):
 		return []
 
-"""2 systems needed 
-- single function to path into any random object
-- persistent objects that can track their own path
 
-
-pathing into an object stores its path?
-"""
-
-#KEY_T = T.Union[str, int]
-
-def pathGet(obj:T.Any, path:list[(str, int, tuple)]) -> dict[tuple[str, int], T.Any]:
-	"""get an object at a path -
-	tuple denotes a slice
-
-	:return dict of path tokens to objects
-	"""
-	toReturn = {}
-	while path:
-		token, *path = path
-		if isinstance(token, tuple): # output a slice of objects
-			for i, t in enumerate(token):
-				toReturn[i] = pathGet(obj, [t, *path])
-			return toReturn
-		adaptor = Pathable.adaptorForType(type(obj))
-		if adaptor is None:
-			raise Exception(f"No adaptor for class {type(obj)}")
-		obj = adaptor._childForToken(obj, token)
-	return obj
 
 if __name__ == '__main__':
 

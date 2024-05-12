@@ -1,6 +1,7 @@
 from __future__ import annotations
 from collections import defaultdict
 import typing as T
+
 """I have split up the proxy functionality like so:
  - main Proxy class handles direct attribute lookup on the
 target object and type
@@ -55,6 +56,7 @@ class ProxyMeta(type):
 
 	#@classmethod
 	def __subclasscheck__(cls, *args, **kwargs):
+		#TODO: obviously add some logic here
 		print("proxy subclass check", args, kwargs)
 		return True
 
@@ -68,7 +70,7 @@ class ProxyLink:
 		self.baseClass = type(proxyTargetObj)
 		self.proxyTargetObj = None
 		self.setProxyTarget(proxyTargetObj)
-		self.proxyInstance : Proxy = None
+		self.proxyInstance : Proxy = None # owning proxy object
 
 	def setProxyInstance(self, proxy:Proxy):
 		self.proxyInstance = proxy
@@ -82,7 +84,9 @@ class ProxyLink:
 		return self.proxyTargetObj
 
 	def proxyResult(self):
-		"""override this to do whatever you want"""
+		"""override this to do whatever you want
+		return the target object to be used in place of the proxy -
+		"""
 		return self.getProxyTarget()
 
 

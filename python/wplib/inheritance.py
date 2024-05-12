@@ -19,6 +19,12 @@ def clsSuper(cls:type)->type:
 	"""return the superclass of cls"""
 	return cls.__mro__[1]
 
+class RichNotImplementedError(NotImplementedError):
+	"""subclass of NotImplementedError, giving more description
+	on exactly where it was raised, and from which type"""
+	pass
+
+
 def leafParentBases(*desiredBases:tuple[type])->list[type]:
 	"""given selection of superclasses to inherit from,
 	return the actual bases to pass, to generate working mro
@@ -58,12 +64,20 @@ def superClassLookup(classMap:(dict[type], dict[tuple[type]]), lookupCls:(type, 
 class SuperClassLookupMap:
 	"""wrapping the above in a class for more consistent
 	use and caching
+
+	can maybe pass this as param to class initialisation,
+	as well as defining at class scope, to set different type
+	overrides for different parts of the program
 	"""
 	def __init__(self, classMap:dict[type, T.Any]=None):
 		self.classMap : dict[type, T.Any] = {}
 		self.cacheMap : dict[type, T.Any] = {}
 		if classMap is not None:
 			self.updateClassMap(classMap)
+
+	def copy(self):
+		"""return a copy of this object"""
+		return SuperClassLookupMap(self.classMap)
 
 	def _expandTypeTupleKeys(self, classMap:dict[type, T.Any]):
 		"""expand out any tuple keys and then sort"""

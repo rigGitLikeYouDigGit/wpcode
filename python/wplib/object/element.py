@@ -10,7 +10,17 @@ import typing as T
 #from tree.lib.python import seedUid, bitwiseXor
 from wplib.string import incrementName
 #from tree.lib import uid as libuid
-
+class HashIdElement:
+	"""element that has a hashable id
+	smaller than others, not compatible with the others"""
+	indexInstanceMap = {}
+	def __init__(self):
+		self.indexInstanceMap[self] = self
+	def __hash__(self):
+		return hash(id(self))
+	@classmethod
+	def getByIndex(cls, index):
+		return cls.indexInstanceMap.get(index)
 
 class IdElementBase:
 	"""Base class for logic - reimplemented below"""
