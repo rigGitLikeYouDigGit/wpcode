@@ -4,7 +4,6 @@ from __future__ import annotations
 import typing
 from PySide2 import QtWidgets, QtGui, QtCore
 
-import wpui.superitem.view
 from wptree.main import Tree
 
 if typing.TYPE_CHECKING:

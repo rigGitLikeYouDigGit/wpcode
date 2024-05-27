@@ -1,36 +1,38 @@
+
+"""string and expression widget resources -
+split into files later"""
+
+
 from __future__ import annotations
 
 import typing as T
 
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2 import QtWidgets
 
 from wplib import log
 
 from wplib.constant import LITERAL_TYPES
-from wpui.typelabel import TypeLabel
-from wpui.superitem import SuperItem, SuperItemWidget, SuperItemView, SuperModel, SuperModelParams
+from wpdex.ui.base import WpDexItem, WpDexWindow
 
-class LiteralSuperItem(SuperItem):
-	"""model for a literal"""
-	forTypes = LITERAL_TYPES
+
+class StrDexItem(WpDexItem):
+	"""model for string - nothing needed by default,
+	delegate to fancier widgets if needed"""
+	forTypes = (str, )
 
 	def wpResultObj(self) ->T.Any:
 		"""return the result object"""
 		return self.wpPyObj
 
 
-class LiteralSuperItemWidget(SuperItemWidget):
-	"""widget for a literal -
-	for now just a text box
-
-	augment with a type label to keep track of a consistent type,
-	or to change type if needed
+class StrDexWidget(WpDexWindow):
+	"""widget for string
 	"""
 	forTypes = LITERAL_TYPES
-	def __init__(self, superItem:LiteralSuperItem, parent=None,
+	def __init__(self, superItem:StrDexItem, parent=None,
 	             expanded=True):
 		super().__init__( superItem, parent=parent)
-		#log(f"LiteralSuperItemWidget.__init__({superItem}, {parent})")
+		#log(f"PrimDexWidget.__init__({superItem}, {parent})")
 		#self.setAutoFillBackground(True)
 		#return
 
@@ -54,7 +56,7 @@ class LiteralSuperItemWidget(SuperItemWidget):
 
 	def _onTextEdited(self, *args, **kwargs):
 		"""update the pyObj on text edit"""
-		log(f"LiteralSuperItemWidget._onTextEdited({args}, {kwargs})")
+		log(f"PrimDexWidget._onTextEdited({args}, {kwargs})")
 		self.superItem.wpPyObj = self.text.text()
 
 	def sizeHint(self):
@@ -64,12 +66,3 @@ class LiteralSuperItemWidget(SuperItemWidget):
 		return self.contentsRect().size()
 
 
-
-# class StringSuperItem(SuperItem):
-# 	"""not sure how the split between string and literal might work
-# 	"""
-# 	forTypes = [str]
-#
-# 	def wpResultObj(self) ->T.Any:
-# 		"""return the result object"""
-# 		return self.wpPyObj

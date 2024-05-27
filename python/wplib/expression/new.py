@@ -526,7 +526,7 @@ if __name__ == '__main__':
 
 
 
-	class MayaSetSyntaxPass(SyntaxPasses._Base):
+	class MayaSetSyntaxPass(SyntaxPasses.base()):
 		"""a star directly adjoined to a string is considered a wildcard match
 		a star separated by a space is considered a set intersection
 		"""

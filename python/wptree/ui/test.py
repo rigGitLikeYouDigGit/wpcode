@@ -1,19 +1,11 @@
 
 import sys
 
-from PySide2 import QtCore, QtGui, QtWidgets
-
-from wpui.layout import genAutoLayout
+from PySide2 import QtWidgets
 
 from wptree import Tree
 
-from wpui.superitem import SuperItem
-
-from wptree.ui.view import TreeView
-from wptree.ui.model import TreeModel
-from wptree.ui.widget import TreeWidget
-
-
+from wpdex.ui.superitem import SuperItem
 
 if __name__ == '__main__':
 

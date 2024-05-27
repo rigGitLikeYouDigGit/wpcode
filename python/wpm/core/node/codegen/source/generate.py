@@ -26,14 +26,13 @@ base classes for nodes, plugs and others
 test using mixin bases to denote inputs, formats etc
 to let ide catch errors
 
+every attribute of every node gets its own class - 
+loaded lazily
 
-node.a.translateX.set( nodeB.a.ty)
+node.tx_
+node.tx_() -> float
+node.t_() -> list[float] # or mvector?
 
-nodeB.a.ty >> node.a.tx ???
-
-node.a.tx = nodeB.a.ty 
-
-nodeB.a.ty // ""
 
 """
 

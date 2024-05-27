@@ -22,9 +22,7 @@ be the only classes that a user needs to override
 
 """
 
-from wptree import Tree, TreeInterface
-
-from wpui.superitem import SuperItem
+from wpdex.ui.superitem import SuperItem
 
 from .model import TreeModel
 from .item import TreeBranchItem

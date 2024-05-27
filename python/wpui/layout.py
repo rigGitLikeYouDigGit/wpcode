@@ -30,3 +30,25 @@ def genAutoLayout(rootWidg:QtWidgets.QWidget, recurse=True):
 	return vl
 
 
+seqObj = QtWidgets.QWidget
+seqType = (seqObj, list[seqObj])
+def literalLayout(literalWidgetSeq:T.Sequence[QtWidgets.QWidget]):
+	"""
+	absolutely deranged test for drawing widget layout literally in code
+
+	layout = QtWidgets.QGridLayout()
+	layoutSpacing = [
+		(   [ self.typeLabel    ],  [ self.superView, 1],       ),
+		(   0,                      [ 1,              1],       ),
+		(   0,                      0,                0,      ),
+		(   [ self.superItem,       1,                1],       ),
+		(   [ 1,                    1,                1],       ),
+	]
+
+	I still hold a candle for this , but I have no idea how
+	to make it work
+	"""
+
+
+
+

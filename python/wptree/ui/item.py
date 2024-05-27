@@ -1,21 +1,15 @@
 from __future__ import annotations
 import typing as T
-import os, pathlib, weakref
+import weakref
 
 from PySide2 import QtGui, QtCore
-from wplib import log
-from wplib.constant import LITERAL_TYPES
 
 from wplib.object import UidElement
 
-from wptree.interface import TreeInterface
 from wptree.main import Tree
 from wptree.delta import TreeDeltas
-from wptree.ui.constant import addressRole, relAddressRole, childBoundsRole, treeObjRole, rowHeight
-from wptree.ui.view import TreeView
-from wpui.superitem.base import SuperItem, SuperModel, SuperDelegate
-
-
+from wptree.ui.constant import addressRole, relAddressRole, childBoundsRole, treeObjRole
+from wpdex.ui.superitem import SuperItem
 
 """for these ui items, we take an immediate approach of syncing and items directly
 whenever tree changes

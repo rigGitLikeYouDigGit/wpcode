@@ -2,12 +2,9 @@ from __future__ import annotations
 
 import typing as T
 
-from PySide2 import QtCore, QtGui, QtWidgets
-
-from wplib.constant import LITERAL_TYPES, SEQ_TYPES, MAP_TYPES
 from wplib.object import VisitAdaptor
 from wptree import TreeInterface
-from wpui.superitem import SuperModel, SuperItem
+from wpdex.ui.superitem import SuperModel, SuperItem
 
 # consder inverting control for selecting new super items or widgets -
 # allow representing referencing where needed withut modifying core logic

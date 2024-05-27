@@ -18,7 +18,25 @@ from wplib.inheritance import superClassLookup, SuperClassLookupMap, isNamedTupl
 from wplib.object.namespace import TypeNamespace
 from wplib.constant import MAP_TYPES, SEQ_TYPES, LITERAL_TYPES
 
-#from wptree import Tree
+"""
+import pretty_errors
+pretty_errors.configure(
+    separator_character = '*',
+    filename_display    = pretty_errors.FILENAME_EXTENDED,
+    line_number_first   = True,
+    #display_link        = True,
+    lines_before        = 0,
+    lines_after         = 0,
+    line_color          = pretty_errors.RED + '> ' + pretty_errors.default_config.line_color,
+    code_color          = '  ' + pretty_errors.default_config.line_color,
+	display_trace_locals=True,
+    truncate_code       = False,
+    display_locals      = True,
+	truncate_locals=0,
+	infix="\t"
+
+)
+"""
 
 class ChildType(TypeNamespace):
 	"""Enum types to mark what kind of "child" each object is in a data structure"""
@@ -74,7 +92,11 @@ class VisitAdaptor(Adaptor):
 	this is so so stupid
 	we're hitting the difficulties of control flow in expressions
 
-	simplest version is definitely useful - smooth spectrum into crazy if/else flows, and I don't see an obvious boundary
+	simplest version is definitely useful - smooth spectrum into crazy if/else/where flows, and I don't see an obvious boundary
+
+	DIFFERENT PURPOSE - move the path stuff to a later object.
+
+	VISITOR visits objects ONCE, in CONSISTENT way - not necessarily script-friendly
 
 
 
@@ -82,6 +104,7 @@ class VisitAdaptor(Adaptor):
 
 	childTypes = ("[", ".") #????
 
+	CHILD_T = CHILD_T
 	ITEM_CHILD_LIST_T = ITEM_CHILD_LIST_T
 	ChildType = ChildType
 	# new base class, declare new map
@@ -123,7 +146,26 @@ class MapVisitAdaptor(VisitAdaptor):
 	otherwise we lose option to capture that relationship
 
 	option would be nice to turn this off as vast majority of dicts
-	don't needit
+	don't need it
+
+	We need to pass some kind of params down for deep operations -
+	will be a dict of {
+		class type : parametre overrides
+		}
+
+
+	pathing, readable text, even serialisation can be a separate concern -
+	literally the only purpose of this layer is consistent mapping of objects
+
+	for dict, can we literally just return a dict?
+
+	actually losing my mind
+
+	new plan - do not add complexity and baggage where we don't need it
+	serialise a dict as a dict, UNLESS we need something more
+
+
+
 	"""
 	forTypes = MAP_TYPES
 
@@ -133,37 +175,35 @@ class MapVisitAdaptor(VisitAdaptor):
 	second is more literal and readable, but makes it more confusing to access
 	dict keys specifically
 	"""
-	USE_TIES = True
-	if USE_TIES:
-		@classmethod
-		def childObjects(cls, obj:T.Any)->ITEM_CHILD_LIST_T:
-			return ((i, tie, "[") for i, tie in enumerate(obj.items()))
 
-		@classmethod
-		def newObj(cls, baseObj: T.Any, itemChildTypeList: ITEM_CHILD_LIST_T) -> T.Any:
-			"""expects list of [
-				( (key , value ), ChildType.MapItem)
-				"""
-			return type(baseObj)(i[1] for i in itemChildTypeList)
+	@classmethod
+	def templateParams(cls)->dict:
+		return {"UseTies": True}
 
-	else:
-		@classmethod
-		def childObjects(cls, obj:T.Any) ->ITEM_CHILD_LIST_T:
-			result : ITEM_CHILD_LIST_T = [None] * len(obj) * 2
-			result = []
-			for k, v in obj.items():
-				result.append((k, v, "["))
+	@classmethod
+	def childObjects(cls, obj:T.Any, params:dict=None):#->ITEM_CHILD_LIST_T:
+		"""supply an override of { dict : { "UseTies": False } } to disable ties"""
+		# don't pass index, visit function can handle that
+		return [((k, v), "") for i, (k, v) in enumerate(obj.items())]
 
-			# my lord,
-			# result.append(( "keys()", obj.keys(), ".")) #is this legal??????
-			return result
+	@classmethod
+	def newObj(cls, baseObj: T.Any, itemChildTypeList: ITEM_CHILD_LIST_T) -> T.Any:
+		"""expects list of [
+			( (key , value ), ChildType.MapItem)
+			"""
+		return type(baseObj)(i[0] for i in itemChildTypeList)
 
-		@classmethod
-		def newObj(cls, baseObj: T.Any, itemChildTypeList: ITEM_CHILD_LIST_T) -> T.Any:
-			"""expects list of [
-				( (key , value ), ChildType.MapItem)
-				"""
-			return type(baseObj)({i[0]: i[1] for i in itemChildTypeList if i[-1] == "["})
+
+Path = namedtuple("Path", ["path", "mode"], defaults=[(), "r"])
+class Exp: # expression resolving to a path or value? can be combined with path?
+	def __hash__(self):
+		return id(self)
+
+
+
+
+
+
 
 class SeqVisitAdaptor(VisitAdaptor):
 	forTypes = SEQ_TYPES
@@ -223,9 +263,6 @@ class VisitObjectData(TypedDict):
 
 	#childDatas : list[VisitObjectData] # tuple of child data for current object
 	#makeNewObjFromVisitResult : bool # if true, make new object from visit result - if false, use visit result as is
-
-
-
 
 
 class DeepVisitOp:
@@ -492,53 +529,65 @@ visitFnType = T.Callable[
 
 if __name__ == '__main__':
 
-	def printArgsVisit(obj, visitor, visitData, visitParams):
-		#print(obj, visitor, visitData, visitParams)
-		return obj
-
-	visitor = DeepVisitor(
-		visitTypeFunctionRegister=visitFunctionRegister,
-		visitSingleObjectFn=printArgsVisit)
-
-	structure = {
+	onlyDictStruct = {
 		"key1": "value1",
-		(2, 4, "fhffhs"): ["value2", [], 3, 4, 5],
+		"key2": {"nestedKey1" : 2,
+		         "nestedKey2" : 3,		         },
 		"key3": "value3",
 	}
 
-	# visitPass = visitor._visitAll(structure, VisitPassParams())
-	# for i in visitPass:
-	# 	print("visited", i)
+	path = Pathable.startPath(onlyDictStruct)
+	print(path)
 
 
-	def addOneTransform(obj, visitor, visitData, visitParams):
-		#print("addOneTransform", obj)
-		if isinstance(obj, int):
-			obj += 1
-		return obj
+	if False:
+		def printArgsVisit(obj, visitor, visitData, visitParams):
+			#print(obj, visitor, visitData, visitParams)
+			return obj
 
-	visitor = DeepVisitor(
-		visitTypeFunctionRegister=visitFunctionRegister,
-		visitSingleObjectFn=addOneTransform)
+		visitor = DeepVisitor(
+			visitTypeFunctionRegister=visitFunctionRegister,
+			visitSingleObjectFn=printArgsVisit)
 
-	structure = [
-		1, [2, [3, 4], 2], 1
-	]
-	print("structure", structure)
-	newStructure = visitor.dispatchPass(structure, VisitPassParams(
-		transformVisitedObjects=False))
-	print("newStructure", newStructure)
+		structure = {
+			"key1": "value1",
+			(2, 4, "fhffhs"): ["value2", [], 3, 4, 5],
+			"key3": "value3",
+		}
 
-	print("structure", structure)
-	newStructure = visitor.dispatchPass(structure, VisitPassParams(
-		transformVisitedObjects=True,
-		topDown=False
-	))
-	print("newStructure", newStructure)
+		# visitPass = visitor._visitAll(structure, VisitPassParams())
+		# for i in visitPass:
+		# 	print("visited", i)
 
 
+		def addOneTransform(obj, visitor, visitData, visitParams):
+			#print("addOneTransform", obj)
+			if isinstance(obj, int):
+				obj += 1
+			return obj
 
-	pass
+		visitor = DeepVisitor(
+			visitTypeFunctionRegister=visitFunctionRegister,
+			visitSingleObjectFn=addOneTransform)
+
+		structure = [
+			1, [2, [3, 4], 2], 1
+		]
+		print("structure", structure)
+		newStructure = visitor.dispatchPass(structure, VisitPassParams(
+			transformVisitedObjects=False))
+		print("newStructure", newStructure)
+
+		print("structure", structure)
+		newStructure = visitor.dispatchPass(structure, VisitPassParams(
+			transformVisitedObjects=True,
+			topDown=False
+		))
+		print("newStructure", newStructure)
+
+
+
+		pass
 
 
 

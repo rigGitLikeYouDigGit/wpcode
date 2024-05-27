@@ -9,7 +9,7 @@ def getLineLink(file=None, line=None) ->str:
 	"""return clickable link to file, to output to log"""
 	return f'File "{file}", line {max(line, 1)}'.replace("\\", "/")
 
-def log(*args, file=None, line=None, printMsg=True, **kwargs):
+def log(*args, file=None, line=None, printMsg=True, vars=True, **kwargs):
 	"""print and append link to line, for easier debugging"""
 	if file is None:
 		file = inspect.stack()[1].filename
@@ -17,6 +17,8 @@ def log(*args, file=None, line=None, printMsg=True, **kwargs):
 		line = inspect.stack()[1].lineno
 	#string = f'File "{file}", line {max(line, 1)}'.replace("\\", "/")
 	string = getLineLink(file, line)
+	if vars:
+		string += " \n" +str(inspect.stack()[1].frame.f_locals)
 	if printMsg:
 		print(*args, string, **kwargs)
 	return string

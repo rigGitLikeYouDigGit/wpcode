@@ -2,13 +2,13 @@
 
 
 
-import sys, pprint
+import pprint
 
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2 import QtWidgets
 
 
 from wpui.layout import genAutoLayout
-from wpui.superitem import SuperItem, SuperWidget
+from wpdex.ui import WpDexWidget, WpDexWindow
 
 class DemoWidget(QtWidgets.QWidget):
 
@@ -18,12 +18,8 @@ class DemoWidget(QtWidgets.QWidget):
 		self.btn = QtWidgets.QPushButton("result", parent=self)
 		self.btn.clicked.connect(self.onBtnClicked)
 
-		# widget to display item
-		self.rootItem = SuperItem.forData(baseData)
-		#view = self.rootItem.getNewWidget()
-		#view.setParent(self)
-		w = SuperWidget(parent=self)
-		w.setTopItem(self.rootItem)
+		self.w = WpDexWindow(parent=self)
+		self.w.setRootObj(baseData)
 		#w.setFixedSize(500, 500)
 
 		# layout = QtWidgets.QVBoxLayout()
@@ -32,7 +28,9 @@ class DemoWidget(QtWidgets.QWidget):
 		# self.setLayout(layout)
 
 
-		layout = genAutoLayout(self)
+		layout = QtWidgets.QVBoxLayout()
+		layout.addWidget(self.btn)
+		layout.addWidget(self.w)
 		self.setLayout(layout)
 
 		self.resize(400, 400)
@@ -42,18 +40,19 @@ class DemoWidget(QtWidgets.QWidget):
 		print("base:")
 		pprint.pprint(self.baseData)
 		print("result:")
-		pprint.pprint(self.rootItem.wpResultObj())
+		pprint.pprint(self.w.dex().obj)
 
 
 
 if __name__ == '__main__':
 	import sys
-	import qt_material
+
 	app = QtWidgets.QApplication(sys.argv)
 	#qt_material.apply_stylesheet(app, theme='dark_blue.xml')
 
 	#data = {"a": 1, "b": [6, {"b": "d"}], "c": 3}
 	data = [1, 2, 3, 4]
+	#data = 9
 	widget = DemoWidget(data)
 	widget.show()
 

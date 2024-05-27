@@ -2,25 +2,12 @@
 
 from __future__ import annotations
 import typing as T
-import os, pathlib, weakref
-
-from PySide2 import QtGui, QtCore
-from wplib import log
-from wplib.constant import LITERAL_TYPES
-
-from wplib.object import UidElement
 
 from wptree.interface import TreeInterface
-from wptree.main import Tree
-from wptree.delta import TreeDeltas
-from wptree.ui.constant import addressRole, relAddressRole, childBoundsRole, treeObjRole, rowHeight
-from wptree.ui.view import TreeView
-from wptree.ui.item import TreeValueItem, TreeBranchItem
 from wptree.ui.model import TreeModel
 from wptree.ui.view import TreeView
 
-from wpui.superitem.base import SuperItem, SuperModel, SuperDelegate
-
+from wpdex.ui.superitem import SuperItem
 
 if T.TYPE_CHECKING:
 	from tree.ui.model import TreeModel

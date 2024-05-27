@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import typing as T
 
-from wplib.constant import LITERAL_TYPES, SEQ_TYPES, MAP_TYPES
+from wplib.constant import MAP_TYPES
 from wplib.object import VisitAdaptor
-from wpui.superitem import SuperModel, SuperItem
+from .base import WpDexModel, WpDexItem
 
 
-class DictSuperModel(SuperModel):
+class DictWpDexModel(WpDexModel):
 	"""model for a dict"""
 	forTypes = MAP_TYPES
 
 
-class DictSuperItem(SuperItem):
+class DictWpDexItem(WpDexItem):
 	"""superitem for a dict"""
 	forTypes = MAP_TYPES
 
@@ -25,7 +25,7 @@ class DictSuperItem(SuperItem):
 		"""
 		return ("{", "}")
 
-	def _generateItemsFromPyObj(self) -> list[tuple[SuperItem, VisitAdaptor.ChildType.T()]]:
+	def _generateItemsFromPyObj(self) -> list[tuple[WpDexItem, VisitAdaptor.ChildType.T()]]:
 		"""generate items from pyObj
 		skip intermediate MapItem stage"""
 		results = []

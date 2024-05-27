@@ -18,6 +18,11 @@ import modules from this module
 this top-level init unifies modified and source packages - 
 no direct relation to the maya system, can be reused for other uses of codegen
 
+simplify logic - each modified file imports the generated node class as its base
+- that way we get all the template plug info
+
+
+
 """
 
 

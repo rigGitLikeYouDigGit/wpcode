@@ -6,12 +6,10 @@ import unittest
 
 from wptree import Tree
 
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2 import QtWidgets
 
-
-from wpui.layout import genAutoLayout
-from wpui.superitem import SuperItem
-from wpui.superitem.tree import TreeSuperItem
+from wpdex.ui.superitem import SuperItem
+from wpdex.ui.superitem import TreeSuperItem
 
 
 

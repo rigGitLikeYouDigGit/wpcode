@@ -5,15 +5,12 @@ import typing as T
 from PySide2 import QtCore, QtGui, QtWidgets
 
 from wpui.keystate import KeyState
-from wpui.constant import keyDict, dropActionDict, tabKeys, enterKeys, deleteKeys, shiftKeys, escKeys, spaceKeys
-from wpui.event import AllEventEater
+from wpui.constant import tabKeys
 
-
-
-from wptree.ui.constant import relAddressRole, treeObjRole, addressRole
+from wptree.ui.constant import treeObjRole
 from wptree.ui.model import TreeModel
 
-from wpui.superitem import SuperItem, SuperModel, SuperDelegate, SuperViewBase
+from wpdex.ui.superitem import SuperViewBase
 
 if T.TYPE_CHECKING:
 	from wptree import Tree
