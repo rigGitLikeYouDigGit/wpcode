@@ -22,12 +22,12 @@ class DragItemWidget(QtWidgets.QWidget):
 		self.dragHandle = QtWidgets.QLabel("☰", parent=self)
 		self.innerWidget = innerWidget
 		#self.innerWidget.setParent(self)
-		#layout = QtWidgets.QHBoxLayout()
-		layout = QtWidgets.QVBoxLayout()
+		layout = QtWidgets.QHBoxLayout()
 		layout.addWidget(self.dragHandle)
 		layout.addWidget(innerWidget)
 		self.setLayout(layout)
-		self.setAutoFillBackground(True)
+		layout.setContentsMargins(0, 0, 0, 0)
+		self.setContentsMargins(0, 0, 0, 0)
 
 class SeqDexWidget(WpDexWidget):
 	"""view for a list
@@ -69,7 +69,6 @@ class SeqDexWidget(WpDexWidget):
 		self.typeLabel = WpTypeLabel(parent=self, closedText="[...]",
 		                             openText="[")
 		self.model = QtGui.QStandardItemModel(parent=self)
-		#self.view = QtWidgets.QListView(parent=self)
 		self.view = QtWidgets.QTreeView(parent=self)
 		self.view.setModel(self.model)
 
@@ -78,22 +77,16 @@ class SeqDexWidget(WpDexWidget):
 			self.model.appendRow(QtGui.QStandardItem(str(key)))
 		for i, (key, w) in enumerate(self.childWidgets.items()):
 
-			#dragWidget = DragItemWidget(w, parent=self)
-			#dragWidget = DragItemWidget(QtWidgets.QLabel("TEST"), parent=self)
-			#dragWidget = QtWidgets.QLabel("TEST")
-			#dragWidget = QtWidgets.QLabel("TEST", parent=self) # works
-			dragWidget = w
-			dragWidget.setAutoFillBackground(True)
-
-			self.view.setIndexWidget(self.model.index(i, 0), dragWidget)
-			# label = QtWidgets.QLabel(str(key), parent=None)
-			# self.view.setIndexWidget(self.model.index(i, 0), label)
+			dragWidget = DragItemWidget(w, parent=self)
+			self.view.setIndexWidget(
+				self.model.index(i, 0),
+				libview.IndexWidgetHolder(parent=self,
+				                          innerWidget=dragWidget)
+			)
 
 		self.view.setSizeAdjustPolicy(
 			QtWidgets.QAbstractItemView.AdjustToContents
 		)
-		#self.view.sizeHintForRow(0)
-
 		libview.syncViewLayout(self.view)
 
 
