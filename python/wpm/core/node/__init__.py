@@ -1,65 +1,107 @@
 
-
 from __future__ import annotations
-
-
-#print("node import cmds", cmds)
-
-#from .main import WN
-#from .objectset import ObjectSetNode
-#from .remapvalue import RemapValue
-
-#from . import WN
-from .base import WN
+import typing as T
+import os, shutil, types, importlib, traceback
+from pathlib import Path
 
 
 """package for defining custom wrappers around individual maya node types
-many small files are better than a few big ones"""
 
-from ..cache import cmds, om, oma
+this won't directly import any node classes, leave that to the 
+catalogue
 
-def createWN(nodeType, name="", n="", parent=None, existOk=False,
-             returnTransform=True)->WN:
-	"""create node and wrap as EdNode
-	if findExisting, existing node of same name will be returned,
-	else name will be incremented as per normal maya
-	operation
+WN() -> random new transform
+WN("myTransform") -> new transform, or an existing one if it exists
+WN("myTransform", new=1) -> new transform
+WN("myTransform", new=0) -> error if not found
 
-	if returnTransform, if the raw node creation would return a shape
-	eg locator, nurbsCurve, then return that shape's transform
+WN.Transform -> Transform node wrapper class
+WN["Transform"] -> Transform node wrapper class
+WN.Transform("myTransform") -> Transform node wrapper class
+
+"""
+
+
+class NodeClassRetriever:
+	"""system to manage deferred lookup of
+	node classes at runtime, and to allow the skin-crawling
+	looping inheritance structure we're using.
+
+	This gives no typing information at all, use separate
+	import statements at compile time
 	"""
-	name = name or n or nodeType
+	genDir = Path(__file__).parent / "gen"
+	authorDir = Path(__file__).parent / "author"
 
-	if existOk:
-		if cmds.ls(name):
-			return WN(name)
+	def __init__(self):
+		self.nodeClsCache : dict[str, type[WN]] = {}
+
+	def getNodeFile(self, nodeClsName:str) -> Path:
+		"""check if given node class name exists in author dir -
+		then fall back to gen -
+		then raise an error"""
+		fileName = nodeClsName + ".py"
+		authorPath = self.authorDir / fileName
+		if authorPath in self.authorDir.iterdir():
+			return authorPath
+		genPath = self.genDir / fileName
+		if fileName in self.genDir.iterdir():
+			return genPath
+		#raise FileNotFoundError(nodeClsName)
+
+	def getNodeModule(self, nodeClsName:str):
+		path = self.getNodeFile(nodeClsName)
+		try:
+			mod = importlib.import_module(
+				"." + nodeClsName.lower(),
+				package="wpscratch._nodeoutline.node.author"
+			)
+			return mod
+		except Exception as e:
+			print("IMPORT ERROR")
+			traceback.print_exc()
+
+		mod = importlib.import_module(
+			"." + nodeClsName.lower(),
+			package="wpscratch._nodeoutline.node.gen"
+		)
+		return mod
+
+	def getNodeCls(self, nodeClsName:str)->type[WN]:
+		found = self.nodeClsCache.get(nodeClsName)
+		if found:
+			return found
+		mod = self.getNodeModule(nodeClsName)
+		cls = getattr(mod, nodeClsName)
+		self.nodeClsCache[nodeClsName] = cls
+		return cls
+
+retriever = NodeClassRetriever()
 
 
-	# check if specific node wrapper class exists for nodeTypeName
-	wrapCls = WN.wrapperClassForNodeType(nodeType)
+class WNMeta(type):
+	"""replace .attr lookup with
+	a retrieval for the node class"""
 
-	if wrapCls is WN:
-		edNode = WN(cmds.createNode(nodeType, n=name, parent=parent))
-	else: # custom subclass
-		print("calling create on", wrapCls)
-		edNode = wrapCls.create(n=name, parent=parent)
+	def __getattr__(self, item):
+		return retriever.getNodeCls(item)
 
-	# avoid annoying material errors
-	if nodeType == "mesh" or nodeType == "nurbsSurface":
-		edNode.assignMaterial("lambert1")
+class Catalogue:
+	pass
 
-	if edNode.isShape() and returnTransform:
-		# set naming correctly
-		edNode.parent.rename(name)
-		return edNode.parent
-
-	return edNode
+if T.TYPE_CHECKING: # override with generated Catalogue at type checking
+	from .gen import *
+	from .author import *
 
 
+class WN(
+	Catalogue,
+	metaclass=WNMeta):
+	"""node base class"""
 
-def invokeNode(name="", nodeType="", parent=""):
-	# print "core invokeNode looking for {}".format(name)
-	return createWN(nodeType, name=name, parent=parent, existOk=True)
+
+
+
 
 
 

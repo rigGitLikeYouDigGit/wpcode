@@ -27,7 +27,7 @@ def formatArg(arg:argT, space=False)->str:
 	"""format an argument"""
 	if isinstance(arg, tuple):
 		if space:
-			f"{arg[0]} : {formatType(arg[1])}"
+			return f"{arg[0]} : {formatType(arg[1])}"
 		return f"{arg[0]}:{formatType(arg[1])}"
 	return arg
 
@@ -36,6 +36,12 @@ def formatArgsKwargs(argsKwargs:argsKwargsT)->str:
 	argStrs = [formatArg(arg) for arg in argsKwargs[0]]
 	kwargStrs = [f"{formatArg(k)}={v}" for k, v in argsKwargs[1].items()]
 	return ", ".join(map(str, argStrs + kwargStrs))
+
+def formatLines(thing:T.Any)->str:
+	"""small recursive function to format sequences"""
+	if isinstance(thing, (list, tuple)):
+		return "\n".join(map(formatLines, thing))
+	return str(thing)
 
 class StringCodeTemplate:
 
@@ -117,7 +123,9 @@ class IfBlock(StringCodeTemplate):
 		self.elseBlock = elseBlock
 
 	def _resultString(self):
-		conditionStrs = [f"if {str(cond)}:\n" + textwrap.indent(str(block), "\t") for cond, block in self.conditionBlocks]
+		conditionStrs = [
+			f"if {str(cond)}:\n" + textwrap.indent(
+				formatLines(block), "\t") for cond, block in self.conditionBlocks]
 		if self.elseBlock:
 			conditionStrs.append(f"else:\n{str(self.elseBlock[1])}")
 		return "\n".join(conditionStrs)
@@ -281,19 +289,18 @@ class ClassTemplate(StringCodeTemplate):
 		return ", ".join(self.classBaseClasses)
 
 	def _resultString(self):
-		#attrStrs = [f"{formatArg(k)} = {v}" for k, v in self.classAttrs.items()]
-		#attrStr = "\t" + "\n\t".join(attrStrs)
-		#methodStr = "\n\n".join([str(method) for method in self.classMethods])
-
 		if self.classBaseClasses:
 			defStr = f"class {self.className}({self.formatBaseClasses()}):"
 		else:
 			defStr = f"class {self.className}:"
-		childBlock = ""
-		lineStr = "\n".join([str(line) for line in self.classLines])
-		#print("child depths", [i.indentDepth for i in self.childTemplates()])
-		methodStr = "\n\n".join([str(method) for method in self.classMethods])
-		childBlock = "\n".join([lineStr, methodStr, "pass\n"])
+		lineStr = ""
+		methodStr = ""
+
+		if self.classLines:
+			lineStr = "\n".join([str(line) for line in self.classLines])
+		if self.classMethods:
+			methodStr = "\n\n".join([str(method) for method in self.classMethods])
+		childBlock = "\n".join(filter(None, [lineStr, methodStr, "pass"]))
 		childBlock = indent(childBlock)
 		endStr = "\n".join([defStr, childBlock])
 

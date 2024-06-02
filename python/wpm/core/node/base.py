@@ -213,6 +213,19 @@ class NodeMeta(type):
 		ins = super(NodeMeta, wrapCls).__call__(mobj)
 		# add to MObject register
 		NodeMeta.objMap[mobj] = ins
+
+		"""
+			# avoid annoying material errors
+	if nodeType == "mesh" or nodeType == "nurbsSurface":
+		edNode.assignMaterial("lambert1")
+
+	if edNode.isShape() and returnTransform:
+		# set naming correctly
+		edNode.parent.rename(name)
+		return edNode.parent
+		
+		"""
+
 		return ins
 
 

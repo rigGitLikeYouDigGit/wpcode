@@ -2,7 +2,7 @@
 from __future__ import annotations
 import typing as T
 
-import json, sys, os
+import json, sys, os, shutil
 from pathlib import Path
 from typing import TypedDict
 from collections import defaultdict
@@ -18,10 +18,14 @@ from wptree import Tree
 #from wpm.core import getMFn
 
 from wplib.codegen.strtemplate import ClassTemplate, FunctionCallTemplate, FunctionTemplate, TextBlock, argT, argsKwargsT, Literal, Assign, Import, IfBlock, indent
-from wptool.codegen import CodeGenProject
+#from wptool.codegen import CodeGenProject
 
 """
 base classes for nodes, plugs and others
+
+this gen script kept clean of maya calls so we can 
+iterate faster from pycharm direct
+
 
 test using mixin bases to denote inputs, formats etc
 to let ide catch errors
@@ -99,6 +103,15 @@ class PlugDescriptor:
 	# def __set__(self, instance, value):
 	# 	self.value = value
 
+class MObjectDescriptor:
+	"""descriptor used to return an attribute-level MObject
+	for a child attribute of a compound array,
+	or internal - something not otherwise accessible without
+	a plug"""
+	def __init__(self, name:str):
+		self.name = name
+
+
 
 class NodeBase:
 	"""base class for nodes"""
@@ -116,8 +129,8 @@ templateStr = templatePath.read_text()
 def refPathForNodeType(project:CodeGenProject, nodeType:str):
 	return project.refPath / (nodeType + ".py")
 
-def genPathForNodeType(project:CodeGenProject, nodeType:str):
-	return project.genPath / (nodeType + ".py")
+def genPathForNodeType(nodeType:str):
+	return genDir / (nodeType + ".py")
 
 def modifiedPathForNodeType(project:CodeGenProject, nodeType:str):
 	return project.modifiedPath / (nodeType + ".py")
@@ -139,16 +152,41 @@ def sortAttrDatas(datas:tuple[AttrData]):
 			attrDatas.insert(attrDatas.index(d.parentData), d)
 	return attrDatas
 
-def genNodeFileStr(project:CodeGenProject, data:NodeData,
+def genNodeFileStr(data:NodeData,
                    nodeTypeAttrSetMap:dict[str, set[str]])->str:
-	#print("gen node", data)
+	"""generate whole file string for a single node
+
+	PROBLEM - hinting "Transform" in the plugs points to the generated
+	class in the same file, not the final (potential) overridden
+	Transform in the authored file
+	"""
+
+
 	nodeType = data.typeName
 	# import statements first
 	importLines = []
-	parent = data.bases[-1]
-	importLines.append("from .{} import {}".format(parent, string.cap(parent)))
+	parent = None
+	if data.bases: # get parent classes (gen at runtime, author at compile time)
+		parent = data.bases[-1]
+		# no direct import, go through retriever class
+		importLines.append("from .. import retriever")
+		# Dag = retriever.getNodeCls("Dag")
+		importLines.append(f"{string.cap(parent)} = retriever.getNodeCls(\"{string.cap(parent)}\")")
+
+		# type-checking time import for final user-authored file
+		# for parent class and for node itself,
+		# to set hint ".node" attribute on plugs
+		typeCheckImports = IfBlock(
+			conditionBlocks=[["T.TYPE_CHECKING",
+			                  ["from .. import " + string.cap(parent),
+			                   "from .. import " + string.cap(nodeType)],
+			                   ]],
+		)
+		importLines.append(str(typeCheckImports))
+
 	importBlock = "\n".join(importLines)
 
+	# attribute datas
 	attrDatas = sortAttrDatas(data.attrDatas)
 	nodeTypeAttrSetMap[data.typeName] = {i.name for i in attrDatas}
 	# look up combined set of preceding base attributes
@@ -210,14 +248,19 @@ def genNodeFileStr(project:CodeGenProject, data:NodeData,
 		plugAssigns.append(Assign((data.name + "_", string.cap(data.name) + "Plug"), descriptorCall))
 
 	# generate main node
+	if parent is not None:
+		classBaseClasses = (string.cap(parent),)
+	else:
+		classBaseClasses = ("NodeBase",)
 	nodeDef = ClassTemplate(
 		className=string.cap(nodeType),
-		classBaseClasses=(string.cap(parent),),
+		# classBaseClasses=(string.cap(parent),),
+		classBaseClasses=classBaseClasses,
 		classLines=plugAssigns,
 	)
 
 
-	plugDefStrings = "\n\n".join([str(i) for i in plugTemplates])
+	plugDefStrings = "\n".join([str(i) for i in plugTemplates])
 
 	# write out final file
 	fileName = nodeType + ".py"
@@ -230,15 +273,32 @@ def genNodeFileStr(project:CodeGenProject, data:NodeData,
 	return fileContent
 
 
-def genNodes(project:CodeGenProject):
+def genNodes(#project:CodeGenProject
+		genDir:Path = Path(__file__).parent.parent / "gen"
+             ):
 	"""generate nodes from json data"""
 	with open(jsonPath, "r") as f:
 		nodeData = json.load(f)
 
+
 	# start with venerable transform
 	targetNodes = [
-		nodeData["4"]["transform"]
+
 	]
+
+	# get all the bases of transform
+	nameNBasesMap = {}
+	for nBases, nameMap in nodeData.items():
+		for name, data in nameMap.items():
+			nameNBasesMap[name] = nBases
+
+	#bases = targetNodes[0]["bases"]
+	bases = nodeData["4"]["transform"]["bases"]
+	for base in bases:
+		if base not in nameNBasesMap:
+			continue
+		targetNodes.append(nodeData[nameNBasesMap[base]][base])
+	targetNodes.append(nodeData["4"]["transform"])
 
 	# map of { node type : all attr names in that node type }
 	# to avoid duplication
@@ -250,83 +310,90 @@ def genNodes(project:CodeGenProject):
 		nodeData = recoverNodeData(i)
 		# generate node file to write
 		nodeFileStr = genNodeFileStr(
-			project, data=nodeData, nodeTypeAttrSetMap=typeAttrSetMap)
+			data=nodeData, nodeTypeAttrSetMap=typeAttrSetMap)
 
-		# write to ref folder
-		refPathForNodeType(project, nodeData.typeName).write_text(nodeFileStr)
 		# write to gen folder
-		genPathForNodeType(project, nodeData.typeName).write_text(nodeFileStr)
+		genPathForNodeType(nodeData.typeName).write_text(nodeFileStr)
 		pass
 
-def makeCatalogueClass(project:CodeGenProject,
-                       topDir:Path)->ClassTemplate:
-	"""return a class with an attribute defined for
-	all node classes in the given directory.
-	This only matters for static typing,
-	at runtime WN won't actually inherit from these
 
-	class Catalogue:
-		Transform : Transform = Transform
-	# bloody poetry
+def processGenInitFile(initFile:Path,
+                       gatherDir:Path):
+	"""write out any extra imports in __init__.py files
+	and populate assignments to Catalogue class -
+	init files don't import any real classes to avoid cycles
 
+	we now generate a type checking import block and a
+	type-check-time alternate Catalogue class
 	"""
-	attrAssigns = []
-	for refFile in topDir.iterdir():
+	initFileText = initFile.read_text()
+
+	# get all imports
+	imports = []
+	assignments = []
+	for refFile in gatherDir.iterdir():
 		if refFile.suffix != ".py":
 			continue
 		if refFile.stem == "__init__":
 			continue
-		attrAssigns.append(Assign((
-			string.cap(refFile.stem), string.cap(refFile.stem)), string.cap(refFile.stem)))
-	return ClassTemplate(
-		className="Catalogue",
-		classBaseClasses=(),
-		classLines=attrAssigns
-	)
-
-def processInitFiles(project:CodeGenProject):
-	"""write out any extra imports in __init__.py files
-
-	noted by {IMPORT_BLOCK} in each
-	"""
-	for topPath in (project.modifiedPath, project.genPath):
-		initFile = topPath / "__init__.py"
-		initFileText = initFile.read_text()
-
-		# get all imports
-		imports = []
-		for refFile in topPath.iterdir():
-			if refFile.suffix != ".py":
-				continue
-			if refFile.stem == "__init__":
-				continue
-			imports.append(Import(
-				fromModule=refFile.stem,
-				module=string.cap(refFile.stem),
-			))
-		importBlock = "\n".join([str(i) for i in imports])
-		# wrap with guard for TYPE_CHECKING
-		importBlock = (str(IfBlock(
-			[ (TextBlock("T.TYPE_CHECKING"), indent(TextBlock(importBlock)))]
-		)))
-		initFileText = initFileText.format(IMPORT_BLOCK=importBlock)
-
-		initFileText += "\n\n" + str(IfBlock(
-			[ (TextBlock("T.TYPE_CHECKING"), makeCatalogueClass(project, topPath))]
+		imports.append(Import(
+			fromModule="." + refFile.stem,
+			module=string.cap(refFile.stem),
+		))
+		assignments.append(Assign(
+			string.cap(refFile.stem), string.cap(refFile.stem)
 		))
 
-		initFile.write_text(initFileText)
+	catalogueClassDef = ClassTemplate(
+		className="Catalogue",
+		#classBaseClasses=("T.Protocol",),
+		classBaseClasses=(),
+		classLines=assignments,
+	)
+
+	typeCondition = IfBlock(
+		[["T.TYPE_CHECKING", imports + [catalogueClassDef]]]
+	)
+
+	#importBlock = "\n".join([str(i) for i in imports])
+	# assignBlock = "\n".join([str(i) for i in assignments])
+	# initFileText = initFileText.format(
+	# 	IMPORT_BLOCK=importBlock,
+	# 	CATALOGUE_ASSIGN_BLOCK=assignBlock)
+	initFileText = initFileText.format(
+		TYPE_CHECK_BLOCK=typeCondition)
+
+	initFile.write_text(initFileText)
+
+
+genDir = Path(__file__).parent.parent / "gen"
+genInitTemplatePath = Path(__file__).parent / "__genInit__.py"
+authorDir = Path(__file__).parent.parent / "author"
+authorInitTemplatePath = Path(__file__).parent / "__authorInit__.py"
+
+def resetGenDir():
+
+	# first clear out old stuff
+	shutil.rmtree(genDir, ignore_errors=True)
+	genDir.mkdir()
+
+	# copy over init files
+	shutil.copy2(genInitTemplatePath, genDir / "__init__.py")
+	shutil.copy2(authorInitTemplatePath, authorDir / "__init__.py")
+
 
 
 if __name__ == '__main__':
-	nodeCodeProject = CodeGenProject(
-		Path(__file__).parent.parent
-	)
 
-	print(nodeCodeProject.topPath)
-	nodeCodeProject.regenerate()
-	genNodes(nodeCodeProject)
-	processInitFiles(nodeCodeProject)
+	print(genDir, genDir.is_dir())
+
+	resetGenDir()
+
+	genNodes()
+
+	processGenInitFile(genDir / "__init__.py", genDir)
+	processGenInitFile(authorDir / "__init__.py", authorDir)
+
 
 
 
