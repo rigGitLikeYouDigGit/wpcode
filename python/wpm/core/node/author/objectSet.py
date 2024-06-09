@@ -1,12 +1,11 @@
-
 from __future__ import annotations
 import typing as T
-from ..patch import cmds, om
 
-from .main import WN
+from ..gen.objectSet import ObjectSet as GenObjectSet
 
+from wpm import cmds, om, WN
 
-class ObjectSetNode(WN):
+class ObjectSet(GenObjectSet):
 	""" wrapper for adding things to node sets in a sane way """
 
 	clsApiType = om.MFn.kSet
@@ -24,8 +23,7 @@ class ObjectSetNode(WN):
 		if not items: return set()
 		return set([WN(i) for i in items])
 
-	def sets(self)->T.Set[ObjectSetNode]:
-		return set(i for i in self.objects() if cmds.nodeTypeName(i) == "objectSet")
-
+	def sets(self)->T.Set[ObjectSet]:
+		return set(filter(lambda i : isinstance(i, ObjectSet), self.objects()))
 
 

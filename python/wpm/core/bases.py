@@ -10,15 +10,28 @@ with python characteristics
 
 
 from __future__ import annotations
-from typing import List, Set, Dict, Callable, Tuple, Sequence, Union, TYPE_CHECKING
+import typing as T
 from functools import partial
+
+if T.TYPE_CHECKING:
+	from .api import om
 
 class NodeBase(object):
 
 	@property
-	def node(self):
+	def MObject(self):
 		raise NotImplementedError
-	pass
+
+	@property
+	def MFn(self)->om.MFnDependencyNode:
+		raise NotImplementedError
+
+	@property
+	def name(self):
+		return self.MFn.name()
+	@property
+	def pathStr(self)->str:
+		return self.MFn.uniqueName()
 
 
 class PlugBase(object):

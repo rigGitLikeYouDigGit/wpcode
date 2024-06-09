@@ -1,5 +1,7 @@
 
-whoosh
+
 forbiddenfruit
-watchdog
+numpy
 qt-material
+watchdog
+whoosh

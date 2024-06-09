@@ -23,14 +23,12 @@ from .. import api, attr
 from ..plug import PlugTree
 from ..namespace import NamespaceTree, getNamespaceTree
 
-# dynamic type lookups
-from . import codegen
 
 # NO TRUE IMPORTS for codegen submodules
-if T.TYPE_CHECKING:
-	from ..api import MFMFnT
-	from .codegen.gen import Catalogue as GenCatalogue
-	from .codegen.modified import Catalogue as ModCatalogue
+# if T.TYPE_CHECKING:
+# 	from ..api import MFMFnT
+# 	from .gen import Catalogue as GenCatalogue
+# 	from .author import Catalogue as ModCatalogue
 
 """
 
@@ -46,6 +44,44 @@ ReferenceError : MObject is null
 
 
 """
+
+# TODO: MOVE THIS
+#  integrate properly with main plugs
+class RampPlug(object):
+	"""don't you love underscores and capital letters?
+	called thus:
+	ramp = RampPlug(myAnnoyingString)
+	setAttr(ramp.point(0).value, 5.0)
+	to be fair, if these are special-cased in maya, why not here"""
+
+	class _Point(object):
+		def __init__(self, root, index):
+			self.root = root
+			self.index = index
+
+		@property
+		def _base(self):
+			return "{}[{}].{}_".format(
+				self.root, self.index, self.root	)
+
+		@property
+		def value(self):
+			return self._base + "FloatValue"
+		@property
+		def position(self):
+			return self._base + "Position"
+		@property
+		def interpolation(self):
+			return self._base + "Interp"
+
+	def __init__(self, rootPlug):
+		"""root is remapValue"""
+		self.root = rootPlug
+		self.points = {}
+
+	def point(self, id):
+		""":rtype : RampPlug._Point"""
+		return self._Point(self.root, id)
 
 class Plug:
 	"""base class for plugs"""
@@ -110,7 +146,7 @@ class PlugDescriptor:
 		self.name = name
 
 	# TEMP get and set
-	def __get__(self, instance:(Plug, WN), owner)->Plug:
+	def __get__(self,  instance:(Plug, WN), owner)->Plug:
 		return instance.plug(self.name)
 	# # TEMP
 	def __set__(self, instance, value):
@@ -119,22 +155,26 @@ class PlugDescriptor:
 
 # nodes
 
-def filterToMObject(node):
-	"""filter input to MObject"""
+def filterToMObject(node)->om.MObject:
+	"""filter input to MObject
+	may not be alive"""
+	node = firstOrNone(node)
 	if isinstance(node, str):
 		mobj = getMObject(node)
 		if mobj is None:
-			raise LookupError("No MObject found for {}".format(mobj))
+			raise LookupError("No MObject found for string {}".format(mobj))
 		return mobj
 	elif isinstance(node, om.MObject):
-		mobj = node
-		if mobj.isNull():
-			raise ReferenceError("MObject {} is null".format(mobj))
-		return mobj
+		return node
 
 	# filter input to MObject
 	if hasattr(node, "MObject"):
 		return node.MObject
+
+	try:
+		return node.object()
+	except AttributeError:
+		pass
 
 	raise TypeError("Could not get MObject from {}".format((node, type(node))))
 	pass
@@ -142,46 +182,76 @@ def filterToMObject(node):
 
 def nodeClassNameFromApiStr(apiTypeStr:str)->str:
 	"""return node class from api type string"""
-	#return apiTypeStr.split("k")[-1]
 	return apiTypeStr[1:]
 
-class NodeMeta(type):
-	"""enforce a single node wrapper per MObject -
-	we also need to support kwargs to init, to let nodes act as functions"""
-	objMap = UnHashableDict()
+if T.TYPE_CHECKING:
+	from . import NodeClassRetriever
+
+class WNMeta(type):
+	"""
+	- get unique MObject for node / string
+	- send getAttr to received to get node classes
+	- support init kwargs for nodes as functions
+		pass these on to node class, otherwise control gets complicated
+	"""
+	# region node class lookup
+	retriever : NodeClassRetriever
+
+	def __getattr__(self, item:str):
+		"""return a class for a specific node type
+
+		WN.Transform -> look up Transform node class
+		"""
+		#look for WN.Transform, WN.Mesh etc
+		if item[0].isupper():
+			return self.retriever.getNodeCls(item)
+		raise AttributeError(f"no attribute {item}")
 
 	@staticmethod
-	def wrapperClassForNodeType(nodeType:str)->T.Type[WN]:
+	def wrapperClassForNodeType(nodeType: str) -> T.Type[WN]:
 		"""return a wrapper class for the given node's type
 		if it exists"""
 		return WN.nodeTypeClassMap().get(nodeType, WN)
 
 	@staticmethod
-	def wrapperClassForMObject(mobj:om.MObject):
+	def wrapperClassForMObject(mobj: om.MObject):
 		"""return a wrapper class for the given mobject
 		bit more involved if we don't know the string type
 		"""
 		return WN.apiTypeClassMap().get(mobj.apiType(), WN)
+	# endregion
 
-	def _lookupNodeClass(cls, nodePyClassName:str)->type[WN]:
-		"""return a class for a specific Python class name
-		 ie Transform, Mesh, etc
-		 """
-		# get module
-		moduleName = nodePyClassName.lower()
-		module = getattr(codegen, moduleName)
-		# get class
-		return getattr(module, nodePyClassName)
+	# region unique MObject lookup
+	objMap = UnHashableDict()
 
-	def __getattr__(self, item:str):
-		"""return a class for a specific node type"""
-		#look for WN.Transform, WN.Mesh etc
-		if item[0].isupper():
-			return self._lookupNodeClass(item)
-		raise AttributeError(f"no attribute {item}")
+	@classmethod
+	def getUniqueMObject(cls, node: T.Union[str, om.MObject, WN, int])->om.MObject:
+		"""filter input to MObject"""
+		if isinstance(node, str):
+			mobj = getMObject(node)
+			if mobj is None:
+				raise LookupError("No MObject found for string {}".format(mobj))
+			return mobj
+		elif isinstance(node, om.MObject):
+			mobj = node
+			if mobj.isNull():
+				raise ReferenceError("MObject {} is null".format(mobj))
+			return mobj
 
+		# filter input to MObject
+		if hasattr(node, "MObject"):
+			return node.MObject
 
-	def __call__(cls, node:T.Union[str, om.MObject, WN])->WN:
+		try:
+			return node.object()
+		except AttributeError:
+			pass
+
+		raise TypeError("Could not get MObject from {}".format((node, type(node))))
+
+	# endregion
+
+	def __call__(cls, node:T.Union[str, om.MObject, WN], **kwargs)->WN:
 		"""filter arguments to correct MObject,
 		check if a node already exists for it,
 		if so return that node
@@ -202,29 +272,17 @@ class NodeMeta(type):
 		mobj = filterToMObject(node)
 
 		# check if MObject is known
-		if mobj in NodeMeta.objMap:
+		if mobj in WNMeta.objMap:
 			# return node object associated with this MObject
-			return NodeMeta.objMap[mobj]
+			return WNMeta.objMap[mobj]
 
 		# get specialised WNode subclass if it exists
-		wrapCls = NodeMeta.wrapperClassForMObject(mobj)
+		wrapCls = WNMeta.wrapperClassForMObject(mobj)
 
 		# create instance
-		ins = super(NodeMeta, wrapCls).__call__(mobj)
+		ins = super(WNMeta, wrapCls).__call__(mobj, **kwargs)
 		# add to MObject register
-		NodeMeta.objMap[mobj] = ins
-
-		"""
-			# avoid annoying material errors
-	if nodeType == "mesh" or nodeType == "nurbsSurface":
-		edNode.assignMaterial("lambert1")
-
-	if edNode.isShape() and returnTransform:
-		# set naming correctly
-		edNode.parent.rename(name)
-		return edNode.parent
-		
-		"""
+		WNMeta.objMap[mobj] = ins
 
 		return ins
 
@@ -235,83 +293,38 @@ WN.Transform("transform1") # this will create a new node
 """
 
 
-
-def WNCall(mobj:om.MObject)->WN:
-	"""init function called on
-	WN("transform1") # this should ERROR if transform1 doesn't exist
-	handle node lookup and dispatch to retrieve the right wrapper class,
-	if it hasn't been loaded yet
-
-	handled by WN metaclass
-	"""
-	# turn into MObject, raise error if not found
-	mobj = filterToMObject(mobj)
-	testCls = WN._loadedClsForMObject(mobj)
-	if testCls:
-		return testCls(mobj)
-	# get the right class name for this MObject type
-	classTypeName = wnTypeNameForMObject(mobj)
-	# load the class if not already, cache against obj type, and return it
-	cls = loadWNClass(classTypeName)
-	return cls(mobj)
-
-
-
-def nodeTypeCall(cls:type[WN], n="", parent=None,
-             **kwargs):
-	"""init function called on
-	WN.Transform("transform1", tx=1, ty="someOtherPlug) # this will create a new node
-
-	handled by WN metaclass
-	"""
-
-	newObj : WN = cls()
-
-	if parent is not None:
-		assert newObj.isDag()
-		newObj.setParent(parent)
-
-	for plugName, val in kwargs.items(): #type: str, (Plug, Literal)
-		newObj(plugName).set(val)
-
-
-
-"""arrange classes so type hinting thinks we have attributes
-for all derived classes : 
-	WN.Transform, WN.Mesh, etc
-in reality this is done dynamically at runtime.
-
-If this was done for real, the inheritance chain would eat
-itself, since all the derived nodes inherit from WN to start with
-"""
-
-WNBase = object
+class Catalogue:
+	pass
 if T.TYPE_CHECKING:
-	class WNBase(GenCatalogue, ModCatalogue):
-		pass
+	from .author import Catalogue
 
 
 # i've got no strings, so i have fn
 class WN( # short for WePresentNode
-	WNBase,
+	Catalogue,
 	StringLike,
          NodeBase,
          #Composite,
          # metaclass=Singleton,
          CallbackOwner,
-         metaclass=NodeMeta
+         metaclass=WNMeta
          ):
 	# DON'T LOSE YOUR WAAAAY
-	"""for once we don't actually use tree
-
+	"""
 	Base class for python node wrapper - we work entirely from MObjects and api
 	objects, and use the tree library for data storage and manipulation.
 
 	Node can be passed directly to the wrapped versions of cmds and OpenMaya
+
+	Don't store any state in this python object for your sanity
 	"""
 
 	# type constant for link to api for specific subclasses
 	clsApiType : int = None
+
+	# TODO: put specific MFn types here in generated classes
+	MFnCls = om.MFnDagNode
+
 
 	NODE_DATA_ATTR = "_nodeAuxData"
 	NODE_PROXY_ATTR = "_proxyDrivers"
@@ -323,19 +336,7 @@ class WN( # short for WePresentNode
 	GraphLevel = GraphLevel
 	GraphDirection = GraphDirection
 
-	# region type integration
-	# def __getattr__(self, item:str):
-	# 	"""return plugtree directly from lookup
-	# 	returns None if no plug found"""
-	# 	plug = self.plug(item)
-	# 	if plug:
-	# 		return plug
-	# 	# if no plug found, return child node
-	# 	childNode = self.getChild(item)
-	# 	if childNode:
-	# 		return childNode
-	# 	raise AttributeError(f"no plug or child node found for {item}")
-
+	nodeArgT: (str, om.MObject, WN) # maybe move this higher
 
 	def plug(self, lookup)->Plug:
 		"""return plugtree directly from lookup
@@ -352,28 +353,35 @@ class WN( # short for WePresentNode
 	#endregion
 
 
-	def __init__(self, node:T.Union[str, om.MObject] = None, **kwargs):
+	def __init__(self, node:om.MObject, **kwargs):
 		"""init here is never called directly, always filtered to an MObject
 		through metaclass
-		node should always be filtered to an MObject by the metaclass
+		we save only an MObjectHandle on the node to avoid
+		holding MObject python wrappers longer than the c++ objects exist
 		"""
-		#Composite.__init__(self)
 		CallbackOwner.__init__(self)
-		self.value = ""
-		self.MObject = None
+
+		assert not node.isNull(), f"invalid MObject passed to WN constructor for {type(self)}"
+
+		self.MObjectHandle = om.MObjectHandle(node)
+
+		# maybe it's ok to cache MFn?
 		self._MFn = None
 
-		self.setMObject(mobj)
-
-		# add plugs for lookup
-		self._namePlugMap = {}
-
 		# slot to hold live data tree object
+		# only used for optimisation, don't rely on it
 		self._liveDataTree = None
 
+	@property
+	def MObject(self)->om.MObject:
+		"""return MObject from handle"""
+		return self.MObjectHandle.object()
 
-	def object(self)->om.MObject:
+
+	def object(self, checkValid=False)->om.MObject:
 		"""same interface as MFnBase"""
+		if checkValid:
+			assert not self.MObject.isNull()
 		return self.MObject
 
 	def exists(self)->bool:
@@ -384,23 +392,48 @@ class WN( # short for WePresentNode
 	def dagPath(self)->om.MDagPath:
 		return om.MDagPath.getAPathTo(self.MObject)
 
-	# region core typing systems
-	def setMObject(self, obj):
-		self.MObject = obj # not weakref-able :(
-
-
 	@property
-	def MFn(self)->MFMFnT:
+	def MFn(self)->MFnCls:
 		"""return the best-matching function set """
 		if self._MFn is not None:
 			return self._MFn
-		mfnType = getMFnType(self.MObject)
-		if issubclass(mfnType, om.MFnDagNode):
+		#mfnType = getMFnType(self.MObject)
+
+		# TODO: rework this once we have specific MFn
+		#  if issubclass(self.MFnCls, om.MFnDagNode):
+
+		try:
 			# dag node, initialise against dag path
-			self._MFn = mfnType(self.dagPath)
-		else:
-			self._MFn = mfnType(self.MObject)
+			self._MFn = self.MFnCls(self.dagPath)
+		except:
+			self._MFn = self.MFnCls(self.MObject)
 		return self._MFn
+
+	# use create() to define order of arguments and process on creation,
+	# WNMeta should delegate to this
+	@classmethod
+	def create(cls,
+	           name:str="", dgMod_:om.MDGModifier=None, parent_:nodeArgT=None, **kwargs)->WN:
+		"""suffix _ to avoid name clashes with kwargs
+		if dgmod is passed, add actions to it - otherwise immediately
+		execute"""
+		opMod = dgMod_ or om.MDGModifier()
+		if parent_ is not None:
+			parent = filterToMObject(parent_)
+
+	def setInitAttrs(self, ):
+		"""subclasses should populate function signature
+		with union of all their attrs and inherited attrs"""
+
+		for attrName, val in locals().items():
+			if attrName.startswith("_"):
+				continue
+			if attrName == "self":
+				continue
+			self(attrName).set(val)
+
+
+
 
 	## refreshing mechanism
 	def __str__(self):

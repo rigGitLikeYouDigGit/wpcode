@@ -207,6 +207,19 @@ class Assign(StringCodeTemplate):
 		#return [self.right]
 		return []
 
+class Comment(StringCodeTemplate):
+	"""template for a single line comment, or empty line"""
+
+	def __init__(self,
+	             comment="",
+	             depth:int=0,
+	             ):
+		super().__init__(depth=depth)
+		self.comment = comment
+
+	def _resultString(self):
+		return f"# {self.comment}" if self.comment else ""
+
 class FunctionCallTemplate(StringCodeTemplate):
 	"""template for a function call"""
 

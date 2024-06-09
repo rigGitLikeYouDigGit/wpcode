@@ -55,7 +55,7 @@ def flatten(l, ltypes=(list, tuple))->(tuple, list):
 		i += 1
 	return ltype(l)
 
-firstOrNone = lambda x: next(iter(x), None)
+firstOrNone = lambda x: next(iter(x), None) if isinstance(x, (tuple, list)) else x
 
 def indexByPath(value:NESTED_TYPES, keyIndexPath:list):
 	"""lookup a value in a nested structure by a path"""

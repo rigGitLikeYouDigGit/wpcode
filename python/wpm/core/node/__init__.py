@@ -10,6 +10,9 @@ from pathlib import Path
 this won't directly import any node classes, leave that to the 
 catalogue
 
+NEED BASE CLASS for init, either inherit from that in _BASE_ or
+put it in the _BASE_ author file
+
 WN() -> random new transform
 WN("myTransform") -> new transform, or an existing one if it exists
 WN("myTransform", new=1) -> new transform
@@ -50,7 +53,7 @@ class NodeClassRetriever:
 		#raise FileNotFoundError(nodeClsName)
 
 	def getNodeModule(self, nodeClsName:str):
-		path = self.getNodeFile(nodeClsName)
+		#path = self.getNodeFile(nodeClsName)
 		try:
 			mod = importlib.import_module(
 				"." + nodeClsName.lower(),
@@ -78,29 +81,12 @@ class NodeClassRetriever:
 
 retriever = NodeClassRetriever()
 
-
-class WNMeta(type):
-	"""replace .attr lookup with
-	a retrieval for the node class"""
-
-	def __getattr__(self, item):
-		return retriever.getNodeCls(item)
-
-class Catalogue:
-	pass
-
-if T.TYPE_CHECKING: # override with generated Catalogue at type checking
-	from .gen import *
-	from .author import *
+from .base import WN
 
 
-class WN(
-	Catalogue,
-	metaclass=WNMeta):
-	"""node base class"""
+if __name__ == '__main__':
 
-
-
+	t = WN.AddDoubleLinear
 
 
 

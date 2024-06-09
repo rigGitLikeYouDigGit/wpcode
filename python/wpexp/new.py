@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import wplib.astlib
-import wplib.expression.evaluator
-import wplib.expression.syntax
+import wpexp.syntax
 from wplib.function import addToFunctionGlobals
 
 """core of refgraph - stores either static value, or function
@@ -12,17 +10,14 @@ import ast, pprint, re
 from types import FunctionType, ModuleType, MethodType, MethodWrapperType
 from dataclasses import dataclass
 
-from wplib.log import log
-from wplib.constant import IMMUTABLE_TYPES, LITERAL_TYPES, MAP_TYPES, SEQ_TYPES
 from wplib.sentinel import Sentinel
 from wplib import astlib as wpast
 #from wplib.object.serialisable import Serialisable, compileFunctionFromString, serialise
 from wplib.object import DeepVisitor
 
-from wplib.expression import syntax, function as libfn, constant as expconstant
-from wplib.expression.error import CompilationError, EvaluationError, ExpSyntaxError
+from wplib.expression import constant as expconstant
 from wplib.expression.evaluator import ExpEvaluator
-from wplib.expression.syntax import ExpSyntaxProcessor, SyntaxPasses
+from wpexp.syntax import ExpSyntaxProcessor, SyntaxPasses
 
 from wplib.serial import Serialisable
 

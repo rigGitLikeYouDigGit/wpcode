@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from wplib.expression.evaluator import ExpEvaluator
-from wplib.expression.syntax import CustomSyntaxPass, SyntaxKeywordFunctionPass, ExpressionToken, AtToken, DollarToken, \
+from wpexp.syntax import CustomSyntaxPass, SyntaxKeywordFunctionPass, ExpressionToken, AtToken, DollarToken, \
 	PointyToken, SyntaxTokenReplacerPass, SyntaxNameToStrPass, SyntaxResolveConstantPass, SyntaxFallbackStringPass
 
 """now is time, my friend

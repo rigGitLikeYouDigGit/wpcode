@@ -1,11 +1,9 @@
 from __future__ import annotations
 import typing as T
 
-from wplib.astlib import astModuleToExpression, parseStrToASTModule, evalASTExpression
-from wplib.expression.constant import MASTER_GLOBALS_EVALUATOR_KEY
 #from wplib.expression.syntax import ExpressionToken
 if T.TYPE_CHECKING:
-	from wplib.expression.syntax import SyntaxPasses, ExpTokens
+	from wpexp.syntax import ExpTokens
 
 class ExpEvaluator:
 	"""main class to actually evaluate expressions

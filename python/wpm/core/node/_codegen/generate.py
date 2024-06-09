@@ -2,7 +2,7 @@
 from __future__ import annotations
 import typing as T
 
-import json, sys, os, shutil
+import json, sys, os, shutil, time
 from pathlib import Path
 from typing import TypedDict
 from collections import defaultdict
@@ -17,7 +17,7 @@ from wptree import Tree
 #from wpm import WN, om, cmds
 #from wpm.core import getMFn
 
-from wplib.codegen.strtemplate import ClassTemplate, FunctionCallTemplate, FunctionTemplate, TextBlock, argT, argsKwargsT, Literal, Assign, Import, IfBlock, indent
+from wplib.codegen.strtemplate import ClassTemplate, FunctionCallTemplate, FunctionTemplate, TextBlock, argT, argsKwargsT, Literal, Assign, Import, IfBlock, indent, Comment
 #from wptool.codegen import CodeGenProject
 
 """
@@ -240,23 +240,32 @@ def genNodeFileStr(data:NodeData,
 		plugTemplates.append(classDef)
 
 	plugAssigns = []
-	for data in newAttrDatas:
+	for attrData in newAttrDatas:
 		descriptorCall = FunctionCallTemplate(
 					"PlugDescriptor",
-					fnArgs=((Literal(data.name), ), {} )
+					fnArgs=((Literal(attrData.name), ), {} )
 				)
-		plugAssigns.append(Assign((data.name + "_", string.cap(data.name) + "Plug"), descriptorCall))
+		plugAssigns.append(Assign((attrData.name + "_", string.cap(attrData.name) + "Plug"), descriptorCall))
+
+	# node attributes
+	nodeAssigns = []
+	nodeAssigns.append(Assign("typeName", Literal(nodeType)))
+	nodeAssigns.append(Assign("apiTypeInt", data.apiTypeConstant))
+	# MFn type
+	# TODO: get the correct MFn type for the node, gather from maya
+	nodeAssigns.append(Assign("MFnCls", "om.MFnDagNode"))
+
 
 	# generate main node
 	if parent is not None:
 		classBaseClasses = (string.cap(parent),)
 	else:
-		classBaseClasses = ("NodeBase",)
+		classBaseClasses = ("WN",)
 	nodeDef = ClassTemplate(
 		className=string.cap(nodeType),
 		# classBaseClasses=(string.cap(parent),),
 		classBaseClasses=classBaseClasses,
-		classLines=plugAssigns,
+		classLines=plugAssigns + [Comment(), Comment("node attributes"), Comment()] +  nodeAssigns,
 	)
 
 
@@ -274,37 +283,49 @@ def genNodeFileStr(data:NodeData,
 
 
 def genNodes(#project:CodeGenProject
-		genDir:Path = Path(__file__).parent.parent / "gen"
+		genDir:Path = Path(__file__).parent.parent / "gen",
+		onlyTransform=False,
              ):
 	"""generate nodes from json data"""
+
+	startTime = time.time()
 	with open(jsonPath, "r") as f:
 		nodeData = json.load(f)
+	readTime = time.time() - startTime
+	print("read time", readTime)
+	if onlyTransform:
+		# start with venerable transform
+		targetNodes = [
 
+		]
 
-	# start with venerable transform
-	targetNodes = [
+		# get all the bases of transform
+		nameNBasesMap = {}
+		for nBases, nameMap in nodeData.items():
+			for name, data in nameMap.items():
+				nameNBasesMap[name] = nBases
 
-	]
+		bases = nodeData["4"]["transform"]["bases"]
+		for base in bases:
+			if base not in nameNBasesMap:
+				continue
+			targetNodes.append(nodeData[nameNBasesMap[base]][base])
+		targetNodes.append(nodeData["4"]["transform"])
 
-	# get all the bases of transform
-	nameNBasesMap = {}
-	for nBases, nameMap in nodeData.items():
-		for name, data in nameMap.items():
-			nameNBasesMap[name] = nBases
-
-	#bases = targetNodes[0]["bases"]
-	bases = nodeData["4"]["transform"]["bases"]
-	for base in bases:
-		if base not in nameNBasesMap:
-			continue
-		targetNodes.append(nodeData[nameNBasesMap[base]][base])
-	targetNodes.append(nodeData["4"]["transform"])
+	else: # regenerate every single node in maya
+		targetNodes = []
+		for nBases, nameMap in nodeData.items():
+			for name, data in nameMap.items():
+				targetNodes.append(data)
 
 	# map of { node type : all attr names in that node type }
 	# to avoid duplication
 	typeAttrSetMap : dict[str, set[str]] = {}
 
+	genStartTime = time.time()
 	for i in targetNodes:
+
+		#print("generate node", i["typeName"], "bases", i["bases"])
 
 		# recover node data from json
 		nodeData = recoverNodeData(i)
@@ -315,21 +336,27 @@ def genNodes(#project:CodeGenProject
 		# write to gen folder
 		genPathForNodeType(nodeData.typeName).write_text(nodeFileStr)
 		pass
-
+	print("generated {} nodes in {}".format(
+		len(targetNodes), time.time() - genStartTime) )
 
 def processGenInitFile(initFile:Path,
-                       gatherDir:Path):
+                       gatherDir:Path,
+                       extraImports:list[Import]=(),
+                       catalogueBases=(),
+                       ):
 	"""write out any extra imports in __init__.py files
 	and populate assignments to Catalogue class -
 	init files don't import any real classes to avoid cycles
 
 	we now generate a type checking import block and a
 	type-check-time alternate Catalogue class
+
+	janky args for different behaviour in author vs gen
 	"""
 	initFileText = initFile.read_text()
 
 	# get all imports
-	imports = []
+	imports = extraImports or []
 	assignments = []
 	for refFile in gatherDir.iterdir():
 		if refFile.suffix != ".py":
@@ -347,7 +374,7 @@ def processGenInitFile(initFile:Path,
 	catalogueClassDef = ClassTemplate(
 		className="Catalogue",
 		#classBaseClasses=("T.Protocol",),
-		classBaseClasses=(),
+		classBaseClasses=catalogueBases,
 		classLines=assignments,
 	)
 
@@ -355,11 +382,7 @@ def processGenInitFile(initFile:Path,
 		[["T.TYPE_CHECKING", imports + [catalogueClassDef]]]
 	)
 
-	#importBlock = "\n".join([str(i) for i in imports])
-	# assignBlock = "\n".join([str(i) for i in assignments])
-	# initFileText = initFileText.format(
-	# 	IMPORT_BLOCK=importBlock,
-	# 	CATALOGUE_ASSIGN_BLOCK=assignBlock)
+
 	initFileText = initFileText.format(
 		TYPE_CHECK_BLOCK=typeCondition)
 
@@ -392,7 +415,14 @@ if __name__ == '__main__':
 	genNodes()
 
 	processGenInitFile(genDir / "__init__.py", genDir)
-	processGenInitFile(authorDir / "__init__.py", authorDir)
+
+	# import gen catalogue to author init
+	processGenInitFile(
+		authorDir / "__init__.py", authorDir,
+		extraImports=[Import(fromModule="..gen", module="Catalogue", alias="GenCatalogue")],
+		catalogueBases=("GenCatalogue",)
+	)
+
 
 
 
