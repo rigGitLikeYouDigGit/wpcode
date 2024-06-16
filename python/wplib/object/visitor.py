@@ -10,8 +10,8 @@ from dataclasses import dataclass
 from collections import deque, namedtuple
 from typing import TypedDict
 
-from wplib import log
-from wplib.log import getDefinitionStrLink
+from wplib import log, function as wfunction
+from wplib.log import getDefinitionStrLink, getLineLink
 #from wplib.sentinel import Sentinel
 from wplib.object import Adaptor
 from wplib.inheritance import superClassLookup, SuperClassLookupMap, isNamedTupleInstance, isNamedTupleClass
@@ -38,35 +38,25 @@ pretty_errors.configure(
 )
 """
 
-class ChildType(TypeNamespace):
-	"""Enum types to mark what kind of "child" each object is in a data structure"""
+ChildData = namedtuple("ChildData",
+                       ["key", "obj", "data"],
+                       defaults=[None, None, None])
 
-	class _Base(TypeNamespace.base()):
-		pass
+@dataclass
+class VisitPassParams:
+	"""Parametres governing single iteration of visit"""
+	topDown:bool = True
+	depthFirst:bool = True
 
-	class SequenceElement(_Base):
-		pass
+	visitKwargs: dict = None  # if given, kwargs to pass to visit function
+	visitFn:visitFnType = None # if given, will yield (original, result) pairs or use result as new transformed object
+	transformVisitedObjects: bool = False  # if true, modifies visited objects - yields (original, transformed) pairs
 
-	class MapItem(_Base):
-		pass
+	passChildDataObjects:bool = False # if true, yield full ChildData objects and pass them to visitFn, not just obj
 
-	class MapKey(_Base):
-		pass
+#PARAMS_T = T.Dict[str, T.Any]
+PARAMS_T = VisitPassParams
 
-	class MapValue(_Base):
-		pass
-
-	class ObjectAttribute(_Base):
-		pass
-
-
-# consistent type passed to all visit functions
-#ITEM_CHILD_LIST_T = T.Iterable[tuple[T.Any, ChildType.T]]
-
-# enum / namespace was too involved, just use strings
-# (childType, key, object)
-CHILD_T = tuple[str, T.Any, T.Optional[str]]
-ITEM_CHILD_LIST_T = T.Iterable[CHILD_T]
 
 # test new adaptor system
 class VisitAdaptor(Adaptor):
@@ -75,194 +65,174 @@ class VisitAdaptor(Adaptor):
 
 	It would make sense to combine this with pathing
 	 functions for the Traversable system
-	  - do this now
 
-	for key type, consider a shorthand "k" for key, "a" for attribute
-
-	top-level literal tuples or generators in path create object slices
-
-	[ 0, "key", (1, 2) ] - get slice of two objects
-	[ 0, ".attr", "key", ["branch", "leaf"] ] - expand branch/leaf into single path lookup for tree
-
-	[ 0, "key", where({ "key": "value" }) ] - get slice of objects where key is value
-	[ 0, "key", where(key="value") ] - get slice of objects where key is value
-	[ 0, ".methodCall()" ] - call method on object with no args?
-	[ 0, ".methodCall(", [1, 2], ")"] - obj[0].methodCall(1, 2) - 1, 2 as literal args
-	[ 0, ".methodCall(", (1, 2), ")"] - (obj[0].methodCall(1), obj[0].methodCall(2)) - slice, one call of 1, other of 2
-	this is so so stupid
-	we're hitting the difficulties of control flow in expressions
-
-	simplest version is definitely useful - smooth spectrum into crazy if/else/where flows, and I don't see an obvious boundary
-
+	this object does not handle serialisation or text representation -
+	just gives consistent interface for those systems to work
 	DIFFERENT PURPOSE - move the path stuff to a later object.
 
 	VISITOR visits objects ONCE, in CONSISTENT way - not necessarily script-friendly
 
-
+	"data" is here used as a shorthand for "just do whatever, and hopefully
+	this is forwards compatible enough that I don't have to rewrite it
+	a 4th time "
 
 	  """
 
-	childTypes = ("[", ".") #????
+	# abstract the structure of results away from function
+	# should be able to use either format in the same visit functions
 
-	CHILD_T = CHILD_T
-	ITEM_CHILD_LIST_T = ITEM_CHILD_LIST_T
-	ChildType = ChildType
+	ChildData = ChildData
+
+
+
+	CHILD_T = ChildData
+	CHILD_LIST_T = T.Iterable[CHILD_T]
 	# new base class, declare new map
 	adaptorTypeMap = Adaptor.makeNewTypeMap()
 	# declare abstract methods
 	@classmethod
-	def childObjects(cls, obj:T.Any) ->ITEM_CHILD_LIST_T:
+	def childObjects(cls, obj:T.Any, params:PARAMS_T) ->CHILD_LIST_T:
 		"""return iterable of (childObject, childType) pairs"""
-		raise NotImplementedError
-
+		raise NotImplementedError("childObjects not implemented "
+		                          "for type adaptor: ", cls)
 	@classmethod
-	def newObj(cls, baseObj: T.Any, itemChildTypeList: ITEM_CHILD_LIST_T) ->T.Any:
+	def newObj(cls, baseObj: T.Any, childDatas:CHILD_LIST_T, params:PARAMS_T) ->T.Any:
 		"""create new object from base object and child type item map,
 		"""
 		raise NotImplementedError("newObj not implemented "
 		                          "for type", type(baseObj),
 		                          " adaptor: ", cls)
 
+CHILD_T = VisitAdaptor.CHILD_T
+CHILD_LIST_T = VisitAdaptor.CHILD_LIST_T
 class NoneVisitAdaptor(VisitAdaptor):
 	forTypes = (type(None),)
 	@classmethod
-	def childObjects(cls, obj:T.Any) ->ITEM_CHILD_LIST_T:
+	def childObjects(cls, obj:T.Any, params:PARAMS_T) ->CHILD_LIST_T:
 		return ()
 	@classmethod
-	def newObj(cls, baseObj: T.Any, itemChildTypeList: ITEM_CHILD_LIST_T) ->T.Any:
+	def newObj(cls, baseObj: T.Any, childDatas:CHILD_LIST_T, params:PARAMS_T) ->T.Any:
 		return None
 
 class LiteralVisitAdaptor(VisitAdaptor):
 	forTypes = LITERAL_TYPES
 	@classmethod
-	def childObjects(cls, obj:T.Any) ->ITEM_CHILD_LIST_T:
+	def childObjects(cls, obj:T.Any, params:PARAMS_T) ->CHILD_LIST_T:
 		return ()
 	@classmethod
-	def newObj(cls, baseObj: T.Any, itemChildTypeList: ITEM_CHILD_LIST_T) -> T.Any:
+	def newObj(cls, baseObj: T.Any, childDatas:CHILD_LIST_T, params:PARAMS_T) ->T.Any:
+		return baseObj
+
+class StrVisitAdaptor(VisitAdaptor):
+	"""base to give hooks to traverse strings - different tokens,
+	lines, paragraphs etc"""
+	forTypes = (str,)
+	def splitStrToChunks(self, s:str)->T.Iterable[str]:
+		"""split string into chunks - OVERRIDE"""
+		return s.split()
+	def combineChunksToStr(self, chunks:T.Iterable[str])->str:
+		"""combine chunks into string - OVERRIDE"""
+		return "".join(chunks)
+	@classmethod
+	def childObjects(cls, obj:T.Any, params:PARAMS_T) ->CHILD_LIST_T:
+		return ()
+	@classmethod
+	def newObj(cls, baseObj: T.Any, childDatas:CHILD_LIST_T, params:PARAMS_T) ->T.Any:
 		return baseObj
 
 class MapVisitAdaptor(VisitAdaptor):
 	"""we DO need a special type for dict items, since
-	otherwise we lose option to capture that relationship
+	otherwise we lose option to capture relationship between
+	keys and values -
+	since we serialise separately, we don't care about
+	excessive layers
 
-	option would be nice to turn this off as vast majority of dicts
-	don't need it
-
-	We need to pass some kind of params down for deep operations -
-	will be a dict of {
-		class type : parametre overrides
-		}
-
-
-	pathing, readable text, even serialisation can be a separate concern -
-	literally the only purpose of this layer is consistent mapping of objects
-
-	for dict, can we literally just return a dict?
-
-	actually losing my mind
-
-	new plan - do not add complexity and baggage where we don't need it
-	serialise a dict as a dict, UNLESS we need something more
-
-
-
-	"""
-	forTypes = MAP_TYPES
-
-	"""USE_TIES - should maps be considered a list of (key, value) ties,
+	USE_TIES - should maps be considered a list of (key, value) ties,
 	or literally as their basic relation?
-	
+
 	second is more literal and readable, but makes it more confusing to access
 	dict keys specifically
 	"""
+	forTypes = MAP_TYPES
 
 	@classmethod
 	def templateParams(cls)->dict:
 		return {"UseTies": True}
 
 	@classmethod
-	def childObjects(cls, obj:T.Any, params:dict=None):#->ITEM_CHILD_LIST_T:
+	def childObjects(cls, obj:T.Any, params:PARAMS_T) ->CHILD_LIST_T:
 		"""supply an override of { dict : { "UseTies": False } } to disable ties"""
 		# don't pass index, visit function can handle that
-		return [((k, v), "") for i, (k, v) in enumerate(obj.items())]
+		return [ChildData(i, tie, {"childType" : "MapTie"})
+		        for i, tie in enumerate(obj.items())]
 
 	@classmethod
-	def newObj(cls, baseObj: T.Any, itemChildTypeList: ITEM_CHILD_LIST_T) -> T.Any:
+	def newObj(cls, baseObj: T.Any, childDatas:CHILD_LIST_T, params:PARAMS_T) ->T.Any:
 		"""expects list of [
 			( (key , value ), ChildType.MapItem)
 			"""
-		return type(baseObj)(i[0] for i in itemChildTypeList)
-
-
-Path = namedtuple("Path", ["path", "mode"], defaults=[(), "r"])
-class Exp: # expression resolving to a path or value? can be combined with path?
-	def __hash__(self):
-		return id(self)
-
-
-
-
-
+		return type(baseObj)(i[1] for i in childDatas)
 
 
 class SeqVisitAdaptor(VisitAdaptor):
 	forTypes = SEQ_TYPES
 	@classmethod
-	def childObjects(cls, obj:T.Any) ->ITEM_CHILD_LIST_T:
-		#return ((i, ChildType.SequenceElement) for i in obj)
-		#return (("item", i, val) for i, val in enumerate(obj))
-		return ((i, val, "[") for i, val in enumerate(obj))
+	def childObjects(cls, obj:T.Any, params:PARAMS_T) ->CHILD_LIST_T:
+		return (ChildData(i, val, None) for i, val in enumerate(obj))
 	@classmethod
-	def newObj(cls, baseObj: T.Any, itemChildTypeList: ITEM_CHILD_LIST_T) -> T.Any:
-		#log("newObj", baseObj, itemChildTypeList)
+	def newObj(cls, baseObj: T.Any, childDatas:CHILD_LIST_T, params:PARAMS_T) ->T.Any:
 		if isNamedTupleInstance(baseObj):
-			return type(baseObj)(*(i[1] for i in itemChildTypeList))
-		return type(baseObj)(i[1] for i in itemChildTypeList)
+			return type(baseObj)(*(i[1] for i in childDatas))
+		return type(baseObj)(i[1] for i in childDatas)
 
 class Visitable:
 	"""custom base interface for custom types -
 	we associate an adaptor type for these later"""
-	def childObjects(self)->ITEM_CHILD_LIST_T:
-		raise NotImplementedError
+	def childObjects(self, params:PARAMS_T)->CHILD_LIST_T:
+		raise NotImplementedError("childObjects not implemented "
+		                          "for type adaptor: ", self)
 	@classmethod
-	def newObj(cls, baseObj, itemChildTypeList:ITEM_CHILD_LIST_T):
-		raise NotImplementedError
-
+	def newObj(cls, baseObj: Visitable, childDatas:CHILD_LIST_T, params:PARAMS_T) ->T.Any:
+		raise NotImplementedError("newObj not implemented "
+		                          "for type", type(baseObj),
+		                          " adaptor: ", cls)
 class VisitableVisitAdaptor(VisitAdaptor):
 	"""integrate derived subclasses with adaptor system
 	"""
 	forTypes = (Visitable,)
 	@classmethod
-	def childObjects(cls, obj:T.Any) ->ITEM_CHILD_LIST_T:
+	def childObjects(cls, obj:T.Any, params:PARAMS_T) ->CHILD_LIST_T:
 		return obj.childObjects()
 	@classmethod
-	def newObj(cls, baseObj: T.Any, itemChildTypeList: ITEM_CHILD_LIST_T) -> T.Any:
-		return baseObj.newObj(baseObj, itemChildTypeList)
-
-
-@dataclass
-class VisitPassParams:
-	"""Parametres governing single iteration of visit"""
-	topDown:bool = True
-	depthFirst:bool = True
-	runVisitFn:bool = True # if false, only yield objects to visit
-	transformVisitedObjects:bool = False # if true, modifies visited objects - yields (original, transformed) pairs
-	visitFn:visitFnType = None # if given, overrides visitor's visit function
-	visitKwargs:dict = None # if given, kwargs to pass to visit function
-	yieldChildType:bool = False # if true, yield child type as well as child object
+	def newObj(cls, baseObj: T.Any, childDatas:CHILD_LIST_T, params:PARAMS_T) ->T.Any:
+		return baseObj.newObj(baseObj, childDatas)
 
 
 class VisitObjectData(TypedDict):
+	"""individual data passed to visit function,
+	with richer record of context
+
+	maybe make this optional
+	"""
 	base : T.Any # root object of the visit
-	visitResult : T.Any # temp result of the visit
-	#copyResult : T.Any # copy of final result
-	#childType : ChildType.T # type of current object
-	key : T.Optional[str, int]
-	childType : str # type of current object
 	visitPassParams : VisitPassParams # pass params for current object
 
-	#childDatas : list[VisitObjectData] # tuple of child data for current object
-	#makeNewObjFromVisitResult : bool # if true, make new object from visit result - if false, use visit result as is
+
+def visitFnTemplate(
+          obj:T.Any,
+          visitor:DeepVisitor,
+          visitObjectData:VisitObjectData,
+          #visitPassParams:VisitPassParams,
+          )->T.Any:
+	"""template function to override for custom transform"""
+	raise NotImplementedError
+
+# test that function argspec can be compared
+# print("argspec", inspect.getfullargspec(visitFnTemplate))
+# for k, v in inspect.getfullargspec(visitFnTemplate)._asdict().items():
+# 	print(k, v)
+
+
 
 
 class DeepVisitOp:
@@ -270,10 +240,10 @@ class DeepVisitOp:
 
 	def visit(self,
 	          obj:T.Any,
-	              visitor:DeepVisitor,
-	              visitObjectData:VisitObjectData,
-	              visitPassParams:VisitPassParams,
-	              )->T.Any:
+              visitor:DeepVisitor,
+              visitObjectData:VisitObjectData,
+              #visitPassParams:VisitPassParams,
+              )->T.Any:
 		"""template function to override for custom transform"""
 		raise NotImplementedError
 
@@ -292,7 +262,6 @@ class DeepVisitor:
 	Might also be useful to have a lazy generator / structure that evaluates only when pathed into?
 	"""
 
-	ChildType = ChildType
 	VisitObjectData = VisitObjectData
 	VisitPassParams = VisitPassParams
 	DeepVisitOp = DeepVisitOp
@@ -318,20 +287,21 @@ class DeepVisitor:
 	                                    visitParams:VisitPassParams,
 	                                    )->T.Generator[CHILD_T, None, None]:
 		"""iterate over all objects top-down"""
-		#yield parentObj
+		#print("iter rec top down", parentObjData, type(parentObjData), tuple(parentObjData))
+
 		parentKey, parentObj, parentChildType = parentObjData
 		adaptorType = VisitAdaptor.adaptorForType(
 			type(parentObj))
 		assert adaptorType, f"no visit adaptor for type {type(parentObj)}"
-		nextObjs : ITEM_CHILD_LIST_T = adaptorType.childObjects(parentObj)
-		for key, nextObj, childType  in nextObjs:
-			if visitParams.yieldChildType:
-				yield key, nextObj, childType
+		nextObjs : CHILD_LIST_T = adaptorType.childObjects(parentObj, visitParams)
+		for childData  in nextObjs:
+			if visitParams.passChildDataObjects:
+				yield childData
 			else:
-				yield nextObj
+				yield childData.obj
 			yield from self._iterRecursiveTopDownDepthFirst(
 				#nextObj,
-				(key, nextObj, childType),
+				childData,
 				visitParams)
 
 	def _iterRecursiveTopDownBreadthFirst(self,
@@ -344,16 +314,16 @@ class DeepVisitor:
 		adaptorType = VisitAdaptor.adaptorForType(
 			type(parentObj))
 		assert adaptorType, f"no visit adaptor for type {type(parentObj)}"
-		nextObjs : ITEM_CHILD_LIST_T = adaptorType.childObjects(parentObj)
-		for key, nextObj, childType  in nextObjs:
-			if visitParams.yieldChildType:
-				yield key, nextObj, childType
+		nextObjs : CHILD_LIST_T = adaptorType.childObjects(parentObj)
+		for key, nextObj, data  in nextObjs:
+			if visitParams.passChildDataObjects:
+				yield key, nextObj, data
 			else:
 				yield nextObj
-		for key, nextObj, childType  in nextObjs:
+		for childData  in nextObjs:
 			yield from self._iterRecursiveTopDownBreadthFirst(
 				#nextObj,
-				(key, nextObj, childType),
+				childData,
 				visitParams)
 
 	def _applyRecursiveTopDownDepthFirst(
@@ -362,21 +332,28 @@ class DeepVisitor:
 			visitParams:VisitPassParams,
 			)->T.Generator[tuple, None, None]:
 		"""apply a function to all entries, yield input and result"""
-		adaptorType = VisitAdaptor.adaptorForType(
+		adaptorType : type[VisitAdaptor] = VisitAdaptor.adaptorForType(
 			type(parentObj))
 		assert adaptorType, f"no visit adaptor for type {type(parentObj)}"
-		nextObjs : ITEM_CHILD_LIST_T = adaptorType.childObjects(parentObj)
-		for key, nextObj, childType  in nextObjs:
+		nextObjs : CHILD_LIST_T = adaptorType.childObjects(
+			parentObj,
+			params=visitParams
+		)
+		for childData  in nextObjs:
 			visitData = VisitObjectData(
 				base=parentObj,
-				visitResult=None,
-				childType=childType,
-				key=key,
+				# visitResult=None,
+				# childType=childType,
+				# key=key,
 				visitPassParams=visitParams,
 			)
-			yield nextObj, visitParams.visitFn(
-				nextObj, self, visitData)
-			yield from self._iterRecursiveTopDownDepthFirst(nextObj, visitParams)
+			if visitParams.passChildDataObjects: # pass in childData if desired
+				yield childData, visitParams.visitFn(
+					childData, self, visitData)
+			else:
+				yield childData.obj, visitParams.visitFn(
+					childData.obj, self, visitData)
+			yield from self._applyRecursiveTopDownDepthFirst(childData.obj, visitParams)
 
 
 	def _transformRecursiveTopDownDepthFirst(
@@ -393,10 +370,10 @@ class DeepVisitor:
 		# transform
 		visitData = VisitObjectData(
 			base=parentObj,
-			visitResult=None,
-			childType=childType,
+			# visitResult=None,
+			# childType=childType,
 			visitPassParams=visitParams,
-			key=key,
+			#key=key,
 		)
 		result = visitParams.visitFn(
 			parentObj, self, visitData)
@@ -407,15 +384,15 @@ class DeepVisitor:
 		# get child objects
 		adaptor = VisitAdaptor.adaptorForType(type(result))
 		assert adaptor, f"no visit adaptor for type {type(result)}"
-		nextObjs : ITEM_CHILD_LIST_T = VisitAdaptor.adaptorForType(
-			type(result)).childObjects(result)
+		nextObjs : CHILD_LIST_T = VisitAdaptor.adaptorForType(
+			type(result)).childObjects(result, visitParams)
 		resultObjs = []
 		#for nextObj, childType in nextObjs:
-		for  key, nextObj, childType in nextObjs:
+		for childData in nextObjs:
 			# transform child objects
 			resultObjs.append(
 				(key, self._transformRecursiveTopDownDepthFirst(
-					(key, nextObj, childType),
+					childData,
 				 visitParams),
 				 childType)
 				 )
@@ -423,7 +400,7 @@ class DeepVisitor:
 		adaptor = VisitAdaptor.adaptorForType(
 			type(result))
 		try:
-			newObj = adaptor.newObj(result, resultObjs)
+			newObj = adaptor.newObj(result, resultObjs, visitParams)
 		except Exception as e:
 			print("error making new object:")
 			print("base", parentObj)
@@ -445,26 +422,26 @@ class DeepVisitor:
 		# transform
 		visitData = VisitObjectData(
 			base=parentObj,
-			visitResult=None,
-			childType=childType,
-			key=key,
+			# visitResult=None,
+			# childType=childType,
+			# key=key,
 			visitPassParams=visitParams,
 		)
-		nextObjs : ITEM_CHILD_LIST_T = VisitAdaptor.adaptorForType(
-			type(parentObj)).childObjects(parentObj)
+		nextObjs : CHILD_LIST_T = VisitAdaptor.adaptorForType(
+			type(parentObj)).childObjects(parentObj, visitParams)
 		# get child objects
 		resultObjs = []
-		for  key, nextObj, childType in nextObjs:
+		for childData in nextObjs:
 			resultObjs.append(
 				(key, self._transformRecursiveBottomUpDepthFirst(
-					(key, nextObj, childType),
+					childData,
 					visitParams),
 									 childType)
 				 )
 
 		adaptor = VisitAdaptor.adaptorForType(parentObj)
 		try:
-			newObj = adaptor.newObj(parentObj, resultObjs)
+			newObj = adaptor.newObj(parentObj, resultObjs, visitParams)
 		except Exception as e:
 			print("Cannot make new object:")
 			print("base", parentObj)
@@ -480,13 +457,30 @@ class DeepVisitor:
 	def dispatchPass(self,
 	                 fromObj:T.Any,
 	                 passParams:VisitPassParams,
-	                 visitFn:visitFnType=None,
+	                 #visitFnTemplate:visitFnType=None,
 	                 **kwargs
 	                 ):
 		"""dispatch a single pass of the visitor
 		"""
 
-		baseChildData = ("", fromObj, "")
+		if passParams.transformVisitedObjects and passParams.visitFn is None:
+			raise ValueError("Cannot transform objects without a visit function")
+
+		# check signature of visit function
+		if passParams.visitFn is not None:
+			pureFnSuccess, data = wfunction.checkFunctionSpecsMatch(
+				visitFnTemplate,
+				passParams.visitFn,
+				allowExtensions=True
+			)
+			if not pureFnSuccess:
+				raise TypeError(f"visit function {passParams.visitFn}\n{inspect.getsource(passParams.visitFn)}"
+				                f"at {getDefinitionStrLink(passParams.visitFn)}\n"
+				                f"must match template function signature\n{inspect.getfullargspec(visitFnTemplate).args}\n")
+
+
+
+		baseChildData = ChildData("", fromObj, None)
 		# if no function, just iterate over stuff
 		if passParams.visitFn is None:
 			return self._iterRecursiveTopDownDepthFirst(
@@ -501,7 +495,10 @@ class DeepVisitor:
 		passParams.visitKwargs.update(kwargs)
 
 		if not passParams.transformVisitedObjects: # apply function over structure
-			return self._applyRecursiveTopDownDepthFirst(fromObj, passParams)
+			return self._applyRecursiveTopDownDepthFirst(
+				baseChildData,
+				passParams
+			)
 
 		# transform and return a new structure
 
@@ -529,65 +526,79 @@ visitFnType = T.Callable[
 
 if __name__ == '__main__':
 
-	onlyDictStruct = {
+	pass
+
+
+
+	visitor = DeepVisitor(
+	)
+
+	structure = {
 		"key1": "value1",
-		"key2": {"nestedKey1" : 2,
-		         "nestedKey2" : 3,		         },
+		(2, 4, "fhffhs"): ["value2", [], 3, 4, 5],
 		"key3": "value3",
 	}
+	yieldPass = visitor.dispatchPass(
+		structure,
+		passParams=VisitPassParams()
+	)
 
-	path = Pathable.startPath(onlyDictStruct)
-	print(path)
-
-
-	if False:
-		def printArgsVisit(obj, visitor, visitData, visitParams):
-			#print(obj, visitor, visitData, visitParams)
-			return obj
-
-		visitor = DeepVisitor(
-			visitTypeFunctionRegister=visitFunctionRegister,
-			visitSingleObjectFn=printArgsVisit)
-
-		structure = {
-			"key1": "value1",
-			(2, 4, "fhffhs"): ["value2", [], 3, 4, 5],
-			"key3": "value3",
-		}
-
-		# visitPass = visitor._visitAll(structure, VisitPassParams())
-		# for i in visitPass:
-		# 	print("visited", i)
-
-
-		def addOneTransform(obj, visitor, visitData, visitParams):
-			#print("addOneTransform", obj)
-			if isinstance(obj, int):
-				obj += 1
-			return obj
-
-		visitor = DeepVisitor(
-			visitTypeFunctionRegister=visitFunctionRegister,
-			visitSingleObjectFn=addOneTransform)
-
-		structure = [
-			1, [2, [3, 4], 2], 1
-		]
-		print("structure", structure)
-		newStructure = visitor.dispatchPass(structure, VisitPassParams(
-			transformVisitedObjects=False))
-		print("newStructure", newStructure)
-
-		print("structure", structure)
-		newStructure = visitor.dispatchPass(structure, VisitPassParams(
-			transformVisitedObjects=True,
-			topDown=False
-		))
-		print("newStructure", newStructure)
-
-
-
+	for i in yieldPass:
+		#print("yield", i)
 		pass
+
+	# apply print function
+	def printArgsVisit(obj, visitor, visitObjectData:VisitObjectData):
+		#print(obj, visitor, visitData, visitParams)
+		return obj
+
+	visitPass = visitor.dispatchPass(
+		structure,
+		VisitPassParams(visitFn=printArgsVisit)
+	)
+	for old, new in visitPass:
+		#print("visited", old, new)
+		pass
+
+	#raise
+	def addOneTransform(obj, visitor, visitObjectData):
+		#print("addOneTransform", obj)
+		if isinstance(obj, int):
+			obj += 1
+		return obj
+
+	visitor = DeepVisitor()
+
+	structure = [
+		1, [2, [3, 4], 2], 1
+	]
+	print("structure ", structure)
+	newStructure = visitor.dispatchPass(structure, VisitPassParams(
+		transformVisitedObjects=False,
+		visitFn=addOneTransform
+	)) # generator, since transform is False
+	# print("newStructure", newStructure)
+	# for i in newStructure:
+	# 	print("new", i)
+	# 	pass
+
+	newStructure = visitor.dispatchPass(structure, VisitPassParams(
+		transformVisitedObjects=True,
+		visitFn=addOneTransform
+	))
+	print("new struct", newStructure)
+
+	print("structure ", structure)
+	newStructure = visitor.dispatchPass(structure, VisitPassParams(
+		transformVisitedObjects=True,
+		topDown=False,
+		visitFn=addOneTransform
+	))
+	print("new struct", newStructure)
+
+
+
+	pass
 
 
 

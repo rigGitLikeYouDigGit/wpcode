@@ -52,7 +52,7 @@ class TestVisitor(unittest.TestCase):
 		                         )
 
 		# test applying
-		params.visitFn = lambda obj, visitor, visitObjectData: obj + 1 if isinstance(obj, int) else obj
+		params.visitFnTemplate = lambda obj, visitor, visitObjectData: obj + 1 if isinstance(obj, int) else obj
 		params.transformVisitedObjects = True
 		result = visitor.dispatchPass(
 			baseList,
@@ -88,7 +88,7 @@ class TestVisitor(unittest.TestCase):
 		# result = visitor.dispatchPass(
 		# 	baseDict,
 		# 	params,
-		# 	visitFn=None
+		# 	visitFnTemplate=None
 		# )
 		# self.assertIsInstance(result, T.Generator)
 		# assert tuple(result) == (
@@ -98,7 +98,7 @@ class TestVisitor(unittest.TestCase):
 		#                          )
 		#
 		# # test applying
-		# params.visitFn = lambda obj, visitor, visitObjectData: obj + 1 if isinstance(obj, int) else obj
+		# params.visitFnTemplate = lambda obj, visitor, visitObjectData: obj + 1 if isinstance(obj, int) else obj
 		# params.transformVisitedObjects = True
 		# result = visitor.dispatchPass(
 		# 	baseDict,
@@ -139,7 +139,7 @@ class TestVisitor(unittest.TestCase):
 
 		visitor = DeepVisitor()
 		params = VisitPassParams(
-			visitFn=lambda *args: print("visitFn", args),
+			visitFn=lambda *args: print("visitFnTemplate", args),
 
 		)
 

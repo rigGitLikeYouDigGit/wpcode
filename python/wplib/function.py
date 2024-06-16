@@ -6,6 +6,35 @@ import inspect
 from types import FunctionType
 
 
+def checkFunctionSpecsMatch(
+		templateFn:FunctionType,
+		testFn:FunctionType,
+		allowExtensions:bool=False,
+)->tuple[bool, dict[str, tuple]]:
+	"""if allowExtensions, allow extra keyword arguments in testFn
+	return tuple of (success, datas)
+	"""
+
+	templateSpec = inspect.getfullargspec(templateFn)
+	testSpec = inspect.getfullargspec(testFn)
+
+	# print("templateArgs", templateSpec.args, set(templateSpec.args))
+	# print("testArgs", testSpec.args, set(testSpec.args))
+	# print(set(templateSpec.args) - set(testSpec.args))
+	failures = {}
+	if allowExtensions:
+		if set(testSpec.args) - set(templateSpec.args):
+			failures["args"] = ("missing template args", set(templateSpec.args) - set(testSpec.args))
+	else:
+		if testSpec.args != templateSpec.args:
+			failures["args"] = ("args mismatch", testSpec.args, templateSpec.args)
+
+	if failures:
+		return False, failures
+
+	return True, None
+
+
 def addToFunctionGlobals(fn:FunctionType, customGlobals:dict):
 	"""add custom globals to function, without affecting the base builtins"""
 	#### W A R N I N G ####
