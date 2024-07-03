@@ -21,4 +21,6 @@ from wpscratch._nodeoutline.node import WN, retriever
 if __name__ == '__main__':
 	print(WN.Transform.dpath)
 	print(WN.Dag.dpath)
+
+	print(issubclass(WN.Transform, WN))
 	pass

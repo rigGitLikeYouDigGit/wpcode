@@ -20,6 +20,7 @@ class DragItemWidget(QtWidgets.QWidget):
 	def __init__(self, innerWidget:QtWidgets.QWidget, parent=None):
 		super().__init__(parent)
 		self.dragHandle = QtWidgets.QLabel("☰", parent=self)
+		self.dragHandle.setFont(QtGui.QFont("monospace", 8))
 		self.innerWidget = innerWidget
 		#self.innerWidget.setParent(self)
 		layout = QtWidgets.QHBoxLayout()
@@ -28,6 +29,7 @@ class DragItemWidget(QtWidgets.QWidget):
 		self.setLayout(layout)
 		layout.setContentsMargins(0, 0, 0, 0)
 		self.setContentsMargins(0, 0, 0, 0)
+		layout.setAlignment(self.dragHandle, QtCore.Qt.AlignTop)
 
 class SeqDexWidget(WpDexWidget):
 	"""view for a list
@@ -71,6 +73,9 @@ class SeqDexWidget(WpDexWidget):
 		self.model = QtGui.QStandardItemModel(parent=self)
 		self.view = QtWidgets.QTreeView(parent=self)
 		self.view.setModel(self.model)
+		self.view.setHeaderHidden(True)
+
+		self.view.setContentsMargins(0, 0, 0, 0)
 
 		for i, (key, w) in enumerate(self.childWidgets.items()):
 			# create an item, set its indexwidget
@@ -88,6 +93,7 @@ class SeqDexWidget(WpDexWidget):
 			QtWidgets.QAbstractItemView.AdjustToContents
 		)
 		libview.syncViewLayout(self.view)
+		#self.view.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
 
 
 	def buildLayout(self):
@@ -95,6 +101,8 @@ class SeqDexWidget(WpDexWidget):
 		#layout = QtWidgets.QVBoxLayout()
 		layout.addWidget(self.typeLabel)
 		layout.addWidget(self.view)
+		layout.setAlignment(self.typeLabel, QtCore.Qt.AlignTop)
+		layout.setContentsMargins(0, 0, 0, 0)
 		self.setLayout(layout)
 
 

@@ -30,6 +30,21 @@ TEST_ASSET_ROOT = TEST_TEMPEST_ROOT / "asset"
 
 TESTING = False
 
+ROOT_MARKER_NAME = "WEPRESENT_ROOT"
+
+def pathIsInDatabase(path:Path)->bool:
+	"""checks if a path is in the database - at each level of parent, check
+	if sibling files include the root marker file"""
+
+	while path != Path():
+		if not path.exists():
+			path = path.parent
+			continue
+		if path.joinpath(ROOT_MARKER_NAME).exists():
+			return True
+		path = path.parent
+	return False
+
 def setTesting(testing:bool):
 	"""sets the testing flag"""
 	global TESTING

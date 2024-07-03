@@ -52,6 +52,7 @@ if __name__ == '__main__':
 
 	#data = {"a": 1, "b": [6, {"b": "d"}], "c": 3}
 	data = [1, 2, 3, 4]
+	data = [1, 2, [5, [[2]], 5], 4]
 	#data = 9
 	widget = DemoWidget(data)
 	widget.show()

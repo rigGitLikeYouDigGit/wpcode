@@ -74,7 +74,7 @@ class WpTypeLabel(QtWidgets.QLabel):
 		else:
 			self.setText(self.closedText)
 
-class WpDexWidget(QtWidgets.QWidget, Adaptor):
+class WpDexWidget(QtWidgets.QFrame, Adaptor):
 	"""ui view for a WpDex object
 	many widgets for one WpDex
 	registered against WpDex type
@@ -98,6 +98,12 @@ class WpDexWidget(QtWidgets.QWidget, Adaptor):
 		self.buildChildWidgets()
 		self.buildExtraWidgets()
 		self.buildLayout()
+		# set border
+		#self.setStyleSheet("border: 1px solid black;")
+
+		self.setAppearance()
+
+
 
 	# def postInit(self):
 	# 	"""test as a manually-called post-init method to build widgets -
@@ -156,6 +162,8 @@ class WpDexWidget(QtWidgets.QWidget, Adaptor):
 		# else:
 		# 	self.typeLabel.hide()
 
+	def setAppearance(self):
+		"""runs after all setup steps"""
 
 	# others
 	def uiPath(self)->list[str]:

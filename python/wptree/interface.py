@@ -79,7 +79,7 @@ class TreeTraversalParams(TraversableParams):
 # 		self.propertyChanged = Signal()
 # 		self.structureChanged = Signal()
 
-ITEM_CHILD_LIST_T = VisitAdaptor.ITEM_CHILD_LIST_T
+ITEM_CHILD_LIST_T = VisitAdaptor.CHILD_LIST_T
 
 keyT = Traversable.keyT
 TreeType = T.TypeVar("TreeType", bound="TreeInterface")

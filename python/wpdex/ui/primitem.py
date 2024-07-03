@@ -34,4 +34,6 @@ class PrimDexWidget(WpDexWidget):
 		layout.addWidget(self.textbox)
 		self.setLayout(layout)
 
-
+	def setAppearance(self):
+		self.layout().setContentsMargins(0, 0, 0, 0)
+		#self.setContentsMargins(0, 0, 0, 0)
