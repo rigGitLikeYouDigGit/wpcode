@@ -30,19 +30,19 @@ to override them
 # register tree functions with type catalogue
 TreeTie = namedtuple("TreeTie", "name value aux")
 
-ChildType = DeepVisitor.ChildType
+#ChildType = DeepVisitor.ChildType
 
-class TreeBranch(ChildType.base()):
-	pass
-class TreeName(ChildType.base()):
-	pass
-class TreeValue(ChildType.base()):
-	pass
-class TreeAuxProperties(ChildType.base()):
-	pass
-for i in [TreeBranch, TreeName, TreeValue, TreeAuxProperties,
-          ]:
-	ChildType.addMember(i)
+# class TreeBranch(ChildType.base()):
+# 	pass
+# class TreeName(ChildType.base()):
+# 	pass
+# class TreeValue(ChildType.base()):
+# 	pass
+# class TreeAuxProperties(ChildType.base()):
+# 	pass
+# for i in [TreeBranch, TreeName, TreeValue, TreeAuxProperties,
+#           ]:
+# 	ChildType.addMember(i)
 
 def _treeChildObjectsFn(tree:TreeInterface):
 	return (

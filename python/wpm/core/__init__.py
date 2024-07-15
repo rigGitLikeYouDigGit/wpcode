@@ -18,13 +18,30 @@ from .api import (
 
 
 from .node import (
-	WN, createWN
+	WN
 )
 #from . import WN
 
-from .plug import PlugTree
+from .plugtree import PlugTree
 
 from .scene import getSceneGlobals, setupGlobals
 from wpm.core.callbackowner import CallbackOwner
 
-from . import attr
+from . import plug
+
+"""
+there are still quite a few areas to develop:
+
+PLUGS : 
+	- setting and retrieving correctly typed values from MPlugs
+	- check typing validity of nodes
+	- descriptors for __set__, rshift connection operators
+	- pathable syntax for slicing
+	- broadcasting 
+	
+NODES :
+	
+
+"""
+
+

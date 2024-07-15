@@ -1,5 +1,6 @@
 
 from __future__ import annotations
+import typing as T
 
 """unified file for any module-level caching operations
 run when maya loads -
@@ -8,12 +9,14 @@ caching functions run,
 also safer to modify those modules without polluting original maya
 """
 
+from collections import defaultdict, namedtuple
 import inspect, pprint
-import typing as T
 from dataclasses import dataclass
+import threading # cache api stuff as threaded jobs to avoid slow startup
 
 #from maya.api import OpenMaya as om, OpenMayaAnim as oma
 #from maya import cmds
+from wplib import log
 from .patch import cmds, om, oma, omr, omui
 
 @dataclass
@@ -36,12 +39,26 @@ conformNameMap = {
 	"Bool"
 }
 
+# for all api classes, allow looking up and retrieving the "kConstant" name,
+# as well as actual values
+def getApiConstantNameMap(cls)->dict[int, str]:
+	"""return a dict of { constant value : name } for all constants in the class"""
+	valueNameMap = {}
+	for name, value in inspect.getmembers(cls):
+		if not name.startswith("k"):
+			continue
+		if not isinstance(value, int):
+			continue
+		valueNameMap[value] = name
+	return valueNameMap
+
+
+if T.TYPE_CHECKING:
+	MFnT = T.Type[om.MFn, om.MFnBase]
 class APICache:
-	"""object encapsulating various api-related registers,
-	functionset maps
-
-	ok IN MY DEFENCE I didn't know about MObject.apiTypeStr
-
+	"""
+	cache useful relationships for MFn classes and Maya's
+	object type system
 	"""
 
 	def __init__(self):
@@ -50,39 +67,131 @@ class APICache:
 		# this has to be emptied when file is opened,
 		# as different MObjects pick up the same uids
 
-		""" { every api MFn int type constant : nearest matching MFn class object} """
-		self.apiTypeMap : dict[int, T.Type[om.MFn]] = {}
+		""" { MFn class apiType : MFn class }
+		ALL MFn classes in maya"""
+		self.apiTypeMFnMap : dict[int, MFnT] = {}
 
-		""" { every api MFn int type constant : nearest matching MFn int type constant } """
-		self.apiTypeCodeMap : dict[int, int] = {}
+		self.classConstantNameMaps : dict[MFnT, dict[int, str]] = {}
+		self.classNameConstantMaps : dict[MFnT, dict[str, int]] = {}
 
-		""" { every api MFn int type constant : nice name of that MFn constant}
-		eg:
-		{ 1002 : 'kKeyframeRegionManip' } """
-		self.apiCodeNameMap : dict[int, str] = {}
+	def classTypeIdNameMemberMap(self, MFnCls:MFnT)->dict[int, str]:
+		if MFnCls not in self.classConstantNameMaps:
+			typeNameMap, nameTypeMap = self.gatherClassConstantMaps(MFnCls)
+			self.classConstantNameMaps[MFnCls] = typeNameMap
+			self.classNameConstantMaps[MFnCls] = nameTypeMap
+			#print("built", MFnCls, typeNameMap, nameTypeMap)
+		return self.classConstantNameMaps[MFnCls]
 
-		self.apiTypeDataMap : dict[int, MFnTypeData] = {}
+	def classNameTypeIdMemberMap(self, MFnCls:MFnT)->dict[str, int]:
+		if MFnCls not in self.classNameConstantMaps:
+			typeNameMap, nameTypeMap = self.gatherClassConstantMaps(MFnCls)
+			self.classConstantNameMaps[MFnCls] = typeNameMap
+			self.classNameConstantMaps[MFnCls] = nameTypeMap
+		return self.classNameConstantMaps[MFnCls]
 
-		# type constants for shape nodes
-		self.shapeTypeConstants : set[int] = {getattr(om.MFn, name) for name in shapeTypeConstantNames}
+	def buildCache(self):
+		"""build everything at startup - see if there's a way
+		to thread this"""
+		# gather all MFn classes to work with
+		self.apiTypeMFnMap = self.gatherMFnClasses()
+		# log("apiTypeMFnMap")
+		# pprint.pp(self.apiTypeMFnMap) # works
 
-		# map of kName to MFnData class object - kVectorArray to MFnVectorArrayData
-		self.mfnDataConstantTypeMap : dict[str, T.Type[om.MFnData]] = {}
+		# run the big name maps
+		mfnMap = self.classTypeIdNameMemberMap(om.MFn)
+		# mfnBaseMap = self.classTypeIdNameMemberMap(om.MFnBase)
+		# pprint.pp(mfnMap)
+		#
+		# pprint.pp(mfnBaseMap)
+		#pprint.pp(self.classTypeIdNameMemberMap(om.MFnNumericData))
 
-		self.dhGetMethods : dict[str, T.Callable] = {}
-		self.dhSetMethods : dict[str, T.Callable] = {}
-		self.dhNumericTypeGetMethodMap : dict[int, T.Callable] = {}
-		self.dhNumericTypeSetMethodMap : dict[int, T.Callable] = {}
-		self.unitAttrPlugMethodMap = {
-			om.MFnUnitAttribute.kDistance: (om.MPlug.asDouble, om.MPlug.setDouble),
-			om.MFnUnitAttribute.kTime: (om.MPlug.asMTime, om.MPlug.setMTime),
-			om.MFnUnitAttribute.kAngle: (om.MPlug.asMAngle, om.MPlug.setMAngle),
-		}
 
-		self.numericAttrPlugMethodMap = {
-			("kLong", "kShort", "kInt", "kBoolean"): (om.MPlug.asInt, om.MPlug.setInt),
-			("kFloat", "kDouble"): (om.MPlug.asDouble, om.MPlug.setDouble)
-		}
+
+	def gatherMFnClasses(self) -> dict[int, type[om.MFn, om.MFnBase]]:
+		"""return { apiType : MFnClass } for all MFn classes
+		"""
+		abstractClasses = (om.MFn, om.MFnBase)
+		mfnCodeClassMap = {-2 : om.MFn,
+		                   -1 : om.MFnBase}
+		# extract all MFn classes and index them by their type constant
+		for k, v in (
+				inspect.getmembers(om)
+				+ inspect.getmembers(oma)
+				+ inspect.getmembers(omui)
+				+ inspect.getmembers(omr)
+		):
+			if not isinstance(v, type):
+				continue
+			if not issubclass(v, om.MFnBase):
+				continue
+			if v in abstractClasses: # raise error if you try to instantiate
+				continue
+			classId = v().type()
+			mfnCodeClassMap[classId] = v
+		return {k : mfnCodeClassMap[k] for k in sorted(mfnCodeClassMap.keys())}
+
+	def gatherClassConstantMaps(self, gatherCls)->tuple[dict[int, str], dict[str, int]]:
+		"""gather static constants like "kDouble" from classes
+		if no lemma is provided, reverts to checking for "k" at start of attrs
+		returns { constant value : name }
+
+		INHERITED class constants can REUSE TYPE IDs in the PARENT :)
+		"""
+		valueNameMap = {}
+		nameValueMap = {}
+		members = inspect.getmembers(gatherCls)
+		#print("gatherCls", gatherCls, gatherCls.__bases__)
+		if gatherCls.__bases__:
+			members = set(members) - set(inspect.getmembers(gatherCls.__bases__[0]))
+		for name, value in sorted(
+				members,
+				key=lambda x: x[1] if isinstance(x[1], int) else 0
+		):
+			#print("check ", name, value)
+			if not name.startswith("k"):
+				continue
+			valueNameMap[value] = name
+			nameValueMap[name] = value
+		return valueNameMap, nameValueMap
+
+
+	def getCompatibilityMaps(self, mfnCodeClassMap:dict[int, MFnT],
+	                        constants:dict[str, int]):
+		"""build map of hasType() compatibility for available classes.
+		Don't think there's a way to avoid NxM complexity,
+		checking every constant against
+		every class
+
+		maybe there's a more structured way of passing this around,
+		for now return 3 results i guess
+		"""
+		# first pass: get all MFns compatible with given constant
+		typeMFnListMap : dict[int : list[MFnT]] = defaultdict(list)
+		mfnTypeListMap : dict[MFnT, list[int]] = defaultdict(list)
+		for mfnCode, cls in mfnCodeClassMap.items():
+			if cls == om.MFnBase:
+				continue
+			for name, code in constants.items():
+				if not name.startswith("k"):
+					continue
+				if cls().hasObj(code):
+					typeMFnListMap[code].append(cls)
+					mfnTypeListMap[cls].append(code)
+
+		for cls, typeList in mfnTypeListMap.items():
+			typeList.sort(
+				key=lambda x: len(typeMFnListMap[x]))
+
+		for typeConstant, clsList in typeMFnListMap.items():
+			clsList.sort(
+				key=lambda x: len(mfnTypeListMap[x]), reverse=True)
+
+		# get lowest leaf MFn classes to prefer lookup
+		typeLeafMFnMap = {k : v[-1] for k, v in typeMFnListMap.items()}
+
+		return typeMFnListMap, mfnTypeListMap, typeLeafMFnMap
+
+
 
 	@staticmethod
 	def MObjectHash(obj)->int:
@@ -90,9 +199,13 @@ class APICache:
 		the ls uid method"""
 		return om.MObjectHandle(obj).hashCode()
 
-	def getMObject(self, node)->om.MObject:
+	def getMObjectCached(self, node)->om.MObject:
 		"""this is specialised for dg nodes -
 		component MObjects will have their own functions anyway if needed
+		TODO: rework this good grief
+			in general getting persistent MObjects is dodgy, the only time
+			we want to do it is in the WN system - maybe we just do a normal
+			getMObject function like every other sane person
 		"""
 		if isinstance(node, om.MObject):
 			if node.isNull():
@@ -104,43 +217,14 @@ class APICache:
 			except:
 				pass
 
-		# cmds call here is VERY cringe
-		uid = cmds.ls(node, uuid=1)[0]
-
-		if self.mObjRegister.get(uid):
-			obj = self.mObjRegister[uid]
-			if not obj.isNull():
-				return obj
 		sel = om.MSelectionList()
 		sel.add(node)
 		obj = sel.getDependNode(0)
 		if obj.isNull():
 			raise RuntimeError("object for ", node, " is invalid")
 
-		self.mObjRegister[uid] = obj
 		return obj
 
-	def gatherClassConstantMaps(self, gatherCls):
-		"""gather static constants like "kDouble" from classes
-		if no lemma is provided, reverts to checking for "k" at start of attrs
-		returns { constant value : name }
-		"""
-		valueNameMap = {}
-		for name, value in inspect.getmembers(gatherCls):
-			if not name.startswith("k"):
-				continue
-			valueNameMap[value] = name
-		return valueNameMap
-
-	# mFnCollectMap = {
-	# 	om.MFnTransform : (om.MFn.kTransform, om.MFn.kJoint, om.MFn.kDagNode),
-	# 	om.MFnMesh : (om.MFn.kMesh, om.MFn.kMeshGeom),
-	# 	om.MFnNurbsSurface : (om.MFn.kNurbsSurface, om.MFn.kNurbsSurfaceGeom,),
-	# 	om.MFnNurbsCurve : (om.MFn.kNurbsCurve, om.MFn.kNurbsCurveGeom,
-	# 	                    om.MFn.kBezierCurve),
-	# 	om.MFnCamera : (om.MFn.kCamera,)
-	#
-	# }
 
 	#print("api begin typemap")
 	def generateApiTypeMap(self):

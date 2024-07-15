@@ -37,6 +37,7 @@ def mfnDataConstantTypeMap():
 # test to access all members of all MFn types
 
 if T.TYPE_CHECKING:
+	from wpm.core.bases import PlugBase
 	class MFMFnT(om.MFnDependencyNode,
 	             # give
 	             om.MFnDagNode,
@@ -84,6 +85,17 @@ def getMObject(node)->om.MObject:
 	component MObjects will have their own functions anyway if needed
 	"""
 	return getCache().getMObject(node)
+
+def getMPlug(plug:(str, om.MPlug, PlugBase))->om.MPlug:
+	if isinstance(plug, om.MPlug): return om.MPlug(plug)
+	if isinstance(plug, str):
+		sel = om.MSelectionList()
+		sel.add(plug)
+		return sel.getPlug(0)
+	if isinstance(plug, PlugBase):
+		return plug.MPlug
+	raise TypeError(f"getMPlug: invalid arg {plug} type {type(plug)}")
+
 
 def nodeTypeFromMObject(mobj:om.MObject):
 	"""return a nodeTypeName string that can be passed to cmds.createNode

@@ -15,7 +15,7 @@ from pathlib import Path
 # import the node base / mixin for instance checking
 #from . import bases as mod
 #reload(mod)
-from wpm.core.bases import NodeBase
+from wpm.core.bases import NodeBase, PlugBase
 
 
 # let sets be hashable
@@ -143,6 +143,7 @@ def wrapCmdFn(fn):
 	# print("wrapping cmd", fn.__name__)
 	fnName = fn.__name__
 	typeMap = {NodeBase : str,
+	           PlugBase : str,
 	           set : list} # can add entries for pm nodes, cmdx etc
 	fn = typeSwitchParamsPatch(fn, typeMap)
 
@@ -166,8 +167,8 @@ def _cmdsGetAttribute_(module, name):
 	"""
 
 	# check cache for wrapped function
-	if name in wrappedCache:
-		return wrappedCache[name]
+	found = wrappedCache.get(name, None)
+	if found: return found
 
 	# no wrapped exists - retrieve it, wrap it, cache it
 	found = object.__getattribute__(module, name)

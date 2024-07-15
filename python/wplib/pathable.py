@@ -4,6 +4,7 @@ from __future__ import annotations
 import typing as T
 
 from copy import deepcopy
+import fnmatch
 
 from wplib.object import Adaptor
 from wplib.log import log
@@ -17,7 +18,9 @@ try
 try
 try
 try
-try"""
+try
+
+but I think we're finally getting somewhere"""
 
 
 
@@ -34,9 +37,17 @@ class Pathable(Adaptor):
 	access flag is not optional - one=true returns a single result, one=false wraps it in a list
 	no no COMBINE results based on given operators - First by default
 
-	INHERITANCE is tough - to add new semantics for access and pathing,
-	you would need to subclass Pathable, and then redeclare every child class separately
-	very cringe
+	main pathing logic for slicing, wildcarding etc should work the same across
+	any class - searching requires all entries to be known for linux-style
+	root/**/leaf recursive
+
+	how would we manage multiple wildcards in the same query, that might
+	only be defined by the adaptor for one object type?
+
+	root/**/branch/array[:4]/leaf ?
+	where only the ArrayPathable adaptor has any idea what slicing means
+
+
 
 	"""
 
@@ -44,7 +55,7 @@ class Pathable(Adaptor):
 		"""operators to flatten multiple results into one"""
 		class _Base(TypeNamespace.base()):
 			@classmethod
-			def flatten(cls, results:list[T.Any])->T.Any:
+			def flatten(cls, results:(list[T.Any], list[Pathable]))->T.Any:
 				"""flatten results"""
 				raise NotImplementedError(cls, f"no flatten for {cls}")
 
@@ -62,6 +73,12 @@ class Pathable(Adaptor):
 	keyT = T.Union[str, int]
 	keyT = T.Union[keyT, tuple[keyT, ...]]
 	pathT = T.List[keyT]
+
+
+	@classmethod
+	def searchChars(cls)->list[str]:
+		"""return characters to look for in queries that
+		require"""
 
 
 	def __init__(self, obj, parent:DictPathable=None, key:T.Iterable[keyType]=None):
@@ -241,7 +258,32 @@ class SeqPathable(Pathable):
 	def _buildChildren(self):
 		return [self.makeChildPathable((i,), v) for i, v in enumerate(self.obj)]
 	def _consumeFirstPathTokens(self, path:pathT) ->tuple[list[Pathable], pathT]:
-		"""process a path token"""
+		"""process a path token
+
+		how to do slicing, if a slice is given as
+		"array[2:5]"
+		or "array", "2:5"
+
+		SEPARATE matching and checking against path, IN SEQUENCE for each
+		separate path token?
+
+		a/b/**/e/f[2:5]/g/**/leaf
+
+		return all paths matching a
+		of those, all then matching b
+		of those, all matching a big wildcard
+
+		3 values for each anim clip
+		weight, speed, offset
+
+		consider single little widget for each? for later,
+		channelbox is cool for now
+		literally change speed by visualising length of clip as a box,
+		offset by moving clip back and forth,
+		careful that it doesn't confuse with the actual graph profile of the attributes,
+		don't try and represent timing, blending etc
+
+		"""
 		token, *path = path
 		# if isinstance(token, int):
 		# 	return [self.children[token]], path

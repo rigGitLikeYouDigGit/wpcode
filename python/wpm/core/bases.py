@@ -6,6 +6,10 @@ openmaya is probably fine though
 
 consider this forward-declaration
 with python characteristics
+
+the alternative to bases would be a try/except to check for
+the attributes in methods, but if/else seems slightly
+faster
 """
 
 
@@ -36,9 +40,11 @@ class NodeBase(object):
 
 class PlugBase(object):
 
-	@property
-	def MPlug(self):
-		raise NotImplementedError
+	MPlug : om.MPlug
+
+	# @property
+	# def MPlug(self):
+	# 	raise NotImplementedError
 	pass
 
 

@@ -42,6 +42,7 @@ from .core import (
 	WN,
 	PlugTree,
 	getSceneGlobals, # scene wrappers
+	api
 
 )
 

@@ -2,9 +2,13 @@
 from __future__ import annotations
 import typing as T
 import ast
+from typing import TypedDict, NamedTuple
+from collections import namedtuple
+
+import numpy as np
 
 # tree libs for core behaviour
-from wptree import Tree
+#from wptree import Tree
 from wplib.object import Signal
 from wplib.inheritance import iterSubClasses
 from wplib.string import camelJoin
@@ -14,13 +18,13 @@ from wplib.sequence import toSeq, firstOrNone
 
 # maya infrastructure
 from wpm.constant import GraphTraversal, GraphDirection, GraphLevel, WPM_ROOT_PATH
-from ..bases import NodeBase
+from ..bases import NodeBase, PlugBase
 from ..callbackowner import CallbackOwner
 from ..patch import cmds, om
 from ..api import getMObject, getMFn, asMFn, getMFnType
-from .. import api, attr
+from .. import api, plug
 
-from ..plug import PlugTree
+#from ..plugtree import PlugTree
 from ..namespace import NamespaceTree, getNamespaceTree
 
 
@@ -83,60 +87,242 @@ class RampPlug(object):
 		""":rtype : RampPlug._Point"""
 		return self._Point(self.root, id)
 
-class Plug:
-	"""base class for plugs"""
+class PlugMeta(type):
+	"""
+	replicate the same dynamic class lookup of the
+	WN node metaclass for plugs
+	"""
+	# register maps for all plugs
+	plugTypeMap : dict[int, T.Type[Plug]] = {}
 
-	if T.TYPE_CHECKING:
+	# def __getattr__(self, item:str):
+	# 	"""return a class for a specific node type
+	#
+	# 	WN.Transform -> look up Transform node class
+	# 	"""
+	# 	#look for WN.Transform, WN.Mesh etc
+	# 	if item[0].isupper():
+	# 		return self.retriever.getNodeCls(item)
+	# 	raise AttributeError(f"no attribute {item}")
 
-		MFn : MFMFnT
 
-		def __getitem__(self, item)->Plug:
-			"""return child plug from string
-			type-checking specialcase -
+	@staticmethod
+	def wrapperClassForMPlug(MPlug: om.MPlug):
+		"""return a wrapper class for the plug -
+		"""
+		return WN.apiTypeClassMap().get(mobj.apiType(), WN)
+	# endregion
 
-			to keep type-hinting working, we need to
-			return parent plug for arrays,
-			to allow string slicing, etc
-			"""
-			return self
+
+	def __call__(cls, plug:(om.MPlug, str), **kwargs)->WN:
+		""" get right plug subclass from MPlug,
+		to get and set data by consistent interface
+		"""
+		# filter to MPlug - in case somehow the incorrect wrapper is used
+		mplug = api.getMPlug(plug)
+
+		print("get class for plug", mplug, type(mplug))
+
+		wrapCls = MatrixPlug
+
+		print("found cls", wrapCls)
+
+		# create instance
+		ins = super(PlugMeta, wrapCls).__call__(mplug, **kwargs)
+		return ins
+
+class ApiType(NamedTuple):
+	int : int
+	str : str
+
+	@classmethod
+	def fromMObj(cls, obj:om.MObject):
+		return cls(obj.apiType(), obj.apiTypeStr())
+	@classmethod
+	def fromConstant(cls, constant:int, holderClass:type[om.MFn]):
+		pass
+
+class MDataHandleFn:
+	"""helpers for MDataHandle getting and setting
+	for different types"""
+
+#class Plug[isArray:T.Literal[False, True]]:
+class Plug(PlugBase, metaclass=PlugMeta):
+	"""base class for plugs
+
+	for setting, take inspiration from normal variable
+	assignment:
+	a = 1
+	b = 2
+	plug.set(3)
+	plug << 4
+
+	this goes completely against the intuition of left-to-right
+	data flow, but maybe it's worth it for consistent syntax
+
+	"""
+
+	# identification constants
+	apiTypeStr : str = None # plug.attribute().apiTypeStr
+	apiType : int = None # plug.attribute().apiType
+
+	subtype = None
+
+	VALUE_T = T.Any # type of value to retrieve from plug
+	# if isArray:
+	# 	VALUE_T = T.List[VALUE_T]
+
+	def value(self)->VALUE_T:
+		"""return value from plug - if compound, recurse
+		into it and return list"""
+		raise NotImplementedError
+	def _getValue(self)->VALUE_T:
+		"""internal method to retrieve value from leaf plug"""
+		raise NotImplementedError
+	def valueNP(self)->np.ndarray:
+		"""return value as numpy array"""
+		return np.array(self.value())
+	def valueMPoint(self)->om.MPoint:
+		return om.MPoint(self.value())
+	def valueMVector(self)->om.MVector:
+		return om.MVector(self.value())
+	def valueMMatrix(self)->om.MMatrix:
+		return om.MMatrix(self.value())
+
+	def _setValue(self, value:VALUE_T):
+		"""set value on plug -
+		internal method called by set() """
+		raise NotImplementedError
+
+	def dataObject(self)->om.MObject:
+		"""return data MObject from plug - used
+		to pass into MFnData objects"""
+		# handle : om.MDataHandle = self.MPlug.constructHandle()
+		# obj = handle.data()
+		# self.MPlug.destructHandle(handle)
+		#return obj
+		return self.MPlug.asMObject()
+
+	def MFnData(self)->om.MFnData:
+		"""return MFnData object from plug"""
+		raise NotImplementedError
+
+	def __init__(self, MPlug:om.MPlug):
+		self.MPlug = MPlug
+
+	def __repr__(self):
+		return f"<{self.__class__.__name__} ({self.MPlug.name()})>"
 
 	def plug(self, s:str)->Plug:
 		"""return child plug from string"""
+		return self
 
-class FloatPlug(Plug):
-	"""object to represent a float plug"""
-	MFn : om.MFnNumericAttribute
+	def node(self)->WN:
+		"""return parent node"""
+		pass
 
-class IntPlug(Plug):
-	"""object to represent an int plug"""
-	MFn : om.MFnNumericAttribute
+	def set(self, arg:(Plug, str)):
+		"""top-level method to set this plug's value,
+		or connect another live plug to it"""
 
-class BoolPlug(Plug):
-	"""object to represent a boolean plug"""
-	MFn : om.MFnNumericAttribute
+	def __lshift__(self, other:(Plug, T.Any)):
+		"""connect other plug to this one"""
+		self.set(other)
 
-class StringPlug(Plug):
-	"""object to represent a string plug"""
-	MFn : om.MFnTypedAttribute
+		pass
+	# def __rlshift__(self, other):
+	# 	pass
+
+class CompoundPlug(Plug):
+	"""plug for compound attributes,
+	return a namedtuple by default - allow returning as dict
+	"""
+
+	apiType = om.MFn.kCompoundAttribute
+
+	VALUE_T : NamedTuple = None
+	def _generateTypeTuple(self)->NamedTuple:
+		"""return a named tuple type for this plug -
+		used if the plug type is not statically defined"""
+		return namedtuple(
+			"CompoundValue",
+		    [self.child(i).name() for i in range(self.numChildren())])
+	def value(self) ->VALUE_T:
+		"""it might be too complex to pass through the numpy-ness of
+		the values"""
+		if self.VALUE_T is None:
+			self.VALUE_T = self._generateTypeTuple()
+		return self.VALUE_T(
+			*[Plug(self.MPlug.child(i)).value()
+			  for i in range(self.MPlug.numChildren())])
+
+class NumericPlug(Plug):
+	apiType = om.MFn.kNumericAttribute
+
+	VALUE_T = list[(int, float)]
+
+	def value(self) ->VALUE_T:
+		# mfnData = om.MFnNumericData(
+		# 	self.MPlug.asMDataHandle().data()		)
+		# DON'T DO THIS ^ it crashes maya
+		return om.MFnNumericData(self.MPlug.asMObject()).getData()
+
+class MatrixPlug(Plug):
+	"""do we add numpy to this"""
+	VALUE_T = om.MMatrix
+	apiType = om.MFn.kMatrixAttribute
+	def MFnData(self) ->om.MFnMatrixData:
+		return om.MFnMatrixData(self.dataObject())
+	def value(self) ->VALUE_T:
+		#return self.MFnData().matrix()
+		return self.MPlug.constructHandle().asMatrix()
+	def valueNP(self)->np.ndarray:
+		return np.array(self.value()).reshape(4, 4)
+	def _setValue(self, value:VALUE_T):
+		"""I don't think it's safe to set the MDataHandle directly
+		"""
+		self.MPlug.setMObject(om.MFnMatrixData().create(
+			om.MMatrix(value)))
+		#self.MPlug.setMObject(om.MFnMatrixData().create(value))
+
+class UnitPlug(Plug):
+	apiType = om.MFn.kUnitAttribute
 
 class EnumPlug(Plug):
-	"""object to represent an enum plug"""
-	MFn : om.MFnEnumAttribute
+	apiType = om.MFn.kEnumAttribute
 
-class MessagePlug(Plug):
-	"""object to represent a message plug"""
-	MFn : om.MFnMessageAttribute
+class TypedPlug(Plug):
+	apiType = om.MFn.kTypedAttribute
 
-# complex datatypes
-class MatrixPlug(Plug):
-	"""object to represent a matrix plug"""
-	MFn : om.MFnMatrixAttribute
-	MFnData : om.MFnMatrixData
+class NurbsCurvePlug(TypedPlug):
+	subtype = om.MFnData.kNurbsCurve
+class MeshPlug(TypedPlug):
+	subtype = om.MFnData.kMesh
+class NurbsSurfacePlug(TypedPlug):
+	subtype = om.MFnData.kNurbsSurface
+class FloatArrayPlug(TypedPlug):
+	subtype = om.MFnData.kFloatArray
+class IntArrayPlug(TypedPlug):
+	subtype = om.MFnData.kIntArray
+class VectorArrayPlug(TypedPlug):
+	subtype = om.MFnData.kVectorArray
+class PointArrayPlug(TypedPlug):
+	subtype = om.MFnData.kPointArray
+class MatrixArrayPlug(TypedPlug):
+	subtype = om.MFnData.kMatrixArray
+class LatticePlug(TypedPlug):
+	subtype = om.MFnData.kLattice
+class StringPlug(TypedPlug):
+	subtype = om.MFnData.kString
+class StringArrayPlug(TypedPlug):
+	subtype = om.MFnData.kStringArray
+class FalloffFunctionPlug(TypedPlug):
+	subtype = om.MFnData.kFalloffFunction
 
 
-
-class PlugSlice:
+class PlugSlice(Plug):
 	"""object to represent a slice of a plug tree
+	Weird inheritance but maybe it works
 	"""
 
 class PlugDescriptor:
@@ -149,8 +335,16 @@ class PlugDescriptor:
 	def __get__(self,  instance:(Plug, WN), owner)->Plug:
 		return instance.plug(self.name)
 	# # TEMP
-	def __set__(self, instance, value):
+	def __set__(self, instance:(Plug, WN),
+	            value:(Plug, WN, T.Any )):
+		try:
+
+			instance.plug(self.name) << value.plug()
+			return
+		except AttributeError:
+			pass
 		instance.plug(self.name).set(value)
+
 
 
 # nodes
@@ -177,6 +371,8 @@ def filterToMObject(node)->om.MObject:
 		pass
 
 	raise TypeError("Could not get MObject from {}".format((node, type(node))))
+
+def filterToMPlug():
 	pass
 
 

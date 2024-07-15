@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from wplib import log
 
 from wpm import om, cmds, createWN, PlugTree, WN
-from wpm.core import attr
+from wpm.core import plug
 
 termType = (PlugTree, om.MPlug, tuple, list, float, int, str, bool)
 

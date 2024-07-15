@@ -1,443 +1,877 @@
+
+
+"""core functions for MPlugs"""
+
 from __future__ import annotations
 
 import typing as T
 
-from wptree import TreeInterface
-from wplib.sequence import flatten
-from wplib.object import UnHashableDict
+from enum import Enum
 
-#from setFnMap
-from .cache import om
-from . import bases, attr
+import copy, fnmatch, re
+
+from collections import defaultdict, namedtuple
+from typing import TypedDict, NamedTuple
+from dataclasses import dataclass
+
+from wplib import log, Sentinel
+from wplib.string import sliceFromString
+from wplib.sequence import flatten, isSeq
+from wplib.object import TypeNamespace
+from wptree import Tree
+
+from .bases import PlugBase
+from .api import getMFn, mfnDataConstantTypeMap, getMObject
+from .cache import getCache, om
+
 
 if T.TYPE_CHECKING:
-	from wpm import WN
+	pass
 
-# def getPlugInput(plug:om.MPlug)->om.MPlug:
-# 	"""return the input plug of the given plug
-# 	"""
-# 	return plug.source()
 
-class PlugMeta(type):
-	"""Metaclass to initialise plug wrapper from mplug
-	or from string"""
-	objMap = UnHashableDict()
-
-	def __call__(cls, plug:T.Union[str, om.MObject, WN])->WN:
-		"""check if existing plug object exists
-		"""
-
-		if isinstance(plug, PlugTree):
-			return plug
-		# filter input to MPlug
-		mPlug = None
-		if isinstance(plug, om.MPlug):
-			mPlug = plug
-
-		elif isinstance(plug, str):
-			# raw string of "nodeA.translate"
-			assert "." in plug, "invalid plug name given: {} - must include a node name first".format(plug)
-			#node = plug.split(".")[0]
-			# tokens = ".".join(plug.split(".")[1:])
-			mPlug = attr.getMPlug(plug)
-
-		# no caching for now, found it to be more trouble than it's worth
-		plug = super(PlugMeta, cls).__call__(mPlug)
+def getMPlug(plug, default=Sentinel.FailToFind)->om.MPlug:
+	if isinstance(plug, om.MPlug):
 		return plug
+	try:
+		return plug.MPlug
+	except AttributeError:
+		pass
+	try:
+		return plug.plug()
+	except AttributeError:
+		pass
 
-		# check for (node, plug) tie in register
-		tie = (mPlug.node(), mPlug.name().split(".")[1:])
+	# check for initialising with (node object, attr object)
+	if isinstance(plug, (tuple, list)):
+		return om.MPlug(plug[0], plug[1])
 
-		if tie not in PlugMeta.objMap:
-			plug = super(PlugMeta, cls).__call__(mPlug)
-			#plug = PlugTree(mPlug)
-			PlugMeta.objMap[tie] = plug
-		return PlugMeta.objMap[tie]
+	if not isinstance(plug, str):
+		raise TypeError(f"cannot retrieve MPlug from argument {plug} of type {type(plug)}")
+	try:
+		sel = om.MSelectionList()
+		sel.add(plug)
+		return sel.getPlug(0)
+	except RuntimeError:
+		if default is Sentinel.FailToFind:
+			raise NameError(f"cannot retrieve MPlug from string {plug}")
+		return default
 
-		#
-		# elif isinstance(plug, str): # passed "node.translate"
-		# 	ass
-		# else:
-		# 	print("mobj", node, type(node))
-		#
-		# # check if MObject is known
-		# if mobj in NodeMeta.objMap:
-		# 	# return node object associated with this MObject
-		# 	return NodeMeta.objMap[mobj]
-		#
-		# # get specialised WN subclass if it exists
-		# postInitWrap = NodeMeta.wrapperClassForMObject(mobj)
-		#
-		# # create instance
-		# ins = super(NodeMeta, postInitWrap).__call__(mobj)
-		# # add to MObject register
-		# NodeMeta.objMap[mobj] = ins
-		# return ins
+# region querying and structure
+class HType: # maybe this should be a proper Enum
+	Leaf = 1
+	Compound = 2
+	Array = 3
 
-TreeType = T.TypeVar("TreeType", bound="PlugTree") # type of the current class
+def plugHType(mPlug:om.MPlug)->int:
+	return HType.Array if mPlug.isArray else (HType.Compound if mPlug.isCompound else HType.Leaf)
 
-class PlugTree(
-	#Tree,
-	TreeInterface,
-    bases.PlugBase,
-			   ):
-	"""specialised tree for interfacing with Maya plugs
-	name is attribute name,
-	value is lambda to look up plug value
-	look up children lazily on demand
+def plugSubPlugs(mPlug:om.MPlug):
+	if mPlug.isArray:
+		return [mPlug.elementByPhysicalIndex(i)
+		        for i in range(mPlug.numElements())]
+	if mPlug.isCompound:
+		return [mPlug.child(i) for i in range(mPlug.numChildren())]
+	return []
 
-	attr lib operates on mplugs, defines logic for NtoN
-	connections
-	tree only implements it
-
-	for now assume no data will ever be saved with this object,
-	should be transient
-
-	array plugs work like:
-	array attr
-	+- [1]
-		+- translate
-			+- translateX
+def subPlugMap(mPlug)->dict[(int, str), om.MPlug]:
+	"""map of all child / element plugs available here
+	if array, return { logical index : plug }
+	if compound, return {local plug name : plug }
 
 	"""
+	if mPlug.isArray:
+		return {index : mPlug.elementByLogicalIndex(index)
+		        for index in mPlug.getExistingArrayAttributeIndices()}
+	if mPlug.isCompound:
+		return {mPlug.child(i).name().split(".")[-1] : mPlug.child(i)
+		        for i in range(mPlug.numChildren())}
+	return {}
 
-	rootName = "plugRoot"
+def parentPlug(mPlug:om.MPlug)->om.MPlug:
+	return mPlug.array() if mPlug.isElement else(
+		mPlug.parent() if mPlug.isChild else None
+	)
 
-	trailingChar = "+" # signifies uncreated trailing plug index
-	separatorChar =  "."
+class PlugData(NamedTuple):
+	"""test caching structural data to cut down on iteration -
+	obviously becomes invalid after structural changes"""
+	#name : str
+	hType : int
+	subPlugMap : dict[(int, str), om.MPlug]
 
-	def __init__(self,
-				 plug:T.Optional[om.MPlug, str],
-				 #_node:om.MObject=None,
-				 #_nodeMFn:om.MFn=None,
-				 ):
-		""""""
-		TreeInterface.__init__(self)
+	@classmethod
+	def get(cls, mPlug:om.MPlug):
+		return PlugData(
+			#plug.name(),
+			plugHType(mPlug),
+			subPlugMap(mPlug)
+		                )
 
-		self._MPlug = plug
-		self.hType : attr.HType = attr.plugHType(self.MPlug)
-		#self._parent : PlugTree = _parent # parent reference to reuse persistent tree objects
+# class PlugInterface:
+# 	"""small (singleton?) classes to give uniform interfaces for
+# 	setting/getting plugs"""
 
-	@property
-	def MPlug(self)->om.MPlug:
-		return self._MPlug
+def ensureOneArrayElement(plug:om.MPlug):
+	"""ensure at least one element in array
+	the logic behind this is super sketchy -
+	maya plug arrays are sparse, with the "logical" index being the "nice" index,
+	and the "physical" index being the real dense index of the value
+	(normally hidden from the user)
 
-	@property
-	def node(self)->WN:
-		"""WN is imported within function to avoid dependency loop
-		should top node should also be plug root?
-		No - it is more useful to have each top-level plug be its own root
-		"""
-		from wpm.core import WN
-		return WN(self.MPlug.node())
+	accessing an empty array or adding new entry
+	with physical values doesn't work, since
+	no physical entries exist, so the first access has to be logical
 
+	after that, we will probably still use the logical index to
+	maintain parity with whatever is displayed in maya's ui
 
-	#region tree integration
-	def getName(self) ->str:
-		"""test for allowing plugs to have int names, not just strings"""
-		result = attr.splitPlugLastNameToken(self._MPlug)
-		if self.MPlug.isElement:
-			return int(result)
-		return result
+	some "simple" numeric attributes don't accept setting with MObject
 
-	def getParent(self) ->PlugTree:
-		parentPlug = attr.parentPlug(self.MPlug)
-		if parentPlug is None:
-			return None
-		return PlugTree(parentPlug)
-
-
-	def getBranches(self) ->list[PlugTree]:
-		return [ PlugTree(v) for k, v in attr.subPlugMap(self.MPlug).items()]
-
-
-	def __eq__(self, other:PlugTree):
-		return self.MPlug is other.MPlug
-
-	def __str__(self):
-		return self.stringAddress()
-
-	def __hash__(self):
-		return hash((self.node, self.MPlug.name()))
-
-	def stringAddress(self, includeRoot=True) -> str:
-		"""reformat full path to this plug
-		"""
-		trunk = self.trunk(includeSelf=True,
-		                   includeRoot=includeRoot,
-		                   )
-		s = ""
-		for i in range(len(trunk)):
-			s += str(trunk[i].name)
-			if i != (len(trunk) - 1):
-				s += trunk[i].separatorChar
-
-		return s
-
-	def __repr__(self):
-		return f"<PlugTree {str(self.MPlug.name())}>"
-
-	@property
-	def isLeaf(self)->bool:
-		return not any((self.MPlug.isCompound, self.MPlug.isArray))
-
-
-	def __call__(self, *address, _parsedAddress=None,
-	             _addressExpands=None,
-	             **kwargs)->(PlugTree, list[PlugTree]):
-		""" parses lookup to return child plugs
-		was just easier to override this entirely
-
-		check first for array, then compound
-
-		a compound array parent plug classes as both array and compound,
-		but a compound array element plug is only compound
-
-		_parsedAddress passed after tokens have been parsed the first time
-
-		if any match or slice tokens are found, a list will be returned -
-		else a single PlugTree
-
-		"""
-		if _parsedAddress is None:
-			_parsedAddress = attr.parseEvalPlugTokens(attr.splitPlugTokens(*address))
-			_addressExpands = attr.checkLookupExpands(address)
-
-		#print("parsed address", _parsedAddress, "expands", _addressExpands)
-
-		if not _parsedAddress:
-			return self
-
-		# if plug has no elements or children, this call is in error
-		elif self.isLeaf:
-			raise TypeError("No child plugs for simple plug", self.MPlug.name())
-
-		currentToken = _parsedAddress.pop(0)
-		plugs = attr.plugLookupSingleLevel(self.MPlug, token=currentToken)
-
-		if plugs is None:
-			raise KeyError("Incorrect token sequence {} for plug {}, check your calls".format(_parsedAddress, self.MPlug))
-
-		# catch case where index is explicitly given for last array plug
+	"""
+	if not plug.numElements():
+		elPlug = plug.elementByLogicalIndex(0)
 		try:
-			currentToken = int(currentToken)
-			if currentToken == len(plugs):
-				attr.newLastArrayElement(self.MPlug)
-		except ValueError:
-			pass
-
-		# looking up or create corresponding branches
-		resultBranches = []
-		for plug in plugs:
-			plugName = attr.splitPlugLastNameToken(plug)
-			try:
-				plugName = int(plugName)
-			except ValueError:
-				pass
-			if not self.getBranch(plugName):
-				newBranch = PlugTree(plug)
-				#self.addChild(newBranch)
-			try:
-				resultBranches.append(self.branchMap[plugName])
-			except KeyError:
-				print( "key error", plugName, type(plugName), self.branchMap)
-				raise
-			#resultBranches.append(self.branchMap[plugName])
-
-		# recurse if further tokens remain
-		if _parsedAddress:
-			# pass further calls into each found branch
-			resultBranches = flatten(branch(_parsedAddress=_parsedAddress,
-			                             _addressExpands=_addressExpands)
-			                      for branch in resultBranches)
-		return resultBranches if _addressExpands else resultBranches[0]
-
-	# endregion
-
-	def recache(self):
-		"""dirty hack for testing"""
-		try:
-			PlugMeta.objMap.pop(((self.MPlug.node(), self.MPlug.name().split(".")[1:])))
+			elPlug.setMObject(elPlug.asMObject())
 		except:
 			pass
 
-	def getValue(self) ->T:
-		"""retrieve MPlug value"""
-		return attr.plugValue(self.MPlug)
+def newLastArrayElement(plug:om.MPlug):
+	"""returns a new open plug at the end of the array"""
+	assert plug.isArray, "invalid plug {} is not array".format( (plug, type(plug)) )
+	n = plug.evaluateNumElements()
+	ensureOneArrayElement(plug)
+	return plug.elementByLogicalIndex(n)
 
-	def setValue(self, val):
-		"""if val is plugTree, connect plug
-		if static value, set it"""
-		if isinstance(val, PlugTree):
-			attr.con(val.MPlug, self.MPlug)
-		elif isinstance(val, om.MPlug):
-			attr.con(val, self.MPlug)
+def arrayElement(plug:om.MPlug, index:int)->om.MPlug:
+	"""final atomic function for retrieving plug by index
+	process negative indices before this"""
+	nElements = plug.evaluateNumElements()
+	if index < 0:
+		index = max(nElements, 1) + index
+	# print("el index", index,  "nElements", nElements)
+	elPlug = plug.elementByLogicalIndex(index)
+	if index > (nElements - 1):
+		try:
+			elPlug.setMObject(elPlug.asMObject())
+		except:
+			pass
+	return elPlug
+
+
+
+#endregion
+
+# region BROADCASTING
+"""reminder of broadcasting rules:
+
+single -> single
+	obviously fine
+	
+single -> compound
+	expand to length of compound, eg
+	[single, single, single] -> compound
+
+single -> array 
+	ERROR, ambiguous, could reasonably be first, last, all, etc
+	explicitly define array slice
+
+single -> [list / slice of plugs]
+	expand to length of list
+
+
+"""
+
+#endregion
+
+
+
+
+def plugMFnAttr(plug:om.MPlug):
+	"""return MFnAttribute for this plug's Attribute object"""
+	attribute = plug.attribute()
+	attrFn = getMFn(attribute)
+	return attrFn
+
+def plugMFnDataType(plug:om.MPlug):
+	"""return MFn<Type>Data clss for the type of this plug
+	if plug is not a typed attribute, return None"""
+	mfnAttr = plugMFnAttr(plug)
+	if not isinstance(mfnAttr, om.MFnTypedAttribute):
+		return None
+	return mfnDataConstantTypeMap()[mfnAttr.attrType()]
+
+def ensurePlugHasMObject(plug:om.MPlug):
+	mfnDataCls = plugMFnDataType(plug)
+	if mfnDataCls is None:
+		return
+	mfnData = mfnDataCls()
+	try:
+		return plug.asMObject()
+	except:
+		pass
+	# create new object with data class
+	newObj = mfnData.create()
+	plug.setMObject(newObj)
+	return newObj
+
+
+#testing separate functions for different iteration systems -
+# more code, but simpler funtions and more explicit in calling
+def iterPlugsTopDown(rootPlug:om.MPlug):
+	"""we know the drill by now, breadth/depth-first iteration over
+	existing plug indices"""
+	yield rootPlug
+	for subPlug in plugSubPlugs(rootPlug):
+		yield from iterPlugsTopDown(subPlug)
+
+def iterPlugsBottomUp(rootPlug:om.MPlug):
+	for subPlug in plugSubPlugs(rootPlug):
+		yield from  iterPlugsBottomUp(subPlug)
+	yield rootPlug
+
+
+def _plugOrConstant(testPlug):
+	try:
+		return getMPlug(testPlug)
+	except (NameError, TypeError):
+		return testPlug
+
+
+def iterLeafPlugs(rootPlug:om.MPlug):
+	"""return all leaf plugs for the given plug"""
+	subPlugs = plugSubPlugs(rootPlug)
+	if subPlugs:
+		for i in subPlugs:
+			yield from iterLeafPlugs(i)
+	else:
+		yield rootPlug
+
+def nestedLeafPlugs(rootPlug:om.MPlug):
+	"""return nested leaf plugs for the given plug"""
+	subPlugs = plugSubPlugs(rootPlug)
+	return [nestedLeafPlugs(i) for i in subPlugs] if subPlugs else [rootPlug]
+
+def _expandPlugSeq(seq):
+	result = []
+	for i in seq:
+		val = _plugOrConstant(i)
+		if isinstance(val, om.MPlug):
+			val = nestedLeafPlugs(val)
+			result.extend(val)
 		else:
-			attr.setPlugValue(self.MPlug, val)
+			result.append(val)
+	return result
 
-	# slightly more maya-familiar versions of the above
-	def get(self):
-		return self.getValue()
+def plugTreePairs(a:(om.MPlug, tuple), b:(om.MPlug, tuple)):
+	"""
+	yield final pairs of leaf plugs or values
+	for connection or setting
+	try to get to nested tuples
 
-	def set(self, *value):
-		if len(value) == 1:
-			value = value[0]
-		self.setValue(value)
+	check for plug types for shortcuts - float3, vector plugs etc
+
+	still need to check for array plugs
+
+	maybe we can use tuples inside argument to denote units that should
+	not be expanded
+
+	"""
+	# convert to sequences
+	if not isSeq(a):
+		a = (a,)
+	if not isSeq(b):
+		b = (b,)
+
+	# check if can be made plugs
+	#print("base", a, b)
+	a = _expandPlugSeq(a)
+	b = _expandPlugSeq(b)
+
+	#log("plugTreePairs", a, b)
+	if len(a) == 1:
+		if len(b) == 1:
+			yield (a[0], b[0])
+			return
+		else:
+			for i in b:
+				yield from (plugTreePairs(a, i))
+			return
+	if len(a) == len(b):
+		for i, j in zip(a, b):
+			yield from plugTreePairs(i, j)
+		return
+
+	raise ValueError("plugTreePairs: mismatched plug sequences", a, b)
 
 
-	def nBranches(self):
-		if self.MPlug.isArray:
-			return self.MPlug.evaluateNumElements()
-		if self.MPlug.isCompound:
-			return self.MPlug.numChildren()
-		return 0
+
+#region getting
+
+def _dataFromPlugMObject(obj:om.MObject):
+	"""retrieve data from direct plug MObject"""
+	dataFn = getMFn(obj)
+	try:
+		return list(dataFn.array())
+	except:
+		pass
+	if isinstance(dataFn, om.MFnMatrixData):
+		return dataFn.matrix()
+	elif isinstance(dataFn, om.MFnStringData):
+		return dataFn.string()
+	return dataFn.getData()
+
+def leafPlugValue(plug:om.MPlug,
+                  asDegrees=True):
+
+	# populate plug if needed
+	ensurePlugHasMObject(plug)
+
+	# easy out, check if plug has a direct data MObject
+	try:
+		obj = plug.asMObject()
+		data = _dataFromPlugMObject(obj)
+		return data
+	except RuntimeError:  # "unexpected internal failure"
+		pass
+
+	# we now need to check the attribute type of the plug
+	attribute = plug.attribute()
+	attrFn = getMFn(attribute)
+	attrFnType = type(attrFn)
+	data = None
+	if attrFnType is om.MFnUnitAttribute:
+		data = getCache().unitAttrPlugMethodMap[attrFn.unitType()][0](plug)
+		if attrFn.unitType() == om.MFnUnitAttribute.kAngle and asDegrees:
+			data = data.asDegrees()
+	elif attrFnType is om.MFnNumericAttribute:
+		getMethod = getCache().numericAttrPlugMethodMap[attrFn.numericType()][0]
+		data = getMethod(plug)
+	elif attrFnType is om.MFnTypedAttribute:
+		if attrFn.attrType() == om.MFnData.kString:
+			data = plug.asString()
 
 
-	def arrayMPlugs(self):
-		"""return MPlug objects for each existing element in index
-		always returns 1 more than number of real plugs (as always
-		one left open)
+	# raise error on missing value
+	if data is None:
+		raise RuntimeError("No value retrieved for plug {}".format(plug))
+
+	return data
+
+
+def plugValue(plug:om.MPlug,
+              asDegrees=True):
+	"""return a corresponding python data for a plug's value
+	returns nested list of individual values"""
+	if plugHType(plug) == HType.Leaf:
+		return leafPlugValue(plug, asDegrees=asDegrees)
+
+	subPlugs = plugSubPlugs(plug)
+	#if subPlugs:
+	return [plugValue(i) for i in subPlugs]
+
+
+#endregion
+
+# region setting
+def _setDataOnPlugMObject(obj, data):
+	dataFn = getMFn(obj)
+	dataFn.set(data)
+
+
+def setLeafPlugValue(plug:om.MPlug, data,
+                     toRadians=False):
+	# populate plug if needed
+	ensurePlugHasMObject(plug)
+	print("set leaf plug value", plug, data)
+	try:
+		obj = plug.asMObject()
+		oldData = _dataFromPlugMObject(obj)
+		#return data
+	except RuntimeError:  # "unexpected internal failure"
+
+		pass
+	# we now need to check the attribute type of the plug
+	attribute = plug.attribute()
+	attrFn = getMFn(attribute)
+	attrFnType = type(attrFn)
+	if attrFnType is om.MFnUnitAttribute:
+		if attrFn.unitType() == om.MFnUnitAttribute.kAngle and toRadians:
+			data = om.MAngle(data).toRadians()
+		setFn = getCache().unitAttrPlugMethodMap[attrFn.unitType()][1]
+		setFn(plug, data)
+
+	elif attrFnType is om.MFnNumericAttribute:
+		setMethod = getCache().numericAttrPlugMethodMap[attrFn.numericType()][1]
+		data = setMethod(plug, data)
+
+	elif attrFnType is om.MFnTypedAttribute:
+		# for a typed attribute, we need to create a new data MObject
+
+		if attrFn.attrType() == om.MFnData.kString:
+			dataMObject = om.MFnStringData().create(data)
+		else:
+			raise RuntimeError("unsupported typed attribute type {}".format(attrFn.attrType()))
+		plug.setMObject(dataMObject)
+		return
+
+
+def setPlugValue(plug:om.MPlug, data:T.Union[T.List, object],
+                 fromDegrees=True,
+                 errorOnFormatMismatch=False):
+	"""given a plug and data, set value on that plug and any plugs below it
+	expands data out to depth of plugs - eg vector arrays are preserved to
+	pass to vectorArray plugs
+
+	if not errorOnFormatMismatch, the last value of a sequence will be
+	copied out to the length of plugs for that level
+
+	"""
+	plug = getMPlug(plug)
+	subPlugs = plugSubPlugs(plug)
+	if plugHType(plug) == HType.Leaf:
+		return setLeafPlugValue(plug, data)
+
+	if errorOnFormatMismatch:
+		assert len(subPlugs) == len(data), "incorrect format passed to setPlugData - \n length of {} \n and {} \n must match".format(subPlugs, data)
+	# copy out last array value if insufficient length
+	if len(data) > len(subPlugs):
+		data = (*data, *(copy.deepcopy(data[-1])
+		                 for i in range(len(subPlugs) - len(data))))
+	for subPlug, dataItem in zip(subPlugs, data):
+		setPlugValue(subPlug, dataItem,
+		             errorOnFormatMismatch=errorOnFormatMismatch)
+	return
+
+
+#endregion
+def splitNodePlugName(plugName)->tuple[str, str]:
+	"""return node, plug for plug name"""
+	tokens = plugName.split(".")
+	return (tokens[0], ".".join(tokens[1:]))
+
+
+# character denoting last open element of array
+plugLastOpenChar = "+"
+plugSplitChar = "."
+plugMatchChar = "*"
+sliceChar = ":"
+plugIndexChar = "["
+
+topSplitPattern = re.compile("[\.\[\]]")
+tokensToKeep = { plugLastOpenChar }
+expandingTokens = { plugMatchChar, sliceChar}
+
+def splitPlugLastNameToken(plug:om.MPlug)->str:
+	"""return a name token specific to the given plug
+	eg for a plug "foo.bar[0]", return "bar[0]"
+	for an array plug return only last string index
+	"""
+	name = plug.name().split(".")[-1]
+	if "[" in name: # return only the index characters
+		name = name.split("[")[-1][:-1]
+	return name
+
+
+def splitPlugTokens(*stringParts:str):
+	"""all necessary logic for splitting plug string call to individual tokens
+	called directly with lookup - can be string, sequence, int, slice, whatever
+
+	we convert all to strings first for ease, then eval
+	some chars should be split and discarded; some split and kept as their own token
+	"""
+	parts = map(str, flatten(stringParts))
+	resultParts = []
+	for part in parts:
+		pieces = list(filter(None, re.split(topSplitPattern, part)))
+		for i, val in enumerate(pieces):
+			if val[-1] in tokensToKeep:
+				pieces[i] = (val[:-1], val[-1])
+		resultParts += pieces
+	return list(filter(None, flatten(resultParts)))
+
+def parseEvalPlugTokens(strTokens:list[str])->list[(str, int, slice)]:
+	"""where appropriate converts string tokens into int indices or
+	slice objects"""
+	realTokens = list(strTokens)
+	for i, val in enumerate(strTokens):
+		# check for square bracket index - [3]
+		if plugIndexChar in val:
+			val = val[1:-1]
+		if sliceChar in val:
+			val = sliceFromString(val, sliceChar) or int(val)
+		else:
+			try:
+				val = int(val)
+			except:
+				pass
+		realTokens[i] = val
+	return realTokens
+
+def checkLookupExpands(strTokens:list[str])->bool:
+	"""return True if this lookup can result in multiple plugs,
+	false if it will only return a single one"""
+	return bool(set("".join(map(str, strTokens))).intersection(expandingTokens))
+
+def plugLookupSingleLevel(parentPlug:om.MPlug,
+                          token:(str, int, slice))->list[om.MPlug]:
+	"""look up child plug or plugs of parent
+	using string name, int index, int slice etc"""
+	# print("lookup single parent", parentPlug,
+	#       "token", token, parentPlug.isCompound, parentPlug.isArray)
+	if parentPlug.isArray:
+		if isinstance(token, int):
+			return [arrayElement(parentPlug, token)]
+
+		if token == plugLastOpenChar:
+			return [newLastArrayElement(parentPlug)]
+		elif isinstance(token, slice):
+			# if slice has negative start or end, respect current number of plugs
+			# otherwise act infinitely
+			n = max(token.start, token.stop, parentPlug.evaluateNumElements())
+			return [arrayElement(parentPlug, i) for i in
+			        range(*token.indices(n))]
+
+	elif parentPlug.isCompound:
+		if isinstance(token, int):
+			return [plugSubPlugs(parentPlug)[token]]
+		plugMap = subPlugMap(parentPlug)
+		if token in plugMap:
+			return [plugMap[token]]
+		if plugMatchChar in token:
+			return [plugMap[i] for i in
+			        fnmatch.filter(plugMap.keys(), token)]
+
+
+def parsePlugLookup(parentPlug: om.MPlug,
+                    plugTokens: (str, list[str, int, slice])) -> list[om.MPlug]:
+	"""parse given tokens recursively into parentPlug's children
+	"""
+	if not plugTokens:
+		return [parentPlug]
+	hType = plugHType(parentPlug)
+	# check for index into leaf plug
+	if hType == HType.Leaf and plugTokens:
+		raise TypeError("Cannot process lookup {} into leaf plug {}".format(
+			(plugTokens), (parentPlug, type(parentPlug))))
+
+	plugs = [parentPlug]
+	while plugTokens:
+		firstToken = plugTokens.pop(0)
+		plugs = flatten(plugLookupSingleLevel(plug, firstToken) for plug in plugs)
+
+	return flatten(plugs)
+
+def topLevelPlugLookup(node:om.MFnDependencyNode,
+                       plugTokens):
+	"""look up a top-level plug from given mfn node
+	no support yet for retrieving multiple top-level plugs
+	"""
+	tokens = splitPlugTokens(plugTokens)
+	plugName = tokens[0]
+	return node.findPlug(plugName, False)
+
+
+
+# region connecting plugs
+
+def checkCompoundConnection(compPlugA:om.MPlug,
+                            compPlugB:om.MPlug):
+	"""check that 2 compound plugs can be connected directly -
+	for now just compare the number of their children"""
+	assert compPlugA.isCompound and compPlugB.isCompound
+	return compPlugA.numChildren() == compPlugB.numChildren()
+
+
+"""
+con(leafA, leafB)
+fine
+
+con(compoundA, leafB)
+decompose into list
+con([cAx, cAy, cAz], leafB)
+truncate to shortest?
+con([cAx], leafB)
+NO - the above errors, as it is too hidden
+
+con(leafA, compoundB)
+con(leafA, [cBx, cBy])
+
+con([a, b, c], [x, y, z, w])
+con([a, b, c], [x, y, z])
+
+con(leafA, arrayB)
+connect to last (new) available index
+con(arrayA, leafB)
+connect with first index
+"""
+
+def plugPairLogic(a:om.MPlug, b:om.MPlug,
+				  compoundFailsafe=False
+				  )\
+		->list[tuple[om.MPlug, om.MPlug]]:
+	"""given 2 MPlugs or lists of MPlugs,
+	return pairs of plugs defining (src, dst) for each
+	individual connection
+	error if formats do not adequately match
+
+	no logic options here, write other wrapper functions for specific
+	behaviour. This is confusing enough as it is
+
+	if compoundFailsafe, connect elements of compound directly even between
+	matching plugs - war flashbacks to maya2019 not
+	updating compound children properly
+
+	"""
+	aType = plugHType(a)
+	bType = plugHType(b)
+
+	# special case, both are single
+	if aType == HType.Leaf and bType == HType.Leaf:
+		return [(a, b)]
+
+	# if source is leaf
+	if aType == HType.Leaf:
+
+		if bType == HType.Compound:
+			# connect simple plug to all compound plugs
+			return [(a, i) for i in plugSubPlugs(b)]
+		else:
+			# b is array - connect simple to last
+			return plugPairLogic(a, newLastArrayElement(b))
+
+	aSubPlugs = plugSubPlugs(a)
+
+	# a is compound or array
+	# direct connection to leaf is illegal, too obscure
+	if bType == HType.Leaf:
+		raise TypeError("Array / compound plug {} cannot be directly connected to leaf plug {}".format((a, type(a)), (b, type(b))))
+
+	bSubPlugs = plugSubPlugs(b)
+
+	# if source is array (precludes source being compound)
+	if aType == HType.Array:
+
+		# dest is either compound or array - zip plugs and check recursively
+		pairs = []
+		for aSubPlug, bSubPlug in zip(aSubPlugs, bSubPlugs):
+			pairs.extend(plugPairLogic(aSubPlug, bSubPlug))
+		return pairs
+
+
+	elif aType == HType.Compound :
+		# error if destination is leaf, too obscure otherwise
+		if bType == HType.Leaf:
+			raise TypeError("Compound plug {} cannot be directly connected to leaf plug {}".format( (a, type(a)), (b, type(b)) ))
+
+		"""ambiguity here: con( compound, array ) could mean to connect elementwise
+		to array elements, or to connect entire plug to last array index
+		
+		last case is more common than first - go with that
 		"""
+		if bType == HType.Array:
+			return plugPairLogic(a, newLastArrayElement(b))
+		else: # both compound
+			# if number of children equal, connect directly
+			if len(aSubPlugs) == len(bSubPlugs):
+				return [ (a, b) ]
+			else: # zip to shortest
+				return list(zip(aSubPlugs, bSubPlugs))
 
-		if self.MPlug.evaluateNumElements() == 0:
-			self.addNewElement()
+def tryConvertToMPlugs(struct:termType)->(om.MPlug, list[om.MPlug]):
+	"""iterate through structure, convert to mplugs if possible"""
+	if isinstance(struct, (tuple, list)):
+		return [tryConvertToMPlugs(i) for i in struct]
+	return getMPlugOrNone(struct) or struct
 
-		return [self.MPlug.elementByLogicalIndex(i)
-				for i in range(self.MPlug.evaluateNumElements())]
+def plugDrivers(dstPlug:om.MPlug)->list[om.MPlug]:
+	# some om functions don't allow keywords
+	return dstPlug.connectedTo(True, # asDest
+	                           False # asSrc
+	)
 
+def con(srcPlug:om.MPlug, dstPlug:om.MPlug, _dgMod:om.MDGModifier=None):
+	"""pair up given plugs, add connections to dg modifier, execute
+	if a modifier is passed in, we assume it is under external control,
+	 and do not execute it within this function"""
+	modifier = _dgMod or om.MDGModifier()
+	plugPairs = plugPairLogic(srcPlug, dstPlug)
+	# print("pairs", [(i.name(), j.name()) for i, j in plugPairs])
+	for src, dst in plugPairs:
+		# disconnect any existing plugs
+		for prevDriver in plugDrivers(dst):
+			modifier.disconnect(prevDriver, dst)
+		modifier.connect(src, dst)
+	if _dgMod is None: # leave to calling code to execute if specified
+		modifier.doIt()
 
-	def element(self, index:int, logical=True):
-		"""ensure that the given element index is present
-		return that array plug"""
-		return attr.arrayElement(self.MPlug, index)
+def _con(a, b, _dgMod=None):
+	modifier = _dgMod or om.MDGModifier()
+	# disconnect any existing plugs
+	for prevDriver in plugDrivers(b):
+		modifier.disconnect(prevDriver, b)
+	modifier.connect(a, b)
+	if _dgMod is None: # leave to calling code to execute if specified
+		modifier.doIt()
 
-	def addNewElement(self):
-		"""extend array plug by 1"""
-		attr.newLastArrayElement(self.MPlug)
+def _set(plug, val, _dgMod=None):
+	modifier = _dgMod or om.MDGModifier()
+	modifier.newPlugValue(plug, val)
+	if _dgMod is None: # leave to calling code to execute if specified
+		modifier.doIt()
 
-	def ensureOneArrayElement(self):
-		"""
-		"""
-		attr.ensureOneArrayElement(self.MPlug)
-
-
-
-	plugParamType = (str, "PlugTree", om.MPlug)
-
-	def _filterPlugParam(self, plug:plugParamType)->om.MPlug:
-		"""return an MPlug from variety of acceptable sources"""
-		plug = getattr(plug, "plug", plug)
-		if isinstance(plug, PlugTree):
-			plug = plug.MPlug
-		elif isinstance(plug, str):
-			plug = attr.getMPlug(plug)
-		return plug
-
-
-	def con(self, otherPlug:(plugParamType,
-	                         list[plugParamType]),
-	        _dgMod=None):
-		"""connect this plug to the given plug or plugs"""
-		dgMod = _dgMod or om.MDGModifier()
-
-		# allow for passing multiple trees to connect to
-		if not isinstance(otherPlug, (list, tuple)):
-			otherPlug = (otherPlug,)
-
-		for otherPlug in otherPlug:
-			# check if other object has a .plug attribute to use
-			otherPlug = self._filterPlugParam(otherPlug)
-			attr.con(self.MPlug, otherPlug, dgMod)
-		dgMod.doIt()
-
-	# region networking
-	def driver(self)->("PlugTree", None):
-		"""looks at only this specific plug, no children
-		returns PlugTree or None"""
-		driverMPlug = self.MPlug.connectedTo(True,  # as Dst
-		                       False  # as Src
-		                       )
-		if not driverMPlug: return None
-		return PlugTree( driverMPlug[0])
-
-	def drivers(self, includeBranches=True)->dict[PlugTree, PlugTree]:
-		"""queries either immediate subplugs, or all subplugs to find set of all
-		sub plugs
-		returns { driverPlug : drivenPlug }
-
-		"""
-		checkBranches = self.allBranches(includeSelf=True) if includeBranches else [self]
-		plugMap = {}
-
-		for checkBranch in checkBranches:
-			driver = checkBranch.driver()
-			if driver:
-				plugMap[driver] = checkBranch
-		return plugMap
-
-	def _singleDestinations(self)->tuple[PlugTree]:
-		"""return all plugs fed by this single plug"""
-		drivenMPlugs = self.MPlug.connectedTo(
-			False, # as Dst
-		    True # as Src
-		)
-		return drivenMPlugs
-
-	def destinations(self, includeBranches=False)->dict[PlugTree, tuple[PlugTree]]:
-		checkBranches = self.allBranches(includeSelf=True) if includeBranches else [self]
-		plugMap = {}
-		for checkBranch in checkBranches:
-			plugMap[checkBranch] = checkBranch._singleDestinations()
-		return plugMap
-
-	def breakConnections(self, incoming=True, outgoing=True, includeBranches=True):
-		"""disconnects all incoming / outgoing edges from this plug,
-		or all of its branches"""
-		#checkBranches = self.allBranches(includeSelf=True) if includeBranches else [self]
-		dgMod = om.MDGModifier()
-		if incoming:
-			driverMap = self.drivers(includeBranches=includeBranches)
-			for driver, driven in driverMap.items():
-				dgMod.disconnect(driver.MPlug, driven.MPlug)
-		if outgoing:
-			driverMap = self.drivers(includeBranches=includeBranches)
-			for driver, drivens in driverMap.items():
-				for driven in drivens:
-					dgMod.disconnect(driver.MPlug, driven.MPlug)
-		dgMod.doIt()
+def conSet(src:(om.MPlug, object), dst:(om.MPlug, object), _dgMod:om.MDGModifier=None):
+	"""con() but with sets of plugs or objects"""
+	src = tryConvertToMPlugs(src)
+	dst = tryConvertToMPlugs(dst)
+	for pair in plugTreePairs(src, dst):
+		if isinstance(pair[0], om.MPlug):
+			_con(*pair, _dgMod)
+		else:
+			#_set(*pair, _dgMod)
+			setPlugValue(pair[1], pair[0])
+	#
+	# if isinstance(src, om.MPlug):
+	# 	con(src, dst, _dgMod)
+	# else:
+	# 	setPlugValue(src, dst, _dgMod)
 
 
-	# endregion
+#endregion
 
-	def driverOrGet(self)->PlugTree:
-		"""if plug is driven by live input,
-		return driving plug
-		else return its static value"""
-		if self.driver():
-			return self.driver()
-		return self.getValue()
+#region AttrSpec helper
+class AttrType(TypeNamespace):
+	class _Base(TypeNamespace.base()):
+		args = []
+		pass
 
-	#def driveOrSet(self, plugOrValue):
+	class Float(_Base):
+		"""default for any new attribute"""
+		args = [om.MFnNumericAttribute,
+		        om.MFnNumericData.kDouble]
+		pass
+	class Int(_Base):
+		args = [om.MFnNumericAttribute,
+		        om.MFnNumericData.kInt]
+		pass
+	class Bool(_Base):
+		args = [om.MFnNumericAttribute,
+		        om.MFnNumericData.kBoolean]
+		pass
+	class String(_Base):
+		args = [om.MFnTypedAttribute,
+		        om.MFnData.kString]
+		pass
+	class Enum(_Base):
+		args = [om.MFnEnumAttribute]
+		pass
+	class Message(_Base):
+		args = [om.MFnMessageAttribute]
+		pass
+	class Matrix(_Base):
+		args = [om.MFnMatrixAttribute]
+		pass
+	class Vector(_Base):
+		"""creates 3 float attributes"""
+		args = [om.MFnNumericAttribute,
+		        om.MFnNumericData.k3Double]
+		pass
+
+	# arrays
+	class FloatArray(_Base):
+		args = [om.MFnTypedAttribute,
+		        om.MFnData.kDoubleArray]
+		pass
+	class IntArray(_Base):
+		args = [om.MFnTypedAttribute,
+		        om.MFnData.kIntArray]
+		pass
+	class MatrixArray(_Base):
+		args = [om.MFnTypedAttribute,
+		        om.MFnData.kMatrixArray]
+		pass
+
+	# geo
+	class Mesh(_Base):
+		args = [om.MFnTypedAttribute,
+		        om.MFnData.kMesh]
+		pass
+	class NurbsCurve(_Base):
+		args = [om.MFnTypedAttribute,
+		        om.MFnData.kNurbsCurve]
+		pass
+	class NurbsSurface(_Base):
+		args = [om.MFnTypedAttribute,
+		        om.MFnData.kNurbsSurface]
+		pass
+
+	# other
+	class Time(_Base):
+		args = [om.MFnUnitAttribute,
+		        om.MFnUnitAttribute.kTime]
+		pass
+	class Untyped(_Base):
+		args = [om.MFnAttribute]
+		pass
+
+"""test for a more consistent (wordy) way to specify new attributes - 
+full object wrapper.
+and of course it's a tree"""
+
+@dataclass
+class AttrData:
+	type : type[AttrType._Base] = AttrType.Float
+	keyable : bool = False
+	array: bool = False
+	min: float = None
+	max: float = None
+	default: float = 0.0
+	channelBox: bool = False
+	# enum options - order of dict is preserved
+	options : dict[str, int] = None
+	readable : bool = True
+	writable : bool = True
 
 
-	# region convenience
-	@property
-	def X(self):
-		"""capital for more maya-like calls - node.translate.X"""
-		return self.branches[0]
+class AttrSpec(Tree):
+	"""tree layout for defining new attributes
+	does NOT map directly to actual plugs on real nodes
 
-	@property
-	def Y(self):
-		return self.branches[1]
+	can probably unify this closer with MFns but it's a decent start
+	"""
 
-	@property
-	def Z(self):
-		return self.branches[2]
+	data : AttrData = Tree.TreePropertyDescriptor("data", AttrData())
 
-	@property
-	def last(self):
-		"""return the last available (empty) plug for this array"""
-		return self(-1)
+def addAttrFromSpec(node, spec:AttrSpec, parentAttrFn=None):
+	"""add a new attribute hierarchy to a node based on the given spec"""
+	mfn = getMFn(node)
+	if spec.branches:
+		attrFn = om.MFnCompoundAttribute()
+		obj = attrFn.create(spec.name, spec.name)
 
-	#end
+	else:
+		attrFn = spec.data.type.args[0]()
+		obj = attrFn.create(
+			spec.name, spec.name, *spec.data.type.args[1:])
+	attrFn.array = spec.data.array
+	attrFn.keyable = spec.data.keyable
+	attrFn.readable = spec.data.readable
+	attrFn.writable = spec.data.writable
+
+	for i in spec.branches:
+		addAttrFromSpec(node, i, attrFn)
+
+	# if parent is given, add to it - else to node
+	if parentAttrFn:
+		parentAttrFn.addChild(obj)
+	else:
+		mfn.addAttribute(obj)
+
+	return attrFn
+
+
+
+
+
+
+
 

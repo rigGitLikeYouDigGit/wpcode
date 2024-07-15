@@ -9,20 +9,23 @@ from pathlib import Path
 from wplib.object import TypeNamespace
 from wpm.core.cache import cmds, om, oma
 
-WPM_ROOT_PATH = __file__.parent # top "wpm" dir, use this for relative paths
+WPM_ROOT_PATH = Path(__file__).parent # top "wpm" dir, use this for relative paths
 
 # config used in case other languages need to draw from values
-with open(WPM_ROOT_PATH / "config.json", "r") as f:
+with open(WPM_ROOT_PATH / "constant.json", "r") as f:
 	config = json.load(f)
 
 
 # in preparation for getting a plugin namespace from AD
-WP_PLUGIN_NAMESPACE = int(config["WP_PLUGIN_NAMESPACE"])
+WP_PLUGIN_NAMESPACE = int.from_bytes(
+	bytes(config["WP_PLUGIN_NAMESPACE"], "utf-8"),
+	byteorder=sys.byteorder,
+)
 # we have 256 nodes in this namespace ready for allocation
 # we assume we might create at most 200 c++ nodes (which will be already registered)
 CPP_PLUGIN_MAX_ID = int(config["CPP_PLUGIN_MAX_ID"])
 # first start id for our python nodes
-PY_PLUGIN_START_ID = WP_PLUGIN_NAMESPACE + CPP_PLUGIN_MAX_ID + 1
+PY_PLUGIN_START_ID = CPP_PLUGIN_MAX_ID + 1
 # this does make ids more volatile to assign them in code - maybe this will be an issue
 
 
