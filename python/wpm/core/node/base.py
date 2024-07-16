@@ -9,7 +9,7 @@ import numpy as np
 
 # tree libs for core behaviour
 #from wptree import Tree
-from wplib.object import Signal
+from wplib.object import Signal, Adaptor
 from wplib.inheritance import iterSubClasses
 from wplib.string import camelJoin
 from wplib.object import UnHashableDict, StringLike
@@ -120,12 +120,27 @@ class PlugMeta(type):
 		"""
 		# filter to MPlug - in case somehow the incorrect wrapper is used
 		mplug = api.getMPlug(plug)
+		cache = api.getCache()
+		mobj = mplug.attribute()
+		getType = mobj.apiType()
+		leafMFnClass = cache.apiTypeLeafMFnMap[getType]
 
-		print("get class for plug", mplug, type(mplug))
+		print("get class for plug", mplug, type(mplug), mobj.apiTypeStr)
+		print("found mfn", leafMFnClass)
 
-		wrapCls = MatrixPlug
+		wrapCls = Plug.adaptorForType(leafMFnClass)
 
 		print("found cls", wrapCls)
+		if leafMFnClass is om.MFnTypedAttribute: # check for data type
+			dataType = om.MFnTypedAttribute(mobj).attrType()
+			dataTypeName = cache.classTypeIdNameMemberMap(om.MFnData)[dataType]
+			print("found data type", dataType, dataTypeName)
+			dataMFnCls = cache.apiTypeMFnDataMap[
+				om.MFnTypedAttribute(mobj).attrType()]
+			print("found data mfn", dataMFnCls)
+			plugCls = Plug.adaptorForType(dataMFnCls)
+			print("found plug cls", plugCls)
+			wrapCls = plugCls
 
 		# create instance
 		ins = super(PlugMeta, wrapCls).__call__(mplug, **kwargs)
@@ -147,7 +162,9 @@ class MDataHandleFn:
 	for different types"""
 
 #class Plug[isArray:T.Literal[False, True]]:
-class Plug(PlugBase, metaclass=PlugMeta):
+class Plug(PlugBase,
+           Adaptor,
+           metaclass=PlugMeta):
 	"""base class for plugs
 
 	for setting, take inspiration from normal variable
@@ -160,7 +177,12 @@ class Plug(PlugBase, metaclass=PlugMeta):
 	this goes completely against the intuition of left-to-right
 	data flow, but maybe it's worth it for consistent syntax
 
+	adaptor set up for MFn attribute classes - we get the lowest-matching
+	MFn class for the plug, and pass that into the adaptor class lookup
+
 	"""
+	adaptorTypeMap = Adaptor.makeNewTypeMap()
+	forTypes = (om.MFnAttribute, )
 
 	# identification constants
 	apiTypeStr : str = None # plug.attribute().apiTypeStr
@@ -238,6 +260,7 @@ class CompoundPlug(Plug):
 	return a namedtuple by default - allow returning as dict
 	"""
 
+	forTypes = (om.MFnCompoundAttribute, )
 	apiType = om.MFn.kCompoundAttribute
 
 	VALUE_T : NamedTuple = None
@@ -257,6 +280,8 @@ class CompoundPlug(Plug):
 			  for i in range(self.MPlug.numChildren())])
 
 class NumericPlug(Plug):
+	"""plug for numeric attributes"""
+	forTypes = (om.MFnNumericAttribute, )
 	apiType = om.MFn.kNumericAttribute
 
 	VALUE_T = list[(int, float)]
@@ -268,7 +293,11 @@ class NumericPlug(Plug):
 		return om.MFnNumericData(self.MPlug.asMObject()).getData()
 
 class MatrixPlug(Plug):
-	"""do we add numpy to this"""
+	"""
+	still not sure what makes some plugs MatrixAttributes,
+	and some TypedAttributes with Matrix data
+	"""
+	forTypes = (om.MFnMatrixAttribute, om.MFnMatrixData)
 	VALUE_T = om.MMatrix
 	apiType = om.MFn.kMatrixAttribute
 	def MFnData(self) ->om.MFnMatrixData:
@@ -286,44 +315,63 @@ class MatrixPlug(Plug):
 		#self.MPlug.setMObject(om.MFnMatrixData().create(value))
 
 class UnitPlug(Plug):
+	forTypes = (om.MFnUnitAttribute, )
 	apiType = om.MFn.kUnitAttribute
 
 class EnumPlug(Plug):
+	forTypes = (om.MFnEnumAttribute, )
 	apiType = om.MFn.kEnumAttribute
 
+class MessagePlug(Plug):
+	forTypes = (om.MFnMessageAttribute, )
+	apiType = om.MFn.kMessageAttribute
+
 class TypedPlug(Plug):
+	forTypes = (om.MFnTypedAttribute, )
 	apiType = om.MFn.kTypedAttribute
 
 class NurbsCurvePlug(TypedPlug):
+	forTypes = (om.MFnNurbsCurve, om.MFnNurbsCurveData)
 	subtype = om.MFnData.kNurbsCurve
 class MeshPlug(TypedPlug):
+	forTypes = (om.MFnMesh, om.MFnMeshData)
 	subtype = om.MFnData.kMesh
 class NurbsSurfacePlug(TypedPlug):
+	forTypes = (om.MFnNurbsSurface, om.MFnNurbsSurfaceData)
 	subtype = om.MFnData.kNurbsSurface
 class FloatArrayPlug(TypedPlug):
+	forTypes = (om.MFnNumericData, )
 	subtype = om.MFnData.kFloatArray
 class IntArrayPlug(TypedPlug):
+	forTypes = (om.MFnIntArrayData, )
 	subtype = om.MFnData.kIntArray
 class VectorArrayPlug(TypedPlug):
+	forTypes = (om.MFnVectorArrayData, )
 	subtype = om.MFnData.kVectorArray
 class PointArrayPlug(TypedPlug):
+	forTypes = (om.MFnPointArrayData, )
 	subtype = om.MFnData.kPointArray
 class MatrixArrayPlug(TypedPlug):
+	forTypes = (om.MFnMatrixArrayData, )
 	subtype = om.MFnData.kMatrixArray
-class LatticePlug(TypedPlug):
-	subtype = om.MFnData.kLattice
+# class LatticePlug(TypedPlug):
+# 	forTypes = (om.MFnLatticeData, )
+# 	subtype = om.MFnData.kLattice
 class StringPlug(TypedPlug):
+	forTypes = (om.MFnStringData, )
 	subtype = om.MFnData.kString
 class StringArrayPlug(TypedPlug):
+	forTypes = (om.MFnStringArrayData, )
 	subtype = om.MFnData.kStringArray
-class FalloffFunctionPlug(TypedPlug):
-	subtype = om.MFnData.kFalloffFunction
+# class FalloffFunctionPlug(TypedPlug):
+# 	forTypes = (om.MFnFalloffFunction,)
+# 	subtype = om.MFnData.kFalloffFunction
 
 
-class PlugSlice(Plug):
-	"""object to represent a slice of a plug tree
-	Weird inheritance but maybe it works
-	"""
+# class PlugSlice(Plug):
+# 	"""object to represent a slice of a plug tree
+# 	Weird inheritance but maybe it works
+# 	"""
 
 class PlugDescriptor:
 	"""descriptor for plugs -

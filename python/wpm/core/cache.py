@@ -74,6 +74,11 @@ class APICache:
 		self.classConstantNameMaps : dict[MFnT, dict[int, str]] = {}
 		self.classNameConstantMaps : dict[MFnT, dict[str, int]] = {}
 
+		self.apiTypeLeafMFnMap : dict[int, MFnT] = {} # specific to MFnBase
+		self.apiStrLeafMFnMap: dict[str, MFnT] = {}
+
+		self.apiTypeMFnDataMap : dict[int, type[om.MFnData]] = {}
+
 	def classTypeIdNameMemberMap(self, MFnCls:MFnT)->dict[int, str]:
 		if MFnCls not in self.classConstantNameMaps:
 			typeNameMap, nameTypeMap = self.gatherClassConstantMaps(MFnCls)
@@ -99,11 +104,39 @@ class APICache:
 
 		# run the big name maps
 		mfnMap = self.classTypeIdNameMemberMap(om.MFn)
+
+		nameMap = self.classNameTypeIdMemberMap(om.MFn)
 		# mfnBaseMap = self.classTypeIdNameMemberMap(om.MFnBase)
 		# pprint.pp(mfnMap)
 		#
 		# pprint.pp(mfnBaseMap)
 		#pprint.pp(self.classTypeIdNameMemberMap(om.MFnNumericData))
+
+		typeMFnListMap, mfnTypeListMap, typeLeafMFnMap = self.getCompatibilityMaps(
+			self.apiTypeMFnMap, nameMap)
+		self.apiTypeLeafMFnMap = typeLeafMFnMap
+		self.apiStrLeafMFnMap = {
+			self.classTypeIdNameMemberMap(om.MFn)[k] : v
+			for k, v in typeLeafMFnMap.items()}
+		#pprint.pp(self.apiStrLeafMFnMap)
+
+
+		"""there is apparently no hard link by type ids from 
+		MFnData.kConstant to the appropriate MFnData subclass.
+		 so we make our own."""
+		apiTypeMFnDataMap = {}
+		#print("SUBCLASSES", om.MFnData.__subclasses__())
+		mfnDataMembers = self.classTypeIdNameMemberMap(om.MFnData)
+		#print("MEMBERS", mfnDataMembers)
+		for subCls in om.MFnData.__subclasses__():
+			#print(subCls.__name__)
+			for typeId, name in mfnDataMembers.items():
+				# this is quite villainous
+				if name[1:] in subCls.__name__:
+					apiTypeMFnDataMap[typeId] = subCls
+		#pprint.pp(apiTypeMFnDataMap)
+		self.apiTypeMFnDataMap = apiTypeMFnDataMap
+
 
 
 
@@ -155,8 +188,9 @@ class APICache:
 		return valueNameMap, nameValueMap
 
 
-	def getCompatibilityMaps(self, mfnCodeClassMap:dict[int, MFnT],
-	                        constants:dict[str, int]):
+	def getCompatibilityMaps(self,
+	                         mfnCodeClassMap:dict[int, MFnT],
+	                         constants:dict[str, int]):
 		"""build map of hasType() compatibility for available classes.
 		Don't think there's a way to avoid NxM complexity,
 		checking every constant against
@@ -169,6 +203,8 @@ class APICache:
 		typeMFnListMap : dict[int : list[MFnT]] = defaultdict(list)
 		mfnTypeListMap : dict[MFnT, list[int]] = defaultdict(list)
 		for mfnCode, cls in mfnCodeClassMap.items():
+			if mfnCode < 0: # abstract class
+				continue
 			if cls == om.MFnBase:
 				continue
 			for name, code in constants.items():
@@ -187,7 +223,8 @@ class APICache:
 				key=lambda x: len(mfnTypeListMap[x]), reverse=True)
 
 		# get lowest leaf MFn classes to prefer lookup
-		typeLeafMFnMap = {k : v[-1] for k, v in typeMFnListMap.items()}
+		typeLeafMFnMap = {k : v[-1] for k, v in sorted(
+			typeMFnListMap.items(), key=lambda x: x[0])}
 
 		return typeMFnListMap, mfnTypeListMap, typeLeafMFnMap
 
@@ -225,103 +262,6 @@ class APICache:
 
 		return obj
 
-
-	#print("api begin typemap")
-	def generateApiTypeMap(self):
-		"""returns 3 maya constant maps -
-
-		apiTypeMap:
-		{ every api MFn int type constant : nearest matching MFn class object}
-
-		apiTypeCodeMap :
-		{ every api MFn int type constant : nearest matching MFn class int type constant }
-
-		apiCodeNameMap :
-		{ every api MFn int type constant : nice name of that MFn constant}
-		eg:
-		{ 1002 : 'kKeyframeRegionManip' }
-
-		"""
-		# get all constants from om.MFn
-		# [ ("kFloat", 2), ("kDouble", 3), ... ]
-		constants = [i for i in inspect.getmembers(om.MFn) if i[0].startswith("k")]
-
-		constants = sorted(constants, key=lambda x:x[1])
-
-		# map of int constants to available python classes
-		mfnCodeClassMap = {}
-		codeNameMap = {}
-
-		for k, v in constants:
-			codeNameMap[v] = k
-
-		abstractClasses = (om.MFn, om.MFnBase)
-		# extract all MFn classes and index them by their type constant
-		for k, v in (inspect.getmembers(om) + inspect.getmembers(oma)):
-			#print(k, v)
-
-			if not isinstance(v, type):
-				continue
-			if not issubclass(v, om.MFnBase):
-				continue
-			# if not k.startswith("MFn"):
-			# 	continue
-
-			if v in abstractClasses:
-				continue
-			classId = v().type()
-			mfnCodeClassMap[classId] = v
-
-		# naively, we might assume that earlier class constants are more likely to be wide
-
-		# build map of hasType() compatibility for available classes
-		# this will likely be slow
-		compatPools = []
-		compatMap = {}
-
-		# map of { mfn class constant : number of supported constants }
-		mfnWidthMap = {mfnCode : 0 for mfnCode in mfnCodeClassMap.keys()}
-
-		# {constant : list of compatible mfn classes}
-		constantToClassCompatMap = {code : [] for name, code in constants}
-		
-		for mfnCode, cls in mfnCodeClassMap.items():
-			if cls == om.MFnBase:
-				continue
-			pool = set()
-			for name, code in constants:
-				if not name.startswith("k"):
-					continue
-				# we need to instantiate an MFn here for hasObj(), bit weird
-				# also no way to just get all compatible types for a given MFn
-				if cls().hasObj(code):
-					#clsData["compat"].add(code)
-					pool.add(code)
-					constantToClassCompatMap[code].append(mfnCode)
-					mfnWidthMap[mfnCode] += 1
-
-			compatMap[mfnCode] = pool
-			#mfnWidthMap[mfnCode] = len(pool)
-			compatPools.append((mfnCode, pool))
-
-		sortedMFnWidths = [i[0] for i in sorted(mfnWidthMap.items(), key=lambda x: x[1], reverse=True)] # list of class constants sorted by number of compatible constants
-
-		"""for now remove them - these are things like kBirailSrf,
-		kManip, kFilter - internals, edge cases, contexts, etc
-		"""
-		constantToClassCompatMap = {k : v for k, v in constantToClassCompatMap.items() if v}
-
-
-		constantToTargetClassMap = {code : None for code in constantToClassCompatMap.keys()}
-		constantToTargetConstantMap = {code : None for code in constantToClassCompatMap.keys()}
-		for constant, clsCodes in constantToClassCompatMap.items():
-			constantToTargetClassMap[constant] = \
-				mfnCodeClassMap[sorted(clsCodes, key=lambda x: mfnWidthMap[x])[0]]
-			constantToTargetConstantMap[constant] = sorted(clsCodes, key=lambda x: mfnWidthMap[x])[0]
-
-		return constantToTargetClassMap, constantToTargetConstantMap, codeNameMap
-
-	#apiTypeMap, apiTypeCodeMap, apiCodeNameMap = generateApiTypeMap()
 
 
 	def nodeTypeFromMObject(self, mobj:om.MObject)->str:
@@ -458,29 +398,13 @@ class APICache:
 	# numericAttrPlugMethodMap = _expandClassLookup(
 	# 	numericAttrPlugMethodMap, om.MFnNumericData)
 
-	def _build(self):
-		"""main initialisation function for manager - rerun on scene open?
-		rerun on reloading edrig
-		"""
-		self.reset()
-		self.apiTypeMap, self.apiTypeCodeMap, self.apiCodeNameMap = self.generateApiTypeMap()
-		self.apiTypeDataMap = self.buildApiTypeDataMap(
-			self.apiTypeMap, self.apiCodeNameMap)
-		self.mfnDataConstantTypeMap = self.buildMFnDataMap()
 
-		self.dhGetMethods, self.dhSetMethods = self.buildDataHandleGetSetNameMaps()
-		self.dhNumericTypeGetMethodMap, self.dhNumericTypeSetMethodMap =\
-			self.buildDataHandleNumericMethodMap(
-				self.dhGetMethods, self.dhSetMethods)
-
-		self.numericAttrPlugMethodMap = self._expandClassLookup(
-			self.numericAttrPlugMethodMap, om.MFnNumericData)
 
 	def reset(self):
 		"""clear any live information from this manager
-		at present that is only the MObject map, the rest is just
-		static mapping through the api itself"""
-		self.mObjRegister.clear()
+		there's nothing here ._.
+		"""
+
 
 
 class _APIGlobals:
@@ -491,7 +415,7 @@ class _APIGlobals:
 	@classmethod
 	def refresh(cls):
 		cls.apiCache = APICache()
-		cls.apiCache._build()
+		cls.apiCache.buildCache()
 
 def getCache()->APICache:
 	if _APIGlobals.apiCache is None:
