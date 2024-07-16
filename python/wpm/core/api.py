@@ -84,14 +84,59 @@ def getMObject(node)->om.MObject:
 	"""this is specialised for dg nodes -
 	component MObjects will have their own functions anyway if needed
 	"""
-	return getCache().getMObject(node)
+	if isinstance(node, om.MObject):
+		if node.isNull():
+			raise RuntimeError("object for ", node, " is invalid")
+		return node
+	elif isinstance(node, str):
+		sel = om.MSelectionList()
+		sel.add(node)
+		obj = sel.getDependNode(0)
+		if obj.isNull():
+			raise RuntimeError("object for ", node, " is invalid")
+		return obj
+	elif isinstance(node, om.MDagPath):
+		return node.node()
+	else:
+		try:
+			return node.object()  # supports MFnBase and WN
+		except:
+			pass
+		raise TypeError("Cannot retrieve MObject from ", node, type(node))
+
+
+def getMDagPath(node)->om.MDagPath:
+	if isinstance(node, om.MDagPath):
+		return node
+	if isinstance(node, str):
+		sel = om.MSelectionList()
+		sel.add(node)
+		path = om.MDagPath()
+		sel.getDagPath(0, path)
+		return path
+	if isinstance(node, om.MObject):
+		return om.MDagPath.getAPathTo(node)
+	raise TypeError("Cannot retrieve MDagPath from ", node, type(node))
 
 def getMPlug(plug:(str, om.MPlug, PlugBase))->om.MPlug:
+	"""TRAGICALLY, sel.getPlug() will implicitly convert an
+	array plug name to its first element as it returns it.
+	Convenient, but not correct
+
+	here we first get the node, then look up the plug on the node
+	"""
 	if isinstance(plug, om.MPlug): return om.MPlug(plug)
 	if isinstance(plug, str):
-		sel = om.MSelectionList()
-		sel.add(plug)
-		return sel.getPlug(0)
+		node, attr = plug.split(".", 1)
+		assert node and attr
+		mobj = getMObject(node)
+		print(mobj, mobj.isNull(), om.MFnDependencyNode(mobj).name())
+		dep = om.MFnDependencyNode(mobj)
+		return dep.findPlug(attr, True)
+		# sel = om.MSelectionList()
+		# sel.add(plug)
+		# print("LOOKUP", plug, "GET", sel.getPlug(0))
+		# return sel.getPlug(0)
 	if isinstance(plug, PlugBase):
 		return plug.MPlug
 	raise TypeError(f"getMPlug: invalid arg {plug} type {type(plug)}")

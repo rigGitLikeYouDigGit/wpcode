@@ -87,6 +87,28 @@ class RampPlug(object):
 		""":rtype : RampPlug._Point"""
 		return self._Point(self.root, id)
 
+
+class ArrayPlug:
+	"""very uncertain about this -
+	dynamically generate classes that
+	work as arrays?
+	we assume this will be the second parent class,
+	look up other values on the first
+
+	type hinting won't work through this, will need to
+	explicitly subclass in generated node files
+	"""
+	@classmethod
+	def checkValid(cls):
+		assert Plug in cls.__bases__
+	@classmethod
+	def plugCls(cls)->type[Plug]:
+		"""return plug class for this array"""
+		return cls.__bases__[0]
+	# def __repr__(self):
+	# 	baseStr = self.plugCls().__repr__(self)
+	# 	return f"<ARRAY {baseStr}>"
+
 class PlugMeta(type):
 	"""
 	replicate the same dynamic class lookup of the
@@ -141,6 +163,13 @@ class PlugMeta(type):
 			plugCls = Plug.adaptorForType(dataMFnCls)
 			print("found plug cls", plugCls)
 			wrapCls = plugCls
+
+		print("IS ARRAY", mplug, mplug.isArray)
+		if mplug.isArray:
+			wrapCls = type("Array_" + wrapCls.__name__,
+			               (wrapCls, ArrayPlug),
+			               {}
+			               )
 
 		# create instance
 		ins = super(PlugMeta, wrapCls).__call__(mplug, **kwargs)
