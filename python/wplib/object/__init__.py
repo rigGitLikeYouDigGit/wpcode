@@ -20,7 +20,7 @@ from .metamagicdelegator import ClassMagicMethodMixin
 from .plugin import PluginBase, PluginRegister
 
 
-
+from .sparselist import SparseList
 from .signal import Signal
 from .stringlike import StringLike
 
