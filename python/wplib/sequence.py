@@ -96,9 +96,18 @@ def iterWindow(seq:T.Sequence):
 def shiftListEntries(arr, lookupOffset=1):
 	""" given a list, shift its entries by given offset,
 	positive or negative
-	by default duplicates last entry"""
+	by default duplicates last entry
+	probably faster to pop(0) and append"""
 	for i in range(len(arr) - 1):
 		arr[i] = arr[i + lookupOffset]
 
 
+def treeShape(tree:NESTED_TYPES)->list[int]:
+	"""return the shape of a nested structure - may not have
+	consistent depth"""
+	shape = []
+	while isinstance(tree, (list, tuple)):
+		shape.append(len(tree))
+		tree = tree[0]
+	return shape
 

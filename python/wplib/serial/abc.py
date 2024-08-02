@@ -48,15 +48,30 @@ class Serialisable:
 		raise NotImplementedError()
 
 	# attach methods for convenience
+	@classmethod
+	def getDefaultSerialiseOp(cls):
+		"""return None to default to Serialisable default"""
+		return None
+
+	@classmethod
+	def getDefaultDeserialiseOp(cls):
+		"""return None to default to Serialisable default"""
+		return None
+
 	def serialise(self, serialiseOp=None, serialParams=None)->dict:
 		"""serialise the object into a dict
 		"""
-		return serialise(self, serialiseOp=serialiseOp, serialParams=serialParams)
+		return serialise(self,
+		                 serialiseOp=serialiseOp or self.getDefaultSerialiseOp(),
+		                 serialParams=serialParams)
 	@classmethod
 	def deserialise(cls, serialData:dict, deserialiseOp=None, serialParams=None)->T.Any:
 		"""deserialise the object from a dict
 		"""
-		return deserialise(serialData, deserialiseOp=deserialiseOp, serialParams=serialParams)
+		return deserialise(
+			serialData,
+			deserialiseOp=deserialiseOp or cls.getDefaultDeserialiseOp(),
+			serialParams=serialParams)
 
 
 class SerialisableAdaptor(SerialAdaptor):
@@ -93,5 +108,11 @@ class SerialisableAdaptor(SerialAdaptor):
 		# foundType = CodeRef.resolve(serialData[cls.FORMAT_KEY][cls.TYPE_KEY])
 		return serialType.decode(serialData[cls.DATA_KEY], decodeParams)
 
+
+
+if __name__ == '__main__':
+	obj = Serialisable()
+	obj.getDefaultSerialiseOp()
+	Serialisable.getDefaultSerialiseOp()
 
 

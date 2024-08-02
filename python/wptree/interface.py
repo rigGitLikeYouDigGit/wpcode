@@ -24,6 +24,9 @@ from wptree.treedescriptor import TreePropertyDescriptor
 
 Ignoring tree auxProperties / traits for now, not sure how best
 to override them
+
+TODO: events only when needed - somehow need to switch out
+code dynamically from root, or downwards
 """
 
 # region DeepVisitor integration
@@ -79,7 +82,9 @@ class TreeTraversalParams(TraversableParams):
 # 		self.propertyChanged = Signal()
 # 		self.structureChanged = Signal()
 
-ITEM_CHILD_LIST_T = VisitAdaptor.CHILD_LIST_T
+CHILD_LIST_T = VisitAdaptor.CHILD_LIST_T
+PARAMS_T = VisitAdaptor.PARAMS_T
+ChildData = VisitAdaptor.ChildData
 
 keyT = Traversable.keyT
 TreeType = T.TypeVar("TreeType", bound="TreeInterface")
@@ -93,26 +98,26 @@ class TreeInterface(Traversable,
 	only interface around name, value, branches and properties
 	"""
 
-	def childObjects(self)->ITEM_CHILD_LIST_T:
+	def childObjects(self, params:PARAMS_T)->CHILD_LIST_T:
 		"""maximum delegation to this tree's children"""
 		return (
-			(self.name, ChildType.TreeName),
-			(self.value, ChildType.TreeValue),
-			(self.auxProperties, ChildType.TreeAuxProperties),
-			*((i, ChildType.TreeBranch) for i in self.branches)
+			ChildData("TreeName", self.name ),
+			ChildData("TreeValue", self.value ),
+			ChildData("TreeProperties",self.auxProperties ),
+			*(ChildData("TreeBranch", i ) for i in self.branches)
 		)
 
 	@classmethod
-	def newObj(cls, baseObj:TreeInterface, itemChildTypeList:ITEM_CHILD_LIST_T):
+	def newObj(cls, baseObj: TreeType, childDatas:CHILD_LIST_T, params:PARAMS_T) ->T.Any:
 		"""create a new tree object from a base object and child type list
 		list of child branches should already have been regenerated
 		"""
 		tree = type(baseObj)(
-			name=itemChildTypeList[0][0],
-			value=itemChildTypeList[1][0]
+			name=childDatas[0][0], #name
+			value=childDatas[1][0] # value
 		)
-		tree._setRawAuxProperties(itemChildTypeList[2][0])
-		for branch, childType in itemChildTypeList[3:]:
+		tree._setRawAuxProperties(childDatas[2][0])
+		for branch, childType in childDatas[3:]:
 			tree.addChild(branch)
 		return tree
 

@@ -86,6 +86,7 @@ class VisitAdaptor(Adaptor):
 
 
 	CHILD_T = ChildData
+	PARAMS_T = PARAMS_T
 	CHILD_LIST_T = T.Iterable[CHILD_T]
 	# new base class, declare new map
 	adaptorTypeMap = Adaptor.makeNewTypeMap()
@@ -169,7 +170,7 @@ class MapVisitAdaptor(VisitAdaptor):
 	@classmethod
 	def newObj(cls, baseObj: T.Any, childDatas:CHILD_LIST_T, params:PARAMS_T) ->T.Any:
 		"""expects list of [
-			( (key , value ), ChildType.MapItem)
+			( index, (key , value ), ChildType.MapItem)
 			"""
 		return type(baseObj)(i[1] for i in childDatas)
 
@@ -198,11 +199,12 @@ class Visitable:
 		                          " adaptor: ", cls)
 class VisitableVisitAdaptor(VisitAdaptor):
 	"""integrate derived subclasses with adaptor system
+	maybe oop really was a mistake
 	"""
 	forTypes = (Visitable,)
 	@classmethod
-	def childObjects(cls, obj:T.Any, params:PARAMS_T) ->CHILD_LIST_T:
-		return obj.childObjects()
+	def childObjects(cls, obj:Visitable, params:PARAMS_T) ->CHILD_LIST_T:
+		return obj.childObjects(params)
 	@classmethod
 	def newObj(cls, baseObj: T.Any, childDatas:CHILD_LIST_T, params:PARAMS_T) ->T.Any:
 		return baseObj.newObj(baseObj, childDatas)
@@ -476,7 +478,8 @@ class DeepVisitor:
 			if not pureFnSuccess:
 				raise TypeError(f"visit function {passParams.visitFn}\n{inspect.getsource(passParams.visitFn)}"
 				                f"at {getDefinitionStrLink(passParams.visitFn)}\n"
-				                f"must match template function signature\n{inspect.getfullargspec(visitFnTemplate).args}\n")
+				                f"must match template function signature\n{inspect.getfullargspec(visitFnTemplate).args}\n"
+				                "failures", data)
 
 
 

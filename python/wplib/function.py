@@ -23,8 +23,11 @@ def checkFunctionSpecsMatch(
 	# print(set(templateSpec.args) - set(testSpec.args))
 	failures = {}
 	if allowExtensions:
-		if set(testSpec.args) - set(templateSpec.args):
-			failures["args"] = ("missing template args", set(templateSpec.args) - set(testSpec.args))
+		# check that no template args are left when subtracting test args
+		if set(templateSpec.args) - set(testSpec.args):
+			failures["args"] = ("missing template args",
+			                    set(templateSpec.args) - set(testSpec.args)
+			                    )
 	else:
 		if testSpec.args != templateSpec.args:
 			failures["args"] = ("args mismatch", testSpec.args, templateSpec.args)
