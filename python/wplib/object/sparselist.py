@@ -15,14 +15,14 @@ class SparseList(T.Generic[VT]):
 	def fromItems(cls, items:dict[int, VT]):
 		"""create a sparse list from a dict"""
 		self = cls()
-		self._indexMap = dict(items)
+		self._indexMap = {k: items[k] for k in sorted(items.keys())}
 		return self
 
 	@classmethod
 	def fromTies(cls, ties:T.Iterable[T.Tuple[int, VT]]):
 		"""create a sparse list from a list of tuples"""
 		self = cls()
-		self._indexMap = dict(ties)
+		self._indexMap = dict(sorted(ties, key=lambda x: x[0]))
 		return self
 
 	@classmethod
@@ -30,7 +30,7 @@ class SparseList(T.Generic[VT]):
 		"""create a sparse list from two lists"""
 		self = cls()
 		assert len(indices) == len(values), f"len(indices) != len(values) {len(indices)} != {len(values)}"
-		self._indexMap = dict(zip(indices, values))
+		self._indexMap = dict(sorted(zip(indices, values)), key=lambda x: x[0])
 		return self
 
 	def __getitem__(self, key:int)->VT:
