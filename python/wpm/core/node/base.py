@@ -12,7 +12,7 @@ import numpy as np
 from wplib.object import Signal, Adaptor
 from wplib.inheritance import iterSubClasses
 from wplib.string import camelJoin
-from wplib.object import UnHashableDict, StringLike
+from wplib.object import UnHashableDict, StringLike, SparseList
 #from tree.lib.treecomponent import TreeBranchLookupComponent
 from wplib.sequence import toSeq, firstOrNone
 
@@ -88,26 +88,7 @@ class RampPlug(object):
 		return self._Point(self.root, id)
 
 
-class ArrayPlug:
-	"""very uncertain about this -
-	dynamically generate classes that
-	work as arrays?
-	we assume this will be the second parent class,
-	look up other values on the first
 
-	type hinting won't work through this, will need to
-	explicitly subclass in generated node files
-	"""
-	@classmethod
-	def checkValid(cls):
-		assert Plug in cls.__bases__
-	@classmethod
-	def plugCls(cls)->type[Plug]:
-		"""return plug class for this array"""
-		return cls.__bases__[0]
-	# def __repr__(self):
-	# 	baseStr = self.plugCls().__repr__(self)
-	# 	return f"<ARRAY {baseStr}>"
 
 class PlugMeta(type):
 	"""
@@ -136,9 +117,11 @@ class PlugMeta(type):
 	# endregion
 
 
-	def __call__(cls, plug:(om.MPlug, str), **kwargs)->WN:
+	def __call__(cls, plug:(om.MPlug, str), **kwargs)->Plug:
 		""" get right plug subclass from MPlug,
 		to get and set data by consistent interface
+		I don't think we care about reusing one Plug object for the
+		same MPlug - this should only handle the type lookup
 		"""
 		# filter to MPlug - in case somehow the incorrect wrapper is used
 		mplug = api.getMPlug(plug)
@@ -165,6 +148,7 @@ class PlugMeta(type):
 			wrapCls = plugCls
 
 		print("IS ARRAY", mplug, mplug.isArray)
+		#TODO: cache array types as declared, don't re-type them each time
 		if mplug.isArray:
 			wrapCls = type("Array_" + wrapCls.__name__,
 			               (wrapCls, ArrayPlug),
@@ -223,6 +207,48 @@ class Plug(PlugBase,
 	# if isArray:
 	# 	VALUE_T = T.List[VALUE_T]
 
+	# region core
+	def __init__(self, MPlug:om.MPlug):
+		self.MPlug = MPlug
+
+	def __repr__(self):
+		return f"<{self.__class__.__name__} ({self.MPlug.name()})>"
+
+	def node(self)->WN:
+		"""return parent node"""
+		return WN(self.MPlug.node())
+
+	def dataObject(self)->om.MObject:
+		"""return data MObject from plug - used
+		to pass into MFnData objects"""
+		return self.MPlug.asMObject()
+
+	def MFnData(self)->om.MFnData:
+		"""return MFnData object from plug"""
+		raise NotImplementedError
+
+	#endregion
+
+	#region structure
+	def plug(self, s:str)->Plug:
+		"""return child plug from string - name is a bit off,
+		but lets us have the same interface as on node, which may
+		be important later"""
+		return self
+
+	def index(self, raw=False)->(int, None):
+		"""return index of plug in parent array"""
+		if not self.MPlug.isElement: return None
+		if not raw:	return self.MPlug.logicalIndex()
+		# physical index is a bit convoluted - there's no direct way to get it,
+		# so we look for the index of the logical index in the list of existing indices.
+		# easy
+		return tuple(self.MPlug.array().getExistingArrayAttributeIndices()).index(
+			self.MPlug.logicalIndex())
+		# as far as I know this should always work, indices might be sparse but they're always sorted
+
+
+	#region value
 	def value(self)->VALUE_T:
 		"""return value from plug - if compound, recurse
 		into it and return list"""
@@ -244,34 +270,10 @@ class Plug(PlugBase,
 		"""set value on plug -
 		internal method called by set() """
 		raise NotImplementedError
+	#endregion
 
-	def dataObject(self)->om.MObject:
-		"""return data MObject from plug - used
-		to pass into MFnData objects"""
-		# handle : om.MDataHandle = self.MPlug.constructHandle()
-		# obj = handle.data()
-		# self.MPlug.destructHandle(handle)
-		#return obj
-		return self.MPlug.asMObject()
 
-	def MFnData(self)->om.MFnData:
-		"""return MFnData object from plug"""
-		raise NotImplementedError
-
-	def __init__(self, MPlug:om.MPlug):
-		self.MPlug = MPlug
-
-	def __repr__(self):
-		return f"<{self.__class__.__name__} ({self.MPlug.name()})>"
-
-	def plug(self, s:str)->Plug:
-		"""return child plug from string"""
-		return self
-
-	def node(self)->WN:
-		"""return parent node"""
-		pass
-
+	# region connection and assignment
 	def set(self, arg:(Plug, str)):
 		"""top-level method to set this plug's value,
 		or connect another live plug to it"""
@@ -284,6 +286,45 @@ class Plug(PlugBase,
 	# def __rlshift__(self, other):
 	# 	pass
 
+	#endregion
+
+if T.TYPE_CHECKING:
+	arrayBase = Plug
+else:
+	arrayBase = object
+
+class ArrayPlug(arrayBase):
+	"""very uncertain about this -
+	dynamically generate classes that
+	work as arrays?
+	we assume this will be the second parent class,
+	look up other values on the first
+
+	type hinting won't work through this, will need to
+	explicitly subclass in generated node files
+	"""
+	@classmethod
+	def checkValid(cls):
+		assert Plug in cls.__bases__
+	@classmethod
+	def plugCls(cls)->type[Plug]:
+		"""return plug class for this array"""
+		return cls.__bases__[0]
+
+	def indices(self)->np.ndarray:
+		return np.array(self.MPlug.getExistingArrayAttributeIndices())
+
+	def child(self, index:int, raw=False)->Plug:
+		"""return child plug from index"""
+		return Plug(self.MPlug.elementByPhysicalIndex(index) if raw else self.MPlug.elementByLogicalIndex(index))
+
+	def value(self) ->VALUE_T:
+		"""return value from plug - if compound, recurse
+		into it and return list"""
+		return SparseList.fromTies(
+			(i, self.child(i, raw=False).value()) for i in self.indices())
+
+
 class CompoundPlug(Plug):
 	"""plug for compound attributes,
 	return a namedtuple by default - allow returning as dict
@@ -292,21 +333,47 @@ class CompoundPlug(Plug):
 	forTypes = (om.MFnCompoundAttribute, )
 	apiType = om.MFn.kCompoundAttribute
 
-	VALUE_T : NamedTuple = None
-	def _generateTypeTuple(self)->NamedTuple:
-		"""return a named tuple type for this plug -
-		used if the plug type is not statically defined"""
-		return namedtuple(
-			"CompoundValue",
-		    [self.child(i).name() for i in range(self.numChildren())])
-	def value(self) ->VALUE_T:
-		"""it might be too complex to pass through the numpy-ness of
-		the values"""
-		if self.VALUE_T is None:
-			self.VALUE_T = self._generateTypeTuple()
-		return self.VALUE_T(
-			*[Plug(self.MPlug.child(i)).value()
-			  for i in range(self.MPlug.numChildren())])
+	USE_NAMED_TUPLES = True
+
+	if USE_NAMED_TUPLES:
+		VALUE_T : type[NamedTuple]
+		def _generateTypeTuple(self)->type[NamedTuple]:
+			"""return a named tuple type for this plug -
+			used if the plug type is not statically defined"""
+			return namedtuple(
+				"CompoundValue",
+			    [self.child(i).name() for i in range(self.numChildren())])
+		def value(self) ->NamedTuple:
+			"""it might be too complex to pass through the numpy-ness of
+			the values"""
+			if self.VALUE_T is None:
+				self.VALUE_T = self._generateTypeTuple()
+			return self.VALUE_T(
+				*[Plug(self.MPlug.child(i)).value()
+				  for i in range(self.MPlug.numChildren())])
+	else:
+		VALUE_T = dict
+		def value(self) ->dict:
+			return {self.child(i).name() : Plug(self.MPlug.child(i)).value()
+			        for i in range(self.MPlug.numChildren())}
+
+	def nameIndexMap(self)->dict[str, int]:
+		"""return child plugs as a map"""
+		nameMap = {}
+		for i in range(self.MPlug.numChildren()):
+			mplug : om.MPlug = self.MPlug.child(i)
+			nameMap[mplug.partialName().rsplit(".", 1)[-1]] = i
+			nameMap[mplug.partialName(useAlias=True).rsplit(".", 1)[-1]] = i
+			nameMap[mplug.partialName(useLongNames=True).rsplit(".", 1)[-1]] = i
+		return nameMap
+
+	def child(self, index:(int, str))->Plug:
+		"""return child plug from index"""
+		if isinstance(index, int):
+			return Plug(self.MPlug.child(index))
+
+
+
 
 class NumericPlug(Plug):
 	"""plug for numeric attributes"""

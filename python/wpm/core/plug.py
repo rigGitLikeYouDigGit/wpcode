@@ -214,6 +214,11 @@ def ensurePlugHasMObject(plug:om.MPlug):
 	plug.setMObject(newObj)
 	return newObj
 
+def plugHash(plug:om.MPlug, includeIndex=True):
+	if includeIndex:
+		return hash((plug.node(), plug.attribute(), plug.logicalIndex()))
+	return hash((plug.node(), plug.attribute()))
+
 
 #testing separate functions for different iteration systems -
 # more code, but simpler funtions and more explicit in calling
@@ -262,46 +267,145 @@ def _expandPlugSeq(seq):
 			result.append(val)
 	return result
 
-def plugTreePairs(a:(om.MPlug, tuple), b:(om.MPlug, tuple)):
+"""for connections, by default we work only at leaf level
+
+but return some data from iteration to check if exact match - if so,
+we can connect directly at the end of the function
+
+we could try and defie tuple vs list as different purposes in structure,
+seems opaque
+"""
+def _setPlugValue(target:om.MPlug, value):
+	"""lowest function to directly set MPlug to given value
+	CHECK here if plug is a float / vector array - these
+	will be valid with deeper structures in value where simple
+	numeric plugs are not
 	"""
-	yield final pairs of leaf plugs or values
-	for connection or setting
-	try to get to nested tuples
+def stringMatches(s:str, matchMap:dict[str, T.Any], default=None):
+	"""check if string a matches any of the keys in matchMap"""
+	for k, v in matchMap.items():
+		if fnmatch.fnmatch(s, k):
+			return v
+	return default
 
-	check for plug types for shortcuts - float3, vector plugs etc
-
-	still need to check for array plugs
-
-	maybe we can use tuples inside argument to denote units that should
-	not be expanded
-
-	"""
-	# convert to sequences
-	if not isSeq(a):
-		a = (a,)
-	if not isSeq(b):
-		b = (b,)
-
-	# check if can be made plugs
-	#print("base", a, b)
-	a = _expandPlugSeq(a)
-	b = _expandPlugSeq(b)
-
-	#log("plugTreePairs", a, b)
-	if len(a) == 1:
-		if len(b) == 1:
-			yield (a[0], b[0])
+valT = (om.MPlug, float)
+def broadcastPlugPairs(target:om.MPlug, value:(valT, tuple[valT], dict[str, valT])):
+	"""set target plug to source plug's value"""
+	if target.isArray:
+		targetSubPlugs = plugSubPlugs(target)
+		if isinstance(value, om.MPlug):
+			# check rules for connecting arrays
+			if plugHType(value) == HType.Array:
+				"""illegal for now - should we connect all available plugs,
+				should we coerce target to length of given, etc"""
+				raise RuntimeError("Cannot directly connect array to array"
+				                   "\n{}\nto\n{}".format(value, target))
+			"""do we allow ANY connection to arrays? should it default to
+			first, last, should it override first, etc
+			too ambiguous for now
+			"""
+			raise RuntimeError("Cannot directly connect plug to array plug"
+			                   "\n{}\nto\n{}".format(value, target))
 			return
-		else:
-			for i in b:
-				yield from (plugTreePairs(a, i))
+		if isinstance(value, dict):
+			# if a list of indices on dict has been given
+			# don't try to mix strings and int indices
+			if isinstance(next(iter(value.keys())), int):
+				for index, v in value.items():
+					yield from broadcastPlugPairs(
+						#arrayElement(target, index),
+						target.elementByLogicalIndex(index),
+						v)
+				return
+			for subPlug in targetSubPlugs:
+				yield from broadcastPlugPairs(subPlug, value)
 			return
-	if len(a) == len(b):
-		for i, j in zip(a, b):
-			yield from plugTreePairs(i, j)
+
+		#TODO: WHAT IF IT'S AN ARRAY OF FLOATARRAY PLUGS
+		# AAAAA
+		if isSeq(value):
+			for i, v in enumerate(value):
+				yield from broadcastPlugPairs(target.elementByPhysicalIndex(i), v)
+			return
+
+		for i in range(target.numElements()):
+			yield from broadcastPlugPairs(target.elementByPhysicalIndex(i),
+			                   value)
 		return
 
-	raise ValueError("plugTreePairs: mismatched plug sequences", a, b)
+	if target.isCompound:
+		targetSubPlugs = plugSubPlugs(target)
+		if isinstance(value, om.MPlug):
+			if plugHType(value) == HType.Leaf:
+				value = (value,) * target.numChildren()
+			else:
+				value = plugSubPlugs(value)
+			assert target.numChildren() == len(value), "compound plugs must have equal number of children to broadcast"
+			for i in range(target.numChildren()):
+				yield from broadcastPlugPairs(target.child(i), value[i])
+			return
+		elif isinstance(value, dict):
+			for i in targetSubPlugs:
+				yield from broadcastPlugPairs(i, value)
+			return
+
+
+	# we have a single plug
+	if isinstance(value, dict):
+		result = stringMatches(target.name(), value, default=None)
+		if result is not None:
+			yield (target, result)
+			#_set(target, result)
+			return
+	yield (target, value)
+	#_setPlugValue(target, value)
+
+
+
+
+
+
+
+# def plugTreePairs(a:(om.MPlug, tuple), b:(om.MPlug, tuple)):
+# 	"""
+# 	yield final pairs of leaf plugs or values
+# 	for connection or setting
+# 	try to get to nested tuples
+#
+# 	check for plug types for shortcuts - float3, vector plugs etc
+#
+# 	still need to check for array plugs
+#
+# 	maybe we can use tuples inside argument to denote units that should
+# 	not be expanded
+#
+# 	"""
+# 	# convert to sequences
+# 	if not isSeq(a):
+# 		a = (a,)
+# 	if not isSeq(b):
+# 		b = (b,)
+#
+# 	# check if can be made plugs
+# 	#print("base", a, b)
+# 	a = _expandPlugSeq(a)
+# 	b = _expandPlugSeq(b)
+#
+# 	#log("plugTreePairs", a, b)
+# 	if len(a) == 1:
+# 		if len(b) == 1:
+# 			yield (a[0], b[0])
+# 			return
+# 		else:
+# 			for i in b:
+# 				yield from (plugTreePairs(a, i))
+# 			return
+# 	if len(a) == len(b):
+# 		for i, j in zip(a, b):
+# 			yield from plugTreePairs(i, j)
+# 		return
+#
+# 	raise ValueError("plugTreePairs: mismatched plug sequences", a, b)
 
 
 

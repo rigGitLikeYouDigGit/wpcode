@@ -118,6 +118,26 @@ def getMDagPath(node)->om.MDagPath:
 		return om.MDagPath.getAPathTo(node)
 	raise TypeError("Cannot retrieve MDagPath from ", node, type(node))
 
+def _resolveSingleLayerMPlug(mfnNode:om.MFnDependencyNode,
+                             plugName:str, parentPlug=None,
+                             physicalIndex=False)->(om.MPlug, T.List[str]):
+	token, *tokens = plugName.split(".", 1)
+	token, *index = token.split("[")
+	parent = parentPlug if parentPlug is not None else mfnNode
+	plug : om.MPlug = parent.findPlug(token, True)
+	if index:
+		plug = plug.elementByPhysicalIndex(int(index[0][0])) if physicalIndex else plug.elementByLogicalIndex(int(index[0][0]))
+	return plug, tokens
+
+def _resolveMPlug(mfnNode:om.MFnDependencyNode, plugName:str)->om.MPlug:
+	"""resolve a plug name to an MPlug on the given node,
+	including array indices"""
+	tokens = (plugName, )
+	plug = None
+	while tokens:
+		plug, tokens = _resolveSingleLayerMPlug(mfnNode, tokens[0], plug)
+	return plug
+
 def getMPlug(plug:(str, om.MPlug, PlugBase))->om.MPlug:
 	"""TRAGICALLY, sel.getPlug() will implicitly convert an
 	array plug name to its first element as it returns it.
@@ -132,11 +152,9 @@ def getMPlug(plug:(str, om.MPlug, PlugBase))->om.MPlug:
 		mobj = getMObject(node)
 		print(mobj, mobj.isNull(), om.MFnDependencyNode(mobj).name())
 		dep = om.MFnDependencyNode(mobj)
-		return dep.findPlug(attr, True)
-		# sel = om.MSelectionList()
-		# sel.add(plug)
-		# print("LOOKUP", plug, "GET", sel.getPlug(0))
-		# return sel.getPlug(0)
+		#return dep.findPlug(attr, True)
+		return _resolveMPlug(dep, attr)
+
 	if isinstance(plug, PlugBase):
 		return plug.MPlug
 	raise TypeError(f"getMPlug: invalid arg {plug} type {type(plug)}")

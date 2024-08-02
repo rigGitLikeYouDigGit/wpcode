@@ -34,20 +34,24 @@ def addHashFnToCls(cls):
 
 
 
-def patchMObjectWeakrefs(omModule:types.ModuleType):
+def patchMObjectHash(omModule:types.ModuleType):
 	"""you need to pull my specific fork of forbiddenfruit for this to work,
 	the base package doesn't handle __hash__ properly
 
 	give MObjects a consistent __hash__ using the builtin MObjectHandle,
 	letting them work in dicts, with weakrefs, etc
 	"""
-
 	import forbiddenfruit
-	#from edRig import om
 	objHash = lambda obj: omModule.MObjectHandle(obj).hashCode()
 	forbiddenfruit.curse(omModule.MObject, "__hash__", objHash)
 
-	pass
+def patchMPlugHash(omModule:types.ModuleType):
+	"""
+	"""
+	import forbiddenfruit
+	objHash = lambda plug: hash((plug.node(), plug.attribute(), plug.logicalIndex())
+	                            if plug.isElement() else (plug.node(), plug.attribute()))
+	forbiddenfruit.curse(omModule.MPlug, "__hash__", objHash)
 
 
 
@@ -205,14 +209,6 @@ class CmdsDescriptor(ModuleDescriptor):
 		return _cmdsGetAttribute_(self.mod, item)
 
 
-def MObjectHash(self):
-	return id(self)
-
-def patchMObjectHash(mod):
-	mod.MObject.__dict__["__hash__"] = MObjectHash
-	#setattr(mod.MObject, "__hash__", MObjectHash)
-
-
 def wrapCmds(targetModule:types.ModuleType,
              baseMemberName:str,
              resultMemberName:str):
@@ -236,7 +232,8 @@ def wrapOm(targetModule:types.ModuleType,
 	patch up openmaya module"""
 
 	baseOm = getattr(targetModule, baseMemberName)
-	patchMObjectWeakrefs(baseOm)
+	patchMObjectHash(baseOm)
+	patchMPlugHash(baseOm)
 
 	setattr(targetModule, resultMemberName, baseOm)
 
