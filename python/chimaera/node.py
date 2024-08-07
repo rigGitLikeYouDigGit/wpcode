@@ -308,9 +308,11 @@ def overlayPopulatedTree(populatedTree:Tree[list[Tree]],
 	for populatedBranch in populatedTree.allBranches(includeSelf=True,
 	                                        depthFirst=True,
 	                                        topDown=True):
+		address = populatedBranch.address(
+			includeSelf=True, includeRoot=False, uid=False)
+		#log(address)
 		resultBranch = resultTree(
-			populatedBranch.address(
-			includeSelf=True, includeRoot=False, uid=False),
+			address,
 						create=True)
 		for i in populatedBranch.value:
 			resultBranch = treelib.overlayTreeInPlace(resultBranch, i,
@@ -418,7 +420,7 @@ class NodeAttrWrapper:
 		# 	self.setCachedIncomingExpandedTree(resultTree.copy())
 
 		# expand expressions to tuples of (node uid, attribute, path)
-		incomingExpandedTree.display()
+		#incomingExpandedTree.display()
 		expandedTree = incomingExpandedTree.copy()
 
 		# populate expanded tree with rich attribute trees
@@ -558,6 +560,8 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin, Serialisable):
 	def getNodeTypeFromDataTree(data:Tree):
 		"""get the right node type to use for
 		a data tree"""
+		#log("DATA")
+		#data.display()
 		return ChimaeraNode.nodeTypeRegister[data["type", "defined"][0]]
 
 	@staticmethod
@@ -739,6 +743,9 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin, Serialisable):
 		name - create new data tree with given name
 
 		don't know why first arg is starred, remove it
+
+		TODO: if called on explicit node type, with data/node of incompatible tyoe as arg,
+		 raise error
 		"""
 
 		if not any((dataOrNodeOrName, uid)):
@@ -777,7 +784,7 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin, Serialisable):
 		self._attrMap : dict[str, NodeAttrWrapper] = {}
 
 		# add attributes
-		self.type = self._newAttrInterface("type")
+		self.type : type[ChimaeraNode] = self._newAttrInterface("type")
 		self.nodes = self._newAttrInterface("nodes")
 		self.params = self._newAttrInterface("params")
 		self.storage = self._newAttrInterface("storage")
@@ -852,6 +859,12 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin, Serialisable):
 
 	def children(self)->list[ChimaeraNode]:
 		"""return the children of this node"""
+		# log("children")
+		# log(self.nodes)
+		# log(self.nodes.resolve())
+		# log(self.nodes.resolve().branches)
+		result = [ChimaeraNode(i) for i in self.nodes.resolve().branches]
+		#print("first result", result[0])
 		return [ChimaeraNode(i) for i in self.nodes.resolve().branches]
 
 	def nameUidMap(self)->dict[str, str]:
@@ -923,22 +936,21 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin, Serialisable):
 
 	uniqueAdapterName = "ChimaeraNode"
 
-	@classmethod
-	def _encodeObject(cls, obj:ChimaeraNode, encodeParams:dict):
+	def encode(self, encodeParams:dict=None):
 		"""encode a node object"""
 		#return obj.tree.serialise(params=encodeParams)
 		print("PARAMS")
 		pprint.pprint(encodeParams)
-		return {"tree" : obj.tree}
+		return {"tree" : self.tree}
 
 	@classmethod
-	def _decodeObject(cls, serialType: type, serialData: dict, decodeParams: dict, formatVersion=-1):
+	def decode(cls, serialData: dict, decodeParams: dict, formatVersion=-1):
 		"""decode a node object"""
 		print("PARAMS")
 		pprint.pprint(decodeParams)
 		pprint.pprint(serialData)
 		assert isinstance(serialData["tree"], Tree)
-		return serialType(serialData["tree"])
+		return cls(serialData["tree"])
 
 
 ChimaeraNode.registerNodeType(ChimaeraNode)

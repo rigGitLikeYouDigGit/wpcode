@@ -87,7 +87,7 @@ formalises accepting no arguments, an empty call, or arbitrary arguments
 		"""OVERRIDE
 
 		if decoratorArgsKwargs is None,
-		decorator was called without arguments
+		decorat or was called without arguments
 		else, a tuple of (args, kwargs)
 
 		return the direct function to call - usually
@@ -95,6 +95,19 @@ formalises accepting no arguments, an empty call, or arbitrary arguments
 		"""
 		return targetFunction
 
+
+def clsInstanceMethod(cls):
+	"""decorator to pass a class if called on
+	a class, or instance if called on instance
+	"""
+	def wrapper(func):
+		@wraps(func)
+		def wrappedFunc(self=None, *args, **kwargs):
+			if self is None:
+				return func(cls, *args, **kwargs)
+			return func(self, *args, **kwargs)
+		return wrappedFunc
+	return
 
 
 if __name__ == '__main__':

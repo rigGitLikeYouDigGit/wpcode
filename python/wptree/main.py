@@ -55,6 +55,7 @@ class Tree(TreeInterface,
 		UidElement.__init__(self, uid)
 		TreeInterface.__init__(self)
 		#self._frameContextEnabled = False
+		assert name is not None, "Name must be specified for tree"
 		self._name = name
 		self._value = value
 		self._parent: TreeInterface = None

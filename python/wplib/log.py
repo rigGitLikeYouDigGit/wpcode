@@ -2,7 +2,7 @@
 from __future__ import annotations
 import typing as T
 
-import inspect
+import inspect, pprint
 
 
 def getLineLink(file=None, line=None) ->str:
@@ -16,9 +16,11 @@ def log(*args, file=None, line=None, printMsg=True, vars=True, **kwargs):
 	if line is None:
 		line = inspect.stack()[1].lineno
 	#string = f'File "{file}", line {max(line, 1)}'.replace("\\", "/")
-	string = getLineLink(file, line)
+	string = ""
 	if vars:
-		string += " \n" +str(inspect.stack()[1].frame.f_locals)
+		string += " \nVARS: " +pprint.pformat(inspect.stack()[1].frame.f_locals) + "\n^ "# + " \n^ " + str(inspect.stack()[1].frame.f_globals)
+	string += getLineLink(file, line)
+
 	if printMsg:
 		print(*args, string, **kwargs)
 	return string

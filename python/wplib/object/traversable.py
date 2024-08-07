@@ -5,6 +5,7 @@ import typing as T
 
 from dataclasses import dataclass
 
+from wplib import log
 from wplib.sequence import flatten
 from wplib.string import multiSplit, indicesOfAny, splitIndices, mergeRepeated
 
@@ -78,7 +79,8 @@ class Traversable:
 	- otherwise use default sepchar
 	"""
 
-	def _getCharAndFirstTokenAndBody(self, path:(str, tuple[str]))->(str, str, str):
+	def _getCharAndFirstTokenAndBody(self, path:(str, tuple[str]))->(tuple[str, str, str],
+			tuple[None, None, None]):
 		"""return (separator char, first token, rest of path body)
 		only look at first occurrence
 		this is a stupid system that probably doesn't handle
@@ -203,27 +205,14 @@ class Traversable:
 		#print("flattened path", path)
 		sepChar, firstToken, body = self._getCharAndFirstTokenAndBody(
 			path	)
+		if sepChar is None: # path was an empty list of lists?
+			return self
 		#print("sep, first, body:", sepChar, firstToken, body)
 
 		if traverseParams is None:
 			traverseParams = self.buildTraverseParamsFromRawKwargs(**kwargs)
 
-		# first parse address into tokens
-		#first, body = self.parseFirstToken(path)
-		#print("first", first, "body", body)
-		# if sepChar in self.separatorChars.values():
-		# 	# use first token as separator
-		# 	separator = sepChar
-		# 	first, body = self.parseFirstToken(body)
-		# else:
-		# 	# use default separator
-		# 	separator = self.defaultStartSeparator()
-
-		#print("traverse", path, first, body, separator)
-
-		#body = ((body,) if body else ()) + tuple(path[1:])
-
-
+		#log(sepChar, firstToken)
 		# look up target from separator and token
 		target = self.findNextTraversable(sepChar, firstToken, params=traverseParams)
 

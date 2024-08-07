@@ -94,6 +94,7 @@ class TestNode(unittest.TestCase):
 		"""
 
 		node = ChimaeraNode("test")
+		self.assertIsNone(node.value)
 		node.value.defined().value = "testValue"
 		#log(node.value.defined())
 		#log(node.value, node.value.resolve())
