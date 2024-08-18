@@ -12,6 +12,7 @@ from .dirtygraph import DirtyGraph, DirtyNode
 
 from .element import HashIdElement, IdElementBase, UidElement, NamedElement
 from .eventdispatcher import EventDispatcher, EventBase
+from .excepthook import ExceptHookManager
 
 from .hashable import HashableMixin, UnHashableDict, UnHashableSet, HashFunctions, toHash
 
@@ -22,6 +23,7 @@ from .plugin import PluginBase, PluginRegister
 
 from .sparselist import SparseList
 from .signal import Signal
+from .singleton import SingletonDecorator
 from .stringlike import StringLike
 
 from .traversable import Traversable, TraversableParams

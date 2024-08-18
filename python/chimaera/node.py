@@ -30,7 +30,7 @@ node uid : node name
 	"type" : node type
 	"params" : 
 		"incoming" : "CLS"
-		"defined" : "root" # could have root as value, to separate stable and dynamic regions
+		"override" : "root" # could have root as value, to separate stable and dynamic regions
 			
 			 
 	
@@ -207,6 +207,14 @@ root : [ type default value tree ]
 
 resolve THAT tree top-down, with lists resolving from left to right
 
+root : [ type default value tree ]
+	+ trunk : composite root value
+		+ (composite tree from ctlA, ctlB, other)
+		+ branch : overrideNode["trunk", "branch", "leaf"]
+			+ (composite tree from overrideNode["trunk", "branch", "leaf"])
+
+
+
 raw tree("trunk", "branch") will index into outer result tree("trunk", "branch"),
 and use that as the base tree for overlaying with value of raw tree("trunk", "branch") 
 
@@ -219,12 +227,25 @@ if T.TYPE_CHECKING:
 		attr : str = "value"
 		path : tuple[(str, int, slice), ...] = ()
 else:
-	NodeAttrRef = namedtuple("NodeAttrRef", "uid attr path")
+	NodeAttrRef = namedtuple("NodeAttrRef", "uid attr path",
+	                         defaults=["", "value", ()])
 
 
-# test = tuple([1,2,3])
-# test = NodeAttrRef(("a", "b", "c"))
-# test = NodeAttrRef(["a", "b", "c"])
+def resolveNodes(exp:str,
+                 graph:ChimaeraNode,
+                 fromNode:ChimaeraNode=None)->list[ChimaeraNode]:
+	"""resolve a list of node expressions to nodes
+	for now just uids
+
+	this doesn't add the node Type object for a "T" expression
+	"""
+	results = []
+	for i in exp:
+		# if i == "T":
+		# 	results.append(fromNode)
+		# 	continue
+		results.extend(graph.getNodes(i))
+	return graph.getNodes(exp)
 
 def expandIncomingTree(rawTree:Tree,
                        attrWrapper:NodeAttrWrapper,
@@ -244,6 +265,11 @@ def expandIncomingTree(rawTree:Tree,
 
 	use THIS tree to determine node dependencies
 
+	left side always resolves to nodes, midpoint always to an attr name,
+	right side always to a tree path within that attribute
+
+	TODO: we list nodes here, only keep their uids, then list again in populateExpandedTree
+
 	return tree[list[tuple[
 		str node uid,
 		str attribute,
@@ -251,28 +277,30 @@ def expandIncomingTree(rawTree:Tree,
 		]]]"""
 	#assert graph
 	for branch in rawTree.allBranches(includeSelf=True):
-		rawValue = branch.value
-		if not isinstance(rawValue, SEQ_TYPES):
+		rawValue : list[NodeAttrRef] = branch.value
+		if rawValue is None:
+			branch.value = []
+			continue
+		if not isinstance(rawValue, list):
 			rawValue = [rawValue]
 		resultTuples : list[NodeAttrRef] = []
+		#log("raw value", rawValue)
 		for i in rawValue: # individual string expressions
 
-			# separate nodes / node terms from path if given
-			nodeExpr = i.split(".")[0]
-			pathTokens = i.split(".")[1:]
-
-			attr = "value"
-			if pathTokens:
-				attr = pathTokens
-
 			# expand node lists to individual uids
-			if nodeExpr == "T":
+			#print("EXPAND", i, i == "T",  i[0] == "T" if isinstance(i, tuple) else False)
+			if i == "T":
 				resultTuples.append( NodeAttrRef("T", attrWrapper.name(), ()) )
 				continue
+			if (i[0] == "T" if isinstance(i, tuple) else False):
+				resultTuples.append( NodeAttrRef("T", attrWrapper.name(), i[2]) )
+				continue
 
-			if graph is not None:
-				for node in graph.getNodes(nodeExpr):
-					resultTuples.append( NodeAttrRef(node.uid, attr, ()) )
+			# separate nodes / node terms from path if given
+			refs = [NodeAttrRef(node.uid, i.attr, i.path)
+			         for node in resolveNodes(i.uid, graph, parentNode)]
+			resultTuples.extend(refs)
+
 		branch.value = resultTuples
 
 def populateExpandedTree(expandedTree:Tree[list[NodeAttrRef]],
@@ -291,8 +319,8 @@ def populateExpandedTree(expandedTree:Tree[list[NodeAttrRef]],
 				newValue.append(parentNode.getAttrInputFromType(
 					attrWrapper.name(), parentNode))
 				continue
-			newValue.append(graph.getNodes(i.uid)[0]._attrMap[i.attr].resolve())
-		# branch.value = [graph.getNodes(i.uid)[0]._attrMap[i.attr].resolve() for i in branch.value]
+			# look at this beautiful line
+			newValue.append(graph.getNodes(i.uid)[0]._attrMap[i.attr].resolve()[i.path])
 		branch.value = newValue
 
 def overlayPopulatedTree(populatedTree:Tree[list[Tree]],
@@ -333,13 +361,12 @@ def resolveIncomingTree(
 	# expand expressions to tuples of (node uid, attribute, path)
 	expandIncomingTree(resultTree, attrWrapper, parentNode, graph)
 
+	## this tree is cached so we don't have to resolve a load of node addresses
+	# every time - everything in resultTree should now be exact UIDs
+
 	# populate expanded tree with rich attribute trees
 	populateExpandedTree(resultTree, attrWrapper, parentNode, graph)
-	# this tree is cached so we don't have to resolve a load of node addresses
-	# every time -
-	# if the incoming data is filtered by dynamic expression, we can't cache :(
-	# not sure how to detect this
-	cacheTree = resultTree.copy()
+
 
 	# overlay rich trees into final incoming data stream
 	return overlayPopulatedTree(resultTree, attrWrapper, parentNode, graph)
@@ -354,7 +381,7 @@ def getEmptyTree():
 def getEmptyNodeAttributeData(name: str, incoming=("T", ), defined=())->Tree:
 	t = Tree(name)
 	t["incoming"] = list(incoming)
-	t["defined"] = list(defined)
+	t["override"] = list(defined)
 	return t
 
 
@@ -369,12 +396,12 @@ class NodeAttrWrapper:
 		return self._tree.name
 
 	# region locally defined overrides
-	def defined(self)->Tree:
-		return self._tree("defined")
+	def override(self)->Tree:
+		return self._tree("override")
 
-	def setDefined(self, value):
+	def setOverride(self, value):
 		"""manually override"""
-		self._tree["defined"] = value
+		self._tree["override"] = value
 	#endregion
 
 	# incoming connections
@@ -425,10 +452,6 @@ class NodeAttrWrapper:
 
 		# populate expanded tree with rich attribute trees
 		populateExpandedTree(expandedTree, self, self.node, self.node.parent())
-		# this tree is cached so we don't have to resolve a load of node addresses
-		# every time -
-		# if the incoming data is filtered by dynamic expression, we can't cache :(
-		# not sure how to detect this
 
 		# overlay rich trees into final incoming data stream
 		return overlayPopulatedTree(expandedTree, self, self.node, self.node.parent())
@@ -466,12 +489,12 @@ class NodeAttrWrapper:
 				)
 			)
 		if not self.node.parent(): # unparented nodes can't do complex behaviour
-			return self.defined()
+			return self.override()
 		incoming = self.resolveIncomingTree(
 			self.incomingTreeExpanded()
 		)
 
-		defined = self.defined()
+		defined = self.override()
 
 		return treelib.overlayTrees([incoming, defined])
 
@@ -481,7 +504,7 @@ class NodeAttrWrapper:
 			log("error overlaying incoming and defined")
 			log("incoming")
 			incoming.display()
-			log("defined")
+			log("override")
 			defined.display()
 			raise e
 
@@ -499,7 +522,7 @@ class NodeAttrWrapper:
 
 			# T E M P
 			# use directly defined type for now to avoid recursion
-			return ChimaeraNode.getNodeType(self.defined().value[0])
+			return ChimaeraNode.getNodeType(self.override().value[0])
 
 		return self.resolve()
 
@@ -562,7 +585,7 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin, Serialisable):
 		a data tree"""
 		#log("DATA")
 		#data.display()
-		return ChimaeraNode.nodeTypeRegister[data["type", "defined"][0]]
+		return ChimaeraNode.nodeTypeRegister[data["type", "override"][0]]
 
 	@staticmethod
 	def getNodeType(lookup:(str, ChimaeraNode, Tree))->type[ChimaeraNode]:
@@ -595,7 +618,9 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin, Serialisable):
 
 	@classmethod
 	def newNodeData(cls, name:str, uid="")->Tree:
-		"""return the default data for a node of this type"""
+		"""return the default data for a node of this type
+		OVERRIDE in unusual cases where normal attribute set is not enough
+		"""
 		t = Tree(name)
 		if uid:
 			t.setElementId(uid)
@@ -788,7 +813,7 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin, Serialisable):
 		self.nodes = self._newAttrInterface("nodes")
 		self.params = self._newAttrInterface("params")
 		self.storage = self._newAttrInterface("storage")
-		self.value = self._newAttrInterface("value")
+		self.flow = self._newAttrInterface("flow")
 
 	if T.TYPE_CHECKING: # better typing for call override
 		def __init__(self,
@@ -855,7 +880,7 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin, Serialisable):
 		# print(self, nodeData, self.nodes.defined())
 
 		# assert nodeData.name not in self.nodes.defined().keys(), f"Node {nodeData.name} already exists in graph {self}"
-		self.nodes.defined().addChild(nodeData, force=force)
+		self.nodes.override().addChild(nodeData, force=force)
 
 	def children(self)->list[ChimaeraNode]:
 		"""return the children of this node"""
@@ -863,7 +888,7 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin, Serialisable):
 		# log(self.nodes)
 		# log(self.nodes.resolve())
 		# log(self.nodes.resolve().branches)
-		result = [ChimaeraNode(i) for i in self.nodes.resolve().branches]
+		#result = [ChimaeraNode(i) for i in self.nodes.resolve().branches]
 		#print("first result", result[0])
 		return [ChimaeraNode(i) for i in self.nodes.resolve().branches]
 
@@ -898,57 +923,32 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin, Serialisable):
 
 		If none is found, overlay all of params on value.
 
-		The output of compute is exactly what comes out
+		The flow of compute is exactly what comes out
 		as a node's resolved value - if any extra overriding
 		has to happen, do it here
 
 		inputData is value.incomingComposed()
 		"""
-		#log("base compute")
-		#log("input")
-		#inputData = self.value.resolveIncomingTree()
-		#inputData.display()
-
-		#log("composed")
-		# inputData = self.value.incomingComposed()
-		# #inputData.display()
-		#
-		# assert isinstance(inputData, Tree)
-
 
 		# override with final defined tree
-		return treelib.overlayTrees([inputData, self.value.defined()])
+		return treelib.overlayTrees([inputData, self.flow.override()])
 
-
-	# def getNode(self, node:(str, ChimaeraNode, Tree)):
-	# 	if isinstance(node, str):
-	# 		uidCheck = self.indexInstanceMap.get(node)
-	# 		if uidCheck is not None:
-	# 			return uidCheck
-	# 		# check for name match
-	# 		nameCheck = self.nameUidMap()
-	#endregion
-
-	# region serialisation
-	# def serialise(self, params:dict=None) ->dict:
-	# 	"""serialise this node"""
-	# 	return self.tree.serialise(params=params)
 
 	uniqueAdapterName = "ChimaeraNode"
 
 	def encode(self, encodeParams:dict=None):
 		"""encode a node object"""
 		#return obj.tree.serialise(params=encodeParams)
-		print("PARAMS")
-		pprint.pprint(encodeParams)
+		#print("PARAMS")
+		#pprint.pprint(encodeParams)
 		return {"tree" : self.tree}
 
 	@classmethod
 	def decode(cls, serialData: dict, decodeParams: dict, formatVersion=-1):
 		"""decode a node object"""
-		print("PARAMS")
-		pprint.pprint(decodeParams)
-		pprint.pprint(serialData)
+		#print("PARAMS")
+		#pprint.pprint(decodeParams)
+		#pprint.pprint(serialData)
 		assert isinstance(serialData["tree"], Tree)
 		return cls(serialData["tree"])
 

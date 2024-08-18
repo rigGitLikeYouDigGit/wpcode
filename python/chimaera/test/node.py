@@ -73,16 +73,7 @@ class TestNode(unittest.TestCase):
 		we're not defining values directly?
 		or maybe we are
 
-		compute is not implicit, it's just the
-		default defined value?
-
-		node.value = "testValue" # sets defined value.
-		simple, fluid
-		internally sets node.value.defined().value = "testValue"
-
-		value:
-		- incoming tree composed
-		-
+		node.value().value is just kinda dumb
 
 		defined is ALWAYS the final override on whatever its attribute,
 		if you define a value, you don't want that value
@@ -94,13 +85,13 @@ class TestNode(unittest.TestCase):
 		"""
 
 		node = ChimaeraNode("test")
-		self.assertIsNone(node.value)
-		node.value.defined().value = "testValue"
+		self.assertIsNone(node.flow().value)
+		node.flow.override().value = "testValue"
 		#log(node.value.defined())
 		#log(node.value, node.value.resolve())
 
-		self.assertEqual(node.value.resolve().value, "testValue")
-		self.assertEqual(node.value().value, "testValue")
+		self.assertEqual(node.flow.resolve().v, "testValue")
+		self.assertEqual(node.flow().v, "testValue")
 
 
 	def test_nodeConnections(self):
@@ -112,11 +103,11 @@ class TestNode(unittest.TestCase):
 		b = ChimaeraNode("b")
 		out = ChimaeraNode("out")
 
-		out.value.incomingTreeRaw().value = [
+		out.flow.incomingTreeRaw().v = [
 			a.uid, b.uid
 		]
 
-		self.assertEqual(len(out.value.incomingTreeRaw().value), 2)
+		self.assertEqual(len(out.flow.incomingTreeRaw().v), 2)
 
 		# uid connections should work globally
 		#out.value.resolveIncomingTree().display()
