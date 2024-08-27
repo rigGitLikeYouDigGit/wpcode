@@ -22,9 +22,9 @@ deltas, hook up signals, inject control for delta events etc. Some of the ideas 
 interesting, but if we ever need that behaviour, use this as REFERENCE ONLY. Start
 from scratch with cleaner structure.
 
-
 """
 
+#TODO: REWRITE as adaptors for different prim types, with a single DeltaTracker class
 
 class DeltaAtom:
 	"""single atomic, ideally reversible change to state of object"""
