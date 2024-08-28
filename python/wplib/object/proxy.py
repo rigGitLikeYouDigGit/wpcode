@@ -67,6 +67,9 @@ class ProxyMeta(type):
 		print("proxy subclass check", args, kwargs)
 		return True
 
+	def __call__(cls:type[Proxy], obj, **kwargs):
+		return cls.getProxy(obj, **kwargs)
+
 
 class ProxyData(T.TypedDict):
 	"""user data for a proxy object"""
@@ -307,10 +310,10 @@ class Proxy(#ABC,
         and set of parents - this is not ideal, but hasn't hurt yet
 
         """
-		#log("proxy new", vars=0)
 
 		# look up existing proxy classes
 		cache = Proxy.__dict__["_classProxyCache"]
+		log("proxy new", cls, obj, vars=0)
 
 		# check that we don't start generating classes from generated classes
 		cls = next(filter(lambda x: not getattr(x, "_generated", False),
@@ -372,10 +375,12 @@ class Proxy(#ABC,
 		#linkObj = proxyLinkCls(targetObj)
 		proxyData = proxyData or {}
 		proxyData["target"] = targetObj
-		proxyObj = cls(targetObj,
+		proxyObj : Proxy = cls._proxyBaseCls().__new__(
+			cls._proxyBaseCls(), targetObj,
 		               proxyData=proxyData,
 		               #proxyLink=linkObj,
 		               )
+		proxyObj.__init__(targetObj, proxyData)
 		#proxyObj._proxyStrongRef = targetObj
 		cls._objProxyCache[uniqueId] = proxyObj
 
@@ -613,9 +618,10 @@ class LinkProxy(Proxy):
 if __name__ == '__main__':
 
 	baseVal = 2
-	proxVal = Proxy.getProxy(baseVal)
+	proxVal = Proxy(2)
+	print("prox val", proxVal)
 
-	print(proxVal, type(proxVal), isinstance(proxVal, int), issubclass(type(proxVal), int))
+
 
 
 

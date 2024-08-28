@@ -133,8 +133,5 @@ class WpDexProxy(
 
 if __name__ == '__main__':
 
-	t = [1, 2, 3]
-	t.append = lambda x: print("nope")
-
-	t.append(4)
-	print(t)
+	s = [1, [2, [3, 4]]]
+	proxy = WpDexProxy(s)
