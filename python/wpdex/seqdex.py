@@ -13,7 +13,7 @@ class SeqDex(WpDex):
 	forTypes = (list, tuple)
 	def _buildChildren(self) ->dict[DexPathable.keyT, WpDex]:
 		#return [self.makeChildPathable((i,), v) for i, v in enumerate(self.obj)]
-		log("seqdex build children")
+		#log("seqdex build children", vars=0)
 		return {i : self.makeChildPathable((i,), v) for i, v in enumerate(self.obj)}
 	def _consumeFirstPathTokens(self, path:pathT) ->tuple[list[WpDex], pathT]:
 		"""process a path token"""

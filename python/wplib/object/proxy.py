@@ -61,16 +61,10 @@ def classCallables(cls, dunders=True):
 class ProxyMeta(type):
 	"""used only for subclasscheck misdirection"""
 
-	#@classmethod
-	def __subclasscheck__(cls, *args, **kwargs):
-		#TODO: obviously add some logic here
-		print("proxy subclass check", args, kwargs)
-		return True
-
 	if not T.TYPE_CHECKING:
 		def __call__(cls:type[Proxy], obj, **kwargs):
+			#print("meta call", cls, obj, kwargs)
 			return cls.getProxy(obj, **kwargs)
-
 
 class ProxyData(T.TypedDict):
 	"""user data for a proxy object"""
@@ -111,28 +105,28 @@ class Proxy(#ABC,
 	# type assistance with proxy data dict
 	_proxyData : ProxyData
 
+	_proxyParentCls : type[Proxy]
+	_proxySuperCls : (type[Proxy], None)
+	_proxyTargetCls : T.Type[object] = None # type this proxy is wrapping
 
-	# @classmethod
-	# def _proxyBaseCls(cls)->T.Type[Proxy]:
-	# 	"""return the base class for this proxy class -
-	# 	OVERRIDE if you subclass the 'master' class
+	# def __init_subclass__(cls, **kwargs):
+	# 	"""get the parent and super proxy classes
 	#
-	# 	TODO: automate this in subclasshook
+	# 	TODO: we could put this into createClassProxy() -
+	# 	 only advantage of init_subclass is, it sets the attributes on
+	# 	 the actual proxy class, not just the generated ones
+	#
+	# 	 this may never be relevant
 	# 	"""
-	# 	return Proxy
-
-	@classmethod
-	def _proxyParentCls(cls)->T.Type[Proxy]:
-		"""return lowest base that is a proxy and not generated"""
-		return next(filter(lambda x: not getattr(x, "_generated", False),
-		                   cls.__mro__))
-
-	@classmethod
-	def _proxySuperCls(cls)->T.Type[Proxy]:
-		"""return the superclass of cls"""
-		# if it works it works
-		return cls._proxyParentCls().__mro__[-2]._proxyParentCls()
-
+	# 	super().__init_subclass__(**kwargs)
+	# 	mro = cls.__mro__
+	# 	print("init subclass", cls, mro)
+	# 	proxyClasses = [x for x in cls.__mro__ if issubclass(x, Proxy) and not getattr(x, "_generated", False)][::-1]
+	# 	print("proxyClases", proxyClasses)
+	# 	cls._proxyParentCls = proxyClasses[-1]
+	# 	cls._proxySuperCls = None
+	# 	if len(proxyClasses) > 1:
+	# 		cls._proxySuperCls = proxyClasses[-2]
 
 
 	def __init__(self, obj, proxyData:ProxyData, **kwargs):
@@ -252,33 +246,33 @@ class Proxy(#ABC,
 	def _createClassProxy(cls, targetCls):
 		"""creates a proxy class for the given class
 
-		CONSIDER -
-		how to handle super() calls from within functions?
-
-		two options: the all-singing-all-dancing way would be to create
-		TWO proxy classes per target class - one template class to hold
-		the base supplanted methods, and a child class inheriting from
-		it to hold overrides.
-
-		we could also introduce a 'self._proxyParentCls()' thing to represent
-		the base proxy behaviour? somehow?
-
-		or the correct way - if you're overriding magic methods,
-		you can handle a couple of extra lines to access the proxy
-		object directly, as one would hope you know what you're doing
-
-		if a proxy object is passed (for some reason), don't try to build
-		a proxy class for a proxy class
+		this wraps all undefined methods with the before- and after- functions,
+		and also handles setting the proxy attributes
 
 		"""
-		#log("new proxy class", vars=0)
+		# build namespace for generated class
 		# combine declared proxy attributes
 		allProxyAttrs = set(cls._proxyAttrs)
 		for base in cls.__mro__:
 			if getattr(base, "_proxyAttrs", None):
 				allProxyAttrs.update(base._proxyAttrs)
 
-		namespace = {"_proxyAttrs" : allProxyAttrs}
+		# work out parent, super and target classes
+		mro = cls.__mro__
+		proxyClasses = [x for x in cls.__mro__ if issubclass(x, Proxy) and not getattr(x, "_generated", False)][::-1]
+		#print("proxyClases", cls, proxyClasses)
+		_proxyParentCls = proxyClasses[-1]
+		_proxySuperCls = None
+		if len(proxyClasses) > 1:
+			_proxySuperCls = proxyClasses[-2]
+
+		# namespace dict
+		namespace = {"_proxyAttrs" : allProxyAttrs,
+		             "_generated" : True,
+		             "_proxyTargetCls" : targetCls,
+		             "_proxyParentCls" : _proxyParentCls,
+		             "_proxySuperCls" : _proxySuperCls,
+		             }
 		toWrap = classCallables(targetCls)
 
 		for methodName in toWrap:
@@ -307,8 +301,7 @@ class Proxy(#ABC,
 		newCls = clsType("{}({})".format(cls.__name__, targetCls.__name__),
 		                 bases,
 		                 namespace)
-		newCls._baseClass = targetCls
-		newCls._generated = True
+		newCls._proxyTargetCls = targetCls
 		return newCls
 
 	def __new__(cls, obj, *args, **kwargs):
@@ -325,7 +318,7 @@ class Proxy(#ABC,
 
 		# look up existing proxy classes
 		cache = Proxy.__dict__["_classProxyCache"]
-		log("proxy new", cls, obj, vars=0)
+		#log("proxy new", cls, obj, vars=0)
 
 		# check that we don't start generating classes from generated classes
 		cls = next(filter(lambda x: not getattr(x, "_generated", False),
@@ -386,10 +379,11 @@ class Proxy(#ABC,
 		# generate ProxyLink component for this object
 
 		#linkObj = proxyLinkCls(targetObj)
-		proxyData = proxyData or {}
+		proxyData = proxyData or ProxyData()
 		proxyData["target"] = targetObj
-		proxyObj : Proxy = cls._proxyParentCls().__new__(
-			cls._proxyParentCls(), targetObj,
+		#print("proxyParentCls", cls._proxyParentCls, "proxySuperCls", cls._proxySuperCls)
+		proxyObj : Proxy = cls.__new__(
+			cls, targetObj,
 		               proxyData=proxyData,
 		               #proxyLink=linkObj,
 			**kwargs
@@ -468,6 +462,8 @@ class Proxy(#ABC,
 		"""
 		return type(self)
 
+# Proxy._proxyParentCls = Proxy
+# Proxy._proxySuperCls = None
 
 class ProxyLink:
 	"""smaller object to govern how the proxy resolves its base object

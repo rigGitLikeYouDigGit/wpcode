@@ -78,8 +78,8 @@ class WpDexProxy(
 	             **kwargs):
 		"""create a WpDex object for this proxy, add
 		weak sets for children and parent"""
-		print("super cls", self._proxyParentCls(), self._proxySuperCls())
-		self._proxySuperCls().__init__(self, obj, proxyData, **kwargs)
+		#log("super cls", self._proxyParentCls, self._proxySuperCls)
+		self._proxySuperCls.__init__(self, obj, proxyData, **kwargs)
 
 
 		self._proxyData["deltaStartState"] = None
@@ -117,7 +117,7 @@ class WpDexProxy(
 	                     targetInstance:object
 	                     ) ->tuple[T.Callable, tuple, dict, object]:
 		"""open a delta if mutating method called"""
-		log(f"before proxy call {methodName}, {methodArgs, methodKwargs}", vars=0)
+		#log(f"before proxy call {methodName}, {methodArgs, methodKwargs}", vars=0)
 		fn, args, kwargs, targetInstance = super()._beforeProxyCall(methodName, methodArgs, methodKwargs, targetInstance)
 
 		if not self.proxyWpDex().childIdDexMap:
@@ -138,7 +138,7 @@ class WpDexProxy(
 		"""return result wrapped in a wpDex proxy, if it appears in
 		main dex children
 		"""
-		log(f"after proxy call {methodName}, {methodArgs, methodKwargs}", vars=0)
+		#log(f"after proxy call {methodName}, {methodArgs, methodKwargs}", vars=0)
 		callResult = super()._afterProxyCall(methodName, method, methodArgs, methodKwargs, targetInstance, callResult)
 		toReturn = callResult
 
@@ -146,8 +146,8 @@ class WpDexProxy(
 		if methodName in self.proxyWpDex().mutatingMethodNames:
 			self.proxyWpDex().updateChildren()
 
-		print("wp children", self.proxyWpDex().childIdDexMap)
-		print(self.proxyWpDex(), self.proxyWpDex().obj)
+		#log("wp children", self.proxyWpDex().childIdDexMap)
+		#log(self.proxyWpDex(), self.proxyWpDex().obj)
 
 		# only wrap containers, not literals?
 		if id(callResult) in self.proxyWpDex().childIdDexMap:
@@ -191,4 +191,8 @@ if __name__ == '__main__':
 	print(proxy, isinstance(proxy, list))
 	item = proxy[1][1]
 
-	print(item, isinstance(item, Proxy))
+	print(item, isinstance(item, WpDexProxy))
+
+	print(type(item))
+	print(type(item).__mro__)
+

@@ -13,6 +13,14 @@ from wplib.object.proxy import Proxy, ProxyLink, LinkProxy, ProxyData
 class TestProxy(unittest.TestCase):
 	""" """
 
+	def test_proxyNotReentrant(self):
+		"""check that a proxy INSTANCE can be created for a proxy,
+		but not a proxy TYPE for a proxy TYPE"""
+		baseObj = 2
+		getProxy = Proxy.getProxy(baseObj)
+		getProxy2 = Proxy.getProxy(getProxy)
+		self.assertEqual(getProxy, getProxy2)
+		self.assertEqual(getProxy2, baseObj)
 
 	def test_proxyTyping(self):
 		"""check that type call returns the right
