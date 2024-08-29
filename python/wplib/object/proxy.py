@@ -67,8 +67,9 @@ class ProxyMeta(type):
 		print("proxy subclass check", args, kwargs)
 		return True
 
-	def __call__(cls:type[Proxy], obj, **kwargs):
-		return cls.getProxy(obj, **kwargs)
+	if not T.TYPE_CHECKING:
+		def __call__(cls:type[Proxy], obj, **kwargs):
+			return cls.getProxy(obj, **kwargs)
 
 
 class ProxyData(T.TypedDict):
@@ -111,18 +112,27 @@ class Proxy(#ABC,
 	_proxyData : ProxyData
 
 
-	@classmethod
-	def _proxyBaseCls(cls)->T.Type[Proxy]:
-		"""return the base class for this proxy class -
-		override if you subclass the 'master' class
-		"""
-		return Proxy
+	# @classmethod
+	# def _proxyBaseCls(cls)->T.Type[Proxy]:
+	# 	"""return the base class for this proxy class -
+	# 	OVERRIDE if you subclass the 'master' class
+	#
+	# 	TODO: automate this in subclasshook
+	# 	"""
+	# 	return Proxy
 
-	def psuper(self)->T.Type[Proxy]:
-		"""return the base class for this proxy class -
-		used to stay idiomatic with super(), could replace
-		the class method above"""
-		return self._proxyBaseCls()
+	@classmethod
+	def _proxyParentCls(cls)->T.Type[Proxy]:
+		"""return lowest base that is a proxy and not generated"""
+		return next(filter(lambda x: not getattr(x, "_generated", False),
+		                   cls.__mro__))
+
+	@classmethod
+	def _proxySuperCls(cls)->T.Type[Proxy]:
+		"""return the superclass of cls"""
+		# if it works it works
+		return cls._proxyParentCls().__mro__[-2]._proxyParentCls()
+
 
 
 	def __init__(self, obj, proxyData:ProxyData, **kwargs):
@@ -250,7 +260,7 @@ class Proxy(#ABC,
 		the base supplanted methods, and a child class inheriting from
 		it to hold overrides.
 
-		we could also introduce a 'self.psuper()' thing to represent
+		we could also introduce a 'self._proxyParentCls()' thing to represent
 		the base proxy behaviour? somehow?
 
 		or the correct way - if you're overriding magic methods,
@@ -274,9 +284,11 @@ class Proxy(#ABC,
 		for methodName in toWrap:
 			# do not override methods if they appear in proxy class
 			# unless they are in the "wrapTheseMethodsAnyway" list
+			#print("wrap", methodName, methodName in cls._wrapTheseMethodsAnyway, methodName in dir(cls))
 			if hasattr(targetCls, methodName):
 				if ((methodName in cls._wrapTheseMethodsAnyway)
 						or (not methodName in dir(cls))):
+					#print("wrapping", methodName)
 					namespace[methodName] = cls._makeProxyMethod(methodName, targetCls)
 
 		clsType = ProxyMeta
@@ -347,6 +359,7 @@ class Proxy(#ABC,
 	             shared=True,
 	             proxyData=None,
 	             proxyLinkCls=None,
+	             **kwargs
 	             ):
 		"""preferred way of creating proxy - link class
 		used falls back to class default,
@@ -375,12 +388,13 @@ class Proxy(#ABC,
 		#linkObj = proxyLinkCls(targetObj)
 		proxyData = proxyData or {}
 		proxyData["target"] = targetObj
-		proxyObj : Proxy = cls._proxyBaseCls().__new__(
-			cls._proxyBaseCls(), targetObj,
+		proxyObj : Proxy = cls._proxyParentCls().__new__(
+			cls._proxyParentCls(), targetObj,
 		               proxyData=proxyData,
 		               #proxyLink=linkObj,
+			**kwargs
 		               )
-		proxyObj.__init__(targetObj, proxyData)
+		proxyObj.__init__(targetObj, proxyData, **kwargs)
 		#proxyObj._proxyStrongRef = targetObj
 		cls._objProxyCache[uniqueId] = proxyObj
 

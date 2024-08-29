@@ -4,11 +4,20 @@ import typing as T
 
 from copy import deepcopy
 from functools import cache, cached_property
+import weakref
 
 from wplib import log, Sentinel, sequence
-from wplib.object import Adaptor, TypeNamespace, HashIdElement
-from wplib.object.visitor import VisitAdaptor, Visitable, ITEM_CHILD_LIST_T
+from wplib.object import Adaptor, TypeNamespace, HashIdElement, ObjectReference
+from wplib.object.visitor import VisitAdaptor, Visitable, CHILD_LIST_T
 
+
+class DexRef(ObjectReference):
+	"""reference to a dex object"""
+	def __init__(self, obj:WpDex, path:DexPathable.pathT=""):
+		self.obj = obj
+		self.path = path
+	def resolve(self) ->WpDex:
+		return self.obj.access(self.path)
 
 class DexPathable:
 	"""base class for objects that can be pathed to"""
@@ -17,6 +26,7 @@ class DexPathable:
 	pathT = T.List[keyT]
 
 	# region combine operators
+	#TODO: pass in full call info to combine operators
 	class Combine(TypeNamespace):
 		"""operators to flatten multiple results into one"""
 		class _Base(TypeNamespace.base()):
@@ -110,6 +120,9 @@ class DexPathable:
 			return combine.flatten(results)
 		return results
 
+	def ref(self, path:DexPathable.pathT="")->DexRef:
+		return DexRef(self, path)
+
 class DexValidator:
 	"""base class for validating dex objects"""
 	def validate(self):
@@ -168,13 +181,21 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 	for defining different behaviour in different regions of structure, different areas
 	of program, etc,
 	use paths to set overrides rather than defining new classes
+
+	if these wrappers are regenerated, we shouldn't store state in them
+	do we get much from having this as a separate class to DexPathable?
+
 	"""
 	# adaptor integration
 	adaptorTypeMap = Adaptor.makeNewTypeMap()
 	dispatchInit = True # WPDex([1, 2, 3]) will return a specialised ListDex object
 
+	# list of methods that can mutate state of data object
+	# updated automatically with all defined setter properties
+	mutatingMethodNames : set[str] = set()
+
 	def __init__(self, obj:T.Any, parent:WpDex=None, key:T.Iterable[DexPathable.keyT]=None,
-	             overrideMap:OverrideMap=None):
+	             overrideMap:OverrideMap=None, **kwargs):
 		"""initialise with object and parent"""
 		# superclass inits
 		HashIdElement.__init__(self)
@@ -185,38 +206,60 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		self.obj = obj
 		self.key = list(key or [])
 
-		# overrides
-		self._overrideMap = overrideMap
+		# keep map of {child object id : WpDex holding that object}
+		#self.childIdDexMap : dict[int, WpDex] = weakref.WeakValueDictionary()
+		# goes against pathable to keep store of child objects
+		self.childIdDexMap : dict[int, WpDex] = {}
+		self.keyDexMap : dict[DexPathable.keyT, WpDex] = {}
 
-	def getOverrideMap(self)->OverrideMap:
-		"""get the override map for this object"""
-		if self._overrideMap is None:
-			self._overrideMap = OverrideMap()
-		return self._overrideMap
+	# 	# overrides
+	# 	self._overrideMap = overrideMap
+	#
+	# def getOverrideMap(self)->OverrideMap:
+	# 	"""get the override map for this object"""
+	# 	if self._overrideMap is None:
+	# 		self._overrideMap = OverrideMap()
+	# 	return self._overrideMap
+	#
+	# def getOverrides(self, forPath=None, root=None):
+	# 	"""retrieve metadata registered against a certain path
+	# 	(or this object's path by default"""
+	# 	path = forPath or self.path
+	# 	root = root or self.root
+	# 	return root.getOverrideMap().getMatches(path)
 
-	def getOverrides(self, forPath=None, root=None):
-		"""retrieve metadata registered against a certain path
-		(or this object's path by default"""
-		path = forPath or self.path
-		root = root or self.root
-		return root.getOverrideMap().getMatches(path)
 
 
-
-	def makeChildPathable(self, key:tuple[keyType], obj:T.Any)->Pathable:
+	def makeChildPathable(self, key:tuple[keyType], obj:T.Any)->WpDex:
 		"""make a child pathable object"""
-		pathType = self.adaptorForType(type(obj))
+		pathType : type[WpDex] = self.adaptorForType(type(obj))
 		assert pathType, f"no path type for {type(obj)}"
 		return pathType(obj, parent=self, key=key)
+		# dex = pathType(obj, parent=self, key=key)
+		# self.childIdDexMap[id(obj)] = dex
+		# return dex
 
 	def _buildChildren(self)->dict[DexPathable.keyT, WpDex]:
-		raise NotImplementedError(self, f"no buildChildren")
+		"""build child objects, return keyDexMap"""
+		raise NotImplementedError(self, f"no _buildChildren")
 
-	@cached_property
+	def updateChildren(self):
+		self.childIdDexMap.clear()
+		self.keyDexMap.clear()
+
+		self.keyDexMap.update(self._buildChildren())
+		self.childIdDexMap.update({id(v.obj) : v for v in self.keyDexMap.values()})
+
 	def children(self)->dict[WpDex.keyT, WpDex]:
 		"""return child objects
 		maybe move to pathable superclass"""
-		return self._buildChildren()
+		#return self._buildChildren()
+		if not self.keyDexMap:
+			self.updateChildren()
+		return self.keyDexMap
+		# return { v.key : v for k, v in self.childIdDexMap.items()
+		#          if v is not None
+		# }
 
 	@cached_property
 	def root(self)->WpDex:
@@ -237,7 +280,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 
 	def __repr__(self):
 		try:
-			return f"<{self.__class__.__name__}({self.obj}, {self.path})>"
+			return f"<{self.__class__.__name__}({self.obj}, path={self.path})>"
 		except:
 			return f"<{self.__class__.__name__}({self.obj}, (PATH ERROR))>"
 

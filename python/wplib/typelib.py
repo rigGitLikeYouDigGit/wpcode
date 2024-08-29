@@ -5,3 +5,4 @@ def isImmutable(obj):
 
 def isSeq(obj):
 	return isinstance(obj, (list, tuple, set, frozenset))
+
