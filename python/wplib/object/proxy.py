@@ -92,6 +92,10 @@ class Proxy(#ABC,
 	_classProxyCache = defaultdict(dict) # { class : { class cache } }
 
 	_generated = False
+	_allowChainedProxies = False # allow proxies to be created for proxies
+	# ^ don't do this
+	_allowProxyTypesForProxies = False # allow proxy types to be created for proxy types
+	# ^ really don't do this
 	_objProxyCache = {} #NB: weakdict was giving issues, this might chug memory
 	#_proxyLinkCls = None # optionally enforce a link class for this class of proxy
 
@@ -109,29 +113,12 @@ class Proxy(#ABC,
 	_proxySuperCls : (type[Proxy], None)
 	_proxyTargetCls : T.Type[object] = None # type this proxy is wrapping
 
-	# def __init_subclass__(cls, **kwargs):
-	# 	"""get the parent and super proxy classes
-	#
-	# 	TODO: we could put this into createClassProxy() -
-	# 	 only advantage of init_subclass is, it sets the attributes on
-	# 	 the actual proxy class, not just the generated ones
-	#
-	# 	 this may never be relevant
-	# 	"""
-	# 	super().__init_subclass__(**kwargs)
-	# 	mro = cls.__mro__
-	# 	print("init subclass", cls, mro)
-	# 	proxyClasses = [x for x in cls.__mro__ if issubclass(x, Proxy) and not getattr(x, "_generated", False)][::-1]
-	# 	print("proxyClases", proxyClasses)
-	# 	cls._proxyParentCls = proxyClasses[-1]
-	# 	cls._proxySuperCls = None
-	# 	if len(proxyClasses) > 1:
-	# 		cls._proxySuperCls = proxyClasses[-2]
 
 
 	def __init__(self, obj, proxyData:ProxyData, **kwargs):
 		"""called by __new__, _proxyLink is constructed internally"""
-		#log("proxy init", vars=0)
+		log("proxy init", obj, type(obj))
+
 		# dict for user data
 		self._proxyData = proxyData
 		# add to this dict instead of defining new attrs,
@@ -218,7 +205,7 @@ class Proxy(#ABC,
 			# pre-call hook - must return parametres of method call
 			newMethod, newArgs, newKw, targetInstance = self._beforeProxyCall(
 				methodName, methodArgs=args, methodKwargs=kw,
-				targetInstance=self._proxyResult()
+				targetInstance=self._proxyTarget()
 			)
 
 			try: # set up exception catch
@@ -318,7 +305,7 @@ class Proxy(#ABC,
 
 		# look up existing proxy classes
 		cache = Proxy.__dict__["_classProxyCache"]
-		#log("proxy new", cls, obj, vars=0)
+		log("proxy new", cls, obj, type(obj), vars=0)
 
 		# check that we don't start generating classes from generated classes
 		cls = next(filter(lambda x: not getattr(x, "_generated", False),
@@ -351,7 +338,6 @@ class Proxy(#ABC,
 	def getProxy(cls, targetObj,
 	             shared=True,
 	             proxyData=None,
-	             proxyLinkCls=None,
 	             **kwargs
 	             ):
 		"""preferred way of creating proxy - link class
@@ -363,29 +349,25 @@ class Proxy(#ABC,
 
 		if weak, no hard reference
 		"""
+		uniqueId = cls._proxyObjUniqueId(targetObj)
 		# check if shared proxy is available
 		if isinstance(targetObj, Proxy):
+			testObj = targetObj._proxyTarget()
+			testUid = cls._proxyObjUniqueId(testObj)
+			if shared and testUid in cls._objProxyCache:
+				if cls._objProxyCache[testUid]:
+					log("fetching shared proxy reference for", testUid)
+					return cls._objProxyCache[testUid]
 
-			targetObj = targetObj._proxyStrongRef
-		uniqueId = cls._proxyObjUniqueId(targetObj)
-		if shared and uniqueId in cls._objProxyCache:
-			if cls._objProxyCache[uniqueId]:
-				print("fetching shared proxy reference for", uniqueId)
-				return cls._objProxyCache[uniqueId]
-
-		# retrieve class to use for ProxyLink
-		#proxyLinkCls = proxyLinkCls or cls._proxyLinkCls or ProxyLink
-
-		# generate ProxyLink component for this object
-
-		#linkObj = proxyLinkCls(targetObj)
+		# build instance proxyData
+		# todo: make this its own method
+		#  maybe classmethod that's called on the constructed class within __new__?
 		proxyData = proxyData or ProxyData()
 		proxyData["target"] = targetObj
 		#print("proxyParentCls", cls._proxyParentCls, "proxySuperCls", cls._proxySuperCls)
 		proxyObj : Proxy = cls.__new__(
 			cls, targetObj,
 		               proxyData=proxyData,
-		               #proxyLink=linkObj,
 			**kwargs
 		               )
 		proxyObj.__init__(targetObj, proxyData, **kwargs)
@@ -395,40 +377,31 @@ class Proxy(#ABC,
 		#proxyObj._proxyStrongRef = targetObj
 		return proxyObj
 
-	def _setProxyBase(self, obj):
-		"""set the base reference to the proxy"""
-		self._proxyLink.setProxyTarget(obj)
 
-	#@property
-	def _proxyBase(self):
-		return self._proxyLink.proxyTargetObj
-
-	def _proxyResult(self):
-		"""return the result of the _proxyLink process"""
-		#return self._proxyLink.proxyResult()
-		#return self._proxyLink.proxyResult()
+	def _proxyTarget(self):
+		"""return the target object to be used in place of the proxy -
+		"""
 		return self._proxyData["target"]
-
 
 	def __getattr__(self, name):
 		try: # look up attribute on proxy class first
 			return object.__getattribute__(self, name)
 		except:
 			# obj = object.__getattribute__(self, self._proxyResultKey)
-			obj = self._proxyResult()
+			obj = self._proxyTarget()
 
 			return getattr( obj, name)
 
 	def __delattr__(self, name):
 		# delattr(object.__getattribute__(self, self._proxyResultKey), name)
-		delattr(self._proxyResult(), name)
+		delattr(self._proxyTarget(), name)
 
 	def __setattr__(self, name, value):
 		try:
 			if name in self.__pclass__._proxyAttrs:
 				object.__setattr__(self, name, value)
 			else:
-				setattr(self._proxyResult(), name, value)
+				setattr(self._proxyTarget(), name, value)
 		except Exception as e:
 			#print("p attrs {}".format(self.__pclass__._proxyAttrs))
 			print("error name {}, value {}".format(name, value))
@@ -437,13 +410,13 @@ class Proxy(#ABC,
 
 
 	def __nonzero__(self):
-		return bool(self._proxyResult())
+		return bool(self._proxyTarget())
 
 	def __str__(self):
-		return str(self._proxyResult())
+		return str(self._proxyTarget())
 
 	def __repr__(self):
-		return repr(self._proxyResult())
+		return repr(self._proxyTarget())
 
 	@property
 	def __class__(self):
@@ -511,12 +484,15 @@ class LinkProxy(Proxy):
 	               # "_proxyStrongRef"
 	               )
 
-	@classmethod
-	def _proxyBaseCls(cls)->T.Type[Proxy]:
-		"""return the base class for this proxy class -
-		override if you subclass the 'master' class
-		"""
-		return LinkProxy
+	# explicit ways to refer to "base" and "result" objects of link
+	def _proxyBase(self):
+		return self.proxyTarget()
+
+	def _proxyResult(self):
+		"""return the result of the _proxyLink process"""
+		return self._proxyData["target"]
+
+
 
 	def __new__(cls, obj, *args, **kwargs):
 		"""
@@ -609,20 +585,6 @@ class LinkProxy(Proxy):
 
 		# set the proxy link instance to this object
 		self._proxyLink.setProxyInstance(self)
-
-
-
-# class Proxy(Proxy # don't worry about it
-#             ): # don't worry about it
-# 	"""don't worry about it"""
-# 	def __new__(cls, *args, **kwargs):
-# 		oldNew = cls.__new__
-# 		cls.__new__ = Proxy.__new__ # don't worry about it
-# 		ins = cls.getProxy(*args)
-# 		cls.__new__ = oldNew # don't worry about it
-# 		return ins
-
-# ^ no idea what this was about ^
 
 
 if __name__ == '__main__':

@@ -16,11 +16,18 @@ class TestProxy(unittest.TestCase):
 	def test_proxyNotReentrant(self):
 		"""check that a proxy INSTANCE can be created for a proxy,
 		but not a proxy TYPE for a proxy TYPE"""
-		baseObj = 2
-		getProxy = Proxy.getProxy(baseObj)
-		getProxy2 = Proxy.getProxy(getProxy)
-		self.assertEqual(getProxy, getProxy2)
-		self.assertEqual(getProxy2, baseObj)
+		baseObj = [1, 2, 3]
+		# by default, proxies cannot be chained
+		proxyA = Proxy(baseObj)
+		proxyB = Proxy(proxyA)
+		self.assertIsInstance(proxyA, Proxy)
+		self.assertIs(proxyA, proxyB)
+
+		# test chaining proxies
+		proxyC = Proxy.getProxy(proxyA, shared=False)
+		self.assertIsNot(proxyA, proxyC)
+		self.assertIsNot(proxyC._proxyTarget(), baseObj)
+		self.assertIs(proxyA, proxyC._proxyTarget())
 
 	def test_proxyTyping(self):
 		"""check that type call returns the right
