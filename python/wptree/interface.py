@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from collections import namedtuple
 
 from wplib.sequence import flatten, resolveSeqIndex
-from wplib.object import Signal, Traversable, TraversableParams, EventDispatcher, EventBase, DeepVisitor
+from wplib.object import Signal, Traversable, TraversableParams, EventDispatcher#, EventBase, DeepVisitor
 from wplib import TypeNamespace, log
 from wplib.sentinel import Sentinel
 from wplib.string import incrementName

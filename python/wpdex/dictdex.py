@@ -25,8 +25,8 @@ class DictDex(WpDex):
 		"""process a path token"""
 		token, *path = path
 		if token == "keys()":
-			return [self.children["keys()"]], path
-		return [self.children[token]], path
+			return [self.children()["keys()"]], path
+		return [self.children()[token]], path
 
 
 

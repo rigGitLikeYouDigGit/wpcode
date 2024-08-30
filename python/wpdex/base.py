@@ -7,7 +7,7 @@ from functools import cache, cached_property
 import weakref
 
 from wplib import log, Sentinel, sequence
-from wplib.object import Adaptor, TypeNamespace, HashIdElement, ObjectReference
+from wplib.object import Adaptor, TypeNamespace, HashIdElement, ObjectReference, EventDispatcher
 from wplib.object.visitor import VisitAdaptor, Visitable, CHILD_LIST_T
 
 
@@ -154,6 +154,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 
             # interfaces that must be implemented
             Visitable,  # compatible with visitor pattern
+            EventDispatcher, # can send events
             DexPathable,
             #DexValidator,
             ):
@@ -161,29 +162,13 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 	WPDex graph, allowing pathing, metadata, UI generation,
 	validation, etc
 
-	Core data in WPDex structure is IMMUTABLE - whenever anything changes,
-	WPDex is regenerated. Detecting these changes from the outside is
-	another issue
+	define a separate adaptor for each primitive type, and implement
+	all special treatment there
 
-	Regardless of how we structure it, there's going to be a lot of
-	stuff here. Do we prefer a few large blocks of stuff, or many small pieces
-	of stuff
-
-	Could split up classes per-type, per-behaviour - DictDexVisitable, ListDexValidator, etc
-
-	let's just have single objects and interfaces - DictDex, ListDex, etc
-
-	THIS base class collects together the interfaces that need to be fulfilled, and subclasses
-	each implement them differently.
-	This actually doesn't seem too bad
-
-
-	for defining different behaviour in different regions of structure, different areas
-	of program, etc,
-	use paths to set overrides rather than defining new classes
-
-	if these wrappers are regenerated, we shouldn't store state in them
-	do we get much from having this as a separate class to DexPathable?
+	if we wanted to properly police a structure, we might do a kind of
+	client/server model, where a WpDex sends the desired change and path to
+	a server through events, and a new event is sent back with the result
+	and permissions?
 
 	"""
 	# adaptor integration
@@ -192,13 +177,18 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 
 	# list of methods that can mutate state of data object
 	# updated automatically with all defined setter properties
-	mutatingMethodNames : set[str] = set()
+	mutatingMethodNames : set[str] = {
+		"__setattr__", "__setitem__", "__iadd__", "__imul__", "__delitem__", "__delattr__", "__setslice__",
+
+		"insert", "append", "extend", "pop", "remove", "clear", "update",
+	}
 
 	def __init__(self, obj:T.Any, parent:WpDex=None, key:T.Iterable[DexPathable.keyT]=None,
 	             overrideMap:OverrideMap=None, **kwargs):
 		"""initialise with object and parent"""
 		# superclass inits
 		HashIdElement.__init__(self)
+		EventDispatcher.__init__(self)
 		#Adaptor.__init__(self)
 
 		# should these attributes be moved into pathable? probably
@@ -298,6 +288,17 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 
 		return self.access(self, list(sequence.toSeq(item)), one=None)
 
+	# events
+	def _nextEventDestinations(self, forEvent:EventBase, key:str)->list[EventDispatcher]:
+		"""
+		OVERRIDE
+		return a list of objects to pass this event
+		unsure if we should allow filtering here (parent deciding
+		which child should receive event)
+		"""
+		if self.parent:
+			return [self.parent]
+		return []
 
 	# serialisation
 	def asStr(self)->str:

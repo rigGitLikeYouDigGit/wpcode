@@ -16,12 +16,6 @@ allow subscribing to different streams of events?
 """
 
 
-@dataclass
-class EventBase:
-	"""events can be anything, base class just used for typing direction"""
-	sender : EventDispatcher = None
-
-
 class EventDispatcher:
 	"""base class for objects that can send events to other objects"""
 
@@ -29,7 +23,8 @@ class EventDispatcher:
 		self._eventNameSignalMap : dict[str, Signal] = {}
 
 
-	def getEventSignal(self, key:str, create=False)->Signal:
+	def getEventSignal(self, key:str="main", create=False)->Signal:
+		"""get the signal that will emit an event, for a given key"""
 		if self._eventNameSignalMap.get(key) is None:
 			if create:
 				self._eventNameSignalMap[key] = Signal()
@@ -44,7 +39,7 @@ class EventDispatcher:
 		self.getEventSignal(key, create=True).connect(fn)
 
 
-	def _nextEventDestinations(self, forEvent:EventBase, key:str)->list[EventDispatcher]:
+	def _nextEventDestinations(self, forEvent:dict, key:str)->list[EventDispatcher]:
 		"""
 		OVERRIDE
 		return a list of objects to pass this event
@@ -54,17 +49,20 @@ class EventDispatcher:
 		raise NotImplementedError
 
 
-	def _emitEventToListeners(self, event:EventBase, key:str):
-		"""override to actually process the event on this object"""
+	def _emitEventToListeners(self, event:dict, key:str="main"):
+		"""override to actually process the event on this object -
+		if a signal is found for that key, emit the event
+		to that signal's listeners
+		"""
 		if self.getEventSignal(key, create=False): # event exists, emit
 			self.getEventSignal(key).emit(event)
 
 
-	def sendEvent(self, event:(EventBase, T.Any), key:str):
+	def sendEvent(self, event:dict, key:str="main"):
 		"""user-facing entrypoint to introduce an event to the system
 		should not be necessary to override this"""
-		if getattr(event, "sender", None) is None:
-			event.sender = self
+		if event.get("sender") is None:
+			event["sender"] = self
 		self._emitEventToListeners(event, key )
 		for i in self._nextEventDestinations(event, key):
 			i.sendEvent(event, key)

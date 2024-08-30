@@ -12,7 +12,7 @@ from .decorator import UserDecorator
 from .dirtygraph import DirtyGraph, DirtyNode
 
 from .element import HashIdElement, IdElementBase, UidElement, NamedElement
-from .eventdispatcher import EventDispatcher, EventBase
+from .eventdispatcher import EventDispatcher
 from .excepthook import ExceptHookManager
 
 from .hashable import HashableMixin, UnHashableDict, UnHashableSet, HashFunctions, toHash

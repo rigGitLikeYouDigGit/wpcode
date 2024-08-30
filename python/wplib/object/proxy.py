@@ -62,7 +62,7 @@ class ProxyMeta(type):
 	"""used only for subclasscheck misdirection"""
 
 	if not T.TYPE_CHECKING:
-		def __call__(cls:type[Proxy], obj, **kwargs):
+		def __call__(cls:type[Proxy], obj, **kwargs)->Proxy:
 			#print("meta call", cls, obj, kwargs)
 			return cls.getProxy(obj, **kwargs)
 
@@ -70,6 +70,9 @@ class ProxyData(T.TypedDict):
 	"""user data for a proxy object"""
 	target : object
 	# other data
+
+if T.TYPE_CHECKING:
+	ProxyMeta = type
 
 class Proxy(#ABC,
 	#object,
@@ -117,7 +120,7 @@ class Proxy(#ABC,
 
 	def __init__(self, obj, proxyData:ProxyData, **kwargs):
 		"""called by __new__, _proxyLink is constructed internally"""
-		log("proxy init", obj, type(obj))
+		#log("proxy init", obj, type(obj))
 
 		# dict for user data
 		self._proxyData = proxyData
@@ -305,7 +308,7 @@ class Proxy(#ABC,
 
 		# look up existing proxy classes
 		cache = Proxy.__dict__["_classProxyCache"]
-		log("proxy new", cls, obj, type(obj), vars=0)
+		#log("proxy new", cls, obj, type(obj), vars=0)
 
 		# check that we don't start generating classes from generated classes
 		cls = next(filter(lambda x: not getattr(x, "_generated", False),
