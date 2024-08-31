@@ -43,9 +43,9 @@ class DexPathable:
 				return results[0]
 	# endregion
 
-	# def path(self)->pathT:
-	# 	"""return path to this object"""
-	# 	raise NotImplementedError(self)
+	def path(self)->pathT:
+		"""return path to this object"""
+		raise NotImplementedError(self)
 
 	def _consumeFirstPathTokens(self, path:pathT)->tuple[list[Pathable], pathT]:
 		"""process a path token"""
@@ -267,6 +267,61 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		if self.parent is None:
 			return []
 		return self.parent.path + list(self.key)
+
+	def trunk(self, includeSelf=True, includeRoot=True)->list[TreeType]:
+		"""return sequence of ancestor trees in descending order to this tree"""
+
+
+		branches = []
+		current = self
+		while current.parent:
+			branches.insert(0, current)
+			current = current.parent
+		if includeRoot:
+			branches.insert(0, current)
+		if branches and not includeSelf:
+			branches.pop(-1)
+		return branches
+
+	def commonParent(self, otherBranch: TreeType)->(TreeType, None):
+		""" return the lowest common parent between given branches
+		or None
+		if one branch is direct parent of the other,
+		that branch will be returned
+		"""
+		# #print("commonParent")
+		if self.root is not otherBranch.root:
+			return None
+		otherTrunk = set(otherBranch.trunk(includeSelf=True, includeRoot=True))
+		# otherTrunk.add(otherBranch)
+		test = self
+		while test not in otherTrunk:
+			test = test.parent
+		return test
+
+	def relativePath(self, fromDex:WpDex)->list[str]:
+		""" retrieve the relative path from the given branch to this one"""
+		fromDex = fromDex or self.root
+
+		# check that branches share a common tree (root)
+		#print("reladdress", self, self.trunk(includeSelf=True, includeRoot=True))
+		common = self.commonParent(fromDex)
+		if not common:
+			raise LookupError("Branches {} and {} "
+			                  "do not share a common root".format(self, fromDex))
+
+		addr = []
+		commonDepth = common.depth()
+		# parent tokens to navigate up from other
+		for i in range(commonDepth - fromDex.depth()):
+			addr.append("..")
+		# add address to this node
+		addr.extend(
+			self.path[commonDepth:])
+		return addr
+
+
+
 
 	def __repr__(self):
 		try:

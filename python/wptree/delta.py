@@ -427,7 +427,7 @@ def branchToSyncForDelta(delta:TreeDeltaAtom, relativeRoot:Tree)->Tree:
 # 			#print("dispatch event", event.accepted, event)
 # 			#i.sendEvent(event)
 # 			#i._relayEvent(event, targetChain=)
-# 			i._emitEventToListeners(event)
+# 			i._handleEvent(event)
 # 			pass
 #
 # 		#self.vendor.sendEvent(event)

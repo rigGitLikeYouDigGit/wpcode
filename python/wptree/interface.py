@@ -27,6 +27,9 @@ to override them
 
 TODO: events only when needed - somehow need to switch out
 code dynamically from root, or downwards
+
+TODO: events superceded by wpdex, remove it from the core data structure here
+
 """
 
 # region DeepVisitor integration
@@ -659,7 +662,6 @@ class TreeInterface(Traversable,
 		# #print("commonParent")
 		if self.root is not otherBranch.root:
 			return None
-		#hash(self)
 		otherTrunk = set(otherBranch.trunk(includeSelf=True, includeRoot=True))
 		# otherTrunk.add(otherBranch)
 		test = self

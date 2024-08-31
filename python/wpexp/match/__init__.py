@@ -1,6 +1,8 @@
 from __future__ import annotations
 import typing as T
 
+from .match import stringMatch
+
 """
 
 package managing queries into pathed and tagged objects.

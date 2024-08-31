@@ -14,6 +14,8 @@ from wplib.object import DeltaAtom, Proxy, ProxyData
 from wplib.constant import SEQ_TYPES, MAP_TYPES, STR_TYPES, LITERAL_TYPES, IMMUTABLE_TYPES
 from wplib.sentinel import Sentinel
 
+from wpexp.match import stringMatch
+
 from wpdex.base import WpDex
 
 
@@ -34,6 +36,16 @@ proxy = WpDexProxy(myStruct)
 myStruct[1][1] -> [3, 4] (list)
 proxy[1][1] -> WpDexProxy([3, 4])
 
+
+"""
+
+"""
+TODO:
+might be cleaner to emit events into an intermediate queue,
+and then start working through them after the call stack is clear - 
+that could also be a way to async the ui updates.
+
+for now the tight coupling seems to work
 """
 
 class Reactive:
@@ -184,6 +196,37 @@ class WpDexProxy(
 		if methodName in self.dex().mutatingMethodNames:
 			self._emitDelta()
 		raise exception
+
+
+	# reactive
+	def bind(self, dataPath:str, target:callable, callNow=True):
+		"""bind a reactive target to a path in this object -
+		when the path data changes, target is called with
+		that data"""
+
+		def onEvent(event):
+			print("onEvent", event)
+			print("dataPath", dataPath)
+			print("dataToSet", self.dex().access(self.dex(), dataPath))
+			print("sender rel path", event["sender"].relativePath(fromDex=self.dex()))
+
+			# check that the relative path is equal or less than the data path
+			# if event["sender"] == dataPath:
+			target(self.dex().access(self.dex(), dataPath,
+			                         values=True, one=True
+			                         )
+			       )
+
+		self.dex().getEventSignal("main", create=True).connect(onEvent)
+
+		if callNow:
+			target(self.dex().access(self.dex(), dataPath,
+			                         values=True, one=True
+			                         )
+			       )
+
+
+		pass
 
 
 

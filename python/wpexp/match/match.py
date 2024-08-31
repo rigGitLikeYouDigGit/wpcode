@@ -11,6 +11,10 @@ def definesMatch(query:str)->bool:
 	"""does this query define a match"""
 	return bool(set(query) & set(SPECIAL_CHARS))
 
+def stringMatch(query:str, value:str)->bool:
+	"""does this string match the query"""
+	return fnmatch.fnmatch(value, query)
+
 def getMatches(
 		items: T.Iterable[dict[str, T.Any]],
 		query: dict[str, str],

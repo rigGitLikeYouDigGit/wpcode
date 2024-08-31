@@ -1,5 +1,7 @@
 
 from __future__ import annotations
+
+import traceback
 import typing as T
 
 from wplib.object.signal import Signal
@@ -21,6 +23,9 @@ class EventDispatcher:
 
 	def __init__(self):
 		self._eventNameSignalMap : dict[str, Signal] = {}
+
+	def __hash__(self):
+		return id(self)
 
 
 	def getEventSignal(self, key:str="main", create=False)->Signal:
@@ -48,8 +53,22 @@ class EventDispatcher:
 		"""
 		raise NotImplementedError
 
+	def _allEventDestinations(self, forEvent:dict, key:str)->list[EventDispatcher]:
+		"""use to prevent recursive sendEvent calls -
+		look at all destinations first, return flat list"""
+		sources = [self]
+		toSend = [self]
 
-	def _emitEventToListeners(self, event:dict, key:str="main"):
+		while sources:
+			source = sources.pop(0)
+			destinations = source._nextEventDestinations(forEvent, key)
+			toSend.extend(destinations)
+			sources.extend(destinations)
+		return toSend
+
+
+
+	def _handleEvent(self, event:dict, key:str= "main"):
 		"""override to actually process the event on this object -
 		if a signal is found for that key, emit the event
 		to that signal's listeners
@@ -63,8 +82,14 @@ class EventDispatcher:
 		should not be necessary to override this"""
 		if event.get("sender") is None:
 			event["sender"] = self
-		self._emitEventToListeners(event, key )
-		for i in self._nextEventDestinations(event, key):
-			i.sendEvent(event, key)
+
+		try:
+			for i in self._allEventDestinations(event, key):
+				i._handleEvent(event, key)
+		except Exception as e:
+			print("error in event handling", e)
+			traceback.print_exc()
+		# for i in self._nextEventDestinations(event, key):
+		# 	i.sendEvent(event, key)
 
 
