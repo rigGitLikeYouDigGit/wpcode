@@ -1,6 +1,7 @@
 from __future__ import annotations
 import typing as T
 
+
 """override system
 
 consider a syntax processing pass to make condition statements
@@ -36,6 +37,10 @@ match="f["purpose"]==WidgetType and isinstance(f["obj"], dict)"
 match=lambda f, obj: f["purpose"]==WidgetType and isinstance(f["obj"], dict)
 match={"purpose" : "WidgetType", "objType" : dict}, matchCombine="any"
 match=["path", "to", "obj"]		
+
+
+apply a series of overrides on top of arbitrary data, where that data
+matches the given conditions
 
 """
 

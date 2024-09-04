@@ -9,6 +9,13 @@ and associated ui tools.
 
 depends on wplib and wpui
 
+should this also handle reactive updates, links to UI etc?
+the dream for me is to have a single model across the entire
+program, updating live whenever a change comes from code or ui - 
+obviously that's the whole point of QT, but the default views
+are not enough 
+
+
 """
 
 

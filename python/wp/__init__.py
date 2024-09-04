@@ -5,6 +5,10 @@ maybe for this package, we just assume that everything is a lib
 unless specified otherwise
 
 depends on wplib and wptree and chimaera, but not on any other wp packages
+
+WP NAME CLASHES WITH WARP BY NVIDIA
+OH NO
+
 """
 
 import sys, gc

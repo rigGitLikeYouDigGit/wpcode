@@ -1,2 +1,6 @@
 this python folder should be prepended to system python path - 
 takes priority in import statements
+
+
+TODO: unify pathable, traversable, tree etc -
+ use the same pathing syntax and logic
