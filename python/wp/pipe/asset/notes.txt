@@ -1,5 +1,15 @@
 
 tags vs hierarchy
+hierarchy
+tags actually was too complicated and ultimately not clear
+this does require us to be more flexible with how we structure db,
+classic example - for a coat worn by Dave:
+character / dave / costume / coat ?
+costume / character / dave / coat ?
+I would say the main association is with the character, so character should go first,
+this is not tenable as the idea of association widens -
+but at this point we can also use tags from the path
+
 
 character : ursus
 ursus as a top asset has no guaranteed resources - could be different versions of the body, different costumes, ages, etc
@@ -68,18 +78,18 @@ ursus / body /
             _out /
                 model.usd # this variant only defines mesh data
                 data / # and more esoteric data like muscle presets
-                apply.chim
+                apply.chi
             sculpt.usd
             process.hip
-            rig.chim
-            rules.chim # chimaera file defining how this variant data overrides default head
+            rig.chi
+            rules.chi # chimaera file defining how this variant data overrides default head
 
     var_age-101 / # for this age tag, apply these overrides by rules
         _out /
             apply.chim
     var_age-101_damage-(lostArm-OR-lostFoot) / # apply this data only where ursus has a booboo
         _out /
-            apply.chim
+            apply.chi
         # not sure i like the sql-query-as-folder-name aesthetic, but it is explicit on what that folder is affecting
     # subsequent tool should show what activates for a combination of variants
 
@@ -98,6 +108,7 @@ tempest / asset / char / ursus / body / _work_ed / sculpt.usd
 
 
 don't use "gen" in asset names, too confusing with prefix for generation
+"source" is better
 
 out_
 for output procedural assets, include

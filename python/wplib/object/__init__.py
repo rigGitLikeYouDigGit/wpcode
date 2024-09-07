@@ -24,6 +24,7 @@ from .proxy import Proxy, LinkProxy, ProxyLink, ProxyData
 
 from .reference import ObjectReference, TypeReference
 
+from .smartfolder import SmartFolder, DiskDescriptor
 from .sparselist import SparseList
 from .signal import Signal
 from .singleton import SingletonDecorator

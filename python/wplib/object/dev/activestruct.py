@@ -22,6 +22,7 @@ adaptor stuff has worked well for serialisation, maybe here too
 don't worry about tracking deltas and undoing for now, though this
 could be a good base to build that
 
+similar ideas became wpDex, still working on that
 
 """
 

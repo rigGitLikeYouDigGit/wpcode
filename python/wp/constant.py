@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tree.lib.object import TypeNamespace
+from wplib.object import TypeNamespace
 
 
 """
@@ -20,6 +20,9 @@ ORIENTATION : X left, Y up, Z forward
 
 # path constants
 WP_ROOT = Path(__file__).parent.parent.parent.parent
+CODE_ROOT = WP_ROOT / "code"
+WP_CONFIG = WP_ROOT / "config.json"
+
 TEMPEST_ROOT = WP_ROOT / "tempest"
 # work out how to get this from the environment when we need different projects lol
 ASSET_ROOT = TEMPEST_ROOT / "asset"

@@ -163,6 +163,15 @@ def mroMergedDict(cls):
 		merged.update(i.__dict__)
 	return merged
 
+def classDescriptors(cls, inherited=True)->dict[str, T.Any]:
+	"""return all objects of this class that define
+	__get__, __set__, or __del__ """
+	# descriptors are instances - need to check the type of the attribute of the class
+	return {k : v for k, v in mroMergedDict(cls).items()
+	        if hasattr(type(v), "__dict__") and any(
+		i in type(v).__dict__ for i in ("__get__", "__set__")
+		)
+	        }
 
 
 # annotation decorators

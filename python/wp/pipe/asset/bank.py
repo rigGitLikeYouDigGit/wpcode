@@ -1,16 +1,22 @@
 from __future__ import annotations
 
+import fnmatch
+import typing as T
+
 import json, glob
 from pathlib import Path
 
-from whoosh.fields import Schema, ID, KEYWORD
+from whoosh.fields import Schema, ID, KEYWORD, TEXT
 from whoosh.index import Index
 from whoosh.qparser import QueryParser, AndGroup
 from whoosh import index as indexModule
 
 from wp import constant
 from .lib import tagsToIndexString
-from wpasset.main import Asset
+from .main import Asset
+
+# if T.TYPE_CHECKING:
+from ..show import Show
 
 # match these tags against a config
 validAssetTags = {
@@ -24,8 +30,9 @@ validAssetTags = {
 
 # build schema for searching assets
 assetSchema = Schema(
-	uid=ID(stored=True),
-	tags=KEYWORD(stored=True)
+	#uid=ID(stored=True),
+	tags=KEYWORD(stored=True),
+	path=TEXT(stored=True)
 	#dirPath=STORED()
 	# tags=TEXT(stored=True,
 	#           phrase=False,
@@ -38,43 +45,54 @@ assetSchema = Schema(
 
 
 class AssetBank:
-	"""main class managing asset system"""
+	"""main class managing asset system
+	this may index every resource of the whole show -
+	shot data has a path just like assets
+	"""
 
-	def __init__(self):
+	def __init__(self, show:(str, Show)=None):
+		self.show = Show.get(show)
+		# dict of { token path : asset }
 		self.assets : dict[str, Asset] = {}
 		self.index : Index = None
 
+	def __repr__(self):
+		return "<AssetBank for {}>".format(self.show)
+
+	def showRoot(self)->Path:
+		return self.show.path()
+
 	def internalDataDir(self)->Path:
 		"""returns the path to the internal data files for the bank itself"""
-		return constant.getAssetRoot() / "_internal"
+		return self.showRoot() / "_internal"
 
 	def internalSearchDataDir(self)->Path:
 		"""returns the path to whoosh index dir"""
 		return self.internalDataDir() / "search"
 
-	def assetDirByUid(self, uid:str)->Path:
-		"""returns the path to the directory containing the asset with the given uid
-		glob for uid, ignore any preceding tags in name"""
-		result = glob.glob(constant.getAssetRoot() / ("*" + Asset.dirNameSep + uid))
-		return result[0] if result else None
-
-	def assetFromUid(self, uid:str)->Asset:
-		"""returns the asset with the given uid
-		if asset has been loaded, return the object
-		if not, try to load it from disk
-		if not, raise KeyError"""
-		try:
-			return self.assets[uid]
-		except KeyError:
-			pass
-		# try to load it from disk
-		dirPath = self.assetDirByUid(uid)
-		try:
-			asset = self.loadAssetFromDir(dirPath)
-			self.assets[uid] = asset
-			return asset
-		except FileNotFoundError:
-			raise KeyError(f"no asset with uid {uid}")
+	# def assetDirByUid(self, uid:str)->Path:
+	# 	"""returns the path to the directory containing the asset with the given uid
+	# 	glob for uid, ignore any preceding tags in name"""
+	# 	result = glob.glob(constant.getAssetRoot() / ("*" + Asset.dirNameSep + uid))
+	# 	return result[0] if result else None
+	#
+	# def assetFromUid(self, uid:str)->Asset:
+	# 	"""returns the asset with the given uid
+	# 	if asset has been loaded, return the object
+	# 	if not, try to load it from disk
+	# 	if not, raise KeyError"""
+	# 	try:
+	# 		return self.assets[uid]
+	# 	except KeyError:
+	# 		pass
+	# 	# try to load it from disk
+	# 	dirPath = self.assetDirByUid(uid)
+	# 	try:
+	# 		asset = self.loadAssetFromDir(dirPath)
+	# 		self.assets[uid] = asset
+	# 		return asset
+	# 	except FileNotFoundError:
+	# 		raise KeyError(f"no asset with uid {uid}")
 
 	def getSearchIndex(self)->Index:
 		"""returns the whoosh index -
@@ -101,8 +119,9 @@ class AssetBank:
 		writer = self.getSearchIndex().writer()
 		for i in assets:
 			writer.add_document(
-				uid=i.uid,
-				tags=tagsToIndexString(i.tags),
+				#uid=i.uid,
+				tags=tagsToIndexString(i.tags()),
+				path=i.path
 
 			)
 
@@ -169,7 +188,8 @@ class AssetBank:
 		"""loads an asset from a directory"""
 		with (path / "_data.json").open("r") as f:
 			data = json.load(f)
-		asset = Asset(uid=data["uid"], tags=data["tags"])
+		asset = Asset(#uid=data["uid"], tags=data["tags"]
+		              )
 		return asset
 
 
@@ -177,11 +197,18 @@ class AssetBank:
 		"""rescan the asset directory and load all assets -
 		this is fine until stuff has to be cached"""
 		self.assets.clear()
-		for i in constant.getAssetRoot().iterdir():
-			if i.is_dir():
-				try:
-					asset = self.loadAssetFromDir(i)
-					self.assets[asset.uid] = asset
-				except FileNotFoundError:
-					pass
+		for i in self.allAssetDirs():
+			try:
+				asset = self.loadAssetFromDir(i)
+				self.assets[asset.uid] = asset
+			except FileNotFoundError:
+				pass
 
+	def allAssetDirs(self)->list[Path]:
+		"""yield all folders that hold an asset resource -
+		phenomenally inefficient, this is the massive drawback of nested
+		compared to flat"""
+
+		q = str(self.showRoot()) + "//**/_asset.json"
+		toIter = glob.glob(q,recursive=True)
+		return list(map(Path, toIter))
