@@ -117,4 +117,18 @@ for output procedural assets, include
     - deltas over the base hda if nodes added
 
 
+VERSIONING
+
+assume that we can use some external VCS for controlling in general,
+use a _version folder under each asset if we ever need to roll back live
+tempest / asset / character / ursus /
+    _out
+    _version
+        22 # copied snapshot of entire asset AND DEPENDENCIES
+            _in # in recursively copies everything this version relied on
+            _out
+            _work
+
+
+
 

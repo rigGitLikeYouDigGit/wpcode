@@ -45,6 +45,9 @@ class Show:
 	def path(self)->Path:
 		return constant.WP_ROOT / self.name
 
+	@staticmethod
+	def availableShows():
+		return availableShows()
 
 def availableShows()->dict[str, Show]:
 	"""check any top-level folders having a "_show.json" file
