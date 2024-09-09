@@ -13,7 +13,7 @@ from .coderef import CodeRef
 
 #from .expression import *
 
-from wplib.object import TypeNamespace, Sentinel
+from wplib.object import Adaptor, TypeNamespace, Sentinel
 
 from .coerce import coerce
 

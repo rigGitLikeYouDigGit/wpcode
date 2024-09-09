@@ -10,12 +10,12 @@ import typing as Ty
 from enum import Enum
 
 from PySide2 import QtCore, QtWidgets, QtGui
-from tree.lib.constant import AtomicWidgetType
-from tree.ui.atomicwidget import AtomicWidgetParams
-from tree.ui.atomicwidget.base import AtomicWidget
+from tree.lib.constant import FieldWidgetType
+from tree.ui.fieldWidget import FieldWidgetParams
+from tree.ui.fieldWidget.base import FieldWidget
 
 
-class BoolWidgetBase(AtomicWidget):
+class BoolWidgetBase(FieldWidget):
 	"""base class defining init arguments"""
 
 	def _processValueForUi(self, rawValue):
@@ -30,23 +30,23 @@ class BoolWidgetBase(AtomicWidget):
 
 class BoolCheckBoxWidget(QtWidgets.QCheckBox, BoolWidgetBase):
 
-	atomicType = AtomicWidgetType.BoolCheckBox
+	atomicType = FieldWidgetType.BoolCheckBox
 
-	def __init__(self, value=None, params:AtomicWidgetParams=None, parent=None):
+	def __init__(self, value=None, params:FieldWidgetParams=None, parent=None):
 		QtWidgets.QCheckBox.__init__(self, parent)
 		self.stateChanged.connect(self._onWidgetChanged)
-		AtomicWidget.__init__(self, value=value, params=params)
+		FieldWidget.__init__(self, value=value, params=params)
 		self.setText(self._params.name)
 		
 
 class BoolCheckButtonWidget(QtWidgets.QPushButton, BoolWidgetBase):
 
-	atomicType = AtomicWidgetType.BoolCheckButton
+	atomicType = FieldWidgetType.BoolCheckButton
 
-	def __init__(self, value=None, params:AtomicWidgetParams=None, parent=None):
+	def __init__(self, value=None, params:FieldWidgetParams=None, parent=None):
 		QtWidgets.QPushButton.__init__(self, parent)
 		self.clicked.connect(self._onWidgetChanged)
-		AtomicWidget.__init__(self, value=value, params=params)
+		FieldWidget.__init__(self, value=value, params=params)
 		self.setCheckable(True)
 		self.setText(self._params.name)
 
@@ -60,7 +60,7 @@ def test():
 	def printValue(member):
 		print("new value", member)
 
-	params = AtomicWidget.paramCls(None, name="test")
+	params = FieldWidget.paramCls(None, name="test")
 	#widg = BoolCheckBoxWidget(value=True,parent=win)
 	widg = BoolCheckButtonWidget(value=True, params=params, parent=win)
 	widg.atomValueChanged.connect(printValue)

@@ -10,9 +10,9 @@ from collections import namedtuple
 from wplib import sequence
 from wplib.astlib import parseStrToASTModule
 from wplib.object import TypeNamespace
-from wplib.expression.constant import MASTER_GLOBALS_EVALUATOR_KEY, EXP_LAMBDA_NAME
-from wplib.expression.error import CompilationError, EvaluationError, ExpSyntaxError
-from wplib.expression.parse import getExpParseFrames, getBracketContents
+from wpexp.constant import MASTER_GLOBALS_EVALUATOR_KEY, EXP_LAMBDA_NAME
+from wpexp.error import CompilationError, EvaluationError, ExpSyntaxError
+from wpexp.parse import getExpParseFrames, getBracketContents
 
 if T.TYPE_CHECKING:
 	pass

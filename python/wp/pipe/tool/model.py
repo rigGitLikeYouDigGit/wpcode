@@ -57,5 +57,10 @@ def runTool():
 
 	print("myShow is ", tool["mainShow"].value, tool["mainAsset"].value)
 
+if __name__ == '__main__':
+	"""minimum test for me - make """
+
+	print(Show.availableShows())
+	from param import rx
 
 

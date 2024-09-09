@@ -180,7 +180,9 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 	mutatingMethodNames : set[str] = {
 		"__setattr__", "__setitem__", "__iadd__", "__imul__", "__delitem__", "__delattr__", "__setslice__",
 
-		"insert", "append", "extend", "pop", "remove", "clear", "update",
+		"insert", "append", "extend", "pop", "remove", "clear", "reverse", "sort",
+		"update", "add", "discard",
+		"split",
 	}
 
 	def __init__(self, obj:T.Any, parent:WpDex=None, key:T.Iterable[DexPathable.keyT]=None,
@@ -201,6 +203,9 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		# goes against pathable to keep store of child objects
 		self.childIdDexMap : dict[int, WpDex] = {}
 		self.keyDexMap : dict[DexPathable.keyT, WpDex] = {}
+
+		# do we build on init?
+		self.updateChildren()
 
 	# 	# overrides
 	# 	self._overrideMap = overrideMap
@@ -239,6 +244,8 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 
 		self.keyDexMap.update(self._buildChildren())
 		self.childIdDexMap.update({id(v.obj) : v for v in self.keyDexMap.values()})
+		for v in self.keyDexMap.values():
+			self.childIdDexMap.update(v.childIdDexMap)
 
 	def children(self)->dict[WpDex.keyT, WpDex]:
 		"""return child objects

@@ -32,6 +32,9 @@ class TestWPDex(unittest.TestCase):
 		# more complex dict
 		obj = {"a" : {"b" : 2}}
 		pathable = WpDex(obj)
+		print("after init")
 		self.assertEqual(pathable["a", "b"], 2)
 		# keys
 		self.assertEqual(pathable["a", "keys()"], ["b"])
+		# print(pathable.children())
+		# print(pathable.children()["a"].children())

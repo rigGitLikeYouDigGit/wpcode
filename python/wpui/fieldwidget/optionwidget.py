@@ -13,21 +13,21 @@ from enum import Enum
 from dataclasses import dataclass
 
 from PySide2 import QtCore, QtWidgets, QtGui
-from tree.lib.constant import AtomicWidgetType
+from tree.lib.constant import FieldWidgetType
 
-from tree.ui.atomicwidget import AtomicWidgetParams
-from tree.ui.atomicwidget.base import AtomicWidget
+from tree.ui.fieldWidget import FieldWidgetParams
+from tree.ui.fieldWidget.base import FieldWidget
 from tree.lib.option import OptionItem, optionType, optionMapFromOptions, optionKeyFromValue, optionFromKey
 
 class OptionWidgetMode(Enum):
 	Combo = "combo"
 	Radio = "radio"
 
-class OptionWidgetBase(AtomicWidget):
+class OptionWidgetBase(FieldWidget):
 	"""Any common abstract processing of enum widgets"""
 	valueType = Enum
-	def __init__(self, value=None, params:AtomicWidgetParams=None, parent=None):
-		AtomicWidget.__init__(self, value, params)
+	def __init__(self, value=None, params:FieldWidgetParams=None, parent=None):
+		FieldWidget.__init__(self, value, params)
 		self.optionMap = optionMapFromOptions(self._params.options)
 
 
@@ -51,18 +51,18 @@ class OptionStickyButton(QtWidgets.QPushButton):
 		self.setCheckable(True)
 
 buttonTypeClsMap = {
-	AtomicWidgetParams.OptionType.Radio : OptionRadioButton,
-	AtomicWidgetParams.OptionType.Sticky : OptionStickyButton
+	FieldWidgetParams.OptionType.Radio : OptionRadioButton,
+	FieldWidgetParams.OptionType.Sticky : OptionStickyButton
 }
 
 class OptionButtonWidget(QtWidgets.QGroupBox, OptionWidgetBase):
 	"""puts all enum options to radio buttons"""
 
-	atomicType = AtomicWidgetType.OptionRadio
+	atomicType = FieldWidgetType.OptionRadio
 
 	def __init__(self,
 	             value=None,
-	             params:AtomicWidgetParams=None,
+	             params:FieldWidgetParams=None,
 	             parent=None):
 		QtWidgets.QGroupBox.__init__(self, parent)
 		OptionWidgetBase.__init__(self, value=value, params=params, parent=parent)
@@ -99,10 +99,10 @@ class OptionComboWidget(QtWidgets.QComboBox, OptionWidgetBase):
 	"""same as above but in combo box form
 	no label directly included"""
 
-	atomicType = AtomicWidgetType.OptionMenu
+	atomicType = FieldWidgetType.OptionMenu
 
 	def __init__(self, value=None,
-	             params: AtomicWidgetParams = None,
+	             params: FieldWidgetParams = None,
 	             parent=None):
 		#super(OptionComboWidget, self).__init__(parent)
 		QtWidgets.QComboBox.__init__(self, parent)

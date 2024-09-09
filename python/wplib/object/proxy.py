@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import weakref
 from collections import defaultdict
 import typing as T
 
@@ -47,8 +49,11 @@ probably the most complex thing I've ever done, but with hindsight I think it's 
 def classCallables(cls, dunders=True):
 	"""return all attributes of a class that can be called"""
 	methodNames = []
+	mroDict = inheritance.mroMergedDict(cls)
 	for attrName in dir(cls):
-		attrValue = getattr(cls, attrName)
+		# this fails on descriptors, since it invokes them
+		#attrValue = getattr(cls, attrName)
+		attrValue = mroDict[attrName]
 		if callable(attrValue):
 			if any((dunders, not attrName.startswith("__"))):
 				methodNames.append(attrName)
@@ -99,7 +104,7 @@ class Proxy(#ABC,
 	# ^ don't do this
 	_allowProxyTypesForProxies = False # allow proxy types to be created for proxy types
 	# ^ really don't do this
-	_objProxyCache = {} #NB: weakdict was giving issues, this might chug memory
+	_objIdProxyCache : dict[int, set[Proxy]] = defaultdict(weakref.WeakSet) #NB: weakdict was giving issues, this might chug memory
 	#_proxyLinkCls = None # optionally enforce a link class for this class of proxy
 
 	# define explicit list of attributes on proxy object, like __slots__
@@ -136,7 +141,7 @@ class Proxy(#ABC,
 	@classmethod
 	def _existingProxy(cls, obj):
 		"""retrieve an existing proxy object for the given base object"""
-		return cls._objProxyCache.get(cls._proxyObjUniqueId(obj))
+		return cls._objIdProxyCache.get(cls._proxyObjUniqueId(obj))
 
 	# factories
 	_special_names = [
@@ -159,6 +164,10 @@ class Proxy(#ABC,
 		"__eq__", "__ge__", "__gt__", #"__hash__",
 		"__le__", "__lt__", "__ne__",
 	)
+
+	# insert modified methods on the target object itself where possible -
+	# clear these up once all proxies pointing to it are deleted
+	_watchMethodNames = set()
 
 	def _beforeProxyCall(self, methodName:str,
 	                     methodArgs:tuple, methodKwargs:dict,
@@ -231,6 +240,43 @@ class Proxy(#ABC,
 			return newResult
 
 		return _proxyMethod
+
+	# # watching methods
+	# def _beforeProxyWatchedMethodCall(self, methodName:str,
+	#                      methodArgs:tuple, methodKwargs:dict,
+	#                      #targetInstance:object
+	#                      )->tuple[T.Callable, tuple, dict, object]:
+	# 	"""overrides / filters args and kwargs passed to method
+	# 	getting _proxyBase and _proxyResult should both be legal here"""
+	# 	targetInstance = self._proxyTarget()
+	# 	newMethod = getattr(targetInstance,methodName)
+	# 	#log("before proxy call", methodName, newMethod, methodArgs, methodKwargs, targetInstance)
+	# 	return newMethod, methodArgs, methodKwargs, targetInstance
+	#
+	# def _afterProxyWatchedMethodCall(self, methodName:str,
+	#                     method:T.Callable,
+	#                      methodArgs:tuple, methodKwargs:dict,
+	#                     #targetInstance: object,
+	#                     callResult:object,
+	#                     )->object:
+	# 	"""overrides / filters result of proxy method"""
+	# 	#log("after proxy call", methodName, method, methodArgs, methodKwargs, targetInstance, callResult)
+	# 	return callResult
+	#
+	# def _onProxyCallWatchedMethodException(self,
+	#                           methodName: str,
+	#                           method:T.Callable,
+	#                           methodArgs: tuple, methodKwargs: dict,
+	#                           #targetInstance: object,
+	#                           exception:BaseException)->(None, object):
+	# 	"""called when proxy call raises exception -
+	# 	to treat exception as normal, raise it from this function as well
+	# 	if no exception is raised, return value of this function is used
+	# 	as return value of method call
+	# 	"""
+	# 	raise exception
+	# def _wrapWatchedMethod(self, methodName):
+
 
 	@classmethod
 	def _createClassProxy(cls, targetCls):
@@ -307,7 +353,8 @@ class Proxy(#ABC,
         """
 
 		# look up existing proxy classes
-		cache = Proxy.__dict__["_classProxyCache"]
+		#cache = cls.__dict__["_classProxyCache"]
+		cache = inheritance.mroMergedDict(cls)["_classProxyCache"]
 		#log("proxy new", cls, obj, type(obj), vars=0)
 
 		# check that we don't start generating classes from generated classes
@@ -357,10 +404,10 @@ class Proxy(#ABC,
 		if isinstance(targetObj, Proxy):
 			testObj = targetObj._proxyTarget()
 			testUid = cls._proxyObjUniqueId(testObj)
-			if shared and testUid in cls._objProxyCache:
-				if cls._objProxyCache[testUid]:
+			if shared and testUid in cls._objIdProxyCache:
+				if cls._objIdProxyCache[testUid]:
 					log("fetching shared proxy reference for", testUid)
-					return cls._objProxyCache[testUid]
+					return cls._objIdProxyCache[testUid]
 
 		# build instance proxyData
 		# todo: make this its own method
@@ -375,7 +422,8 @@ class Proxy(#ABC,
 		               )
 		proxyObj.__init__(targetObj, proxyData, **kwargs)
 		#proxyObj._proxyStrongRef = targetObj
-		cls._objProxyCache[uniqueId] = proxyObj
+		log("insert obj id", uniqueId, targetObj)
+		cls._objIdProxyCache[uniqueId] = proxyObj
 
 		#proxyObj._proxyStrongRef = targetObj
 		return proxyObj
@@ -478,7 +526,7 @@ class LinkProxy(Proxy):
 	_classProxyCache = defaultdict(dict)  # { class : { class cache } }
 
 	_generated = False
-	_objProxyCache = {}  # NB: weakdict was giving issues, this might chug memory
+	_objIdProxyCache = {}  # NB: weakdict was giving issues, this might chug memory
 	_proxyLinkCls = None  # optionally enforce a link class for this class of proxy
 	_proxyAttrs = ("_proxyLink",
 	               "_proxyData",

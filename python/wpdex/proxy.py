@@ -14,7 +14,7 @@ from wplib.object import DeltaAtom, Proxy, ProxyData
 from wplib.constant import SEQ_TYPES, MAP_TYPES, STR_TYPES, LITERAL_TYPES, IMMUTABLE_TYPES
 from wplib.sentinel import Sentinel
 
-from wpexp.match import stringMatch
+#from wpexp.match import stringMatch
 
 from wpdex.base import WpDex
 
@@ -46,6 +46,11 @@ and then start working through them after the call stack is clear -
 that could also be a way to async the ui updates.
 
 for now the tight coupling seems to work
+
+emit EVENTS THROUGH DEX.
+proxies only used to watch, may be created and destroyed
+too readily to depend on for event chains
+
 """
 
 class Reactive:
@@ -81,11 +86,12 @@ class WpDexProxy(
 	WpDex structure
 	"""
 	_classProxyCache = defaultdict(dict) # { class : { class cache } }
-	_objProxyCache = {} #NB: weakdict was giving issues, this might chug memory
+	_objIdProxyCache = {} #NB: weakdict was giving issues, this might chug memory
 	_proxyAttrs = ("_proxyWpDex", "_proxyDeltaStartState")
 
 	_proxyData : WpDexProxyData
-
+	def __repr__(self):
+		return repr(self._proxyTarget() + "PROXY({})".format(self.dex().path))
 
 	def __init__(self, obj, proxyData: WpDexProxyData=None,
 	             wpDex:WpDex=None, parentDex:WpDex=None,
@@ -126,9 +132,15 @@ class WpDexProxy(
 			self._proxyData["deltaStartState"] = None
 			# send out delta event
 			# TODO: make an actual delta event
-			self.dex().sendEvent({"type":"delta", "delta":None,
+			#log("send event path", self.dex().path)
+			event = {"type":"delta", "delta":None,
 			                      "path" : self.dex().path
-			                      })
+			                      }
+			# log("event destinations", self.dex()._allEventDestinations(
+			# 	event, "main"
+			# ), self.dex()._nextEventDestinations(event, "main"))
+			self.dex().sendEvent(event)
+
 
 
 	def _beforeProxyCall(self, methodName:str,
@@ -157,11 +169,12 @@ class WpDexProxy(
 		"""return result wrapped in a wpDex proxy, if it appears in
 		main dex children
 		"""
-		#log(f"after proxy call {methodName}, {methodArgs, methodKwargs}", vars=0)
+		log(f"after proxy call {methodName}, {methodArgs, methodKwargs}", vars=0)
 		callResult = super()._afterProxyCall(methodName, method, methodArgs, methodKwargs, targetInstance, callResult)
 		toReturn = callResult
 
 		# if mutating method called, rebuild WpDex children
+		log("method", methodName, "in", self.dex().mutatingMethodNames, methodName in self.dex().mutatingMethodNames)
 		if methodName in self.dex().mutatingMethodNames:
 			self.dex().updateChildren()
 
@@ -169,13 +182,25 @@ class WpDexProxy(
 		#log(self.dex(), self.dex().obj)
 
 		# only wrap containers, not literals?
+		#log("childIdDexMap", self.dex().childIdDexMap)
+		#log("callResult", callResult, "result in childIdDexMap", id(callResult) in self.dex().childIdDexMap)
+
+		# if a returned result is a valid mapped dex child, return a proxy pointing to it
 		if id(callResult) in self.dex().childIdDexMap:
 			if isinstance(callResult, LITERAL_TYPES) or callResult is None:
 				pass
 			else:
-				proxy = WpDexProxy(callResult, parent=self,
-				                   wpDex=self.dex().childIdDexMap[id(callResult)],
-				                   parentDex=self.dex()
+				# may not be a DIRECT child, consider getting tree branches from call
+				# need a way to map parent dex back to proxy
+				childDex = self.dex().childIdDexMap[id(callResult)]
+				childParentDex = childDex.parent
+				#log("childParentDex", childParentDex)
+				#log("childParentDex.obj", childParentDex.obj)
+				#childParentProxy = self._objIdProxyCache[id(childParentDex.obj)]
+				proxy = WpDexProxy(callResult,
+				                   #parent=childParentProxy,
+				                   wpDex=childDex,
+				                   parentDex=childDex.parent
 				                   )
 				toReturn = proxy
 
@@ -233,39 +258,42 @@ class WpDexProxy(
 
 if __name__ == '__main__':
 
-	s = [1, [2, [3, 4]]]
-	proxy = WpDexProxy(s)
+	t = [1, [2, [3, 4]]]
+	t.append = lambda x: print("append", x)
 
-	print(type(proxy), isinstance(proxy, Proxy))
-
-	print(proxy, isinstance(proxy, list))
-	item = proxy[1][1]
-
-	print(item, isinstance(item, WpDexProxy))
-
-	print(type(item))
-	print(type(item).__mro__)
-
-	# test that we can still access the clean structure
-	print(proxy._proxyTarget())
-	cleanResult = proxy._proxyTarget()[1][1]
-	print(cleanResult, type(cleanResult))
-
-	# test that events work at root
-	def printEventFn(event, *args, **kwargs):
-		log("event", event, args, kwargs)
-
-	proxy.dex().getEventSignal(create=True).connect(printEventFn)
-	# change a leaf value
-	proxy[1][1] = [5, 6]
-
-	# check that it stuck
-	print(proxy[1][1])
-	print(s[1][1])
-
-	# check if setting on the base object triggers signal (probably won't)
-	s[1][1] = [7, 8]
-	print("nowt")
+	# s = [1, [2, [3, 4]]]
+	# proxy = WpDexProxy(s)
+	#
+	# print(type(proxy), isinstance(proxy, Proxy))
+	#
+	# print(proxy, isinstance(proxy, list))
+	# item = proxy[1][1]
+	#
+	# print(item, isinstance(item, WpDexProxy))
+	#
+	# print(type(item))
+	# print(type(item).__mro__)
+	#
+	# # test that we can still access the clean structure
+	# print(proxy._proxyTarget())
+	# cleanResult = proxy._proxyTarget()[1][1]
+	# print(cleanResult, type(cleanResult))
+	#
+	# # test that events work at root
+	# def printEventFn(event, *args, **kwargs):
+	# 	log("event", event, args, kwargs)
+	#
+	# proxy.dex().getEventSignal(create=True).connect(printEventFn)
+	# # change a leaf value
+	# proxy[1][1] = [5, 6]
+	#
+	# # check that it stuck
+	# print(proxy[1][1])
+	# print(s[1][1])
+	#
+	# # check if setting on the base object triggers signal (probably won't)
+	# s[1][1] = [7, 8]
+	# print("nowt")
 
 
 

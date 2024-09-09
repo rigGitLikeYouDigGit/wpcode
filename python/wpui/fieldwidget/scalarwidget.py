@@ -10,16 +10,16 @@ import typing as Ty
 from enum import Enum
 
 from PySide2 import QtCore, QtWidgets, QtGui
-from tree.lib.constant import AtomicWidgetType
+from tree.lib.constant import FieldWidgetType
 
-from tree.ui.atomicwidget import AtomicWidgetParams
-from tree.ui.atomicwidget.base import AtomicWidget
+from tree.ui.fieldWidget import FieldWidgetParams
+from tree.ui.fieldWidget.base import FieldWidget
 
 
-class ScalarWidgetBase(AtomicWidget):
+class ScalarWidgetBase(FieldWidget):
 
 	def __init__(self, value,
-	             params: AtomicWidgetParams = None,
+	             params: FieldWidgetParams = None,
 	             ):
 
 		self.scalarType = type(value)
@@ -49,15 +49,15 @@ spinBoxClsMap = {int : QtWidgets.QSpinBox,
 """some repetition in these classes is fine"""
 class FloatSpinBox(QtWidgets.QDoubleSpinBox, ScalarWidgetBase):
 
-	atomicType = AtomicWidgetType.ScalarSpinBox
-	def __init__(self, value, params:AtomicWidgetParams=None, parent=None):
+	atomicType = FieldWidgetType.ScalarSpinBox
+	def __init__(self, value, params:FieldWidgetParams=None, parent=None):
 		QtWidgets.QDoubleSpinBox.__init__(self, parent)
 		ScalarWidgetBase.__init__(self, value, params=params)
 		self.valueChanged.connect(self._onWidgetChanged)
 		self.setOrientation(self._getParamsQtOrient())
 class IntSpinBox(QtWidgets.QSpinBox, ScalarWidgetBase):
-	atomicType = AtomicWidgetType.ScalarSpinBox
-	def __init__(self, value, params:AtomicWidgetParams=None, parent=None):
+	atomicType = FieldWidgetType.ScalarSpinBox
+	def __init__(self, value, params:FieldWidgetParams=None, parent=None):
 		QtWidgets.QSpinBox.__init__(parent)
 		ScalarWidgetBase.__init__(self, value, params)
 		self.valueChanged.connect(self._onWidgetChanged)
@@ -69,7 +69,7 @@ scalarSpinBoxClsMap = {int : IntSpinBox,
 # class ScalarSpinBoxWidget(type):
 # 	"""main imported class"""
 #
-# 	def __new__(mcs, value, resultParams:AtomicWidgetParams=None, parent=None):
+# 	def __new__(mcs, value, resultParams:FieldWidgetParams=None, parent=None):
 # 		scalarType = type(value)
 # 		widgetCls = scalarSpinBoxClsMap[scalarType]
 # 		return widgetCls( value, resultParams, parent=None)
@@ -80,8 +80,8 @@ class ScalarSliderBase(ScalarWidgetBase):
 
 class FloatSlider(QtWidgets.QSlider, ScalarSliderBase):
 
-	atomicType = AtomicWidgetType.ScalarSlider
-	def __init__(self, value, params:AtomicWidgetParams=None,
+	atomicType = FieldWidgetType.ScalarSlider
+	def __init__(self, value, params:FieldWidgetParams=None,
 	             parent=None):
 		QtWidgets.QSlider.__init__(self, parent)
 		ScalarSliderBase.__init__(self, value, params)
@@ -99,8 +99,8 @@ class FloatSlider(QtWidgets.QSlider, ScalarSliderBase):
 
 
 class IntSlider(QtWidgets.QSlider, ScalarSliderBase):
-	atomicType = AtomicWidgetType.ScalarSlider
-	def __init__(self, value, params:AtomicWidgetParams=None, parent=None):
+	atomicType = FieldWidgetType.ScalarSlider
+	def __init__(self, value, params:FieldWidgetParams=None, parent=None):
 		QtWidgets.QSlider.__init__(self, parent)
 		ScalarSliderBase.__init__(self, value, params)
 		self.setOrientation(self._getParamsQtOrient())
@@ -113,7 +113,7 @@ scalarSliderClsMap = {int : IntSlider,
 # class ScalarSliderWidget(type):
 # 	"""main imported class"""
 #
-# 	def __new__(mcs, value, resultParams:AtomicWidgetParams=None,
+# 	def __new__(mcs, value, resultParams:FieldWidgetParams=None,
 # 	            parent=None, *args, **kwargs):
 # 		scalarType = type(value)
 # 		widgetCls = scalarSliderClsMap[scalarType]
@@ -129,7 +129,7 @@ def test():
 		print("new value", member)
 
 
-	params = AtomicWidgetParams(None, min=0, max=13)
+	params = FieldWidgetParams(None, min=0, max=13)
 	#widg = FloatSpinBox(value=5.0, resultParams=resultParams, parent=win)
 	widg = FloatSlider(value=5.0, params=params, parent=win)
 	#widg = ScalarSliderWidget(value=5, minVal=0, maxVal=10, parent=win)

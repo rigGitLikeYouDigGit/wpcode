@@ -29,37 +29,10 @@ TODO: events only when needed - somehow need to switch out
 code dynamically from root, or downwards
 
 TODO: events superceded by wpdex, remove it from the core data structure here
-
+TODO: combine and collate pathable, traversable and visitable in some jeff-goldlum's-the-fly-esque process
+TODO: breakpoints are probably still useful for parent/root encapsulation in
+	nested tools; everything else should be done with wpdex and paths
 """
-
-# region DeepVisitor integration
-# register tree functions with type catalogue
-TreeTie = namedtuple("TreeTie", "name value aux")
-
-#ChildType = DeepVisitor.ChildType
-
-# class TreeBranch(ChildType.base()):
-# 	pass
-# class TreeName(ChildType.base()):
-# 	pass
-# class TreeValue(ChildType.base()):
-# 	pass
-# class TreeAuxProperties(ChildType.base()):
-# 	pass
-# for i in [TreeBranch, TreeName, TreeValue, TreeAuxProperties,
-#           ]:
-# 	ChildType.addMember(i)
-
-def _treeChildObjectsFn(tree:TreeInterface):
-	return (
-		(tree.name, ChildType.TreeName),
-		(tree.value, ChildType.TreeValue),
-		(tree.auxProperties, ChildType.TreeAuxProperties),
-		*((i, ChildType.TreeBranch) for i in tree.branches)
-	)
-
-# endregion
-
 
 
 @dataclass
@@ -333,8 +306,8 @@ class TreeInterface(Traversable,
 		# set value internally
 		self._setRawValue(value)
 
-		self.sendEvent(TreeDeltas.Value(self, oldValue, value),
-		               key=self.SignalKeys.ValueChanged)
+		# self.sendEvent(TreeDeltas.Value(self, oldValue, value),
+		#                key=self.SignalKeys.ValueChanged)
 		# if self.getSignalComponent(create=False) and oldValue != value:
 		# 	self.getSignalComponent(create=False).valueChanged.emit(
 		# 		TreeDeltas.Value(self, oldValue, value)
@@ -806,9 +779,9 @@ class TreeInterface(Traversable,
 		newBranch._setParent(self)
 		if index is not None:
 			self._setRawBranchIndex(newBranch, index)
-
-		self.sendEvent(TreeDeltas.Create(newBranch, self, newBranch.serialise()),
-		               key=self.SignalKeys.StructureChanged)
+		#
+		# self.sendEvent(TreeDeltas.Create(newBranch, self, newBranch.serialise()),
+		#                key=self.SignalKeys.StructureChanged)
 		# if self.getSignalComponent(create=False):
 		# 	self.getSignalComponent(create=False).structureChanged.emit(
 		# 		TreeDeltas.Create(newBranch, self,
@@ -873,7 +846,7 @@ class TreeInterface(Traversable,
 	#endregion
 
 	#region serialisation
-	def __deepcopy__(self)->TreeType:
+	def __deepcopy__(self, memo:dict)->TreeType:
 		""":returns Tree"""
 		return self.copy(copyUid=False)
 	# 	return self.deserialise(copy.deepcopy(self.serialise()))

@@ -20,13 +20,13 @@ from enum import Enum
 from PySide2 import QtCore, QtWidgets, QtGui
 
 from tree.lib.path import Path, PurePath
-from tree.lib.constant import AtomicWidgetType, FileSelectMode, pathTypes
-from tree.ui.atomicwidget import AtomicWidgetParams
-from tree.ui.atomicwidget.base import AtomicWidget
+from tree.lib.constant import FieldWidgetType, FileSelectMode, pathTypes
+from tree.ui.fieldWidget import FieldWidgetParams
+from tree.ui.fieldWidget.base import FieldWidget
 from tree.ui.libwidget.filebutton import FileBrowserButton
 
-class StringWidgetBase(AtomicWidget):
-	# def __init__(self, value=None, resultParams:AtomicWidgetParams=None,
+class StringWidgetBase(FieldWidget):
+	# def __init__(self, value=None, resultParams:FieldWidgetParams=None,
 	#              # default=None, defaultFolder=None,
 	#              # fileMask=None,
 	#              # fileSelectMode=None
@@ -46,9 +46,9 @@ class StringWidget(QtWidgets.QLineEdit, StringWidgetBase):
 
 	"""
 
-	atomicType = AtomicWidgetType.String
+	atomicType = FieldWidgetType.String
 
-	def __init__(self, value=None, params:AtomicWidgetParams=None, parent=None):
+	def __init__(self, value=None, params:FieldWidgetParams=None, parent=None):
 		QtWidgets.QLineEdit.__init__(self, parent=parent)
 		StringWidgetBase.__init__(self, value, params)
 		self.textChanged.connect(self._onWidgetChanged)
@@ -72,9 +72,9 @@ class FileStringWidget(QtWidgets.QWidget, StringWidgetBase):
 	"""line edit with a file button next to it
 	small duplications here but it's fine"""
 
-	atomicType = AtomicWidgetType.File
+	atomicType = FieldWidgetType.File
 
-	def __init__(self, value=None, params:AtomicWidgetParams=None, parent=None):
+	def __init__(self, value=None, params:FieldWidgetParams=None, parent=None):
 
 		QtWidgets.QWidget.__init__(self, parent)
 		self.line = QtWidgets.QLineEdit(self)
@@ -122,7 +122,7 @@ def test():
 
 
 	baseVal = __file__
-	params = AtomicWidget.paramCls(
+	params = FieldWidget.paramCls(
 		None, "testStringWidget",
 		fileSelectMode=FileSelectMode.File
 	)

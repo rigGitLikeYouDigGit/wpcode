@@ -4,6 +4,7 @@ from __future__ import annotations
 import traceback
 import typing as T
 
+from wplib.log import log
 from wplib.object.signal import Signal
 from wplib.sequence import flatten
 from dataclasses import dataclass
@@ -28,11 +29,11 @@ class EventDispatcher:
 		return id(self)
 
 
-	def getEventSignal(self, key:str="main", create=False)->Signal:
+	def getEventSignal(self, key:str="main", create=True)->Signal:
 		"""get the signal that will emit an event, for a given key"""
 		if self._eventNameSignalMap.get(key) is None:
 			if create:
-				self._eventNameSignalMap[key] = Signal()
+				self._eventNameSignalMap[key] = Signal(name="event_" + key)
 		return self._eventNameSignalMap.get(key)
 
 
@@ -73,6 +74,8 @@ class EventDispatcher:
 		if a signal is found for that key, emit the event
 		to that signal's listeners
 		"""
+		#log("handling event", self)
+		#log(event, key, self.getEventSignal(key, create=False))
 		if self.getEventSignal(key, create=False): # event exists, emit
 			self.getEventSignal(key).emit(event)
 
@@ -80,6 +83,7 @@ class EventDispatcher:
 	def sendEvent(self, event:dict, key:str="main"):
 		"""user-facing entrypoint to introduce an event to the system
 		should not be necessary to override this"""
+		#return
 		if event.get("sender") is None:
 			event["sender"] = self
 

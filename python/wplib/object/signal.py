@@ -7,6 +7,8 @@ from weakref import WeakSet, WeakKeyDictionary
 from collections import deque
 from functools import partial
 
+from wplib import log
+
 
 class Signal(object):
 	""" basic signal emitter
@@ -24,9 +26,10 @@ class Signal(object):
 	def __init__(self, name="", queue="", useQueue=False):
 		""":param queue : name of queue to use, or external queue object """
 		self.name = name
-		self._functions = WeakSet()
+		#self._functions = WeakSet()
 		self._methods = WeakKeyDictionary()
-		#self._functions = set()
+		self._functions = set() # no reason for functions to be weak
+		# weak set also prevents using direct lambdas
 		#self._methods = {}
 
 		# separate register for references to explicitly strong functions
@@ -45,7 +48,7 @@ class Signal(object):
 		return hash(id(self))
 
 	def __repr__(self):
-		return f"Signal({self.name})"
+		return f"Signal({self.name}, {self._functions}, {dict(self._methods)})"
 
 	def __call__(self, *args, **kwargs):
 		#print("emit", self.debugLog())
@@ -94,10 +97,8 @@ class Signal(object):
 	def connect(self, slot):
 		"""add given callable to function or method register
 		flag as strong to allow local lambdas or closures"""
-
+		#log("connect", slot)
 		if inspect.ismethod(slot):
-			if self.debugConnection:
-				print()
 			try:
 				hash(slot.__self__)
 				if slot.__self__ not in self._methods:

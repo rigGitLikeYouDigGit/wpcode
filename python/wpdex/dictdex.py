@@ -2,7 +2,7 @@
 from __future__ import annotations
 import typing as T
 
-
+from wplib import log
 from .base import WpDex
 
 class DictDex(WpDex):
@@ -17,6 +17,7 @@ class DictDex(WpDex):
 		# return [(self.makeChildPathable(("keys()", ), k),
 		#          self.makeChildPathable((k,), v) )
 		#         for i, (k, v) in enumerate(self.obj.items())]
+		#log("building children for dict", self.obj)
 		items = { k : self.makeChildPathable((k,), v) for k, v in self.obj.items()}
 		items["keys()"] = self.makeChildPathable(("keys()",), list(self.obj.keys()))
 		return items
