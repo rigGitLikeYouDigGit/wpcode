@@ -391,8 +391,10 @@ if __name__ == '__main__':
 	#
 	s = [[3]]
 	#s = [3]
-	r = React(s)
+	#r = React(s)
+	r = React.__new__(React, s)
 	log(r, type(r))
 	log(r)
 	print(r[0], type(r[0]))
+	print(r[0][0], type(r[0][0]))
 	pass
