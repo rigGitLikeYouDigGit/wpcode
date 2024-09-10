@@ -9,7 +9,6 @@ from wptree import Tree, TreeInterface
 
 from wpdex import WpDex, WpDexProxy, DexPathable
 
-
 class TreeDex(WpDex):
 
 	forTypes = [Tree, TreeInterface]
@@ -43,37 +42,57 @@ class TreeDex(WpDex):
 		#log("buildChildren items", items)
 		return items
 
+
+
+# from param import rx
+#
+# class myrx(rx):
+# 	def __str__(self):
+# 		return "<rx" + str(self._obj) + ">"
+# 	pass
 if __name__ == '__main__':
+
+	eventFn = lambda *args: (print("EVENT"), pprint.pprint(args[0]))
 	t = Tree("root")
-	t["a"]
-	t["a", "b"]
+	# t["a"]
+	# t["a", "b"]
 	t["a", "b", "c"] = 4
 
-	proxy = WpDexProxy(t)
-	proxy.dex().getEventSignal("main", create=True).connect(
-		lambda *args: (print("EVENT"), pprint.pprint(args[0])))
-	#proxy.setValue(2)
-	# b = proxy("a")
-	# b.setValue(3)
+	#rt = myrx(t)
+	# rt.rx.when(eventFn)
+	# print(type(rt))
+	# print(str(rt) == rx)
+	# print(rt)
+	# print(rt, type(rt))
+	# rt.rx.value = 2
+
+
+	#b = t("a", "b", "c")
+
+	# proxy = WpDexProxy(t)
+	# proxy.dex().getEventSignal("main", create=True).connect(eventFn)
+	# #proxy.setValue(2)
+	# # b = proxy("a")
+	# # b.setValue(3)
+	# #
+	# #proxy["a", "b", "c", "d", "e"] = 4
+	# #b = proxy("a", "b")
+	# #b.setValue(4)
 	#
-	#proxy["a", "b", "c", "d", "e"] = 4
-	#b = proxy("a", "b")
-	#b.setValue(4)
-
-	#proxy["a", "b", "c", "d", "e"] = 4
-	proxy["a", "b", "c"] = 7
-	print("jjj")
-	proxy["a", "b", "c"] = 9
-
-	# branch = proxy("a", "b")
-	# print("branch", branch, type(branch))
-	# # # connect listener
-	# dex = proxy.dex()
-
-	# print("proxy", proxy, type(proxy))
-	# print("proxy['a']", proxy["a"], type(proxy("a")))
-	#proxy["a", "b", "c"] = 4
-	#proxy("a", "b", "c").setValue( 6 )
+	# #proxy["a", "b", "c", "d", "e"] = 4
+	# proxy["a", "b", "c"] = 7
+	# print("jjj")
+	# proxy["a", "b", "c"] = 9
+	#
+	# # branch = proxy("a", "b")
+	# # print("branch", branch, type(branch))
+	# # # # connect listener
+	# # dex = proxy.dex()
+	#
+	# # print("proxy", proxy, type(proxy))
+	# # print("proxy['a']", proxy["a"], type(proxy("a")))
+	# #proxy["a", "b", "c"] = 4
+	# #proxy("a", "b", "c").setValue( 6 )
 
 
 

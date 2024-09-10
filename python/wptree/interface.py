@@ -173,6 +173,9 @@ class TreeInterface(Traversable,
 
 	def __repr__(self):
 		return "<{} ({}) : {}>".format(self.__class__, self.getName(), self.getValue())
+
+	def __str__(self):
+		return repr(self)
 	def __eq__(self, other):
 		""" equivalence considers value, branch names and extras
 		for exact comparison use 'is' """

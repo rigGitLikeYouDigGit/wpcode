@@ -5,6 +5,8 @@ from collections import defaultdict
 import typing as T
 
 from wplib import log, inheritance
+from wplib.inheritance import classCallables
+
 """
 
 I have split up the proxy functionality like so:
@@ -44,23 +46,6 @@ probably the most complex thing I've ever done, but with hindsight I think it's 
 
 
 """
-
-
-def classCallables(cls, dunders=True):
-	"""return all attributes of a class that can be called"""
-	methodNames = []
-	mroDict = inheritance.mroMergedDict(cls)
-	for attrName in dir(cls):
-		# this fails on descriptors, since it invokes them
-		#attrValue = getattr(cls, attrName)
-		attrValue = mroDict[attrName]
-		if callable(attrValue):
-			if any((dunders, not attrName.startswith("__"))):
-				methodNames.append(attrName)
-	return methodNames
-
-
-
 
 
 class ProxyMeta(type):
@@ -240,42 +225,6 @@ class Proxy(#ABC,
 			return newResult
 
 		return _proxyMethod
-
-	# # watching methods
-	# def _beforeProxyWatchedMethodCall(self, methodName:str,
-	#                      methodArgs:tuple, methodKwargs:dict,
-	#                      #targetInstance:object
-	#                      )->tuple[T.Callable, tuple, dict, object]:
-	# 	"""overrides / filters args and kwargs passed to method
-	# 	getting _proxyBase and _proxyResult should both be legal here"""
-	# 	targetInstance = self._proxyTarget()
-	# 	newMethod = getattr(targetInstance,methodName)
-	# 	#log("before proxy call", methodName, newMethod, methodArgs, methodKwargs, targetInstance)
-	# 	return newMethod, methodArgs, methodKwargs, targetInstance
-	#
-	# def _afterProxyWatchedMethodCall(self, methodName:str,
-	#                     method:T.Callable,
-	#                      methodArgs:tuple, methodKwargs:dict,
-	#                     #targetInstance: object,
-	#                     callResult:object,
-	#                     )->object:
-	# 	"""overrides / filters result of proxy method"""
-	# 	#log("after proxy call", methodName, method, methodArgs, methodKwargs, targetInstance, callResult)
-	# 	return callResult
-	#
-	# def _onProxyCallWatchedMethodException(self,
-	#                           methodName: str,
-	#                           method:T.Callable,
-	#                           methodArgs: tuple, methodKwargs: dict,
-	#                           #targetInstance: object,
-	#                           exception:BaseException)->(None, object):
-	# 	"""called when proxy call raises exception -
-	# 	to treat exception as normal, raise it from this function as well
-	# 	if no exception is raised, return value of this function is used
-	# 	as return value of method call
-	# 	"""
-	# 	raise exception
-	# def _wrapWatchedMethod(self, methodName):
 
 
 	@classmethod
@@ -636,6 +585,10 @@ class LinkProxy(Proxy):
 
 		# set the proxy link instance to this object
 		self._proxyLink.setProxyInstance(self)
+
+
+
+#class ReactiveProxy
 
 
 if __name__ == '__main__':

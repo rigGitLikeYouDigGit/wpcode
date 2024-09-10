@@ -187,3 +187,15 @@ def overrideThis(fn:T.Callable)->T.Callable:
 # pattern is to have classes and class methods as general practice,
 # but then to override special cases with specific instances.
 
+def classCallables(cls, dunders=True):
+	"""return all attributes of a class that can be called"""
+	methodNames = []
+	mroDict = mroMergedDict(cls)
+	for attrName in dir(cls):
+		# this fails on descriptors, since it invokes them
+		#attrValue = getattr(cls, attrName)
+		attrValue = mroDict[attrName]
+		if callable(attrValue):
+			if any((dunders, not attrName.startswith("__"))):
+				methodNames.append(attrName)
+	return methodNames

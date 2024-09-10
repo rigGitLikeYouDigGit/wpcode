@@ -69,6 +69,7 @@ def deserialise(serialData:dict, deserialiseOp=None, serialParams=None)->T.Any:
 		serialData,
 		params,
 	)
+	log("deserialise result", result)
 	return result
 
 

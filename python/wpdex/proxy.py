@@ -67,7 +67,15 @@ class Reactive:
 	 Param's main model of declaring class-level attributes on objects
 	 doesn't seem extensible enough for the flexible params in chimaera -
 	 the reactive stuff is rad though
-
+	 -
+	 THE CASE AGAINST Param.rx (for us):
+	    - >>> a = rx(1); print(a)
+	        the above errors, since a direct rx interprets casting to str for print
+	        as applying __str__ as a live operator, returning a new live head, not an actual string.
+	        this is, to say the least, annoying
+	    - it's all reactive all the time by default if you use it - getting back to the static data has to be done by rx.value, everywhere.
+	        aside from the confusion when the object itself has a "value" attribute, eg trees, for us we only want reactive behaviour in some places and the ui, not everywhere throughout tools
+	    - setting up reactive expressions and conditions is extremely fluid though - in ours, consider accessing the reactive part as "context-switching" for that line, where you're able to define an island of reactive relations without worrying about accidentally linking anything in the rest of the code.
 	"""
 
 class WpDexProxyData(ProxyData):
@@ -84,6 +92,10 @@ class WpDexProxy(
 	initialise at top level of structure to watch -
 	accessing structure through proxy returns a fully wrapped
 	WpDex structure
+
+	this FAILED because it can't reasonably check for internal changes -
+	for example the implicit branch creation in a tree
+
 	"""
 	_classProxyCache = defaultdict(dict) # { class : { class cache } }
 	_objIdProxyCache = {} #NB: weakdict was giving issues, this might chug memory
