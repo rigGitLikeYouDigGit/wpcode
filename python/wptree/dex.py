@@ -1,5 +1,7 @@
 
 from __future__ import annotations
+
+import pprint
 import typing as T
 
 from wplib import log
@@ -45,19 +47,23 @@ if __name__ == '__main__':
 	t = Tree("root")
 	t["a"]
 	t["a", "b"]
+	t["a", "b", "c"] = 4
 
 	proxy = WpDexProxy(t)
 	proxy.dex().getEventSignal("main", create=True).connect(
-		lambda *args: print("EVENT", args))
+		lambda *args: (print("EVENT"), pprint.pprint(args[0])))
 	#proxy.setValue(2)
 	# b = proxy("a")
 	# b.setValue(3)
 	#
+	#proxy["a", "b", "c", "d", "e"] = 4
+	#b = proxy("a", "b")
+	#b.setValue(4)
 
-	b = proxy("a", "b")
-	b.setValue(4)
-
-	proxy["a", "b", "c", "d", "e"] = 4
+	#proxy["a", "b", "c", "d", "e"] = 4
+	proxy["a", "b", "c"] = 7
+	print("jjj")
+	proxy["a", "b", "c"] = 9
 
 	# branch = proxy("a", "b")
 	# print("branch", branch, type(branch))

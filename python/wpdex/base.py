@@ -1,13 +1,20 @@
 
 from __future__ import annotations
+
+import copy
+import pickle
 import typing as T
 
 from copy import deepcopy
+from collections import defaultdict
 from functools import cache, cached_property
 import weakref
 
+import deepdiff
+
 from wplib import log, Sentinel, sequence
 from wplib.object import Adaptor, TypeNamespace, HashIdElement, ObjectReference, EventDispatcher
+from wplib.serial import serialise, deserialise
 from wplib.object.visitor import VisitAdaptor, Visitable, CHILD_LIST_T
 
 
@@ -123,12 +130,6 @@ class DexPathable:
 	def ref(self, path:DexPathable.pathT="")->DexRef:
 		return DexRef(self, path)
 
-class DexValidator:
-	"""base class for validating dex objects"""
-	def validate(self):
-		"""validate this object"""
-		raise NotImplementedError(self)
-
 
 class OverrideMap:
 	"""sketch for storing layered overrides that can
@@ -169,6 +170,16 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 	client/server model, where a WpDex sends the desired change and path to
 	a server through events, and a new event is sent back with the result
 	and permissions?
+	YES this way we avoid storing parametres and state in wpdex
+	the ROOT of any wpdex hierarchy is considered the manager
+	so data has to persist and maintain a link to its object, but logic/interface doesn't
+
+	this all applies if the core data structure has to be absolutely inviolate,
+	has to be made of pure python primitives, etc-
+
+	if there is the opportunity to replace the whole structure in place,
+	not just through the interface and results provided by the wpdex layer,
+	I think things might get a whole lot easier
 
 	"""
 	# adaptor integration
@@ -184,6 +195,10 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		"update", "add", "discard",
 		"split",
 	}
+
+	def _newPersistData(self)->dict:
+		"""return a new dict to store data"""
+		return {"deltaBase" : None}
 
 	def __init__(self, obj:T.Any, parent:WpDex=None, key:T.Iterable[DexPathable.keyT]=None,
 	             overrideMap:OverrideMap=None, **kwargs):
@@ -203,6 +218,13 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		# goes against pathable to keep store of child objects
 		self.childIdDexMap : dict[int, WpDex] = {}
 		self.keyDexMap : dict[DexPathable.keyT, WpDex] = {}
+
+		#self._baseDeltaState = None
+
+		# save data against paths to persist across
+		# destroying and regenerating dex structure
+		self._rootData : dict[tuple[str], dict[str]] = {}
+		self._persistData = self._newPersistData()
 
 		# do we build on init?
 		self.updateChildren()
@@ -238,7 +260,19 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		"""build child objects, return keyDexMap"""
 		raise NotImplementedError(self, f"no _buildChildren")
 
+	def _gatherRootData(self):
+		"""iter over all children, save persist data to this
+		dex root data by path"""
+		for i in self.allBranches(includeSelf=False):
+			self._rootData[tuple(i.path)] = i._persistData
+
+	def _restoreChildDatasFromRoot(self):
+		"""restore child data from root data"""
+		for i in self.allBranches(includeSelf=False):
+			i._persistData.update(self._rootData.get(tuple(i.path), {}))
+
 	def updateChildren(self):
+		self._gatherRootData()
 		self.childIdDexMap.clear()
 		self.keyDexMap.clear()
 
@@ -246,17 +280,51 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		self.childIdDexMap.update({id(v.obj) : v for v in self.keyDexMap.values()})
 		for v in self.keyDexMap.values():
 			self.childIdDexMap.update(v.childIdDexMap)
+		self._restoreChildDatasFromRoot()
+
+
+	# TODO TODO TODO TODO TODO
+	#  UNIFY THIS WITH TREE AND PATHABLE
 
 	def children(self)->dict[WpDex.keyT, WpDex]:
 		"""return child objects
 		maybe move to pathable superclass"""
 		#return self._buildChildren()
-		if not self.keyDexMap:
-			self.updateChildren()
+		# if not self.keyDexMap:
+		# 	self.updateChildren()
 		return self.keyDexMap
 		# return { v.key : v for k, v in self.childIdDexMap.items()
 		#          if v is not None
 		# }
+
+	@property
+	def branches(self):
+		return list(self.children().values())
+
+	def allBranches(self, includeSelf=True, depthFirst=True, topDown=True)->list[WpDex]:
+		""" returns list of all child objects
+		depth first
+		if not topDown, reverse final list
+		we avoid recursion here, don't insert any crazy logic in this
+		"""
+
+		#found = [ self ] if includeSelf else []
+		toIter = [ self ]
+		found = []
+
+		while toIter:
+			current = toIter.pop(0)
+			found.append(current)
+			if depthFirst:
+				toIter = current.branches + toIter
+			else:
+				toIter = toIter + current.branches
+
+		if not includeSelf:
+			found.pop(0)
+		if not topDown:
+			found.reverse()
+		return found
 
 	@cached_property
 	def root(self)->WpDex:
@@ -275,10 +343,8 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 			return []
 		return self.parent.path + list(self.key)
 
-	def trunk(self, includeSelf=True, includeRoot=True)->list[TreeType]:
+	def trunk(self, includeSelf=True, includeRoot=True)->list[WpDex]:
 		"""return sequence of ancestor trees in descending order to this tree"""
-
-
 		branches = []
 		current = self
 		while current.parent:
@@ -289,6 +355,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		if branches and not includeSelf:
 			branches.pop(-1)
 		return branches
+
 
 	def commonParent(self, otherBranch: TreeType)->(TreeType, None):
 		""" return the lowest common parent between given branches
@@ -361,6 +428,42 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		if self.parent:
 			return [self.parent]
 		return []
+
+	def getStateForDelta(self)->dict:
+		"""return a representation suitable to extract deltas
+		"""
+		return serialise(self.obj)
+
+	def extractDeltas(self, baseState, endState)->list[dict]:
+		"""
+		extract changes between two states
+		if list is empty, no changes done -
+
+		should compare only this level of dex, children will extract
+		their own deltas and emit events with their own path
+		"""
+		#log("extract deltas", self.path, "states:", baseState, endState)
+		if baseState is None:
+			return [{"added" : endState}]
+
+		# if baseState.keys() != endState.keys():
+		# 	return [{"change": None}]
+		if pickle.dumps(baseState) != pickle.dumps(endState):
+			return [{"change": None}]
+		return []
+
+	def prepForDeltas(self):
+		for i in self.allBranches(includeSelf=True):
+			i._persistData["deltaBase"] = i.getStateForDelta()
+
+	def gatherDeltas(self):
+		deltas = {}
+		branches = self.allBranches(includeSelf=True, topDown=False)
+		for i in branches:
+			log("branch", i.path)
+		for i in branches:
+			deltas[tuple(i.path)] = i.extractDeltas(i._persistData["deltaBase"], i.getStateForDelta())
+		return deltas
 
 	# serialisation
 	def asStr(self)->str:

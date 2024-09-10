@@ -122,6 +122,7 @@ class WpDexProxy(
 		if mutating functions are reentrant, only open one delta"""
 		if self._proxyData["deltaCallDepth"] == 0:
 			self._proxyData["deltaStartState"] = copy.deepcopy(self._proxyData["target"])
+			self.dex().prepForDeltas()
 		self._proxyData["deltaCallDepth"] += 1
 
 	def _emitDelta(self):
@@ -133,13 +134,20 @@ class WpDexProxy(
 			# send out delta event
 			# TODO: make an actual delta event
 			#log("send event path", self.dex().path)
-			event = {"type":"delta", "delta":None,
-			                      "path" : self.dex().path
-			                      }
+
+			deltaMap = self.dex().gatherDeltas()
+			if deltaMap:
+				event = {"type":"deltas", "deltas":deltaMap,
+				         "path" : self.dex().path}
+				self.dex().sendEvent(event)
+
+			# event = {"type":"delta", "delta":None,
+			#                       "path" : self.dex().path
+			#                       }
 			# log("event destinations", self.dex()._allEventDestinations(
 			# 	event, "main"
 			# ), self.dex()._nextEventDestinations(event, "main"))
-			self.dex().sendEvent(event)
+
 
 
 
@@ -168,6 +176,8 @@ class WpDexProxy(
 	                    ) ->object:
 		"""return result wrapped in a wpDex proxy, if it appears in
 		main dex children
+
+		gather deltas, THEN refresh children, THEN emit deltas
 		"""
 		log(f"after proxy call {methodName}, {methodArgs, methodKwargs}", vars=0)
 		callResult = super()._afterProxyCall(methodName, method, methodArgs, methodKwargs, targetInstance, callResult)
@@ -193,7 +203,7 @@ class WpDexProxy(
 				# may not be a DIRECT child, consider getting tree branches from call
 				# need a way to map parent dex back to proxy
 				childDex = self.dex().childIdDexMap[id(callResult)]
-				childParentDex = childDex.parent
+				#childParentDex = childDex.parent
 				#log("childParentDex", childParentDex)
 				#log("childParentDex.obj", childParentDex.obj)
 				#childParentProxy = self._objIdProxyCache[id(childParentDex.obj)]
@@ -258,42 +268,42 @@ class WpDexProxy(
 
 if __name__ == '__main__':
 
-	t = [1, [2, [3, 4]]]
-	t.append = lambda x: print("append", x)
+	# t = [1, [2, [3, 4]]]
+	# t.append = lambda x: print("append", x)
 
-	# s = [1, [2, [3, 4]]]
-	# proxy = WpDexProxy(s)
-	#
-	# print(type(proxy), isinstance(proxy, Proxy))
-	#
-	# print(proxy, isinstance(proxy, list))
-	# item = proxy[1][1]
-	#
-	# print(item, isinstance(item, WpDexProxy))
-	#
-	# print(type(item))
-	# print(type(item).__mro__)
-	#
-	# # test that we can still access the clean structure
-	# print(proxy._proxyTarget())
-	# cleanResult = proxy._proxyTarget()[1][1]
-	# print(cleanResult, type(cleanResult))
-	#
-	# # test that events work at root
-	# def printEventFn(event, *args, **kwargs):
-	# 	log("event", event, args, kwargs)
-	#
-	# proxy.dex().getEventSignal(create=True).connect(printEventFn)
-	# # change a leaf value
-	# proxy[1][1] = [5, 6]
-	#
-	# # check that it stuck
-	# print(proxy[1][1])
-	# print(s[1][1])
-	#
-	# # check if setting on the base object triggers signal (probably won't)
-	# s[1][1] = [7, 8]
-	# print("nowt")
+	s = [1, [2, [3, 4]]]
+	proxy = WpDexProxy(s)
+
+	print(type(proxy), isinstance(proxy, Proxy))
+
+	print(proxy, isinstance(proxy, list))
+	item = proxy[1][1]
+
+	print(item, isinstance(item, WpDexProxy))
+
+	print(type(item))
+	print(type(item).__mro__)
+
+	# test that we can still access the clean structure
+	print(proxy._proxyTarget())
+	cleanResult = proxy._proxyTarget()[1][1]
+	print(cleanResult, type(cleanResult))
+
+	# test that events work at root
+	def printEventFn(event, *args, **kwargs):
+		log("event", event, args, kwargs)
+
+	proxy.dex().getEventSignal(create=True).connect(printEventFn)
+	# change a leaf value
+	proxy[1][1] = [5, 6]
+
+	# check that it stuck
+	print(proxy[1][1])
+	print(s[1][1])
+
+	# check if setting on the base object triggers signal (probably won't)
+	s[1][1] = [7, 8]
+	print("nowt")
 
 
 
