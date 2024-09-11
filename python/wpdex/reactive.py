@@ -7,7 +7,7 @@ from collections import defaultdict
 
 from wplib import inheritance, dictlib, log
 from wplib.serial import serialise, deserialise, Serialisable, SerialAdaptor
-from wplib.object import DeepVisitor, Adaptor
+from wplib.object import DeepVisitor, Adaptor, Proxy, ProxyMeta, VisitObjectData
 from wpdex.base import WpDex, DexPathable
 
 class ReactiveDeserialiseOp(DeepVisitor.DeepVisitOp):
@@ -281,6 +281,7 @@ class React(metaclass=ReactMeta):
 		# set the __new__ of this type to that of the target, so we don't get
 		# infinite loops throught the React __new__
 		newCls.__new__ = targetCls.__new__
+		#newCls.__new__ = super(newCls, targetCls).__new__
 		return newCls
 
 
@@ -327,50 +328,7 @@ class React(metaclass=ReactMeta):
 		return ("WRX({})".format(super().__repr__()))
 
 
-	@classmethod
-	def _getProxy(cls, obj,):
-		"""amusingly this is called in the inverse order of the base proxy class
 
-		React.__new__
-		-> DeserialiseOp
-			-> React._getProxy() # multiple times throughout hierarchy
-
-		"""
-		cache = inheritance.mroMergedDict(cls)["_classProxyCache"]
-		# log("proxy new", cls, obj, type(obj), vars=0)
-
-		# check that we don't start generating classes from generated classes
-		cls = next(filter(lambda x: not getattr(x, "_generated", False),
-		                  cls.__mro__))
-
-
-
-
-		# if obj is proxy, look at its type
-		# if React in type(obj).__mro__:
-		# 	objCls = obj.__class__
-		# else:
-		# 	objCls = type(obj)
-		# try:
-		# 	genClass = cache[cls][objCls]
-		# except KeyError:
-		# 	genClass = cls._createClassProxy(objCls)
-		# 	cache[cls] = {objCls: genClass}
-
-		try:
-			ins = object.__new__(genClass)
-		except TypeError:
-			# for builtins need to call:
-			#  int.__new__( ourNewClass, 3 )
-			ins = objCls.__new__(genClass, obj)
-
-		proxyObj = ins
-		proxyObj.__init__(obj, proxyData, **kwargs)
-		# proxyObj._proxyStrongRef = targetObj
-		log("insert obj id", uniqueId, targetObj)
-		cls._objIdProxyCache[uniqueId] = proxyObj
-
-		# proxyObj._proxyStrongRef = targetObj
 
 	@classmethod
 	def _callNewOnGenType(cls, obj, objCls, genClass):
@@ -382,19 +340,47 @@ class React(metaclass=ReactMeta):
 			ins = objCls.__new__(genClass, obj)
 		return ins
 
+
+
+class DeepProxyOp(DeepVisitor.DeepVisitOp):
+
+	@classmethod
+	def visit(self,
+	          obj:T.Any,
+              visitor:DeepVisitor,
+              visitObjectData:VisitObjectData,
+              #visitPassParams:VisitPassParams,
+              ) ->T.Any:
+		"""Transform to apply to each object during deserialisation.
+		"""
+		log("visit", obj, type(obj))
+		return Proxy(obj, proxyData={})
+
+
+# class ProxyRecursive(Proxy):
+# 	pass
+
 if __name__ == '__main__':
+	s = [[3]]
+	v = DeepVisitor()
+	r = v.dispatchPass(s, passParams=DeepVisitor.VisitPassParams(
+		topDown=False, depthFirst=True, transformVisitedObjects=True,
+		visitFn=DeepProxyOp.visit
+	))
+	print(s, type(s))
+
 
 	# s = 5
 	# r = React(s)
 	# print(r, type(r))
 
 	#
-	s = [[3]]
-	#s = [3]
-	#r = React(s)
-	r = React.__new__(React, s)
-	log(r, type(r))
-	log(r)
-	print(r[0], type(r[0]))
-	print(r[0][0], type(r[0][0]))
-	pass
+	# s = [[3]]
+	# #s = [3]
+	# r = React(s)
+	# #r = React.__new__(React, s) # THIS WORKS ._.
+	# log(r, type(r))
+	# log(r)
+	# print(r[0], type(r[0]))
+	# print(r[0][0], type(r[0][0]))
+	# pass

@@ -51,10 +51,92 @@ probably the most complex thing I've ever done, but with hindsight I think it's 
 class ProxyMeta(type):
 	"""used only for subclasscheck misdirection"""
 
-	if not T.TYPE_CHECKING:
-		def __call__(cls:type[Proxy], obj, **kwargs)->Proxy:
-			#print("meta call", cls, obj, kwargs)
-			return cls.getProxy(obj, **kwargs)
+	#if not T.TYPE_CHECKING:
+	def __call__(cls:type[Proxy], obj, proxyData=None, shared=True, **kwargs)->Proxy:
+		#print("meta call", cls, obj, kwargs)
+		#return cls.getProxy(obj, **kwargs)
+		"""
+		creates a proxy instance referencing `obj`. (obj, *args, **kwargs) are
+		passed to this class' __init__, so deriving classes can define an
+		__init__ method of their own.
+		base Proxy class holds master dict
+
+		proxying a proxy will create a new class for each layer
+		and set of parents - this is not ideal, but hasn't hurt yet
+
+		consider the line
+		>>>return type(baseObj)(i[1] for i in childDatas)
+		we can't proxy a generator, but we need to capture the result of the proxy's target class with it
+
+		"""
+		log("proxy call", obj, type(obj), shared)
+
+		uniqueId = cls._proxyObjUniqueId(obj)
+		# check if shared proxy is available
+		if isinstance(obj, Proxy):
+			testObj = obj._proxyTarget()
+			testUid = cls._proxyObjUniqueId(testObj)
+			if shared and testUid in cls._objIdProxyCache:
+				if cls._objIdProxyCache[testUid]:
+					log("fetching shared proxy reference for", testUid)
+					return cls._objIdProxyCache[testUid]
+
+		# build instance proxyData
+		# todo: make this its own method
+		#  maybe classmethod that's called on the constructed class within __new__?
+		proxyData = proxyData or ProxyData()
+		proxyData["target"] = obj
+		#print("proxyParentCls", cls._proxyParentCls, "proxySuperCls", cls._proxySuperCls)
+		# proxyObj : Proxy = cls.__new__(
+		# 	cls, obj,
+		#                proxyData=proxyData,
+		# 	**kwargs
+		#                )
+		proxyObj = ProxyMeta.construct(cls, obj, proxyData=proxyData, shared=shared, **kwargs)
+		proxyObj.__init__(obj, proxyData, **kwargs)
+		#proxyObj._proxyStrongRef = targetObj
+		log("insert obj id", uniqueId, obj, frames=0)
+		cls._objIdProxyCache[uniqueId] = proxyObj
+
+		#proxyObj._proxyStrongRef = targetObj
+		return proxyObj
+
+
+	@staticmethod
+	def construct(cls, obj, proxyData=None, shared=True, **kwargs):
+		# look up existing proxy classes
+		# cache = cls.__dict__["_classProxyCache"]
+		log("construct", obj, cls)
+		cache = inheritance.mroMergedDict(cls)["_classProxyCache"]
+		# log("proxy new", cls, obj, type(obj), vars=0)
+
+		# check that we don't start generating classes from generated classes
+		cls = next(filter(lambda x: not getattr(x, "_generated", False),
+		                  cls.__mro__))
+
+		# if obj is proxy, look at its type
+		if Proxy in type(obj).__mro__:
+			objCls = obj.__class__
+		else:
+			objCls = type(obj)
+		try:
+			genClass = cache[cls][objCls]
+		except KeyError:
+			genClass = cls._createClassProxy(objCls)
+			cache[cls] = {objCls: genClass}
+
+		# create new proxy instance of type-specific proxy class
+		# sometimes gives "not safe" errors on builtin types
+		log("new proxy class", genClass, objCls, vars=0)
+		try:
+			ins = object.__new__(genClass)
+		except TypeError:
+			# for builtins need to call:
+			#  int.__new__( ourNewClass, 3 )
+			ins = objCls.__new__(genClass, obj)
+
+		return ins
+
 
 class ProxyData(T.TypedDict):
 	"""user data for a proxy object"""
@@ -235,6 +317,7 @@ class Proxy(#ABC,
 		and also handles setting the proxy attributes
 
 		"""
+		#log("create class proxy", cls, targetCls, frames=1)
 		# build namespace for generated class
 		# combine declared proxy attributes
 		allProxyAttrs = set(cls._proxyAttrs)
@@ -245,7 +328,7 @@ class Proxy(#ABC,
 		# work out parent, super and target classes
 		mro = cls.__mro__
 		proxyClasses = [x for x in cls.__mro__ if issubclass(x, Proxy) and not getattr(x, "_generated", False)][::-1]
-		#print("proxyClases", cls, proxyClasses)
+		log("proxyClasses", cls, proxyClasses)
 		_proxyParentCls = proxyClasses[-1]
 		_proxySuperCls = None
 		if len(proxyClasses) > 1:
@@ -283,55 +366,66 @@ class Proxy(#ABC,
 		# 	bases = (cls, )
 
 		# generate new type inheriting from all relevant bases
-		newCls = clsType("{}({})".format(cls.__name__, targetCls.__name__),
-		                 bases,
-		                 namespace)
+		try:
+			newCls = clsType("{}({})".format(cls.__name__, targetCls.__name__),
+			                 bases,
+			                 namespace)
+		except Exception as e:
+			log("error creating proxy class", cls, targetCls)
+			log("bases", bases)
+			log("namespace", namespace)
+			raise e
+
 		newCls._proxyTargetCls = targetCls
 		return newCls
 
-	def __new__(cls, obj, *args, **kwargs):
-		"""
-        creates a proxy instance referencing `obj`. (obj, *args, **kwargs) are
-        passed to this class' __init__, so deriving classes can define an
-        __init__ method of their own.
-        base Proxy class holds master dict
-
-        proxying a proxy will create a new class for each layer
-        and set of parents - this is not ideal, but hasn't hurt yet
-
-        """
-
-		# look up existing proxy classes
-		#cache = cls.__dict__["_classProxyCache"]
-		cache = inheritance.mroMergedDict(cls)["_classProxyCache"]
-		#log("proxy new", cls, obj, type(obj), vars=0)
-
-		# check that we don't start generating classes from generated classes
-		cls = next(filter(lambda x: not getattr(x, "_generated", False),
-		                  cls.__mro__))
-
-		# if obj is proxy, look at its type
-		if Proxy in type(obj).__mro__:
-			objCls = obj.__class__
-		else:
-			objCls = type(obj)
-		try:
-			genClass = cache[cls][objCls]
-		except KeyError:
-			genClass = cls._createClassProxy(objCls)
-			cache[cls] = {objCls: genClass}
-
-		# create new proxy instance of type-specific proxy class
-		# sometimes gives "not safe" errors on builtin types
-		#log("new proxy class", genClass, objCls, vars=0)
-		try:
-			ins = object.__new__(genClass)
-		except TypeError:
-			# for builtins need to call:
-			#  int.__new__( ourNewClass, 3 )
-			ins = objCls.__new__(genClass, obj)
-
-		return ins
+	# def __new__(cls, obj, *args, **kwargs):
+		# """
+        # creates a proxy instance referencing `obj`. (obj, *args, **kwargs) are
+        # passed to this class' __init__, so deriving classes can define an
+        # __init__ method of their own.
+        # base Proxy class holds master dict
+		#
+        # proxying a proxy will create a new class for each layer
+        # and set of parents - this is not ideal, but hasn't hurt yet
+		#
+        # consider the line
+        # >>>return type(baseObj)(i[1] for i in childDatas)
+        # we can't proxy a generator, but we need to capture the result of the proxy's target class with it
+		#
+        # """
+		#
+		# # look up existing proxy classes
+		# #cache = cls.__dict__["_classProxyCache"]
+		# cache = inheritance.mroMergedDict(cls)["_classProxyCache"]
+		# #log("proxy new", cls, obj, type(obj), vars=0)
+		#
+		# # check that we don't start generating classes from generated classes
+		# cls = next(filter(lambda x: not getattr(x, "_generated", False),
+		#                   cls.__mro__))
+		#
+		# # if obj is proxy, look at its type
+		# if Proxy in type(obj).__mro__:
+		# 	objCls = obj.__class__
+		# else:
+		# 	objCls = type(obj)
+		# try:
+		# 	genClass = cache[cls][objCls]
+		# except KeyError:
+		# 	genClass = cls._createClassProxy(objCls)
+		# 	cache[cls] = {objCls: genClass}
+		#
+		# # create new proxy instance of type-specific proxy class
+		# # sometimes gives "not safe" errors on builtin types
+		# #log("new proxy class", genClass, objCls, vars=0)
+		# try:
+		# 	ins = object.__new__(genClass)
+		# except TypeError:
+		# 	# for builtins need to call:
+		# 	#  int.__new__( ourNewClass, 3 )
+		# 	ins = objCls.__new__(genClass, obj)
+		#
+		# return ins
 
 	@classmethod
 	def getProxy(cls, targetObj,
@@ -348,34 +442,35 @@ class Proxy(#ABC,
 
 		if weak, no hard reference
 		"""
-		uniqueId = cls._proxyObjUniqueId(targetObj)
-		# check if shared proxy is available
-		if isinstance(targetObj, Proxy):
-			testObj = targetObj._proxyTarget()
-			testUid = cls._proxyObjUniqueId(testObj)
-			if shared and testUid in cls._objIdProxyCache:
-				if cls._objIdProxyCache[testUid]:
-					log("fetching shared proxy reference for", testUid)
-					return cls._objIdProxyCache[testUid]
-
-		# build instance proxyData
-		# todo: make this its own method
-		#  maybe classmethod that's called on the constructed class within __new__?
-		proxyData = proxyData or ProxyData()
-		proxyData["target"] = targetObj
-		#print("proxyParentCls", cls._proxyParentCls, "proxySuperCls", cls._proxySuperCls)
-		proxyObj : Proxy = cls.__new__(
-			cls, targetObj,
-		               proxyData=proxyData,
-			**kwargs
-		               )
-		proxyObj.__init__(targetObj, proxyData, **kwargs)
-		#proxyObj._proxyStrongRef = targetObj
-		log("insert obj id", uniqueId, targetObj)
-		cls._objIdProxyCache[uniqueId] = proxyObj
-
-		#proxyObj._proxyStrongRef = targetObj
-		return proxyObj
+		return cls(targetObj, proxyData=proxyData, shared=shared, **kwargs)
+		# uniqueId = cls._proxyObjUniqueId(targetObj)
+		# # check if shared proxy is available
+		# if isinstance(targetObj, Proxy):
+		# 	testObj = targetObj._proxyTarget()
+		# 	testUid = cls._proxyObjUniqueId(testObj)
+		# 	if shared and testUid in cls._objIdProxyCache:
+		# 		if cls._objIdProxyCache[testUid]:
+		# 			log("fetching shared proxy reference for", testUid)
+		# 			return cls._objIdProxyCache[testUid]
+		#
+		# # build instance proxyData
+		# # todo: make this its own method
+		# #  maybe classmethod that's called on the constructed class within __new__?
+		# proxyData = proxyData or ProxyData()
+		# proxyData["target"] = targetObj
+		# #print("proxyParentCls", cls._proxyParentCls, "proxySuperCls", cls._proxySuperCls)
+		# proxyObj : Proxy = cls.__new__(
+		# 	cls, targetObj,
+		#                proxyData=proxyData,
+		# 	**kwargs
+		#                )
+		# proxyObj.__init__(targetObj, proxyData, **kwargs)
+		# #proxyObj._proxyStrongRef = targetObj
+		# log("insert obj id", uniqueId, targetObj, frames=1)
+		# cls._objIdProxyCache[uniqueId] = proxyObj
+		#
+		# #proxyObj._proxyStrongRef = targetObj
+		# return proxyObj
 
 
 	def _proxyTarget(self):

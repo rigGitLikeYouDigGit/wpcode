@@ -246,8 +246,8 @@ class DeepVisitor:
 			newObj = adaptor.newObj(result, resultObjs, visitParams)
 		except Exception as e:
 			print("error making new object:")
-			print("base", parentObj)
-			print("result", result)
+			print("base", parentObj, type(parentObj))
+			print("result", result, type(result))
 			print("resultObjs", resultObjs)
 			raise e
 
@@ -298,7 +298,7 @@ class DeepVisitor:
 		# 	newObj, self, visitData)
 		result = visitParams.visitFn(
 			newObj, self, visitData)
-		log("visit tf result", result)
+		log("visit tf result", result, type(result))
 		return result
 
 
