@@ -32,4 +32,4 @@ from .stringlike import StringLike
 
 from .traversable import Traversable, TraversableParams
 
-from .visitor import DeepVisitor, VisitObjectData, VisitPassParams, Visitable, VisitAdaptor
+from .visitor import DeepVisitor, DeepVisitOp, VisitObjectData, VisitPassParams, Visitable, VisitAdaptor

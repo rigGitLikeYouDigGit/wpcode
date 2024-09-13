@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from collections import deque, namedtuple
 from typing import TypedDict
 
-from wplib import log, function as wfunction
+from wplib import log, fnlib as wfunction
 from wplib.log import getDefinitionStrLink, getLineLink
 #from wplib.sentinel import Sentinel
 from wplib.object import Adaptor
@@ -34,6 +34,8 @@ class VisitPassParams:
 	transformVisitedObjects: bool = False  # if true, modifies visited objects - yields (original, transformed) pairs
 
 	passChildDataObjects:bool = False # if true, yield full ChildData objects and pass them to visitFn, not just obj
+	visitRoot:bool = True # if true, visit root object
+	rootObj: T.Any = None # passed as the original top object
 
 ChildData = namedtuple("ChildData",
                        ["key", "obj", "data"],
@@ -166,8 +168,8 @@ class SeqVisitAdaptor(VisitAdaptor):
 		return (ChildData(i, val, None) for i, val in enumerate(obj))
 	@classmethod
 	def newObj(cls, baseObj: T.Any, childDatas:CHILD_LIST_T, params:PARAMS_T) ->T.Any:
-		log( "  newObj", baseObj, childDatas, frames=1)
-		log("  ", type(baseObj), type(childDatas[0][1]))
+		#log( "  newObj", baseObj, childDatas, frames=1)
+		#log("  ", type(baseObj), type(childDatas[0][1]))
 		if isNamedTupleInstance(baseObj):
 			return type(baseObj)(*(i[1] for i in childDatas))
 		return type(baseObj)(i[1] for i in childDatas)
@@ -186,11 +188,13 @@ class Visitable:
 class VisitableVisitAdaptor(VisitAdaptor):
 	"""integrate derived subclasses with adaptor system
 	maybe oop really was a mistake
-	"""
+	TODO: we can probably replace this with simple inheritance,
+	 there's no need for the extra complexity"""
+
 	forTypes = (Visitable,)
 	@classmethod
 	def childObjects(cls, obj:Visitable, params:PARAMS_T) ->CHILD_LIST_T:
 		return obj.childObjects(params)
 	@classmethod
 	def newObj(cls, baseObj: T.Any, childDatas:CHILD_LIST_T, params:PARAMS_T) ->T.Any:
-		return baseObj.newObj(baseObj, childDatas)
+		return baseObj.newObj(baseObj, childDatas, params)

@@ -80,7 +80,7 @@ class TreeInterface(Traversable,
 			ChildData("TreeName", self.name ),
 			ChildData("TreeValue", self.value ),
 			ChildData("TreeProperties",self.auxProperties ),
-			*(ChildData("TreeBranch", i ) for i in self.branches)
+			*(ChildData(i.name, i ) for i in self.branches)
 		)
 
 	@classmethod
@@ -88,13 +88,16 @@ class TreeInterface(Traversable,
 		"""create a new tree object from a base object and child type list
 		list of child branches should already have been regenerated
 		"""
+		log("tree newObj", baseObj, type(baseObj))
+		log(getattr(type(baseObj), "_generated", False))
 		tree = type(baseObj)(
 			name=childDatas[0][0], #name
 			value=childDatas[1][0] # value
 		)
-		tree._setRawAuxProperties(childDatas[2][0])
-		for branch, childType in childDatas[3:]:
-			tree.addChild(branch)
+		#tree._setRawAuxProperties(childDatas[2][0])
+		for key, obj, data in childDatas[3:]:
+			assert isinstance(obj, TreeInterface)
+			tree.addChild(obj)
 		return tree
 
 

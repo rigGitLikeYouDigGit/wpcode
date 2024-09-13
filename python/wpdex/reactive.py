@@ -1,95 +1,24 @@
 
 from __future__ import annotations
 
-import pprint
+import pprint, copy, weakref
 import typing as T
 from collections import defaultdict
+from dataclasses import dataclass
 
 from wplib import inheritance, dictlib, log
 from wplib.serial import serialise, deserialise, Serialisable, SerialAdaptor
-from wplib.object import DeepVisitor, Adaptor, Proxy, ProxyMeta, VisitObjectData
+from wplib.object import DeepVisitor, Adaptor, Proxy, ProxyData, ProxyMeta, VisitObjectData, DeepVisitOp
+from wplib.constant import SEQ_TYPES, MAP_TYPES, STR_TYPES, LITERAL_TYPES, IMMUTABLE_TYPES
+from wplib.sentinel import Sentinel
 from wpdex.base import WpDex, DexPathable
 
-class ReactiveDeserialiseOp(DeepVisitor.DeepVisitOp):
-	@classmethod
-	def visit(cls,
-	          obj:T.Any,
-	              visitor:DeepVisitor=None,
-	              visitObjectData:VisitObjectData=None,
-	              #visitPassParams:VisitPassParams=None,
-	              ) ->T.Any:
 
-		"""Transform to apply to each object during deserialisation.
-		"""
-		result = None
-		visitPassParams:VisitPassParams = visitObjectData["visitPassParams"]
-
-		serialParams : dict = dict(visitPassParams.visitKwargs["serialParams"])
-
-		if obj is None:
-			return None
-
-		if not isinstance(obj, dict):
-			result = obj
-
-		elif obj.get(SerialAdaptor.FORMAT_KEY, None) is None:
-			result = obj
-		log("VISIT", obj, type(obj), result)
-
-		if result is not None: # it's a primitive or a simple dict,
-			# copy by direct initialisation
-			# TODO: shuffle the __new__ of the generated class so we don't get a loop
-			#  when base class is called
-			serialisedType = type(obj)
-			reactType = React.getProxyTypeForOrigType(serialisedType)
-			log("reactType", reactType, reactType.__new__)
-			reactObj = reactType(obj)
-
-		else:
-
-			# reload serialised type and get the adaptor for it
-			serialisedType = SerialAdaptor.typeForData(obj[SerialAdaptor.FORMAT_KEY])
-			# get the react type for this loaded type
-			reactType = React.getProxyTypeForOrigType(serialisedType)
-
-			# still use the normal deserialise adaptor to load in the data
-			adaptorCls = SerialAdaptor.adaptorForType(serialisedType)
-
-			if adaptorCls is None:
-				raise Exception(f"No adaptor for class {type(obj)}")
-			dictlib.defaultUpdate(serialParams, adaptorCls.defaultDecodeParams(serialisedType)
-			                      )
-			# decode the object
-			log("decode", obj, adaptorCls)
-			reactObj = adaptorCls.decode(
-				obj,
-				#serialType=serialisedType,
-				serialType=reactType,
-				decodeParams=serialParams)
-		reactObj.__reactInit__(obj)
-		log("deserialised obj", reactObj, type(reactObj))
-		return reactObj
-
-
-class ReactCopyOp(DeepVisitor.DeepVisitOp):
-	@classmethod
-	def visit(cls,
-	          obj:T.Any,
-	              visitor:DeepVisitor=None,
-	              visitObjectData:VisitObjectData=None,
-	              #visitPassParams:VisitPassParams=None,
-	              ) ->T.Any:
-
-		"""Transform to apply to each object during deserialisation.
-		"""
-		visitPassParams:VisitPassParams = visitObjectData["visitPassParams"]
-
-		serialParams : dict = dict(visitPassParams.visitKwargs["serialParams"])
-
-		if obj is None:
-			return None
-
-		return React._copy(obj)
+class WpDexProxyData(ProxyData):
+	parent : weakref.ref
+	wpDex : WpDex
+	deltaStartState : T.Any
+	deltaCallDepth : int
 
 class ReactLogic(Adaptor):
 	"""silo off the active parts of react to avoid jamming in
@@ -98,19 +27,29 @@ class ReactLogic(Adaptor):
 	forTypes = (object, )
 
 
-class ReactMeta(type):
+class WpDexProxyMeta(ProxyMeta):
+	"""manage top-level call logic -
+	if you call WpDexProxy(obj) raw in client code,
+	wrap the full hierarchy in proxies and return the root
 
-	def __call__(cls, *args, **kwargs):
-		log("META call", cls, args, kwargs)
-		try:
-			result = type.__call__(cls, *args, **kwargs)
-		except TypeError:
-			cls.__new__ = cls.__mro__[1].__new__
-			result = type.__call__(cls, *args, **kwargs)
-		log("  META call result", result)
-		return result
+	we specify some flags to prevent infinite loops on meta call
+	parent=None - pass the parent proxy, if known
+	isRoot=None - None starts the hierarchy wrapping, True is the root, False is a child
+	"""
 
-class React(metaclass=ReactMeta):
+	def __call__(cls:type[WpDexProxy], *args, **kwargs):
+		log("WPMETA call", cls, args, type(args[0]), kwargs)
+		parent = kwargs.pop("parent", None)
+		isRoot = kwargs.pop("isRoot", None)
+
+		# called at top level, wrap hierarchy
+		if isRoot is None and parent is None:
+			return cls.wrap(args[0], **kwargs)
+		return super().__call__(*args, **kwargs)
+
+
+
+class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 	"""replace a hieararchy of objects in-place:
 	copy the proxy idea of subclassing for each type.
 	deserialise-copy the root item, and for each lookup type
@@ -131,220 +70,162 @@ class React(metaclass=ReactMeta):
 
 	_proxyAttrs = {"_reactData" : {}}
 	_generated = False
-	_objIdProxyCache : dict[int, React] = {}
+	_objIdProxyCache : dict[int, WpDexProxy] = {}
+
+	def __init__(self, obj, proxyData: WpDexProxyData=None,
+	             wpDex:WpDex=None, parentDex:WpDex=None,
+	             **kwargs):
+		"""create a WpDex object for this proxy, add
+		weak sets for children and parent"""
+		log("WP init", obj, type(obj), type(self), self._proxyParentCls, self._proxySuperCls)
+		self._proxySuperCls.__init__(self, obj, proxyData, **kwargs)
 
 
-	def __reactInit__(self, obj, reactData:dict=None, **kwargs):
-		"""called by __new__, after object has been deserialised
-		STORE NO REFERENCE TO OBJ, the original object -
-		this reactive object REPLACES it"""
-		log("react INIT", obj, self, type(self))
-		self._reactData = reactData
+		self._proxyData["deltaStartState"] = None
+		self._proxyData["deltaCallDepth"] = 0
+
+		# wpdex set up
+		if wpDex is not None: # pre-built dex passed in
+			self._proxyData["wpDex"] = wpDex
+		else:
+			self._proxyData["wpDex"] = WpDex(obj)
+			# link parent dex if given
+		if parentDex is not None:
+			self.dex().parent = parentDex
+
+	def dex(self)->WpDex:
+		return self._proxyData["wpDex"]
 
 	@classmethod
-	def _existingProxy(cls, obj):
-		"""retrieve an existing proxy object for the given base object"""
-		return cls._objIdProxyCache.get(id(obj))
+	def wrap(cls, obj:T.Any, op:DeepProxyOp=None, **kwargs):
+		"""return the given structure recursively wrapped in proxies
+		there's no good way to do this in a single pass -
+		we go bottom-up to create the proxy hierarchy, then top-down
+		to set the links between parents and children
+
+		"""
+		v = DeepVisitor()
+		op = op or DeepProxyOp(proxyCls=cls)
+		r = v.dispatchPass(obj, passParams=v.VisitPassParams(
+			topDown=False, depthFirst=True,
+			transformVisitedObjects=True,
+			visitFn=op.visit, visitRoot=True,
+			rootObj=obj
+		))
+		return r
+
+	def _openDelta(self):
+		"""open a delta for this object -
+		if mutating functions are reentrant, only open one delta"""
+		if self._proxyData["deltaCallDepth"] == 0:
+			self._proxyData["deltaStartState"] = copy.deepcopy(self._proxyData["target"])
+			self.dex().prepForDeltas()
+		self._proxyData["deltaCallDepth"] += 1
+
+	def _emitDelta(self):
+		"""emit a delta for this object"""
+		self._proxyData["deltaCallDepth"] -= 1
+		if self._proxyData["deltaCallDepth"] == 0:
+			# delta = DeltaAtom(self._proxyData["deltaStartState"], self._proxyData["target"])
+			self._proxyData["deltaStartState"] = None
+			# send out delta event
+			# TODO: make an actual delta event
+			#log("send event path", self.dex().path)
+
+			deltaMap = self.dex().gatherDeltas()
+			if deltaMap:
+				event = {"type":"deltas", "deltas":deltaMap,
+				         "path" : self.dex().path}
+				self.dex().sendEvent(event)
+
+			# event = {"type":"delta", "delta":None,
+			#                       "path" : self.dex().path
+			#                       }
+			# log("event destinations", self.dex()._allEventDestinations(
+			# 	event, "main"
+			# ), self.dex()._nextEventDestinations(event, "main"))
 
 
-	def _beforeProxyCall(self, methodName: str,
-	                     methodArgs: tuple, methodKwargs: dict,
-	                     targetInstance: object
-	                     ) -> tuple[T.Callable, tuple, dict, object]:
-		"""overrides / filters args and kwargs passed to method
-		getting _proxyBase and _proxyResult should both be legal here"""
-		newMethod = getattr(targetInstance, methodName)
-		# log("before proxy call", methodName, newMethod, methodArgs, methodKwargs, targetInstance)
-		return newMethod, methodArgs, methodKwargs, targetInstance
 
-	def _afterProxyCall(self, methodName: str,
-	                    method: T.Callable,
-	                    methodArgs: tuple, methodKwargs: dict,
+
+	def _beforeProxyCall(self, methodName:str,
+	                     methodArgs:tuple, methodKwargs:dict,
+	                     targetInstance:object
+	                     ) ->tuple[T.Callable, tuple, dict, object]:
+		"""open a delta if mutating method called"""
+		#log(f"before proxy call {methodName}, {methodArgs, methodKwargs}", vars=0)
+		fn, args, kwargs, targetInstance = super()._beforeProxyCall(methodName, methodArgs, methodKwargs, targetInstance)
+
+		if not self.dex().childIdDexMap:
+			self.dex().updateChildren()
+
+		# check if method will mutate data - need to open a delta
+		if methodName in self.dex().mutatingMethodNames:
+			self._openDelta()
+
+		return fn, args, kwargs, targetInstance
+
+	def _afterProxyCall(self, methodName:str,
+	                    method:T.Callable,
+	                     methodArgs:tuple, methodKwargs:dict,
 	                    targetInstance: object,
-	                    callResult: object,
-	                    ) -> object:
-		"""overrides / filters result of proxy method"""
-		# log("after proxy call", methodName, method, methodArgs, methodKwargs, targetInstance, callResult)
-		return callResult
+	                    callResult:object,
+	                    ) ->object:
+		"""return result wrapped in a wpDex proxy, if it appears in
+		main dex children
+
+		gather deltas, THEN refresh children, THEN emit deltas
+		"""
+		#log(f"after proxy call {methodName}, {methodArgs, methodKwargs}", vars=0)
+		callResult = super()._afterProxyCall(methodName, method, methodArgs, methodKwargs, targetInstance, callResult)
+		toReturn = callResult
+
+
+		# if mutating method called, rebuild WpDex children
+		#log("method", methodName, "in", methodName in self.dex().mutatingMethodNames)
+		if methodName in self.dex().mutatingMethodNames:
+			"""TO UPDATE CHILDREN -
+			need to keep THIS object intact - 
+			run op on root's TARGET, 
+			DO NOT wrap that object,
+			REBASE root (this proxy) on to the result
+			
+			but then we invalidate all references to any branch, regardless of it changing
+			i am in deep pain
+			i just want to make films man
+			"""
+
+
+			# ensure every bit of the structure is still wrapped in a proxy
+			self._proxyData["target"] = self.wrap(self._proxyData["target"])
+
+			self.dex().updateChildren()
+
+
+		# if mutating method called, finallyemit delta
+		if methodName in self.dex().mutatingMethodNames:
+			self._emitDelta()
+
+		return toReturn
 
 	def _onProxyCallException(self,
 	                          methodName: str,
-	                          method: T.Callable,
+	                          method:T.Callable,
 	                          methodArgs: tuple, methodKwargs: dict,
 	                          targetInstance: object,
-	                          exception: BaseException) -> (None, object):
-		"""called when proxy call raises exception -
-		to treat exception as normal, raise it from this function as well
-		if no exception is raised, return value of this function is used
-		as return value of method call
-		"""
+	                          exception:BaseException) ->(None, object):
+		"""ensure we still emit / clear deltas if an exception is raised"""
+		log(f"on proxy call exception {methodName}, {methodArgs, methodKwargs}")
+		if methodName in self.dex().mutatingMethodNames:
+			self._emitDelta()
 		raise exception
 
-	@classmethod
-	def _makeProxyMethod(cls, methodName, targetCls):
-		"""called with each method of the target cls,
-		by default looks up proxy on each call
-		default implementation provides hooks to override before and after
-		call, also allowing filtering args, kwargs, as well as what method
-		is actually called, and on what instance
+@dataclass
+class DeepProxyOp(DeepVisitOp):
+	proxyCls : type
+	rootObj : T.Any
+	transformRoot : bool = True
 
-		shifting to return the method object itself, not just the name
-		"""
-
-		def _proxyMethod(self: Proxy, *args, **kw):
-			# pre-call hook - must return parametres of method call
-			newMethod, newArgs, newKw, targetInstance = self._beforeProxyCall(
-				methodName, methodArgs=args, methodKwargs=kw,
-				targetInstance=self._proxyTarget()
-			)
-
-			try:  # set up exception catch
-				# actually call method on target instance, get raw result
-				result = newMethod(*newArgs, **newKw)
-			except Exception as e:  # on any exception, pass to handler function
-				result = self._onProxyCallException(
-					methodName, newMethod,
-					methodArgs=newArgs, methodKwargs=newKw,
-					targetInstance=targetInstance,
-					exception=e
-				)
-
-			# filter result based on call params, return filtered output
-			newResult = self._afterProxyCall(
-				methodName, newMethod,
-				methodArgs=newArgs, methodKwargs=newKw,
-				targetInstance=targetInstance,
-				callResult=result)
-			return newResult
-
-		return _proxyMethod
-
-	@classmethod
-	def _createClassProxy(cls, targetCls):
-		"""creates a proxy class for the given class
-
-		this wraps all undefined methods with the before- and after- functions,
-		and also handles setting the proxy attributes
-
-		"""
-		log("create class proxy for", targetCls)
-		# build namespace for generated class
-		# combine declared proxy attributes
-		allProxyAttrs = set(cls._proxyAttrs)
-		for base in cls.__mro__:
-			if getattr(base, "_proxyAttrs", None):
-				allProxyAttrs.update(base._proxyAttrs)
-
-		# work out parent, super and target classes
-		proxyClasses = [x for x in cls.__mro__ if issubclass(x, React) and not getattr(x, "_generated", False)][::-1]
-		_proxyParentCls = proxyClasses[-1]
-		_proxySuperCls = None
-		if len(proxyClasses) > 1:
-			_proxySuperCls = proxyClasses[-2]
-
-		# namespace dict
-		namespace = {"_proxyAttrs": allProxyAttrs,
-		             "_generated": True,
-		             "_proxyTargetCls": targetCls,
-		             "_proxyParentCls": _proxyParentCls,
-		             "_proxySuperCls": _proxySuperCls,
-		             }
-		#toWrap = inheritance.classCallables(targetCls)
-
-		# for methodName in toWrap:
-		# 	# do not override methods if they appear in proxy class
-		# 	# unless they are in the "wrapTheseMethodsAnyway" list
-		# 	# print("wrap", methodName, methodName in cls._wrapTheseMethodsAnyway, methodName in dir(cls))
-		# 	if hasattr(targetCls, methodName):
-		# 		if ((methodName in cls._wrapTheseMethodsAnyway)
-		# 				or (not methodName in dir(cls))):
-		# 			# print("wrapping", methodName)
-		# 			namespace[methodName] = cls._makeProxyMethod(methodName, targetCls)
-
-		#clsType = ProxyMeta
-		clsType = type
-
-		# proxying things like bools and ints is useful for persistence,
-		# but precludes the more complex proxy wrapping and typing -
-		# inherit directly from Proxy in these cases
-
-		bases = (cls, targetCls)
-		# try:
-		# 	testType = clsType("test", bases, {})
-		# except TypeError:
-		# 	bases = (cls, )
-
-		# generate new type inheriting from all relevant bases
-		newCls = clsType("{}({})".format(cls.__name__, targetCls.__name__),
-		                 bases,
-		                 namespace)
-		# set the __new__ of this type to that of the target, so we don't get
-		# infinite loops throught the React __new__
-		newCls.__new__ = targetCls.__new__
-		#newCls.__new__ = super(newCls, targetCls).__new__
-		return newCls
-
-
-	@classmethod
-	def getProxyTypeForOrigType(cls, objCls):
-		"""returns the proxy type for the given original type"""
-		# if obj is proxy, look at its type
-		cache = cls._classProxyCache
-		try:
-			genClass = cache[cls][objCls]
-		except KeyError:
-			genClass = cls._createClassProxy(objCls)
-			cache[cls] = {objCls: genClass}
-		return genClass
-
-	def __new__(cls, obj, params=None, *args, **kwargs):
-		"""
-        creates a copy of the passed structure -
-        we cheap out by using __new__ on the class to return an existing object if found,
-        rather than __call__ on the metaclass, but that also means we don't have to worry
-        about metaclass clashes in our synthetic types
-
-		"""
-		uniqueId = id(obj)
-		# sharing makes no sense here, since we want the actual object
-		if isinstance(obj, React):
-			return obj
-
-		# serialise given structure, then deserialise with a custom class
-		result = deserialise(serialise(obj),
-		                   deserialiseOp=ReactiveDeserialiseOp)
-		log("_new_ result", result)
-		# if isinstance(result, list):
-		# 	log("entry", result[0], type(result[0]))
-
-		return result
-
-	# @classmethod
-	# def _copy(cls, obj):
-	
-	# def __str__(self):
-	# 	return ("WRX({})".format(super().__str__()))
-	def __repr__(self):
-		return ("WRX({})".format(super().__repr__()))
-
-
-
-
-	@classmethod
-	def _callNewOnGenType(cls, obj, objCls, genClass):
-		try:
-			ins = object.__new__(genClass)
-		except TypeError:
-			# for builtins need to call:
-			#  int.__new__( ourNewClass, 3 )
-			ins = objCls.__new__(genClass, obj)
-		return ins
-
-
-
-class DeepProxyOp(DeepVisitor.DeepVisitOp):
-
-	@classmethod
 	def visit(self,
 	          obj:T.Any,
               visitor:DeepVisitor,
@@ -354,7 +235,13 @@ class DeepProxyOp(DeepVisitor.DeepVisitOp):
 		"""Transform to apply to each object during deserialisation.
 		"""
 		log("visit", obj, type(obj))
-		return Proxy(obj, proxyData={})
+		log("data", visitObjectData)
+		isRoot = False
+		if obj is visitObjectData["visitPassParams"].rootObj:
+			log("visit root" )
+			isRoot = True
+		return self.proxyCls(obj, proxyData={}, parent=None,
+		                     isRoot=isRoot)
 
 
 # class ProxyRecursive(Proxy):
@@ -363,11 +250,14 @@ class DeepProxyOp(DeepVisitor.DeepVisitOp):
 if __name__ == '__main__':
 	s = [[3]]
 	v = DeepVisitor()
-	r = v.dispatchPass(s, passParams=DeepVisitor.VisitPassParams(
+	op = DeepProxyOp()
+	r = v.dispatchPass(s, passParams=v.VisitPassParams(
 		topDown=False, depthFirst=True, transformVisitedObjects=True,
-		visitFn=DeepProxyOp.visit
+		visitFn=op.visit
 	))
-	print(s, type(s))
+	print(r, type(r))
+	print(r[0], type(r[0]))
+	print(r[0][0], type(r[0][0]))
 
 
 	# s = 5

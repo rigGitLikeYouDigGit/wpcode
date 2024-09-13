@@ -4,7 +4,7 @@ import weakref
 from collections import defaultdict
 import typing as T
 
-from wplib import log, inheritance
+from wplib import log, inheritance, fnlib
 from wplib.inheritance import classCallables
 
 """
@@ -52,9 +52,10 @@ class ProxyMeta(type):
 	"""used only for subclasscheck misdirection"""
 
 	#if not T.TYPE_CHECKING:
-	def __call__(cls:type[Proxy], obj, proxyData=None, shared=True, **kwargs)->Proxy:
-		#print("meta call", cls, obj, kwargs)
-		#return cls.getProxy(obj, **kwargs)
+	#def __call__(cls:type[Proxy], obj, proxyData=None, shared=True, **kwargs)->Proxy:
+	def __call__(cls:type[Proxy], *args, **kwargs)->Proxy:
+		log( "META call", cls, args[0], kwargs)
+		log("generated", getattr(cls, "_generated", False))
 		"""
 		creates a proxy instance referencing `obj`. (obj, *args, **kwargs) are
 		passed to this class' __init__, so deriving classes can define an
@@ -69,7 +70,28 @@ class ProxyMeta(type):
 		we can't proxy a generator, but we need to capture the result of the proxy's target class with it
 
 		"""
-		log("proxy call", obj, type(obj), shared)
+		#log("proxy call", obj, type(obj), shared)
+
+		"""catch the generator / initialisation problem first - 
+		>>>type(baseObj)(i[1] for i in childDatas) 
+		will meta-call a GENERATED proxy class
+		>>>WpDexProxy(i[1] for i in childDatas)
+		will meta-call a user-defined one, which is in theory legal
+		"""
+		if getattr(cls, "_generated", False):
+			# delegate to the type of the target object, it's probably
+			# client code that we can't predict
+			return cls._proxyTargetCls(*args, **kwargs)
+		if not args:
+			raise TypeError("Proxy classes must be called with an object to proxy")
+		obj = args[0]
+		shared = kwargs.pop("shared", True)
+		proxyData = kwargs.pop("proxyData", None)
+		# shared = fnlib.trimKwarg(kwargs,"shared", True)
+		# proxyData = fnlib.trimKwarg(kwargs, "proxyData", None)
+		if obj is None: # for now we just don't deal with None
+			return None
+
 
 		uniqueId = cls._proxyObjUniqueId(obj)
 		# check if shared proxy is available
@@ -92,6 +114,7 @@ class ProxyMeta(type):
 		#                proxyData=proxyData,
 		# 	**kwargs
 		#                )
+
 		proxyObj = ProxyMeta.construct(cls, obj, proxyData=proxyData, shared=shared, **kwargs)
 		proxyObj.__init__(obj, proxyData, **kwargs)
 		#proxyObj._proxyStrongRef = targetObj
@@ -379,53 +402,6 @@ class Proxy(#ABC,
 		newCls._proxyTargetCls = targetCls
 		return newCls
 
-	# def __new__(cls, obj, *args, **kwargs):
-		# """
-        # creates a proxy instance referencing `obj`. (obj, *args, **kwargs) are
-        # passed to this class' __init__, so deriving classes can define an
-        # __init__ method of their own.
-        # base Proxy class holds master dict
-		#
-        # proxying a proxy will create a new class for each layer
-        # and set of parents - this is not ideal, but hasn't hurt yet
-		#
-        # consider the line
-        # >>>return type(baseObj)(i[1] for i in childDatas)
-        # we can't proxy a generator, but we need to capture the result of the proxy's target class with it
-		#
-        # """
-		#
-		# # look up existing proxy classes
-		# #cache = cls.__dict__["_classProxyCache"]
-		# cache = inheritance.mroMergedDict(cls)["_classProxyCache"]
-		# #log("proxy new", cls, obj, type(obj), vars=0)
-		#
-		# # check that we don't start generating classes from generated classes
-		# cls = next(filter(lambda x: not getattr(x, "_generated", False),
-		#                   cls.__mro__))
-		#
-		# # if obj is proxy, look at its type
-		# if Proxy in type(obj).__mro__:
-		# 	objCls = obj.__class__
-		# else:
-		# 	objCls = type(obj)
-		# try:
-		# 	genClass = cache[cls][objCls]
-		# except KeyError:
-		# 	genClass = cls._createClassProxy(objCls)
-		# 	cache[cls] = {objCls: genClass}
-		#
-		# # create new proxy instance of type-specific proxy class
-		# # sometimes gives "not safe" errors on builtin types
-		# #log("new proxy class", genClass, objCls, vars=0)
-		# try:
-		# 	ins = object.__new__(genClass)
-		# except TypeError:
-		# 	# for builtins need to call:
-		# 	#  int.__new__( ourNewClass, 3 )
-		# 	ins = objCls.__new__(genClass, obj)
-		#
-		# return ins
 
 	@classmethod
 	def getProxy(cls, targetObj,
@@ -443,34 +419,6 @@ class Proxy(#ABC,
 		if weak, no hard reference
 		"""
 		return cls(targetObj, proxyData=proxyData, shared=shared, **kwargs)
-		# uniqueId = cls._proxyObjUniqueId(targetObj)
-		# # check if shared proxy is available
-		# if isinstance(targetObj, Proxy):
-		# 	testObj = targetObj._proxyTarget()
-		# 	testUid = cls._proxyObjUniqueId(testObj)
-		# 	if shared and testUid in cls._objIdProxyCache:
-		# 		if cls._objIdProxyCache[testUid]:
-		# 			log("fetching shared proxy reference for", testUid)
-		# 			return cls._objIdProxyCache[testUid]
-		#
-		# # build instance proxyData
-		# # todo: make this its own method
-		# #  maybe classmethod that's called on the constructed class within __new__?
-		# proxyData = proxyData or ProxyData()
-		# proxyData["target"] = targetObj
-		# #print("proxyParentCls", cls._proxyParentCls, "proxySuperCls", cls._proxySuperCls)
-		# proxyObj : Proxy = cls.__new__(
-		# 	cls, targetObj,
-		#                proxyData=proxyData,
-		# 	**kwargs
-		#                )
-		# proxyObj.__init__(targetObj, proxyData, **kwargs)
-		# #proxyObj._proxyStrongRef = targetObj
-		# log("insert obj id", uniqueId, targetObj, frames=1)
-		# cls._objIdProxyCache[uniqueId] = proxyObj
-		#
-		# #proxyObj._proxyStrongRef = targetObj
-		# return proxyObj
 
 
 	def _proxyTarget(self):

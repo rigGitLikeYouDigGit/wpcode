@@ -15,6 +15,13 @@ program, updating live whenever a change comes from code or ui -
 obviously that's the whole point of QT, but the default views
 are not enough 
 
+arch-enemy situation that will never be resolved:
+
+>>>proxyTree = myNode.settings()
+>>>myNonProxyTree = Tree(a, b, c)
+>>>proxyTree.addBranch(myNonProxyTree)
+OBVIOUSLY this reference to the non-proxy tree can't be changed
+
 
 """
 
@@ -27,4 +34,4 @@ from .dictdex import *
 from .seqdex import *
 from .strexpdex import *
 
-from .proxy import WpDexProxy
+from .reactive import WpDexProxy

@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from collections import deque, namedtuple
 from typing import TypedDict
 
-from wplib import log, function as wfunction
+from wplib import log, fnlib as wfunction
 from wplib.log import getDefinitionStrLink, getLineLink
 #from wplib.sentinel import Sentinel
 from wplib.object import Adaptor
@@ -201,7 +201,6 @@ class DeepVisitor:
 
 	def _transformRecursiveTopDownDepthFirst(
 			self,
-			#parentObj:T.Any,
 			parentObjData:CHILD_T,
 
 			visitParams:VisitPassParams,
@@ -282,11 +281,11 @@ class DeepVisitor:
 					visitParams),
 									 childType)
 				 )
-			print("resultObjs", resultObjs)
+			#print("resultObjs", resultObjs)
 		#log("resultObjs", resultObjs)
 		adaptor = VisitAdaptor.adaptorForType(parentObj)
 		try:
-			log("call newobj", parentObj, resultObjs)
+			#log("call newobj", parentObj, resultObjs)
 			newObj = adaptor.newObj(parentObj, resultObjs, visitParams)
 		except Exception as e:
 			print("Cannot make new object:")
@@ -294,11 +293,15 @@ class DeepVisitor:
 			print("resultObjs", resultObjs)
 			raise e
 
-		# return visitParams.visitFn(
-		# 	newObj, self, visitData)
+		# if this is the top level we skip, if desired
+		if not visitParams.visitRoot:
+			if parentObj is visitParams.rootObj:
+				return newObj
+
+		# transform object
 		result = visitParams.visitFn(
 			newObj, self, visitData)
-		log("visit tf result", result, type(result))
+		#log("visit tf result", result, type(result))
 		return result
 
 
@@ -316,6 +319,8 @@ class DeepVisitor:
 
 		if passParams.transformVisitedObjects and passParams.visitFn is None:
 			raise ValueError("Cannot transform objects without a visit function")
+
+		passParams.rootObj = passParams.rootObj or fromObj
 
 		# check signature of visit function
 		if passParams.visitFn is not None:

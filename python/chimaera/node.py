@@ -540,6 +540,11 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin, Serialisable):
 	Node objects should look up their NodeType live from "type" attribute,
 	so type can be changed dynamically.
 
+	node.parent
+	node.params
+	how do you abbreviate this
+	node.settings might be better
+
 
 	Tree composition behaviour -
 		default defined by node type

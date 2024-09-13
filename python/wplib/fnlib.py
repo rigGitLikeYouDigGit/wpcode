@@ -6,6 +6,17 @@ import inspect
 from types import FunctionType
 
 
+def trimArg(args, index):
+	"""remove argument at index from args
+	TODO: safety checks"""
+	return args[:index] + args[index+1:], args[index]
+
+def trimKwarg(kwargs, key, default=None):
+	"""remove key from kwargs and return value"""
+	if key in kwargs:
+		return kwargs.pop(key)
+	return default
+
 def checkFunctionSpecsMatch(
 		templateFn:FunctionType,
 		testFn:FunctionType,

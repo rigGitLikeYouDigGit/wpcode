@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import wpexp.syntax
-from wplib.function import addToFunctionGlobals
+from wplib.fnlib import addToFunctionGlobals
 
 """core of refgraph - stores either static value, or function
 to be evaluated"""

@@ -54,17 +54,16 @@ if __name__ == '__main__':
 
 	eventFn = lambda *args: (print("EVENT"), pprint.pprint(args[0]))
 	t = Tree("root")
-	# t["a"]
+	t["a"]
 	# t["a", "b"]
-	t["a", "b", "c"] = 4
+	#t["a", "b", "c"] = 4
 
-	#rt = myrx(t)
-	# rt.rx.when(eventFn)
-	# print(type(rt))
-	# print(str(rt) == rx)
-	# print(rt)
-	# print(rt, type(rt))
-	# rt.rx.value = 2
+	p = WpDexProxy(t)
+
+	log(p, type(p), )
+	a = p("a")
+	log(a, type(a))
+
 
 
 	#b = t("a", "b", "c")
