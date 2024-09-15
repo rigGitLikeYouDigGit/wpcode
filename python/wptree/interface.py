@@ -72,6 +72,10 @@ class TreeInterface(Traversable,
 	"""base class for tree-like objects -
 	no requirements for internal storage or structure,
 	only interface around name, value, branches and properties
+
+	TODO: the different layers of setName(), _setRawName() etc are leftover from
+	 trying to pack referencing and events into this single object.
+	 they should probably be simplified
 	"""
 
 	def childObjects(self, params:PARAMS_T)->CHILD_LIST_T:
@@ -89,10 +93,11 @@ class TreeInterface(Traversable,
 		list of child branches should already have been regenerated
 		"""
 		log("tree newObj", baseObj, type(baseObj))
-		log(getattr(type(baseObj), "_generated", False))
+		# log("tree childDatas", childDatas)
+		#log(getattr(type(baseObj), "_generated", False))
 		tree = type(baseObj)(
-			name=childDatas[0][0], #name
-			value=childDatas[1][0] # value
+			name=childDatas[0][1], #name
+			value=childDatas[1][1] # value
 		)
 		#tree._setRawAuxProperties(childDatas[2][0])
 		for key, obj, data in childDatas[3:]:
@@ -439,9 +444,10 @@ class TreeInterface(Traversable,
 		:param params: traverse params object
 		:return: Traversable object
 		"""
-
+		log("findNextTraversable", self, separator, token, params)
 		# check if branch is directly found - return it if so
 		found = self._branchFromToken(token)
+		log("found", found, type(found))
 		if found:
 			return found
 
@@ -479,7 +485,7 @@ class TreeInterface(Traversable,
 	             **kwargs)->TreeInterface:
 		""" index into tree hierarchy via address sequence,
 		return matching branch"""
-		#print("call", self, path)
+		log("__call__", self, path)
 
 		try:
 			# path = flatten(path)
@@ -514,7 +520,12 @@ class TreeInterface(Traversable,
 	def branchMap(self)-> dict[str, TreeType]:
 		"""return a nice view of {tree name : tree}
 		generated from uid map"""
-		return {i.name : i for i in self.branches}
+		try:
+			return {i.name : i for i in self.branches}
+		except Exception as e:
+			s = self.branches[0].name
+			log("branchMap error", type(s), type(s).__hash__)
+			raise e
 
 	@property
 	def uidBranchMap(self)->dict[str, TreeType]:

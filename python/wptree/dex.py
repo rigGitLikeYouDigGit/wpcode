@@ -60,9 +60,11 @@ if __name__ == '__main__':
 
 	p = WpDexProxy(t)
 
-	log(p, type(p), )
+	log("-----", p, type(p), )
+	log("px call fn", p.__call__)
+	print("")
 	a = p("a")
-	log(a, type(a))
+	log("-----", a, type(a))
 
 
 

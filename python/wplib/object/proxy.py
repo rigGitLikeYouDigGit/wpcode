@@ -259,6 +259,9 @@ class Proxy(#ABC,
 	# clear these up once all proxies pointing to it are deleted
 	_watchMethodNames = set()
 
+	def __hash__(self):
+		return hash(self._proxyData["target"])
+
 	def _beforeProxyCall(self, methodName:str,
 	                     methodArgs:tuple, methodKwargs:dict,
 	                     targetInstance:object
@@ -303,6 +306,7 @@ class Proxy(#ABC,
 
 		shifting to return the method object itself, not just the name
 		"""
+		#log("make proxy method", methodName, targetCls)
 		def _proxyMethod(self:Proxy, *args, **kw):
 			# pre-call hook - must return parametres of method call
 			newMethod, newArgs, newKw, targetInstance = self._beforeProxyCall(
@@ -398,6 +402,10 @@ class Proxy(#ABC,
 			log("bases", bases)
 			log("namespace", namespace)
 			raise e
+
+		log("gen new cls", newCls, targetCls, newCls.__mro__)
+		newCls.__hash__ = cls.__hash__  # please don't work
+		assert newCls.__hash__  # damn it
 
 		newCls._proxyTargetCls = targetCls
 		return newCls

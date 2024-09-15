@@ -10,7 +10,7 @@ import pprint, copy, textwrap, ast
 
 import typing as T
 
-from wplib import Sentinel
+from wplib import Sentinel, log
 from wplib.object.element import UidElement
 from wptree.reference import TreeReference
 
@@ -51,6 +51,7 @@ class Tree(TreeInterface,
 
 		LookupCreate on by default here? Freedom vs safety - freedom wins
 		"""
+		log("tree init start", name, type(name))
 
 		UidElement.__init__(self, uid)
 		TreeInterface.__init__(self)
@@ -68,6 +69,10 @@ class Tree(TreeInterface,
 			self.default = default
 		if desc:
 			self.description = desc
+
+		log("tree init end")
+		log(self.childObjects({}))
+		log([type(i[1]) for i in self.childObjects({})])
 
 	def __hash__(self):
 		return hash(self.uid)
