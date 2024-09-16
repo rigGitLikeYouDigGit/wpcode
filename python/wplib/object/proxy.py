@@ -116,6 +116,7 @@ class ProxyMeta(type):
 		#                )
 
 		proxyObj = ProxyMeta.construct(cls, obj, proxyData=proxyData, shared=shared, **kwargs)
+		cls._setProxyTarget(proxyObj, obj)
 		proxyObj.__init__(obj, proxyData, **kwargs)
 		#proxyObj._proxyStrongRef = targetObj
 		log("insert obj id", uniqueId, obj, frames=0)
@@ -157,7 +158,8 @@ class ProxyMeta(type):
 			# for builtins need to call:
 			#  int.__new__( ourNewClass, 3 )
 			ins = objCls.__new__(genClass, obj)
-
+		# set passed in data before init is run
+		ins._proxyData = proxyData
 		return ins
 
 
@@ -194,7 +196,7 @@ class Proxy(#ABC,
 	# ^ don't do this
 	_allowProxyTypesForProxies = False # allow proxy types to be created for proxy types
 	# ^ really don't do this
-	_objIdProxyCache : dict[int, set[Proxy]] = defaultdict(weakref.WeakSet) #NB: weakdict was giving issues, this might chug memory
+	_objIdProxyCache : dict[int, Proxy] = defaultdict(weakref.WeakSet) #NB: weakdict was giving issues, this might chug memory
 	#_proxyLinkCls = None # optionally enforce a link class for this class of proxy
 
 	# define explicit list of attributes on proxy object, like __slots__
@@ -231,24 +233,28 @@ class Proxy(#ABC,
 	@classmethod
 	def _existingProxy(cls, obj):
 		"""retrieve an existing proxy object for the given base object"""
-		return cls._objIdProxyCache.get(cls._proxyObjUniqueId(obj))
+		return cls._objIdProxyCache.get(cls._proxyObjUniqueId(obj), None)
 
 	# factories
 	_special_names = [
-		'__abs__', '__add__', '__and__', '__call__', '__cmp__', '__coerce__',
-		'__contains__', '__delitem__', '__delslice__', '__div__', '__divmod__',
-		'__eq__', '__float__', '__floordiv__', '__ge__', '__getitem__',
-		'__getslice__', '__gt__', '__hash__', '__hex__', '__iadd__', '__iand__',
-		'__idiv__', '__idivmod__', '__ifloordiv__', '__ilshift__', '__imod__',
-		'__imul__', '__int__', '__invert__', '__ior__', '__ipow__', '__irshift__',
-		'__isub__', '__iter__', '__itruediv__', '__ixor__', '__le__', '__len__',
-		'__long__', '__lshift__', '__lt__', '__mod__', '__mul__', '__ne__',
-		'__neg__', '__oct__', '__or__', '__pos__', '__pow__', '__radd__',
-		'__rand__', '__rdiv__', '__rdivmod__', '__reduce__', '__reduce_ex__',
-		'__repr__', '__reversed__', '__rfloorfiv__', '__rlshift__', '__rmod__',
-		'__rmul__', '__ror__', '__rpow__', '__rrshift__', '__rshift__', '__rsub__',
-		'__rtruediv__', '__rxor__', '__setitem__', '__setslice__', '__sub__',
-		'__truediv__', '__xor__', 'next',
+		'__abs__', '__add__', '__and__',
+		'__call__', '__cmp__', '__coerce__', '__contains__',
+		'__delitem__', '__delslice__', '__div__', '__divmod__',
+		'__eq__',
+		'__float__', '__floordiv__',
+		'__ge__', '__getitem__','__getslice__', '__gt__',
+		'__hash__', '__hex__',
+		'__iadd__', '__iand__','__idiv__', '__idivmod__', '__ifloordiv__', '__ilshift__', '__imod__','__imul__', '__int__', '__invert__', '__ior__', '__ipow__', '__irshift__',	'__isub__', '__iter__', '__itruediv__', '__ixor__',
+		'__le__', '__len__','__long__', '__lshift__', '__lt__',
+		'__mod__', '__mul__',
+		'__ne__','__neg__',
+		'__oct__', '__or__',
+		'__pos__', '__pow__',
+		'__radd__','__rand__', '__rdiv__', '__rdivmod__', '__reduce__', '__reduce_ex__','__repr__', '__reversed__', '__rfloorfiv__', '__rlshift__', '__rmod__','__rmul__', '__ror__', '__rpow__', '__rrshift__', '__rshift__', '__rsub__','__rtruediv__', '__rxor__',
+		'__setitem__', '__setslice__', '__sub__',
+		'__truediv__',
+		'__xor__',
+		'next',
 	]
 	_wrapTheseMethodsAnyway = (
 		"__eq__", "__ge__", "__gt__", #"__hash__",
@@ -432,7 +438,15 @@ class Proxy(#ABC,
 	def _proxyTarget(self):
 		"""return the target object to be used in place of the proxy -
 		"""
+		#raise
 		return self._proxyData["target"]
+
+
+	@classmethod
+	def _setProxyTarget(cls, proxy:Proxy, target):
+		"""set target on this object and add its id to map"""
+		proxy._proxyData["target"] = target
+		cls._objIdProxyCache[cls._proxyObjUniqueId(target)] = proxy
 
 	def __getattr__(self, name):
 		try: # look up attribute on proxy class first

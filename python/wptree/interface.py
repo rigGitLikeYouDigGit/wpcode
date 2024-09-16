@@ -81,10 +81,10 @@ class TreeInterface(Traversable,
 	def childObjects(self, params:PARAMS_T)->CHILD_LIST_T:
 		"""maximum delegation to this tree's children"""
 		return (
-			ChildData("TreeName", self.name ),
-			ChildData("TreeValue", self.value ),
-			ChildData("TreeProperties",self.auxProperties ),
-			*(ChildData(i.name, i ) for i in self.branches)
+			ChildData("TreeName", self._getRawName() ),
+			ChildData("TreeValue", self._getRawValue() ),
+			ChildData("TreeProperties",self._getRawAuxProperties() ),
+			*(ChildData(i._getRawName(), i ) for i in self.branches)
 		)
 
 	@classmethod
@@ -99,7 +99,7 @@ class TreeInterface(Traversable,
 			name=childDatas[0][1], #name
 			value=childDatas[1][1] # value
 		)
-		#tree._setRawAuxProperties(childDatas[2][0])
+		tree._setRawAuxProperties(childDatas[2][1])
 		for key, obj, data in childDatas[3:]:
 			assert isinstance(obj, TreeInterface)
 			tree.addChild(obj)
@@ -447,7 +447,7 @@ class TreeInterface(Traversable,
 		log("findNextTraversable", self, separator, token, params)
 		# check if branch is directly found - return it if so
 		found = self._branchFromToken(token)
-		log("found", found, type(found))
+		log("found", found, type(found), bool(found))
 		if found:
 			return found
 
@@ -485,18 +485,18 @@ class TreeInterface(Traversable,
 	             **kwargs)->TreeInterface:
 		""" index into tree hierarchy via address sequence,
 		return matching branch"""
-		log("__call__", self, path)
+		log("__call__", self, path, [type(i) for i in self.branches])
 
 		try:
 			# path = flatten(path)
 			if traverseParams is None:
 				traverseParams = self.buildTraverseParamsFromRawKwargs(**kwargs)
-			return self.traverse(path, traverseParams, **kwargs)
+			result = self.traverse(path, traverseParams, **kwargs)
 		except Exception as e:
 			print("unable to index path", path)
 			raise e
-
-
+		log("__call__ END ", result, type(result))
+		return result
 	#endregion
 
 

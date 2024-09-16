@@ -160,15 +160,15 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 	                     targetInstance:object
 	                     ) ->tuple[T.Callable, tuple, dict, object]:
 		"""open a delta if mutating method called"""
-		#log(f"before proxy call {methodName}, {methodArgs, methodKwargs}", vars=0)
+		log(f"before proxy call {methodName}, {methodArgs, methodKwargs}", vars=0)
 		fn, args, kwargs, targetInstance = super()._beforeProxyCall(methodName, methodArgs, methodKwargs, targetInstance)
 
-		if not self.dex().childIdDexMap:
-			self.dex().updateChildren()
-
-		# check if method will mutate data - need to open a delta
-		if methodName in self.dex().mutatingMethodNames:
-			self._openDelta()
+		# if not self.dex().childIdDexMap:
+		# 	self.dex().updateChildren()
+		#
+		# # check if method will mutate data - need to open a delta
+		# if methodName in self.dex().mutatingMethodNames:
+		# 	self._openDelta()
 
 		return fn, args, kwargs, targetInstance
 
@@ -186,6 +186,10 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		log(f"after proxy call {methodName}, {methodArgs, methodKwargs}", vars=0)
 		callResult = super()._afterProxyCall(methodName, method, methodArgs, methodKwargs, targetInstance, callResult)
 		toReturn = callResult
+		if methodName in { "__call__", "traverse"}:
+			log(methodName, " result", callResult, type(callResult))
+			log(" ", self._objIdProxyCache)
+			log(" ", self._existingProxy(callResult))
 
 
 		# if mutating method called, rebuild WpDex children
@@ -208,13 +212,18 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 			#self._proxyData["target"] = WpDexProxy(self._proxyData["target"])
 			self.updateProxy()
 
-			self.dex().updateChildren()
+			#self.dex().updateChildren()
 
 
 		# if mutating method called, finallyemit delta
 		if methodName in self.dex().mutatingMethodNames:
 			self._emitDelta()
 
+		# consider instance methods that "return self"
+		# check if a proxy already exists for that object and return it
+		checkExisting = self._existingProxy(toReturn)
+		if checkExisting is not None:
+			toReturn = checkExisting
 		return toReturn
 
 	def _onProxyCallException(self,
@@ -229,9 +238,9 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 			self._emitDelta()
 		raise exception
 
-	def __hash__(self):
-		log("hash proxy called")
-		return hash(self._proxyData["target"])
+	# def __hash__(self):
+	# 	log("hash proxy called")
+	# 	return hash(self._proxyData["target"])
 
 	def updateProxy(self):
 		""" we can't keep regenerating new proxy objects or no references will
@@ -259,25 +268,26 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 				log("wrap child", t[1])
 				proxy = WpDexProxy(t[1], isRoot=False)
 				log("result proxy", proxy, type(proxy))
-				if proxy is not None:
-					proxy.updateProxy()
+				# if proxy is not None:
+				# 	proxy.updateProxy()
 				childObjects[i] = (t[0], proxy, t[2])
 		if needsUpdate:
-			log("   updating", childObjects)
+			log("   updating", self, childObjects)
 			log([type(i[1]) for i in childObjects])
 			newObj = adaptor.newObj(self._proxyData["target"], childObjects, {})
 			log("final childObjects", adaptor.childObjects(newObj, {}))
 			log([type(i[1]) for i in adaptor.childObjects(newObj, {})])
-			self._proxyData["target"] = newObj
+			self._setProxyTarget(self, newObj)
+			#self._proxyData["target"] = newObj
 
 		for i in adaptor.childObjects(self._proxyData["target"], {}):
 			if i[1] is None:
 				continue
-			if isinstance(i[1], WpDexProxy):
-
-				# maybe we don't need to proxy primitive types?
-
-				i[1].updateProxy()
+			# if isinstance(i[1], WpDexProxy):
+			#
+			# 	# maybe we don't need to proxy primitive types?
+			#
+			# 	i[1].updateProxy()
 
 	# @class
 	# def updateRecursive(self):

@@ -55,6 +55,9 @@ if __name__ == '__main__':
 	eventFn = lambda *args: (print("EVENT"), pprint.pprint(args[0]))
 	t = Tree("root")
 	t["a"]
+
+	#print(t.branches)
+	#raise
 	# t["a", "b"]
 	#t["a", "b", "c"] = 4
 
@@ -65,6 +68,11 @@ if __name__ == '__main__':
 	print("")
 	a = p("a")
 	log("-----", a, type(a))
+	c1 = a("b", "c")
+	c2 = a("b", "c")
+	log(c2, type(c2), c1 is c2)
+
+
 
 
 
