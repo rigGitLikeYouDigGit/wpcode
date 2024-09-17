@@ -119,7 +119,7 @@ class ProxyMeta(type):
 		cls._setProxyTarget(proxyObj, obj)
 		proxyObj.__init__(obj, proxyData, **kwargs)
 		#proxyObj._proxyStrongRef = targetObj
-		log("insert obj id", uniqueId, obj, frames=0)
+		#log("insert obj id", uniqueId, obj, frames=0)
 		cls._objIdProxyCache[uniqueId] = proxyObj
 
 		#proxyObj._proxyStrongRef = targetObj
@@ -151,7 +151,7 @@ class ProxyMeta(type):
 
 		# create new proxy instance of type-specific proxy class
 		# sometimes gives "not safe" errors on builtin types
-		log("new proxy class", genClass, objCls, vars=0)
+		#log("new proxy class", genClass, objCls, vars=0)
 		try:
 			ins = object.__new__(genClass)
 		except TypeError:
@@ -342,6 +342,61 @@ class Proxy(#ABC,
 		return _proxyMethod
 
 
+	def _beforeProxySetAttr(self, attrName:str, attrVal:T.Any,
+	                     targetInstance:object
+	                     )->tuple[str, T.Any, object]:
+		"""inserted before setting attr on proxy, if that attribute is not found
+		on proxy itself"""
+		return attrName, attrVal, targetInstance
+
+	def _afterProxySetAttr(self, attrName:str, attrVal:T.Any,
+	                     targetInstance:object
+	                     )->None:
+		pass
+
+	def _onProxySetAttrException(self, attrName:str, attrVal:T.Any,
+	                     targetInstance:object, exception:BaseException
+	                     )->(None, object):
+		"""called when proxy call raises exception -
+		to treat exception as normal, raise it from this function as well
+		if no exception is raised, return value of this function is used
+		as return value of method call
+		"""
+		raise exception
+
+	def _beforeProxyGetAttr(self, methodName:str,
+	                     methodArgs:tuple, methodKwargs:dict,
+	                     targetInstance:object
+	                     )->tuple[T.Callable, tuple, dict, object]:
+		"""overrides / filters args and kwargs passed to method
+		getting _proxyBase and _proxyResult should both be legal here"""
+		newMethod = getattr(targetInstance,methodName)
+		#log("before proxy call", methodName, newMethod, methodArgs, methodKwargs, targetInstance)
+		return newMethod, methodArgs, methodKwargs, targetInstance
+
+	def _afterProxyGetAttr(self, methodName:str,
+	                    method:T.Callable,
+	                     methodArgs:tuple, methodKwargs:dict,
+	                    targetInstance: object,
+	                    callResult:object,
+	                    )->object:
+		"""overrides / filters result of proxy method"""
+		#log("after proxy call", methodName, method, methodArgs, methodKwargs, targetInstance, callResult)
+		return callResult
+
+	def _onProxyGetAttrException(self,
+	                          methodName: str,
+	                          method:T.Callable,
+	                          methodArgs: tuple, methodKwargs: dict,
+	                          targetInstance: object,
+	                          exception:BaseException)->(None, object):
+		"""called when proxy call raises exception -
+		to treat exception as normal, raise it from this function as well
+		if no exception is raised, return value of this function is used
+		as return value of method call
+		"""
+		raise exception
+
 	@classmethod
 	def _createClassProxy(cls, targetCls):
 		"""creates a proxy class for the given class
@@ -393,6 +448,7 @@ class Proxy(#ABC,
 		# inherit directly from Proxy in these cases
 
 		bases = (cls, targetCls)
+		bases = (cls, ) # test not actually inheriting
 		# try:
 		# 	testType = clsType("test", bases, {})
 		# except TypeError:

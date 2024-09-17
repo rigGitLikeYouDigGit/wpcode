@@ -23,6 +23,8 @@ toSeqIf = lambda x: (x if isinstance(x, (*SEQUENCE_TYPES, *MAP_TYPES)) else (x,)
 # may need to be moved higher if we need stronger high-level coercion
 isSeq = lambda x: isinstance(x, tuple(SEQUENCE_TYPES)) and not isinstance(x, str)
 
+# exact object contains, not just eq
+isIn = lambda x, seq: any(i is x for i in seq)
 
 def strList(i)->list[str]:
 	if isinstance(i, str):

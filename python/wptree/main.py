@@ -51,7 +51,7 @@ class Tree(TreeInterface,
 
 		LookupCreate on by default here? Freedom vs safety - freedom wins
 		"""
-		log("tree init start", name, type(name))
+		#log("tree init start", name, type(name))
 
 		UidElement.__init__(self, uid)
 		TreeInterface.__init__(self)
@@ -70,9 +70,9 @@ class Tree(TreeInterface,
 		if desc:
 			self.description = desc
 
-		log("tree init end")
-		log(self.childObjects({}))
-		log([type(i[1]) for i in self.childObjects({})])
+		#log("tree init end")
+		#log(self.childObjects({}))
+		#log([type(i[1]) for i in self.childObjects({})])
 
 	def __hash__(self):
 		return hash(self.uid)

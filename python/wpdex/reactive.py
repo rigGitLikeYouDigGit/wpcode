@@ -160,7 +160,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 	                     targetInstance:object
 	                     ) ->tuple[T.Callable, tuple, dict, object]:
 		"""open a delta if mutating method called"""
-		log(f"before proxy call {methodName}, {methodArgs, methodKwargs}", vars=0)
+		#log(f"before proxy call {methodName}, {methodArgs, methodKwargs}", vars=0)
 		fn, args, kwargs, targetInstance = super()._beforeProxyCall(methodName, methodArgs, methodKwargs, targetInstance)
 
 		# if not self.dex().childIdDexMap:
@@ -183,13 +183,13 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 
 		gather deltas, THEN refresh children, THEN emit deltas
 		"""
-		log(f"after proxy call {methodName}, {methodArgs, methodKwargs}", vars=0)
+		#log(f"after proxy call {methodName}, {methodArgs, methodKwargs}", vars=0)
 		callResult = super()._afterProxyCall(methodName, method, methodArgs, methodKwargs, targetInstance, callResult)
 		toReturn = callResult
-		if methodName in { "__call__", "traverse"}:
-			log(methodName, " result", callResult, type(callResult))
-			log(" ", self._objIdProxyCache)
-			log(" ", self._existingProxy(callResult))
+		# if methodName in { "__call__", "traverse"}:
+		# 	log(methodName, " result", callResult, type(callResult))
+		# 	log(" ", self._objIdProxyCache)
+		# 	log(" ", self._existingProxy(callResult))
 
 
 		# if mutating method called, rebuild WpDex children
@@ -205,7 +205,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 			i am in deep pain
 			i just want to make films man
 			"""
-			log("update children", )
+			log("AFTER", methodName, "update children mutating method" )
 
 			# ensure every bit of the structure is still wrapped in a proxy
 			#self._proxyData["target"] = self.wrap(self._proxyData["target"])
@@ -253,7 +253,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 
 		before update, save each proxy and its value against its path on the root
 		"""
-		log("update proxy", self)
+		#log("update proxy", self)
 		adaptor = VisitAdaptor.adaptorForObject(self._proxyData["target"])
 		childObjects = list(adaptor.childObjects(self._proxyData["target"], {}))
 		# returns list of 3-tuples (index, value, childType)
@@ -265,18 +265,18 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 				needsUpdate = True
 
 				# ADD IN PATH LOOKUP HERE to check if proxy is already known
-				log("wrap child", t[1])
+				#log("wrap child", t[1])
 				proxy = WpDexProxy(t[1], isRoot=False)
-				log("result proxy", proxy, type(proxy))
+				#log("result proxy", proxy, type(proxy))
 				# if proxy is not None:
 				# 	proxy.updateProxy()
 				childObjects[i] = (t[0], proxy, t[2])
 		if needsUpdate:
-			log("   updating", self, childObjects)
-			log([type(i[1]) for i in childObjects])
+			#log("   updating", self, childObjects)
+			#log([type(i[1]) for i in childObjects])
 			newObj = adaptor.newObj(self._proxyData["target"], childObjects, {})
-			log("final childObjects", adaptor.childObjects(newObj, {}))
-			log([type(i[1]) for i in adaptor.childObjects(newObj, {})])
+			#log("final childObjects", adaptor.childObjects(newObj, {}))
+			#log([type(i[1]) for i in adaptor.childObjects(newObj, {})])
 			self._setProxyTarget(self, newObj)
 			#self._proxyData["target"] = newObj
 

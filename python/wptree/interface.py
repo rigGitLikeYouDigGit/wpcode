@@ -92,7 +92,7 @@ class TreeInterface(Traversable,
 		"""create a new tree object from a base object and child type list
 		list of child branches should already have been regenerated
 		"""
-		log("tree newObj", baseObj, type(baseObj))
+		#log("tree newObj", baseObj, type(baseObj))
 		# log("tree childDatas", childDatas)
 		#log(getattr(type(baseObj), "_generated", False))
 		tree = type(baseObj)(

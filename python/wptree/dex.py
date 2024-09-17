@@ -72,6 +72,11 @@ if __name__ == '__main__':
 	c2 = a("b", "c")
 	log(c2, type(c2), c1 is c2)
 
+	c2.value = [1, [2]]
+	c2.setValue( [1, [2]] )
+	log(c2.value[1][0], type(c2.value[1][0]))
+	log(type(c2.value).__mro__)
+
 
 
 
