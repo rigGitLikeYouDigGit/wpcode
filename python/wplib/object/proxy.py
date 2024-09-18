@@ -54,8 +54,8 @@ class ProxyMeta(type):
 	#if not T.TYPE_CHECKING:
 	#def __call__(cls:type[Proxy], obj, proxyData=None, shared=True, **kwargs)->Proxy:
 	def __call__(cls:type[Proxy], *args, **kwargs)->Proxy:
-		log( "META call", cls, args[0], kwargs)
-		log("generated", getattr(cls, "_generated", False))
+		#log( "META call", cls, args[0], kwargs)
+		#log("generated", getattr(cls, "_generated", False))
 		"""
 		creates a proxy instance referencing `obj`. (obj, *args, **kwargs) are
 		passed to this class' __init__, so deriving classes can define an
@@ -130,7 +130,7 @@ class ProxyMeta(type):
 	def construct(cls, obj, proxyData=None, shared=True, **kwargs):
 		# look up existing proxy classes
 		# cache = cls.__dict__["_classProxyCache"]
-		log("construct", obj, cls)
+		#log("construct", obj, cls)
 		cache = inheritance.mroMergedDict(cls)["_classProxyCache"]
 		# log("proxy new", cls, obj, type(obj), vars=0)
 
@@ -350,52 +350,26 @@ class Proxy(#ABC,
 		return attrName, attrVal, targetInstance
 
 	def _afterProxySetAttr(self, attrName:str, attrVal:T.Any,
-	                     targetInstance:object
+	                     targetInstance:object, exception=None
 	                     )->None:
-		pass
+		if exception:
+			raise exception
 
-	def _onProxySetAttrException(self, attrName:str, attrVal:T.Any,
-	                     targetInstance:object, exception:BaseException
-	                     )->(None, object):
-		"""called when proxy call raises exception -
-		to treat exception as normal, raise it from this function as well
-		if no exception is raised, return value of this function is used
-		as return value of method call
-		"""
-		raise exception
 
-	def _beforeProxyGetAttr(self, methodName:str,
-	                     methodArgs:tuple, methodKwargs:dict,
+	def _beforeProxyGetAttr(self, attrName:str,
 	                     targetInstance:object
-	                     )->tuple[T.Callable, tuple, dict, object]:
-		"""overrides / filters args and kwargs passed to method
-		getting _proxyBase and _proxyResult should both be legal here"""
-		newMethod = getattr(targetInstance,methodName)
-		#log("before proxy call", methodName, newMethod, methodArgs, methodKwargs, targetInstance)
-		return newMethod, methodArgs, methodKwargs, targetInstance
+	                     )->tuple[str, object]:
+		"""inserted before setting attr on proxy, if that attribute is not found
+		on proxy itself"""
+		return attrName, targetInstance
 
-	def _afterProxyGetAttr(self, methodName:str,
-	                    method:T.Callable,
-	                     methodArgs:tuple, methodKwargs:dict,
-	                    targetInstance: object,
-	                    callResult:object,
-	                    )->object:
+	def _afterProxyGetAttr(self, attrName:str, attrVal:T.Any,
+	                     targetInstance:object, exception=None
+	                     )->T.Any:
 		"""overrides / filters result of proxy method"""
-		#log("after proxy call", methodName, method, methodArgs, methodKwargs, targetInstance, callResult)
-		return callResult
+		if exception: raise exception
+		return attrVal
 
-	def _onProxyGetAttrException(self,
-	                          methodName: str,
-	                          method:T.Callable,
-	                          methodArgs: tuple, methodKwargs: dict,
-	                          targetInstance: object,
-	                          exception:BaseException)->(None, object):
-		"""called when proxy call raises exception -
-		to treat exception as normal, raise it from this function as well
-		if no exception is raised, return value of this function is used
-		as return value of method call
-		"""
-		raise exception
 
 	@classmethod
 	def _createClassProxy(cls, targetCls):
@@ -416,7 +390,7 @@ class Proxy(#ABC,
 		# work out parent, super and target classes
 		mro = cls.__mro__
 		proxyClasses = [x for x in cls.__mro__ if issubclass(x, Proxy) and not getattr(x, "_generated", False)][::-1]
-		log("proxyClasses", cls, proxyClasses)
+		#log("proxyClasses", cls, proxyClasses)
 		_proxyParentCls = proxyClasses[-1]
 		_proxySuperCls = None
 		if len(proxyClasses) > 1:
@@ -465,7 +439,7 @@ class Proxy(#ABC,
 			log("namespace", namespace)
 			raise e
 
-		log("gen new cls", newCls, targetCls, newCls.__mro__)
+		#log("gen new cls", newCls, targetCls, newCls.__mro__)
 		newCls.__hash__ = cls.__hash__  # please don't work
 		assert newCls.__hash__  # damn it
 

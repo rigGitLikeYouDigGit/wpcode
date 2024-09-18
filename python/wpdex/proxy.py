@@ -1,82 +1,18 @@
 
 from __future__ import annotations
 
-import copy
+import pprint, copy, weakref
 import typing as T
+from collections import defaultdict
+from dataclasses import dataclass
 
-from collections import defaultdict, namedtuple
-import weakref
-
-from deepdiff import Delta, DeepDiff, DeepHash
-
-from wplib import log
-from wplib.object import DeltaAtom, Proxy, ProxyData
+from wplib import inheritance, dictlib, log
+from wplib.serial import serialise, deserialise, Serialisable, SerialAdaptor
+from wplib.object import DeepVisitor, Adaptor, Proxy, ProxyData, ProxyMeta, VisitObjectData, DeepVisitOp, Visitable, VisitAdaptor
 from wplib.constant import SEQ_TYPES, MAP_TYPES, STR_TYPES, LITERAL_TYPES, IMMUTABLE_TYPES
 from wplib.sentinel import Sentinel
+from wpdex.base import WpDex, DexPathable
 
-#from wpexp.match import stringMatch
-
-from wpdex.base import WpDex
-
-
-
-"""
-test for wrapping a WHOLE datastructure
-in layers of proxy objects
-
-purpose is to watch for changes - either simple events or full deltas
-
-
-copied the old proxy system from wplib for testing - once stable
-maybe combine them somehow
-
-myStruct = [ 1, [ 2, [ 3, 4 ] ] ]
-proxy = WpDexProxy(myStruct)
-
-myStruct[1][1] -> [3, 4] (list)
-proxy[1][1] -> WpDexProxy([3, 4])
-
-
-"""
-
-"""
-TODO:
-might be cleaner to emit events into an intermediate queue,
-and then start working through them after the call stack is clear - 
-that could also be a way to async the ui updates.
-
-for now the tight coupling seems to work
-
-emit EVENTS THROUGH DEX.
-proxies only used to watch, may be created and destroyed
-too readily to depend on for event chains
-
-"""
-
-class Reactive:
-	"""
-
-	bind(source, target)
-	not as flashy as wrapping every function to watch for calling
-	with a live source, but more readable
-
-
-	TODO: check if it's more work to just use Param for
-	 this
-	 -
-	 Param's main model of declaring class-level attributes on objects
-	 doesn't seem extensible enough for the flexible params in chimaera -
-	 the reactive stuff is rad though
-	 -
-	 THE CASE AGAINST Param.rx (for us):
-	    - >>> a = rx(1); print(a)
-	        the above errors, since a direct rx interprets casting to str for print
-	        as applying __str__ as a live operator, returning a new live head, not an actual string.
-	        this is, to say the least, annoying
-	    - it's all reactive all the time by default if you use it - getting back to the static data has to be done by rx.value, everywhere.
-	        aside from the confusion when the object itself has a "value" attribute, eg trees, for us we only want reactive behaviour in some places and the ui, not everywhere throughout tools
-	    - setting up reactive expressions and conditions is extremely fluid though - in ours, consider accessing the reactive part as "context-switching" for that line, where you're able to define an island of reactive relations without worrying about accidentally linking anything in the rest of the code.
-	"""
 
 class WpDexProxyData(ProxyData):
 	parent : weakref.ref
@@ -84,33 +20,69 @@ class WpDexProxyData(ProxyData):
 	deltaStartState : T.Any
 	deltaCallDepth : int
 
-class WpDexProxy(
-    Proxy
-            ):
+class ReactLogic(Adaptor):
+	"""silo off the active parts of react to avoid jamming in
+	even more base classes, it's getting mental"""
+	adaptorTypeMap = Adaptor.makeNewTypeMap()
+	forTypes = (object, )
+
+
+class WpDexProxyMeta(ProxyMeta):
+	"""manage top-level call logic -
+	if you call WpDexProxy(obj) raw in client code,
+	wrap the full hierarchy in proxies and return the root
+
+	we specify some flags to prevent infinite loops on meta call
+	parent=None - pass the parent proxy, if known
+	isRoot=None - None starts the hierarchy wrapping, True is the root, False is a child
 	"""
-	proxy object for watching changes to a data structure
-	initialise at top level of structure to watch -
-	accessing structure through proxy returns a fully wrapped
-	WpDex structure
 
-	this FAILED because it can't reasonably check for internal changes -
-	for example the implicit branch creation in a tree
+	def __call__(cls:type[WpDexProxy], *args, **kwargs):
+		#log("WPMETA call", cls, args, type(args[0]), kwargs)
+		parent = kwargs.pop("parent", None)
+		isRoot = kwargs.pop("isRoot", None)
 
+		# called at top level, wrap hierarchy
+		# if isRoot is None and parent is None:
+			#return cls.wrap(args[0], **kwargs)
+		return super().__call__(*args, **kwargs)
+
+
+
+class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
+	"""replace a hieararchy of objects in-place:
+	copy the proxy idea of subclassing for each type.
+	deserialise-copy the root item, and for each lookup type
+	item, create a new type inheriting from that and this class
+
+	unsure if this class should also inherit from WpDex itself,
+	don't see a reason why not
+
+	inheriting from Proxy just to get the class generation
+
+	ADMIT DEFEAT on watching vanilla structures - replace at source with this
+
+	even more critical not to pollute namespace, since these are the actual
+	live objects
+	use WpDex definitions on which methods to watch
+
+	IMMUTABLE TYPES -
+	we're not adding functionality to edit strings in-place, so we delegate
+	hash to the immutable object as normal - all the proxy does is watch it
+	and provide a hook for rx. the source stays the same
 	"""
-	_classProxyCache = defaultdict(dict) # { class : { class cache } }
-	_objIdProxyCache = {} #NB: weakdict was giving issues, this might chug memory
-	_proxyAttrs = ("_proxyWpDex", "_proxyDeltaStartState")
+	_classProxyCache : dict[type, dict[type, type]] = defaultdict(dict) # { class : { class cache } }
 
-	_proxyData : WpDexProxyData
-	def __repr__(self):
-		return repr(self._proxyTarget() + "PROXY({})".format(self.dex().path))
+	_proxyAttrs = {"_reactData" : {}}
+	_generated = False
+	_objIdProxyCache : dict[int, WpDexProxy] = {}
 
 	def __init__(self, obj, proxyData: WpDexProxyData=None,
 	             wpDex:WpDex=None, parentDex:WpDex=None,
 	             **kwargs):
 		"""create a WpDex object for this proxy, add
 		weak sets for children and parent"""
-		#log("super cls", self._proxyParentCls, self._proxySuperCls)
+		#log("WP init", obj, type(obj), type(self), self._proxyParentCls, self._proxySuperCls)
 		self._proxySuperCls.__init__(self, obj, proxyData, **kwargs)
 
 
@@ -126,8 +98,28 @@ class WpDexProxy(
 		if parentDex is not None:
 			self.dex().parent = parentDex
 
+		self.updateProxy()
+
 	def dex(self)->WpDex:
 		return self._proxyData["wpDex"]
+
+	@classmethod
+	def wrap(cls, obj:T.Any, op:DeepProxyOp=None, **kwargs):
+		"""return the given structure recursively wrapped in proxies
+		there's no good way to do this in a single pass -
+		we go bottom-up to create the proxy hierarchy, then top-down
+		to set the links between parents and children
+
+		"""
+		v = DeepVisitor()
+		op = op or DeepProxyOp(proxyCls=cls, )
+		r = v.dispatchPass(obj, passParams=v.VisitPassParams(
+			topDown=False, depthFirst=True,
+			transformVisitedObjects=True,
+			visitFn=op.visit, visitRoot=True,
+			rootObj=obj
+		))
+		return r
 
 	def _openDelta(self):
 		"""open a delta for this object -
@@ -171,12 +163,12 @@ class WpDexProxy(
 		#log(f"before proxy call {methodName}, {methodArgs, methodKwargs}", vars=0)
 		fn, args, kwargs, targetInstance = super()._beforeProxyCall(methodName, methodArgs, methodKwargs, targetInstance)
 
-		if not self.dex().childIdDexMap:
-			self.dex().updateChildren()
-
-		# check if method will mutate data - need to open a delta
-		if methodName in self.dex().mutatingMethodNames:
-			self._openDelta()
+		# if not self.dex().childIdDexMap:
+		# 	self.dex().updateChildren()
+		#
+		# # check if method will mutate data - need to open a delta
+		# if methodName in self.dex().mutatingMethodNames:
+		# 	self._openDelta()
 
 		return fn, args, kwargs, targetInstance
 
@@ -191,45 +183,47 @@ class WpDexProxy(
 
 		gather deltas, THEN refresh children, THEN emit deltas
 		"""
-		log(f"after proxy call {methodName}, {methodArgs, methodKwargs}", vars=0)
+		#log(f"after proxy call {methodName}, {methodArgs, methodKwargs}", vars=0)
 		callResult = super()._afterProxyCall(methodName, method, methodArgs, methodKwargs, targetInstance, callResult)
 		toReturn = callResult
+		# if methodName in { "__call__", "traverse"}:
+		# 	log(methodName, " result", callResult, type(callResult))
+		# 	log(" ", self._objIdProxyCache)
+		# 	log(" ", self._existingProxy(callResult))
+
 
 		# if mutating method called, rebuild WpDex children
-		log("method", methodName, "in", self.dex().mutatingMethodNames, methodName in self.dex().mutatingMethodNames)
+		#log("method", methodName, "in", methodName in self.dex().mutatingMethodNames)
 		if methodName in self.dex().mutatingMethodNames:
-			self.dex().updateChildren()
+			"""TO UPDATE CHILDREN -
+			need to keep THIS object intact - 
+			run op on root's TARGET, 
+			DO NOT wrap that object,
+			REBASE root (this proxy) on to the result
+			
+			but then we invalidate all references to any branch, regardless of it changing
+			i am in deep pain
+			i just want to make films man
+			"""
+			#log("AFTER", methodName, "update children mutating method" )
 
-		#log("wp children", self.dex().childIdDexMap)
-		#log(self.dex(), self.dex().obj)
+			# ensure every bit of the structure is still wrapped in a proxy
+			#self._proxyData["target"] = self.wrap(self._proxyData["target"])
+			#self._proxyData["target"] = WpDexProxy(self._proxyData["target"])
+			self.updateProxy()
 
-		# only wrap containers, not literals?
-		#log("childIdDexMap", self.dex().childIdDexMap)
-		#log("callResult", callResult, "result in childIdDexMap", id(callResult) in self.dex().childIdDexMap)
+			#self.dex().updateChildren()
 
-		# if a returned result is a valid mapped dex child, return a proxy pointing to it
-		if id(callResult) in self.dex().childIdDexMap:
-			if isinstance(callResult, LITERAL_TYPES) or callResult is None:
-				pass
-			else:
-				# may not be a DIRECT child, consider getting tree branches from call
-				# need a way to map parent dex back to proxy
-				childDex = self.dex().childIdDexMap[id(callResult)]
-				#childParentDex = childDex.parent
-				#log("childParentDex", childParentDex)
-				#log("childParentDex.obj", childParentDex.obj)
-				#childParentProxy = self._objIdProxyCache[id(childParentDex.obj)]
-				proxy = WpDexProxy(callResult,
-				                   #parent=childParentProxy,
-				                   wpDex=childDex,
-				                   parentDex=childDex.parent
-				                   )
-				toReturn = proxy
 
 		# if mutating method called, finallyemit delta
 		if methodName in self.dex().mutatingMethodNames:
 			self._emitDelta()
 
+		# consider instance methods that "return self"
+		# check if a proxy already exists for that object and return it
+		checkExisting = self._existingProxy(toReturn)
+		if checkExisting is not None:
+			toReturn = checkExisting
 		return toReturn
 
 	def _onProxyCallException(self,
@@ -244,79 +238,122 @@ class WpDexProxy(
 			self._emitDelta()
 		raise exception
 
+	# def __hash__(self):
+	# 	log("hash proxy called")
+	# 	return hash(self._proxyData["target"])
 
-	# reactive
-	def bind(self, dataPath:str, target:callable, callNow=True):
-		"""bind a reactive target to a path in this object -
-		when the path data changes, target is called with
-		that data"""
+	def updateProxy(self):
+		""" we can't keep regenerating new proxy objects or no references will
+		ever be stable
+		we can't just update objects directly because immutable types exist
 
-		def onEvent(event):
-			print("onEvent", event)
-			print("dataPath", dataPath)
-			print("dataToSet", self.dex().access(self.dex(), dataPath))
-			print("sender rel path", event["sender"].relativePath(fromDex=self.dex()))
+		compare CHILD objects, find any that are NOT PROXIES
+		create proxies of them,
+		update the TARGET OF THIS PROXY to the newObj(), formed by THOSE PROXIES.
 
-			# check that the relative path is equal or less than the data path
-			# if event["sender"] == dataPath:
-			target(self.dex().access(self.dex(), dataPath,
-			                         values=True, one=True
-			                         )
-			       )
+		before update, save each proxy and its value against its path on the root
+		"""
+		#log("update proxy", self)
+		adaptor = VisitAdaptor.adaptorForObject(self._proxyData["target"])
+		childObjects = list(adaptor.childObjects(self._proxyData["target"], {}))
+		# returns list of 3-tuples (index, value, childType)
+		needsUpdate = False
+		for i, t in enumerate(childObjects):
+			if isinstance(t[1], WpDexProxy):
+				t[1].updateProxy()
+			else:
+				needsUpdate = True
 
-		self.dex().getEventSignal("main", create=True).connect(onEvent)
+				# ADD IN PATH LOOKUP HERE to check if proxy is already known
+				#log("wrap child", t[1])
+				proxy = WpDexProxy(t[1], isRoot=False)
+				#log("result proxy", proxy, type(proxy))
+				# if proxy is not None:
+				# 	proxy.updateProxy()
+				childObjects[i] = (t[0], proxy, t[2])
+		if needsUpdate:
+			#log("   updating", self, childObjects)
+			#log([type(i[1]) for i in childObjects])
+			newObj = adaptor.newObj(self._proxyData["target"], childObjects, {})
+			#log("final childObjects", adaptor.childObjects(newObj, {}))
+			#log([type(i[1]) for i in adaptor.childObjects(newObj, {})])
+			self._setProxyTarget(self, newObj)
+			#self._proxyData["target"] = newObj
 
-		if callNow:
-			target(self.dex().access(self.dex(), dataPath,
-			                         values=True, one=True
-			                         )
-			       )
+		for i in adaptor.childObjects(self._proxyData["target"], {}):
+			if i[1] is None:
+				continue
+			# if isinstance(i[1], WpDexProxy):
+			#
+			# 	# maybe we don't need to proxy primitive types?
+			#
+			# 	i[1].updateProxy()
+
+	# @class
+	# def updateRecursive(self):
+	#
+	# 	adaptor = VisitAdaptor.adaptorForObject(self._proxyData["target"])
+	# 	childObjects = list(adaptor.childObjects(self._proxyData["target"], {}))
+	# 	for i, t in enumerate(childObjects):
+	# 		if not isinstance(t[1], WpDexProxy):
+	# 			needsUpdate = True
+	#
+	# 			# ADD IN PATH LOOKUP HERE to check if proxy is already known
+	# 			childObjects[i] = (t[0], WpDexProxy(t[1], isRoot=False), t[2])
 
 
-		pass
+@dataclass
+class DeepProxyOp(DeepVisitOp):
+	proxyCls : type
+	rootObj : T.Any
+	transformRoot : bool = True
+
+	def visit(self,
+	          obj:T.Any,
+              visitor:DeepVisitor,
+              visitObjectData:VisitObjectData,
+              #visitPassParams:VisitPassParams,
+              ) ->T.Any:
+		"""Transform to apply to each object during deserialisation.
+		"""
+		log("visit", obj, type(obj))
+		log("data", visitObjectData)
+		isRoot = False
+		if obj is visitObjectData["visitPassParams"].rootObj:
+			log("visit root" )
+			isRoot = True
+		return self.proxyCls(obj, proxyData={}, parent=None,
+		                     isRoot=isRoot)
 
 
-
+# class ProxyRecursive(Proxy):
+# 	pass
 
 if __name__ == '__main__':
-
-	# t = [1, [2, [3, 4]]]
-	# t.append = lambda x: print("append", x)
-
-	s = [1, [2, [3, 4]]]
-	proxy = WpDexProxy(s)
-
-	print(type(proxy), isinstance(proxy, Proxy))
-
-	print(proxy, isinstance(proxy, list))
-	item = proxy[1][1]
-
-	print(item, isinstance(item, WpDexProxy))
-
-	print(type(item))
-	print(type(item).__mro__)
-
-	# test that we can still access the clean structure
-	print(proxy._proxyTarget())
-	cleanResult = proxy._proxyTarget()[1][1]
-	print(cleanResult, type(cleanResult))
-
-	# test that events work at root
-	def printEventFn(event, *args, **kwargs):
-		log("event", event, args, kwargs)
-
-	proxy.dex().getEventSignal(create=True).connect(printEventFn)
-	# change a leaf value
-	proxy[1][1] = [5, 6]
-
-	# check that it stuck
-	print(proxy[1][1])
-	print(s[1][1])
-
-	# check if setting on the base object triggers signal (probably won't)
-	s[1][1] = [7, 8]
-	print("nowt")
+	s = [[3]]
+	# v = DeepVisitor()
+	# op = DeepProxyOp()
+	# r = v.dispatchPass(s, passParams=v.VisitPassParams(
+	# 	topDown=False, depthFirst=True, transformVisitedObjects=True,
+	# 	visitFn=op.visit
+	# ))
+	r = WpDexProxy(s)
+	print(r, type(r))
+	print(r[0], type(r[0]))
+	print(r[0][0], type(r[0][0]))
 
 
+	# s = 5
+	# r = React(s)
+	# print(r, type(r))
 
-
+	#
+	# s = [[3]]
+	# #s = [3]
+	# r = React(s)
+	# #r = React.__new__(React, s) # THIS WORKS ._.
+	# log(r, type(r))
+	# log(r)
+	# print(r[0], type(r[0]))
+	# print(r[0][0], type(r[0][0]))
+	# pass

@@ -444,10 +444,10 @@ class TreeInterface(Traversable,
 		:param params: traverse params object
 		:return: Traversable object
 		"""
-		log("findNextTraversable", self, separator, token, params)
+		#log("findNextTraversable", self, separator, token, params)
 		# check if branch is directly found - return it if so
 		found = self._branchFromToken(token)
-		log("found", found, type(found), bool(found))
+		#log("found", found, type(found), bool(found))
 		if found:
 			return found
 
@@ -485,7 +485,7 @@ class TreeInterface(Traversable,
 	             **kwargs)->TreeInterface:
 		""" index into tree hierarchy via address sequence,
 		return matching branch"""
-		log("__call__", self, path, [type(i) for i in self.branches])
+		#log("__call__", self, path, [type(i) for i in self.branches])
 
 		try:
 			# path = flatten(path)
@@ -495,7 +495,7 @@ class TreeInterface(Traversable,
 		except Exception as e:
 			print("unable to index path", path)
 			raise e
-		log("__call__ END ", result, type(result))
+		#log("__call__ END ", result, type(result))
 		return result
 	#endregion
 

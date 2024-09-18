@@ -201,7 +201,7 @@ class Traversable:
 		"""
 
 		if not path: # empty path, return self
-			log("traverse return self from empty path")
+			#log("traverse return self from empty path")
 			return self
 		#print("flattened path", path)
 		sepChar, firstToken, body = self._getCharAndFirstTokenAndBody(
