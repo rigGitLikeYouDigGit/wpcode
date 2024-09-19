@@ -74,10 +74,17 @@ if __name__ == '__main__':
 
 	c2.value = [1, [2]]
 	c2.setValue( [1, [2]] )
-	log(c2.value[1][0], type(c2.value[1][0]))
-	log(type(c2.value).__mro__)
+	# log(c2.value[1][0], type(c2.value[1][0]))
+	# log(type(c2.value).__mro__)
+	#
+	# log(c2.value._proxyData)
+	# log(type(c2.value._proxyData["parent"]))
 
+	print("----")
+	print("")
+	p.dex().getEventSignal().connect(eventFn)
 
+	c2.value = "hello"
 
 
 

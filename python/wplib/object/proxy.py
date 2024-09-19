@@ -268,38 +268,32 @@ class Proxy(#ABC,
 	def __hash__(self):
 		return hash(self._proxyData["target"])
 
+	def __iter__(self):
+		return iter(self._proxyTarget())
+
 	def _beforeProxyCall(self, methodName:str,
 	                     methodArgs:tuple, methodKwargs:dict,
 	                     targetInstance:object
-	                     )->tuple[T.Callable, tuple, dict, object]:
+	                     )->tuple[T.Callable, tuple, dict, object, dict]:
 		"""overrides / filters args and kwargs passed to method
 		getting _proxyBase and _proxyResult should both be legal here"""
 		newMethod = getattr(targetInstance,methodName)
 		#log("before proxy call", methodName, newMethod, methodArgs, methodKwargs, targetInstance)
-		return newMethod, methodArgs, methodKwargs, targetInstance
+		return newMethod, methodArgs, methodKwargs, targetInstance, {}
 
 	def _afterProxyCall(self, methodName:str,
 	                    method:T.Callable,
 	                     methodArgs:tuple, methodKwargs:dict,
 	                    targetInstance: object,
 	                    callResult:object,
+	                    beforeData:dict,
+	                    exception:BaseException=None
 	                    )->object:
 		"""overrides / filters result of proxy method"""
 		#log("after proxy call", methodName, method, methodArgs, methodKwargs, targetInstance, callResult)
+		if exception is not None:
+			raise exception
 		return callResult
-
-	def _onProxyCallException(self,
-	                          methodName: str,
-	                          method:T.Callable,
-	                          methodArgs: tuple, methodKwargs: dict,
-	                          targetInstance: object,
-	                          exception:BaseException)->(None, object):
-		"""called when proxy call raises exception -
-		to treat exception as normal, raise it from this function as well
-		if no exception is raised, return value of this function is used
-		as return value of method call
-		"""
-		raise exception
 
 
 	@classmethod
@@ -315,7 +309,7 @@ class Proxy(#ABC,
 		#log("make proxy method", methodName, targetCls)
 		def _proxyMethod(self:Proxy, *args, **kw):
 			# pre-call hook - must return parametres of method call
-			newMethod, newArgs, newKw, targetInstance = self._beforeProxyCall(
+			newMethod, newArgs, newKw, targetInstance, beforeData = self._beforeProxyCall(
 				methodName, methodArgs=args, methodKwargs=kw,
 				targetInstance=self._proxyTarget()
 			)
@@ -324,10 +318,12 @@ class Proxy(#ABC,
 				# actually call method on target instance, get raw result
 				result = newMethod(*newArgs, **newKw)
 			except Exception as e: # on any exception, pass to handler function
-				result = self._onProxyCallException(
+				result = self._afterProxyCall(
 					methodName, newMethod,
 					methodArgs=newArgs, methodKwargs=newKw,
 					targetInstance=targetInstance,
+					callResult=None,
+					beforeData=beforeData,
 					exception=e
 				)
 
@@ -336,7 +332,10 @@ class Proxy(#ABC,
 				methodName, newMethod,
 				methodArgs=newArgs, methodKwargs=newKw,
 				targetInstance=targetInstance,
-				callResult=result)
+				callResult=result,
+				beforeData=beforeData,
+				exception=None
+			)
 			return newResult
 
 		return _proxyMethod
@@ -344,30 +343,30 @@ class Proxy(#ABC,
 
 	def _beforeProxySetAttr(self, attrName:str, attrVal:T.Any,
 	                     targetInstance:object
-	                     )->tuple[str, T.Any, object]:
+	                     )->tuple[str, T.Any, object, dict]:
 		"""inserted before setting attr on proxy, if that attribute is not found
 		on proxy itself"""
-		return attrName, attrVal, targetInstance
+		#log("before proxy setattr")
+		return attrName, attrVal, targetInstance, {}
 
 	def _afterProxySetAttr(self, attrName:str, attrVal:T.Any,
-	                     targetInstance:object, exception=None
+	                     targetInstance:object, beforeData:dict, exception=None
 	                     )->None:
-		if exception:
+		if exception is not None:
 			raise exception
-
 
 	def _beforeProxyGetAttr(self, attrName:str,
 	                     targetInstance:object
-	                     )->tuple[str, object]:
+	                     )->tuple[str, object, dict]:
 		"""inserted before setting attr on proxy, if that attribute is not found
 		on proxy itself"""
-		return attrName, targetInstance
+		return attrName, targetInstance, {}
 
 	def _afterProxyGetAttr(self, attrName:str, attrVal:T.Any,
-	                     targetInstance:object, exception=None
+	                     targetInstance:object, beforeData:dict, exception=None
 	                     )->T.Any:
 		"""overrides / filters result of proxy method"""
-		if exception: raise exception
+		if exception is not None: raise exception
 		return attrVal
 
 
@@ -422,7 +421,7 @@ class Proxy(#ABC,
 		# inherit directly from Proxy in these cases
 
 		bases = (cls, targetCls)
-		bases = (cls, ) # test not actually inheriting
+		#bases = (cls, ) # test not actually inheriting
 		# try:
 		# 	testType = clsType("test", bases, {})
 		# except TypeError:
@@ -474,7 +473,14 @@ class Proxy(#ABC,
 
 	@classmethod
 	def _setProxyTarget(cls, proxy:Proxy, target):
-		"""set target on this object and add its id to map"""
+		"""set target on this object and add its id to map
+		TODO:
+		 for user-defined objects, one last possibility is to patch an instance's
+		 methods at the moment that we link it to a proxy - invasive, less
+		 robust than a wholly separate wrapper,
+		 but maximum coverage of any source of mutation
+		 (from within instance itself, which wrapper cannot detect)
+		"""
 		proxy._proxyData["target"] = target
 		cls._objIdProxyCache[cls._proxyObjUniqueId(target)] = proxy
 
@@ -482,10 +488,23 @@ class Proxy(#ABC,
 		try: # look up attribute on proxy class first
 			return object.__getattribute__(self, name)
 		except:
-			# obj = object.__getattribute__(self, self._proxyResultKey)
-			obj = self._proxyTarget()
 
-			return getattr( obj, name)
+
+			attrName, targetInstance, beforeData = self._beforeProxyGetAttr(
+				name, self._proxyTarget()
+			)
+			try:
+				result = getattr( targetInstance, name)
+				result = self._afterProxyGetAttr(
+					name, result, targetInstance, beforeData, exception=None
+				)
+				return result
+			except Exception as e:
+				result = self._afterProxyGetAttr(
+					name, result, targetInstance, beforeData, exception=e
+				)
+				return result # if an exception is not caught
+
 
 	def __delattr__(self, name):
 		# delattr(object.__getattribute__(self, self._proxyResultKey), name)
@@ -496,7 +515,15 @@ class Proxy(#ABC,
 			if name in self.__pclass__._proxyAttrs:
 				object.__setattr__(self, name, value)
 			else:
-				setattr(self._proxyTarget(), name, value)
+				attrName, attrVal, targetInstance, beforeData = self._beforeProxySetAttr(
+					attrName=name, attrVal=value, targetInstance=self._proxyTarget()
+				)
+				setattr(targetInstance, attrName, attrVal)
+				try:
+					self._afterProxySetAttr(attrName=attrName, attrVal=attrVal, targetInstance=targetInstance, beforeData=beforeData)
+				except Exception as e:
+					self._afterProxySetAttr(attrName=attrName, attrVal=attrVal, targetInstance=targetInstance, beforeData=beforeData, exception=e)
+				#setattr(self._proxyTarget(), name, value)
 		except Exception as e:
 			#print("p attrs {}".format(self.__pclass__._proxyAttrs))
 			print("error name {}, value {}".format(name, value))

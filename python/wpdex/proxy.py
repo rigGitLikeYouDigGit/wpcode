@@ -89,6 +89,8 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		self._proxyData["deltaStartState"] = None
 		self._proxyData["deltaCallDepth"] = 0
 
+		self._proxyData["parent"] = self._proxyData.get("parent", None)
+
 		# wpdex set up
 		if wpDex is not None: # pre-built dex passed in
 			self._proxyData["wpDex"] = wpDex
@@ -98,28 +100,18 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		if parentDex is not None:
 			self.dex().parent = parentDex
 
+		#log("WP init", obj, self._proxyData["parent"])
 		self.updateProxy()
 
 	def dex(self)->WpDex:
 		return self._proxyData["wpDex"]
 
-	@classmethod
-	def wrap(cls, obj:T.Any, op:DeepProxyOp=None, **kwargs):
-		"""return the given structure recursively wrapped in proxies
-		there's no good way to do this in a single pass -
-		we go bottom-up to create the proxy hierarchy, then top-down
-		to set the links between parents and children
+	def __str__(self):
+		return "WPX(" + super().__str__() + ")"
 
-		"""
-		v = DeepVisitor()
-		op = op or DeepProxyOp(proxyCls=cls, )
-		r = v.dispatchPass(obj, passParams=v.VisitPassParams(
-			topDown=False, depthFirst=True,
-			transformVisitedObjects=True,
-			visitFn=op.visit, visitRoot=True,
-			rootObj=obj
-		))
-		return r
+	# def __repr__(self):
+	# 	return "WPX(" + repr(self._proxyTarget()) +
+
 
 	def _openDelta(self):
 		"""open a delta for this object -
@@ -131,6 +123,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 
 	def _emitDelta(self):
 		"""emit a delta for this object"""
+		log("emitDelta")
 		self._proxyData["deltaCallDepth"] -= 1
 		if self._proxyData["deltaCallDepth"] == 0:
 			# delta = DeltaAtom(self._proxyData["deltaStartState"], self._proxyData["target"])
@@ -140,6 +133,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 			#log("send event path", self.dex().path)
 
 			deltaMap = self.dex().gatherDeltas()
+			log("WPX", self, "result deltaMap", deltaMap)
 			if deltaMap:
 				event = {"type":"deltas", "deltas":deltaMap,
 				         "path" : self.dex().path}
@@ -158,42 +152,48 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 	def _beforeProxyCall(self, methodName:str,
 	                     methodArgs:tuple, methodKwargs:dict,
 	                     targetInstance:object
-	                     ) ->tuple[T.Callable, tuple, dict, object]:
+	                     )->tuple[T.Callable, tuple, dict, object, dict]:
 		"""open a delta if mutating method called"""
 		#log(f"before proxy call {methodName}, {methodArgs, methodKwargs}", vars=0)
-		fn, args, kwargs, targetInstance = super()._beforeProxyCall(methodName, methodArgs, methodKwargs, targetInstance)
+		fn, args, kwargs, targetInstance, beforeData = super()._beforeProxyCall(methodName, methodArgs, methodKwargs, targetInstance)
 
 		# if not self.dex().childIdDexMap:
 		# 	self.dex().updateChildren()
 		#
-		# # check if method will mutate data - need to open a delta
-		# if methodName in self.dex().mutatingMethodNames:
-		# 	self._openDelta()
+		# check if method will mutate data - need to open a delta
+		if methodName in self.dex().mutatingMethodNames:
+			self._openDelta()
 
-		return fn, args, kwargs, targetInstance
+		return fn, args, kwargs, targetInstance, beforeData
 
 	def _afterProxyCall(self, methodName:str,
 	                    method:T.Callable,
 	                     methodArgs:tuple, methodKwargs:dict,
 	                    targetInstance: object,
 	                    callResult:object,
-	                    ) ->object:
+	                    beforeData:dict,
+	                    exception:BaseException=None
+	                    )->object:
 		"""return result wrapped in a wpDex proxy, if it appears in
 		main dex children
 
 		gather deltas, THEN refresh children, THEN emit deltas
+
+		TODO: should we check validation here, or should there be a separate
+		 signal / event before the call to check arguments
 		"""
 		#log(f"after proxy call {methodName}, {methodArgs, methodKwargs}", vars=0)
-		callResult = super()._afterProxyCall(methodName, method, methodArgs, methodKwargs, targetInstance, callResult)
+
+		#close delta first
+		# if methodName in self.dex().mutatingMethodNames:
+		# 	self._emitDelta()
+
+		callResult = super()._afterProxyCall(
+			methodName, method, methodArgs, methodKwargs, targetInstance, callResult,
+			beforeData, exception
+		)
 		toReturn = callResult
-		# if methodName in { "__call__", "traverse"}:
-		# 	log(methodName, " result", callResult, type(callResult))
-		# 	log(" ", self._objIdProxyCache)
-		# 	log(" ", self._existingProxy(callResult))
 
-
-		# if mutating method called, rebuild WpDex children
-		#log("method", methodName, "in", methodName in self.dex().mutatingMethodNames)
 		if methodName in self.dex().mutatingMethodNames:
 			"""TO UPDATE CHILDREN -
 			need to keep THIS object intact - 
@@ -205,17 +205,14 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 			i am in deep pain
 			i just want to make films man
 			"""
-			#log("AFTER", methodName, "update children mutating method" )
 
 			# ensure every bit of the structure is still wrapped in a proxy
-			#self._proxyData["target"] = self.wrap(self._proxyData["target"])
-			#self._proxyData["target"] = WpDexProxy(self._proxyData["target"])
 			self.updateProxy()
 
 			#self.dex().updateChildren()
 
 
-		# if mutating method called, finallyemit delta
+		# if mutating method called, finally emit delta
 		if methodName in self.dex().mutatingMethodNames:
 			self._emitDelta()
 
@@ -226,21 +223,19 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 			toReturn = checkExisting
 		return toReturn
 
-	def _onProxyCallException(self,
-	                          methodName: str,
-	                          method:T.Callable,
-	                          methodArgs: tuple, methodKwargs: dict,
-	                          targetInstance: object,
-	                          exception:BaseException) ->(None, object):
-		"""ensure we still emit / clear deltas if an exception is raised"""
-		log(f"on proxy call exception {methodName}, {methodArgs, methodKwargs}")
-		if methodName in self.dex().mutatingMethodNames:
-			self._emitDelta()
-		raise exception
+	def _beforeProxySetAttr(self, attrName:str, attrVal:T.Any,
+	                     targetInstance:object
+	                     ) ->tuple[str, T.Any, object, dict]:
+		"""in general we assume setting an attribute will usually 
+		mutate an object"""
+		self._openDelta()
+		return super()._beforeProxySetAttr(attrName, attrVal, targetInstance)
 
-	# def __hash__(self):
-	# 	log("hash proxy called")
-	# 	return hash(self._proxyData["target"])
+	def _afterProxySetAttr(self, attrName:str, attrVal:T.Any,
+	                     targetInstance:object, beforeData:dict, exception=None
+	                     ) ->None:
+		self._emitDelta()
+		return super()._afterProxySetAttr(attrName, attrVal, targetInstance, beforeData, exception)
 
 	def updateProxy(self):
 		""" we can't keep regenerating new proxy objects or no references will
@@ -260,13 +255,15 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		needsUpdate = False
 		for i, t in enumerate(childObjects):
 			if isinstance(t[1], WpDexProxy):
+				t[1]._proxyData["parent"] = self
 				t[1].updateProxy()
 			else:
 				needsUpdate = True
 
 				# ADD IN PATH LOOKUP HERE to check if proxy is already known
 				#log("wrap child", t[1])
-				proxy = WpDexProxy(t[1], isRoot=False)
+				proxy = WpDexProxy(t[1], isRoot=False,
+				                   proxyData={"parent" : self})
 				#log("result proxy", proxy, type(proxy))
 				# if proxy is not None:
 				# 	proxy.updateProxy()
