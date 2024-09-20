@@ -10,7 +10,7 @@ from .adaptor import SerialAdaptor
 
 
 from wplib.object.visitor import VisitObjectData, DeepVisitor
-from wplib.object import VisitPassParams
+from wplib.object.visitor import VisitPassParams
 from wplib.serial.ops import SerialiseOp, DeserialiseOp
 
 #from .encoder import EncoderBase

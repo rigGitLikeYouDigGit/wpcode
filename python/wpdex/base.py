@@ -15,7 +15,8 @@ import deepdiff
 from wplib import log, Sentinel, sequence
 from wplib.object import Adaptor, TypeNamespace, HashIdElement, ObjectReference, EventDispatcher
 from wplib.serial import serialise, deserialise
-from wplib.object.visitor import VisitAdaptor, Visitable, CHILD_LIST_T
+from wplib.object.visitor import VisitAdaptor, Visitable, CHILD_LIST_T, DeepVisitor
+from wplib.object.proxy import Proxy, FlattenProxyOp
 
 
 class DexRef(ObjectReference):
@@ -429,10 +430,34 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 			return [self.parent]
 		return []
 
+	def _handleEvent(self, event:dict, key:str= "main"):
+		"""test a more flexible way of identifying by paths -
+		as an event propagates from its source dex, it prepends its
+		own key to the event path
+
+		that way it even works for a diamond shape, without worrying
+		about unique vs alias paths, I think it's cool"""
+		log("handleEvent", self)
+		log(event)
+		if "path" in event:
+			event["path"].insert(0, self.key)
+		else:
+			event["path"] = []
+		return super()._handleEvent(event, key)
+			
+
 	def getStateForDelta(self)->dict:
 		"""return a representation suitable to extract deltas
+		doing this all the way down gives obscene slowdown,
+		every wpdex has to recurse into the entire data
+		structure below it
+
+		remove any proxies from structure first?
 		"""
-		return serialise(self.obj)
+		state = serialise(self.obj)
+		#log(" getState", self)
+		#log(state)
+		return state
 
 	def extractDeltas(self, baseState, endState)->list[dict]:
 		"""
@@ -442,7 +467,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		should compare only this level of dex, children will extract
 		their own deltas and emit events with their own path
 		"""
-		#log("extract deltas", self.path, "states:", baseState, endState)
+		log("extract deltas", self.path, "states:", baseState, endState)
 		if baseState is None:
 			return [{"added" : endState}]
 
@@ -456,13 +481,16 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		for i in self.allBranches(includeSelf=True):
 			i._persistData["deltaBase"] = i.getStateForDelta()
 
-	def gatherDeltas(self):
+	def gatherDeltas(self, startState, endState):
 		deltas = {}
-		branches = self.allBranches(includeSelf=True, topDown=False)
-		for i in branches:
-			log("branch", i.path)
-		for i in branches:
-			deltas[tuple(i.path)] = i.extractDeltas(i._persistData["deltaBase"], i.getStateForDelta())
+		#branches = self.allBranches(includeSelf=True, topDown=False)
+		log("gatherDeltas")
+		log(startState)
+		log(endState)
+		# for i in branches:
+		# 	log("branch", i.path)
+		# for i in branches:
+		# 	deltas[tuple(i.path)] = i.extractDeltas(i._persistData["deltaBase"], i.getStateForDelta())
 		return deltas
 
 	# serialisation

@@ -7,7 +7,7 @@ from wplib import CodeRef, inheritance, log, dictlib
 from wplib.inheritance import SuperClassLookupMap
 
 from wplib.object.visitor import VisitObjectData, DeepVisitor
-from wplib.object import VisitPassParams
+from wplib.object.visitor import VisitPassParams
 from wplib.serial.ops import SerialiseOp, DeserialiseOp
 from wplib.serial.adaptor import SerialAdaptor
 from wplib.serial.main import serialise, deserialise

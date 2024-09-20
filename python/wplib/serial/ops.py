@@ -2,8 +2,8 @@
 from __future__ import annotations
 import typing as T
 
-from wplib import dictlib
-from wplib.object import DeepVisitor, VisitAdaptor, VisitObjectData, VisitPassParams
+from wplib import dictlib, log
+from wplib.object.visitor import DeepVisitor, VisitAdaptor, VisitObjectData, VisitPassParams
 from wplib.serial.adaptor import SerialAdaptor
 
 
@@ -30,7 +30,9 @@ class SerialiseOp(DeepVisitor.DeepVisitOp):
 		# copy params and update with class defaults
 		dictlib.defaultUpdate(serialParams, adaptorCls.defaultEncodeParams(obj)
 		                      )
-		return adaptorCls.encode(obj, encodeParams=serialParams)
+		encodeResult = adaptorCls.encode(obj, encodeParams=serialParams)
+		#log("encode result", obj, encodeResult)
+		return encodeResult
 
 class DeserialiseOp(DeepVisitor.DeepVisitOp):
 	@classmethod

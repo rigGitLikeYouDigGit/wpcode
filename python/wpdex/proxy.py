@@ -102,6 +102,8 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 
 		#log("WP init", obj, self._proxyData["parent"])
 		self.updateProxy()
+		# if isinstance(self.dex().obj, WpDexProxy):
+		# 	self.dex().obj = self.dex().obj._proxyTarget()
 
 	def dex(self)->WpDex:
 		return self._proxyData["wpDex"]
@@ -117,8 +119,12 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		"""open a delta for this object -
 		if mutating functions are reentrant, only open one delta"""
 		if self._proxyData["deltaCallDepth"] == 0:
-			self._proxyData["deltaStartState"] = copy.deepcopy(self._proxyData["target"])
-			self.dex().prepForDeltas()
+			#self._proxyData["deltaStartState"] = copy.deepcopy(self._proxyData["target"])
+			self._proxyData["deltaStartState"] = serialise(
+				self._proxyCleanResult(),
+				serialParams={"TreeSerialiseUid" : False}
+			)
+			#self.dex().prepForDeltas()
 		self._proxyData["deltaCallDepth"] += 1
 
 	def _emitDelta(self):
@@ -126,17 +132,23 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		log("emitDelta")
 		self._proxyData["deltaCallDepth"] -= 1
 		if self._proxyData["deltaCallDepth"] == 0:
+			self._proxyData["deltaEndState"] = serialise(
+				self._proxyCleanResult(),
+				serialParams={"TreeSerialiseUid": False}
+			)
+
+			deltaMap = self.dex().gatherDeltas(
+				self._proxyData["deltaStartState"],
+				self._proxyData["deltaEndState"],
+			)
+			log("WPX", self, "result deltaMap", deltaMap)
+			#if deltaMap:
 			# delta = DeltaAtom(self._proxyData["deltaStartState"], self._proxyData["target"])
 			self._proxyData["deltaStartState"] = None
-			# send out delta event
-			# TODO: make an actual delta event
-			#log("send event path", self.dex().path)
+			self._proxyData["deltaEndState"] = None
 
-			deltaMap = self.dex().gatherDeltas()
-			log("WPX", self, "result deltaMap", deltaMap)
-			if deltaMap:
-				event = {"type":"deltas", "deltas":deltaMap,
-				         "path" : self.dex().path}
+			if True:
+				event = {"type":"deltas", }
 				self.dex().sendEvent(event)
 
 			# event = {"type":"delta", "delta":None,
@@ -285,6 +297,20 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 			# 	# maybe we don't need to proxy primitive types?
 			#
 			# 	i[1].updateProxy()
+
+	@classmethod
+	def _setProxyTarget(cls, proxy:WpDexProxy, target):
+		super()._setProxyTarget(proxy, target)
+		# parentDex = proxy.dex().parent
+		# key = None
+		# if parentDex:
+		# 	key = proxy.dex().key
+		if not "wpDex" in proxy._proxyData:
+			return
+		proxy._proxyData["wpDex"] = WpDex(
+			target, parent=proxy.dex().parent,
+		key=proxy.dex().key,)
+
 
 	# @class
 	# def updateRecursive(self):

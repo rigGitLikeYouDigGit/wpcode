@@ -5,6 +5,8 @@ from collections import defaultdict
 import typing as T
 
 from wplib import log, inheritance, fnlib
+from wplib.serial import Serialisable, serialise, deserialise
+from wplib.object.visitor import DeepVisitOp, DeepVisitor, VisitObjectData
 from wplib.inheritance import classCallables
 
 """
@@ -173,6 +175,7 @@ if T.TYPE_CHECKING:
 
 class Proxy(#ABC,
 	#object,
+	#Serialisable,
     metaclass=ProxyMeta
             ):
 	""" Transparent proxy for most objects
@@ -213,7 +216,9 @@ class Proxy(#ABC,
 	_proxySuperCls : (type[Proxy], None)
 	_proxyTargetCls : T.Type[object] = None # type this proxy is wrapping
 
-
+	# def encode(self, encodeParams:dict=None) ->dict:
+	# 	"""very dodgy"""
+	# 	return serialise(self._proxyTarget())
 
 	def __init__(self, obj, proxyData:ProxyData, **kwargs):
 		"""called by __new__, _proxyLink is constructed internally"""
@@ -270,6 +275,22 @@ class Proxy(#ABC,
 
 	def __iter__(self):
 		return iter(self._proxyTarget())
+
+	def _proxyCleanResult(self):
+		"""return this object with any proxy stuff removed"""
+		op = FlattenProxyOp()
+		visitor = DeepVisitor()
+		params = DeepVisitor.VisitPassParams(
+			topDown=True,
+			transformVisitedObjects=True,
+			visitFn=op.visit,
+			visitKwargs={"serialParams" : {"TreeSerialiseUid" : False}}
+		)
+		result = visitor.dispatchPass(
+			fromObj=self,
+			passParams=params
+		)
+		return result
 
 	def _beforeProxyCall(self, methodName:str,
 	                     methodArgs:tuple, methodKwargs:dict,
@@ -501,9 +522,9 @@ class Proxy(#ABC,
 				return result
 			except Exception as e:
 				result = self._afterProxyGetAttr(
-					name, result, targetInstance, beforeData, exception=e
+					name, None, targetInstance, beforeData, exception=e
 				)
-				return result # if an exception is not caught
+				return None # if an exception is not caught
 
 
 	def __delattr__(self, name):
@@ -526,8 +547,8 @@ class Proxy(#ABC,
 				#setattr(self._proxyTarget(), name, value)
 		except Exception as e:
 			#print("p attrs {}".format(self.__pclass__._proxyAttrs))
-			print("error name {}, value {}".format(name, value))
-			print("type name ", type(name))
+			log("proxy setAttr error name {}, value {}".format(name, value))
+			log("type name ", type(name))
 			raise e
 
 
@@ -556,6 +577,23 @@ class Proxy(#ABC,
 		any proxy stuff, unless specifically working with it
 		"""
 		return type(self)
+
+class FlattenProxyOp(DeepVisitOp):
+	"""if a proxy is found, replace it with its target object
+
+	TODO: get a better way of chaining visitor transformations,
+	 other than rebuilding the whole structure on each pass
+	"""
+
+	def visit(self,
+	          obj:T.Any,
+              visitor:DeepVisitor,
+              visitObjectData:VisitObjectData,
+              #visitPassParams:VisitPassParams,
+              ) ->T.Any:
+		if isinstance(obj, Proxy):
+			return obj._proxyTarget()
+		return obj
 
 # Proxy._proxyParentCls = Proxy
 # Proxy._proxySuperCls = None

@@ -67,7 +67,7 @@ TreeType = T.TypeVar("TreeType", bound="TreeInterface")
 class TreeInterface(Traversable,
                     Serialisable,
                     Visitable,
-                    EventDispatcher
+                    #EventDispatcher
                     ):
 	"""base class for tree-like objects -
 	no requirements for internal storage or structure,
@@ -175,9 +175,9 @@ class TreeInterface(Traversable,
 		#self._signalComponent : TreeSignalComponent = None
 
 
-	def _nextEventDestinations(self, forEvent:EventBase, key:str) ->list[EventDispatcher]:
-		"""return only parent"""
-		return [self.parent] if self.parent else []
+	# def _nextEventDestinations(self, forEvent:EventBase, key:str) ->list[EventDispatcher]:
+	# 	"""return only parent"""
+	# 	return [self.parent] if self.parent else []
 
 	def __repr__(self):
 		return "<{} ({}) : {}>".format(self.__class__, self.getName(), self.getValue())
@@ -240,8 +240,8 @@ class TreeInterface(Traversable,
 		# set name internally
 		self._setRawName(name)
 
-		self.sendEvent(TreeDeltas.Name(self, oldName, name),
-		               			self.SignalKeys.NameChanged)
+		# self.sendEvent(TreeDeltas.Name(self, oldName, name),
+		#                			self.SignalKeys.NameChanged)
 		#
 		# # if something is listening to this tree's signals, emit nameChanged
 		# if self._signalComponent and oldName != name:
@@ -776,9 +776,9 @@ class TreeInterface(Traversable,
 				result = self.parent._removeBranch(self)
 			else:
 				raise ValueError("Cannot remove root branch")
-		event = TreeDeltas.Delete(result, parent, result.serialise())
-		self.sendEvent(event, self.SignalKeys.StructureChanged)
-		parent.sendEvent(event, parent.SignalKeys.StructureChanged)
+		#event = TreeDeltas.Delete(result, parent, result.serialise())
+		# self.sendEvent(event, self.SignalKeys.StructureChanged)
+		# parent.sendEvent(event, parent.SignalKeys.StructureChanged)
 		return result
 		# if self.getSignalComponent(create=False):
 		# 	self.getSignalComponent(create=False).structureChanged.emit(
@@ -893,8 +893,9 @@ class TreeInterface(Traversable,
 			#self.serialKeys().format : 0
 		}
 
-	def _baseSerialData(self)->dict:
+	def _baseSerialData(self, params:dict=None)->dict:
 		"""return name, value, auxProperties for this branch only"""
+		#log("_base serial data", params)
 		serialKeys = self.serialKeys()
 		data = { serialKeys.name : self.getName()
 		         }
@@ -908,26 +909,28 @@ class TreeInterface(Traversable,
 			typeData = CodeRef.get(self.__class__)
 			data[serialKeys.type] = typeData
 
-		data[serialKeys.uid] = self.uid
+		# sometimes we don't care about uid
+		if (params or {}).get("TreeSerialiseUid", True):
+			data[serialKeys.uid] = self.uid
 
 		return data
 
 
-	def _serialiseFlat(self):
+	def _serialiseFlat(self, params:dict=None):
 		"""return flat representation of tree, using address
 		"""
-		data = { tuple(self.address()) : self._baseSerialData()}
+		data = { tuple(self.address()) : self._baseSerialData(params)}
 		#for i in self.branches:
 		for i in self.allBranches(includeSelf=False):
-			data[tuple(i.address())] = i._baseSerialData()
+			data[tuple(i.address())] = i._baseSerialData(params)
 		return data
 
-	def _serialiseNested(self):
+	def _serialiseNested(self, params:dict=None):
 		"""inner function to call for main process"""
-		data = self._baseSerialData()
+		data = self._baseSerialData(params)
 		#print("serialiseNested", self, self.branches)
 		if self.branches:
-			data[self.serialKeys().children] = [i._serialiseNested() for i in self.branches]
+			data[self.serialKeys().children] = [i._serialiseNested(params) for i in self.branches]
 		return data
 
 	def _serialiseNestedOuter(self):
@@ -1030,7 +1033,8 @@ class TreeInterface(Traversable,
 
 	def encode(self, encodeParams:dict=None)->dict:
 		nested = True
-		data = self._serialiseNested() if nested else self._serialiseFlat()
+		data = self._serialiseNested(encodeParams) if nested \
+			else self._serialiseFlat(encodeParams)
 		# add root data
 		data[self.serialKeys().rootData] = self._rootData()
 		data[self.serialKeys().layout] = self.serialKeys().nestedMode if nested else self.serialKeys().flatMode
