@@ -883,7 +883,8 @@ class TreeInterface(Traversable,
 				# else: return self.deserialise(self.serialise(), preserveUid=True)
 		return targetType.deserialise(self.serialise())
 
-
+	# TODO: brother do you have enough serial functions yet
+	#  brother do you want some more
 	def _rootData(self)->dict:
 		"""Returns any data needed to describe the whole tree
 		in its serialised state -
@@ -910,7 +911,7 @@ class TreeInterface(Traversable,
 			data[serialKeys.type] = typeData
 
 		# sometimes we don't care about uid
-		if (params or {}).get("TreeSerialiseUid", True):
+		if (params or {}).get("PreserveUid", True):
 			data[serialKeys.uid] = self.uid
 
 		return data

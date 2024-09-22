@@ -48,7 +48,7 @@ class WpDexProxyMeta(ProxyMeta):
 		return super().__call__(*args, **kwargs)
 
 
-
+VT = T.TypeVar("VT")
 class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 	"""replace a hieararchy of objects in-place:
 	copy the proxy idea of subclassing for each type.
@@ -77,9 +77,9 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 	_generated = False
 	_objIdProxyCache : dict[int, WpDexProxy] = {}
 
-	def __init__(self, obj, proxyData: WpDexProxyData=None,
+	def __init__(self, obj:VT, proxyData: WpDexProxyData=None,
 	             wpDex:WpDex=None, parentDex:WpDex=None,
-	             **kwargs):
+	             **kwargs)->VT:
 		"""create a WpDex object for this proxy, add
 		weak sets for children and parent"""
 		#log("WP init", obj, type(obj), type(self), self._proxyParentCls, self._proxySuperCls)
@@ -97,13 +97,12 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		else:
 			self._proxyData["wpDex"] = WpDex(obj)
 			# link parent dex if given
-		if parentDex is not None:
-			self.dex().parent = parentDex
+		# if parentDex is not None:
+		# 	self.dex().parent = parentDex
 
-		#log("WP init", obj, self._proxyData["parent"])
+
 		self.updateProxy()
-		# if isinstance(self.dex().obj, WpDexProxy):
-		# 	self.dex().obj = self.dex().obj._proxyTarget()
+
 
 	def dex(self)->WpDex:
 		return self._proxyData["wpDex"]
@@ -120,11 +119,13 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		if mutating functions are reentrant, only open one delta"""
 		if self._proxyData["deltaCallDepth"] == 0:
 			#self._proxyData["deltaStartState"] = copy.deepcopy(self._proxyData["target"])
-			self._proxyData["deltaStartState"] = serialise(
-				self._proxyCleanResult(),
-				serialParams={"TreeSerialiseUid" : False}
-			)
-			#self.dex().prepForDeltas()
+			# self._proxyData["deltaStartState"] = serialise(
+			# 	self._proxyCleanResult(),
+			# 	serialParams={"TreeSerialiseUid" : False}
+			# )
+			log("OPEN ", self, "prepped", self.dex().isPreppedForDeltas)
+			if not self.dex().isPreppedForDeltas:
+				self.dex().prepForDeltas()
 		self._proxyData["deltaCallDepth"] += 1
 
 	def _emitDelta(self):
@@ -132,14 +133,14 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		log("emitDelta")
 		self._proxyData["deltaCallDepth"] -= 1
 		if self._proxyData["deltaCallDepth"] == 0:
-			self._proxyData["deltaEndState"] = serialise(
-				self._proxyCleanResult(),
-				serialParams={"TreeSerialiseUid": False}
-			)
+			# self._proxyData["deltaEndState"] = serialise(
+			# 	self._proxyCleanResult(),
+			# 	serialParams={"TreeSerialiseUid": False}
+			# )
 
 			deltaMap = self.dex().gatherDeltas(
-				self._proxyData["deltaStartState"],
-				self._proxyData["deltaEndState"],
+				# self._proxyData["deltaStartState"],
+				# self._proxyData["deltaEndState"],
 			)
 			log("WPX", self, "result deltaMap", deltaMap)
 			#if deltaMap:
@@ -147,8 +148,9 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 			self._proxyData["deltaStartState"] = None
 			self._proxyData["deltaEndState"] = None
 
-			if True:
-				event = {"type":"deltas", }
+			if deltaMap:
+				event = {"type":"deltas",
+				         "paths" : deltaMap}
 				self.dex().sendEvent(event)
 
 			# event = {"type":"delta", "delta":None,
@@ -268,6 +270,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		for i, t in enumerate(childObjects):
 			if isinstance(t[1], WpDexProxy):
 				t[1]._proxyData["parent"] = self
+				t[1].dex().parent = self.dex()
 				t[1].updateProxy()
 			else:
 				needsUpdate = True
@@ -276,9 +279,10 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 				#log("wrap child", t[1])
 				proxy = WpDexProxy(t[1], isRoot=False,
 				                   proxyData={"parent" : self})
-				#log("result proxy", proxy, type(proxy))
-				# if proxy is not None:
-				# 	proxy.updateProxy()
+				if proxy is not None: # if you wrap a proxy of None
+					proxy.dex().parent = self.dex()
+					#proxy.dex().updateChildren()
+
 				childObjects[i] = (t[0], proxy, t[2])
 		if needsUpdate:
 			#log("   updating", self, childObjects)
@@ -292,6 +296,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		for i in adaptor.childObjects(self._proxyData["target"], {}):
 			if i[1] is None:
 				continue
+		#self.dex().updateChildren()
 			# if isinstance(i[1], WpDexProxy):
 			#
 			# 	# maybe we don't need to proxy primitive types?

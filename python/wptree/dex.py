@@ -54,7 +54,7 @@ if __name__ == '__main__':
 
 	eventFn = lambda *args: (print("EVENT"), pprint.pprint(args[0]))
 	t = Tree("root")
-	t["a"]
+	#t["a"]
 
 	#print(t.branches)
 	#raise
@@ -63,10 +63,15 @@ if __name__ == '__main__':
 
 	p = WpDexProxy(t)
 	print(p.dex().children())
-
+	p.dex().getEventSignal().connect(eventFn)
 	p.name = "test"
 
-	# p.dex().getEventSignal().connect(eventFn)
+	# log("before call")
+	# t = p("a")
+
+
+
+
 	# p.name = "test"
 
 

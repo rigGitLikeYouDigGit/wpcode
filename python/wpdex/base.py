@@ -79,7 +79,12 @@ class DexPathable:
 
 
 		"""
+		# catch the case of access(obj, [])
+		if not path: return obj
 		toAccess = sequence.toSeq(obj)
+		#log("ACCESS", obj, toAccess)
+
+
 
 		foundPathables = [] # end results of path access - unstructured
 		paths = [deepcopy(path) for i in range(len(toAccess))]
@@ -175,12 +180,11 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 	the ROOT of any wpdex hierarchy is considered the manager
 	so data has to persist and maintain a link to its object, but logic/interface doesn't
 
-	this all applies if the core data structure has to be absolutely inviolate,
-	has to be made of pure python primitives, etc-
-
-	if there is the opportunity to replace the whole structure in place,
-	not just through the interface and results provided by the wpdex layer,
-	I think things might get a whole lot easier
+	TODO:
+	 to gather deltas, not enough to compare serialised dictionaries, and it's
+	 restrictive to only rely on child objects from visitable -
+	 consider copying out a static "dissected" version of the hierarchy, held entirely
+	 in the dex structure?
 
 	"""
 	# adaptor integration
@@ -207,7 +211,6 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		# superclass inits
 		HashIdElement.__init__(self)
 		EventDispatcher.__init__(self)
-		#Adaptor.__init__(self)
 
 		# should these attributes be moved into pathable? probably
 		self.parent = parent
@@ -215,37 +218,19 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		self.key = list(key or [])
 
 		# keep map of {child object id : WpDex holding that object}
-		#self.childIdDexMap : dict[int, WpDex] = weakref.WeakValueDictionary()
 		# goes against pathable to keep store of child objects
 		self.childIdDexMap : dict[int, WpDex] = {}
 		self.keyDexMap : dict[DexPathable.keyT, WpDex] = {}
-
-		#self._baseDeltaState = None
 
 		# save data against paths to persist across
 		# destroying and regenerating dex structure
 		self._rootData : dict[tuple[str], dict[str]] = {}
 		self._persistData = self._newPersistData()
 
+		self.isPreppedForDeltas = False
+
 		# do we build on init?
-		self.updateChildren()
-
-	# 	# overrides
-	# 	self._overrideMap = overrideMap
-	#
-	# def getOverrideMap(self)->OverrideMap:
-	# 	"""get the override map for this object"""
-	# 	if self._overrideMap is None:
-	# 		self._overrideMap = OverrideMap()
-	# 	return self._overrideMap
-	#
-	# def getOverrides(self, forPath=None, root=None):
-	# 	"""retrieve metadata registered against a certain path
-	# 	(or this object's path by default"""
-	# 	path = forPath or self.path
-	# 	root = root or self.root
-	# 	return root.getOverrideMap().getMatches(path)
-
+		#self.updateChildren()
 
 
 	def makeChildPathable(self, key:tuple[keyType], obj:T.Any)->WpDex:
@@ -445,6 +430,15 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 			event["path"] = []
 		return super()._handleEvent(event, key)
 			
+	def staticCopy(self)->WpDex:
+		"""return a fully separate hierarchy, wrapped in a separate
+		network of WpDex objects"""
+		return WpDex(deserialise(serialise(Proxy.flatten(
+			self.obj
+		), serialParams={"PreserveUid" : True}),
+			serialParams={"PreserveUid" : True}
+		))
+
 
 	def getStateForDelta(self)->dict:
 		"""return a representation suitable to extract deltas
@@ -454,7 +448,9 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 
 		remove any proxies from structure first?
 		"""
-		state = serialise(self.obj)
+		#state = serialise(self.obj)
+		state = serialise(Proxy.flatten(self.obj),
+		                  serialParams={"PreserveUid" : True})
 		#log(" getState", self)
 		#log(state)
 		return state
@@ -467,30 +463,83 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		should compare only this level of dex, children will extract
 		their own deltas and emit events with their own path
 		"""
-		log("extract deltas", self.path, "states:", baseState, endState)
+		log("extract deltas", self.path, "states:", )
+		log(baseState)
+		log( endState)
 		if baseState is None:
 			return [{"added" : endState}]
 
-		# if baseState.keys() != endState.keys():
-		# 	return [{"change": None}]
+		# check for what could have changed - might switch to deepdiff here,
+		# as fully diffing 2 objects is very involved
+		# changes = []
+		# baseMap = {i[0] : i[1] for i in VisitAdaptor.adaptorForObject(baseState).childObjects(baseState, {})}
 		if pickle.dumps(baseState) != pickle.dumps(endState):
 			return [{"change": None}]
 		return []
 
 	def prepForDeltas(self):
-		for i in self.allBranches(includeSelf=True):
-			i._persistData["deltaBase"] = i.getStateForDelta()
+		"""check for deltas below this dex -
+		if called by outside process, be aware that internal
+		effects may also change the state of the other structure,
+		so it may be best to always call this on the root"""
 
-	def gatherDeltas(self, startState, endState):
+		# for i in self.allBranches(includeSelf=True):
+		# 	log("prep deltas ", i)
+		# 	i._persistData["deltaBase"] = i.getStateForDelta()
+		self._persistData["deltaBase"] = self.staticCopy()
+		self.isPreppedForDeltas = True
+
+	def compareState(self, newObj, baseObj=None):
+		"""by default, compare newObj against this Dex object"""
+		raise NotImplementedError
+
+	def gatherDeltas(self, #startState, endState
+	                 ):
 		deltas = {}
-		#branches = self.allBranches(includeSelf=True, topDown=False)
-		log("gatherDeltas")
-		log(startState)
-		log(endState)
-		# for i in branches:
-		# 	log("branch", i.path)
-		# for i in branches:
-		# 	deltas[tuple(i.path)] = i.extractDeltas(i._persistData["deltaBase"], i.getStateForDelta())
+		log("GATHER", self)
+		self.isPreppedForDeltas = False
+		baseState : WpDex = self._persistData["deltaBase"]
+		assert baseState is not None
+		log("base", baseState)
+
+		# we compare FROM the base state to this dex as the live current one
+		"""iter top-down -
+		if type has changed, full change
+		if length or number of children changed, continue going
+		
+		delegate to specific dex classes to process deltas between two 
+		objects of their type, where they match
+		"""
+		toIter = [baseState]
+		while toIter:
+			baseDex = toIter.pop(0)
+			basePath = tuple(baseDex.path)
+			try:
+				liveDex = self.access(self, basePath, values=False)
+			except KeyError: # if a path is missing
+				deltas[basePath] = {"remove" : basePath}
+				continue
+
+			if not isinstance(liveDex.obj, type(baseDex.obj)):
+				# type entirely changed
+				deltas[basePath] = {"change" : "type"}
+				"""later consider catching edge case where new value is subclass of
+				original type - that way there could be a change in type, but other
+				relevant deltas as well"""
+				continue
+
+			try:
+				log("compare", baseDex.obj, liveDex.obj)
+				deltas[basePath] = baseDex.compareState(liveDex.obj)
+			except NotImplementedError:
+				log("no delta compare implemented for", self)
+				deltas[basePath] = {"change" : "any"}
+				continue
+
+			toIter.extend(baseDex.branches)
+
+
+
 		return deltas
 
 	# serialisation
