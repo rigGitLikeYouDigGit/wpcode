@@ -17,6 +17,7 @@ from wplib.object import Adaptor, TypeNamespace, HashIdElement, ObjectReference,
 from wplib.serial import serialise, deserialise
 from wplib.object.visitor import VisitAdaptor, Visitable, CHILD_LIST_T, DeepVisitor
 from wplib.object.proxy import Proxy, FlattenProxyOp
+from wplib.delta import DeltaAtom, DeltaAid, SetValueDelta
 
 
 class DexRef(ObjectReference):
@@ -113,6 +114,7 @@ class DexPathable:
 
 		# combine / flatten results
 		results = foundPathables
+		log("results", results)
 		# check if needed to error
 		if not results:
 			# format of default overrides one/many, since it's provided directly
@@ -215,7 +217,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		# should these attributes be moved into pathable? probably
 		self.parent = parent
 		self.obj = obj
-		self.key = list(key or [])
+		self.key = tuple(key or [])
 
 		# keep map of {child object id : WpDex holding that object}
 		# goes against pathable to keep store of child objects
@@ -243,8 +245,25 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		# return dex
 
 	def _buildChildren(self)->dict[DexPathable.keyT, WpDex]:
-		"""build child objects, return keyDexMap"""
-		raise NotImplementedError(self, f"no _buildChildren")
+		"""build child objects, return keyDexMap
+		make this uniform with visitable / pathable
+
+		overriding might be illegal - maybe dex can add additional,
+		false children on top for pathing syntax"""
+		#raise NotImplementedError(self, f"no _buildChildren")
+		children = {}
+		adaptor = VisitAdaptor.adaptorForObject(self.obj)
+		childObjects = list(adaptor.childObjects(self.obj, {}))
+		# childObjects = { k : v.obj for k, v in self.dex().keyDexMap.items()}
+		# returns list of 3-tuples (index, value, childType)
+		needsUpdate = False
+		# for i, (k, t) in enumerate(childObjects.items()):
+		for i, t in enumerate(childObjects):
+			if t[1] is None: continue # maybe
+			key = (t[0], )
+			children[key] = self.makeChildPathable(key, t[1])
+		return children
+
 
 	def _gatherRootData(self):
 		"""iter over all children, save persist data to this
@@ -257,9 +276,20 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		for i in self.allBranches(includeSelf=False):
 			i._persistData.update(self._rootData.get(tuple(i.path), {}))
 
+	def addBranch(self, newDex:WpDex, key:DexPathable.keyT=None):
+		if key:
+			newDex.key = key
+		#key = newDex.key
+		log("addBranch", self, newDex, key, newDex.key)
+		assert newDex.key
+		self.keyDexMap[tuple(key)] = newDex
+		newDex.parent = self
+		log( " added", newDex, newDex.key, newDex.path, newDex.parent, newDex.parent is self)
+		log(" after add", self.branches)
+
+
 	def updateChildren(self):
 		self._gatherRootData()
-		self.childIdDexMap.clear()
 		self.keyDexMap.clear()
 
 		self.keyDexMap.update(self._buildChildren())
@@ -312,7 +342,8 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 			found.reverse()
 		return found
 
-	@cached_property
+	#@cached_property
+	@property
 	def root(self)->WpDex:
 		"""get the root
 		the similarity between this thing and tree is not lost on me,
@@ -323,7 +354,8 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 			test = test.parent
 		return test
 
-	@cached_property
+	#@cached_property
+	@property
 	def path(self)->list[str]:
 		if self.parent is None:
 			return []
@@ -433,27 +465,14 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 	def staticCopy(self)->WpDex:
 		"""return a fully separate hierarchy, wrapped in a separate
 		network of WpDex objects"""
-		return WpDex(deserialise(serialise(Proxy.flatten(
+		dex = WpDex(deserialise(serialise(Proxy.flatten(
 			self.obj
 		), serialParams={"PreserveUid" : True}),
 			serialParams={"PreserveUid" : True}
 		))
+		dex.updateChildren()
+		return dex
 
-
-	def getStateForDelta(self)->dict:
-		"""return a representation suitable to extract deltas
-		doing this all the way down gives obscene slowdown,
-		every wpdex has to recurse into the entire data
-		structure below it
-
-		remove any proxies from structure first?
-		"""
-		#state = serialise(self.obj)
-		state = serialise(Proxy.flatten(self.obj),
-		                  serialParams={"PreserveUid" : True})
-		#log(" getState", self)
-		#log(state)
-		return state
 
 	def extractDeltas(self, baseState, endState)->list[dict]:
 		"""
@@ -487,20 +506,36 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		# 	log("prep deltas ", i)
 		# 	i._persistData["deltaBase"] = i.getStateForDelta()
 		self._persistData["deltaBase"] = self.staticCopy()
+		log("static copy", self._persistData["deltaBase"], self._persistData["deltaBase"].branches)
 		self.isPreppedForDeltas = True
 
-	def compareState(self, newObj, baseObj=None):
-		"""by default, compare newObj against this Dex object"""
-		raise NotImplementedError
+	def compareState(self, newDex:WpDex, baseDex:WpDex=None)->(dict, list[DeltaAtom]):
+		"""by default, compare newObj against this Dex object
+		TODO: still a lot to work on here with the deltas, just a first pass
+
+		here we directly compare object values with the delta library, I
+		don't think there's any point in adding extra logic in the dex layer
+		"""
+		baseDex = baseDex or self
+		baseObj = baseDex.obj
+		newObj = newDex.obj
+		deltaAid : DeltaAid = DeltaAid.adaptorForType(type(baseObj))
+		#log("base", baseObj, deltaAid)
+
+		if deltaAid:
+			return deltaAid.gatherDeltas(baseObj, newObj)
+		log("no aid for ", newObj, DeltaAid.adaptorTypeMap)
+		raise NotImplementedError()
+
 
 	def gatherDeltas(self, #startState, endState
-	                 ):
+	                 )->dict[DexPathable.pathT, (list, dict)]:
 		deltas = {}
-		log("GATHER", self)
+		log("GATHER", self, self.branches)
 		self.isPreppedForDeltas = False
 		baseState : WpDex = self._persistData["deltaBase"]
 		assert baseState is not None
-		log("base", baseState)
+		#log("base", baseState)
 
 		# we compare FROM the base state to this dex as the live current one
 		"""iter top-down -
@@ -514,11 +549,15 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		while toIter:
 			baseDex = toIter.pop(0)
 			basePath = tuple(baseDex.path)
+			log(" base", baseDex, basePath, baseDex.branches)
 			try:
-				liveDex = self.access(self, basePath, values=False)
-			except KeyError: # if a path is missing
+				liveDex : WpDex = self.access(self, basePath, values=False)
+			except KeyError as e: # if a path is missing
+				log("keyError", )
+				#raise e
 				deltas[basePath] = {"remove" : basePath}
 				continue
+			log(" live", liveDex, liveDex.path, liveDex.branches)
 
 			if not isinstance(liveDex.obj, type(baseDex.obj)):
 				# type entirely changed
@@ -528,14 +567,24 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 				relevant deltas as well"""
 				continue
 
+			# get any added dex paths
+			for i, dex in liveDex.keyDexMap.items():
+				if not i in baseDex.keyDexMap:
+					deltas[tuple(dex.path)] = {"added" : dex}
+
 			try:
 				log("compare", baseDex.obj, liveDex.obj)
-				deltas[basePath] = baseDex.compareState(liveDex.obj)
+				itemDeltas = baseDex.compareState(liveDex)
+
 			except NotImplementedError:
 				log("no delta compare implemented for", self)
-				deltas[basePath] = {"change" : "any"}
+				itemDeltas = {"change" : "any"}
+				if itemDeltas:
+					deltas[basePath] = itemDeltas
 				continue
 
+			if itemDeltas:
+				deltas[basePath] = itemDeltas
 			toIter.extend(baseDex.branches)
 
 

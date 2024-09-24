@@ -6,7 +6,7 @@ from .builtinextension import UserSet, PostDecMethodWrapper
 from .namespace import TypeNamespace, Sentinel
 
 from .cache import CacheObj
-from .delta import DeltaAtom, PrimDeltaAtom, MoveDelta, InsertDelta
+#from .delta import DeltaAtom, PrimDeltaAtom, MoveDelta, InsertDelta
 
 from .decorator import UserDecorator
 from .dirtygraph import DirtyGraph, DirtyNode

@@ -13,4 +13,5 @@ place the graph system in wplib, and have this package depend on it.
 
 from .interface import TreeInterface, TreeType
 from .main import Tree
+from .delta import TreeDeltaAid, TreeDeltas
 

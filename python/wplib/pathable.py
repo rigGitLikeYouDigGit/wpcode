@@ -51,6 +51,12 @@ class Pathable(Adaptor):
 	where only the ArrayPathable adaptor has any idea what slicing means
 
 
+	NOW we can start unifying all our path stuff -
+	classmethod access() can look up the right adaptor class to manage the given object
+
+	pathable handles accessing, data structures like tree deal with holding
+	data
+
 
 	"""
 

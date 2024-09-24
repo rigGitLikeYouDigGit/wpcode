@@ -17,7 +17,7 @@ from wplib.object import VisitAdaptor, Visitable
 from wplib.serial import Serialisable, SerialAdaptor
 
 
-from wptree.delta import TreeDeltas
+#from wptree.delta import TreeDeltas
 from wptree.treedescriptor import TreePropertyDescriptor
 
 """interface specification for objects that may behave like a basic tree.
@@ -1027,8 +1027,8 @@ class TreeInterface(Traversable,
 	@classmethod
 	def defaultDecodeParams(cls) ->dict:
 		return {
-			"preserveUid" : True,
-			"preserveType" : True,
+			"PreserveUid" : True,
+			"PreserveType" : True,
 		}
 
 
@@ -1047,8 +1047,8 @@ class TreeInterface(Traversable,
 		#print("tree interface decode")
 
 		# todo: maybe have outer layer of params indexed by object type?
-		preserveUid = decodeParams["preserveUid"]
-		preserveType = decodeParams["preserveType"]
+		preserveUid = decodeParams["PreserveUid"]
+		preserveType = decodeParams["PreserveType"]
 		rootData = serialData[cls.serialKeys().rootData]  # not used yet
 
 		# cls._setCaching(False)

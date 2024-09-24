@@ -75,6 +75,9 @@ class SuperClassLookupMap:
 		if classMap is not None:
 			self.updateClassMap(classMap)
 
+	def __repr__(self):
+		return f"{self.__class__}({self.classMap})"
+
 	def copy(self):
 		"""return a copy of this object"""
 		return SuperClassLookupMap(self.classMap)

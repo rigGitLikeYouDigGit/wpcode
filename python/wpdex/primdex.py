@@ -9,7 +9,7 @@ from .base import WpDex, DexPathable
 # dexes for primitives
 
 class PrimDex(WpDex):
-	forTypes = (int, float, bool, None)
+	forTypes = (int, float, bool, type(None))
 
 	def _buildChildren(self) ->dict[DexPathable.keyT, WpDex]:
 		return {}

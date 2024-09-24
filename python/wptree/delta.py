@@ -21,13 +21,12 @@ from dataclasses import dataclass
 import typing as T
 
 from wplib.object.namespace import TypeNamespace
-from wplib.object.delta import DeltaAtom#, DeltaContext
+from wplib.delta import DeltaAtom, DeltaAid
 from wptree.reference import TreeReference
 #from wplib.object.event import TreeEvent
 
-if T.TYPE_CHECKING:
-	from wptree.main import Tree
-	from tree.lib.treeinterface import TreeInterface
+from wptree.main import Tree
+from wptree.interface import TreeInterface
 
 
 """DELTAS
@@ -70,12 +69,12 @@ class TreeDeltaAtom(DeltaAtom):
 		"""return all TreeReferences used by this object"""
 		return [i for i in self.__dict__.values() if isinstance(i, TreeReference)]
 
-	def doDelta(self, targetRoot:TreeInterface):
-		"""consider adding mode to define system of reference to use, but
-		that should be set on each reference itself"""
-		# if no targetRoot is given, use the main branch
-		targetRoot = targetRoot or self.branchRef
-		super(TreeDeltaAtom, self).doDelta(targetRoot)
+	# def do(self, targetRoot:TreeInterface):
+	# 	"""consider adding mode to define system of reference to use, but
+	# 	that should be set on each reference itself"""
+	# 	# if no targetRoot is given, use the main branch
+	# 	targetRoot = targetRoot or self.branchRef
+	# 	super(TreeDeltaAtom, self).do(targetRoot)
 
 @dataclass
 class TreeNameDelta(TreeDeltaAtom):
@@ -87,12 +86,11 @@ class TreeNameDelta(TreeDeltaAtom):
 	oldValue: str
 	newValue : str
 
-	def doDelta(self, targetRoot:TreeInterface):
+	def do(self, target:TreeInterface):
 		""""""
-		self.resolveRef(self.branchRef, targetRoot).setName(self.newValue)
-		super(TreeNameDelta, self).doDelta(targetRoot)
+		self.resolveRef(self.branchRef, target).setName(self.newValue)
 
-	def undoDelta(self, targetRoot:TreeInterface):
+	def undo(self, target:TreeInterface):
 		"""to reverse name delta, replace last address token
 		with delta result"""
 		#print("undo delta")
@@ -100,9 +98,8 @@ class TreeNameDelta(TreeDeltaAtom):
 		# replace ref address last token with new name
 		if tempRef.address:
 			tempRef.address = tempRef.address[:-1] + [self.newValue]
-		lookupBranch = self.resolveRef(self.branchRef, targetRoot)
+		lookupBranch = self.resolveRef(self.branchRef, target)
 		lookupBranch.setName(self.oldValue)
-		super(TreeNameDelta, self).undoDelta(targetRoot)
 
 
 @dataclass
@@ -114,17 +111,15 @@ class TreeValueDelta(TreeDeltaAtom):
 	oldValue: T.Any
 	newValue : T.Any
 
-	def doDelta(self, targetRoot:TreeInterface):
+	def do(self, target:TreeInterface):
 		""""""
-		lookupBranch = self.resolveRef(self.branchRef, targetRoot)
+		lookupBranch = self.resolveRef(self.branchRef, target)
 		lookupBranch.setValue(self.newValue)
-		super(TreeValueDelta, self).doDelta(targetRoot)
 
-	def undoDelta(self, targetRoot:TreeInterface):
+	def undo(self, target:TreeInterface):
 		""""""
-		lookupBranch = self.resolveRef(self.branchRef, targetRoot)
+		lookupBranch = self.resolveRef(self.branchRef, target)
 		lookupBranch.setValue(self.oldValue)
-		super(TreeValueDelta, self).undoDelta(targetRoot)
 
 # intermediate base to avoid logic duplication
 @dataclass
@@ -134,21 +129,21 @@ class _TreeCreationDeletionDeltaBase(TreeDeltaAtom):
 	treeType: type = None
 	preserveUid: bool = True
 
-	def createTreeFromData(self, targetRoot: TreeInterface) -> TreeInterface:
+	def createTreeFromData(self, target: TreeInterface) -> TreeInterface:
 		"""create a new tree, of either a type serialised in
 		this delta, or the target root's defaultCls"""
-		treeType: TreeInterface = self.treeType if self.treeType else targetRoot.defaultBranchCls()
+		treeType: TreeInterface = self.treeType if self.treeType else target.defaultBranchCls()
 		newTree = treeType.deserialiseSingle(self.serialData, preserveUid=self.preserveUid)  #
 		if self.parentRef is not None:
-			self.resolveRef(self.parentRef, targetRoot).addChild(newTree,  # index=self.index
+			self.resolveRef(self.parentRef, target).addChild(newTree,  # index=self.index
 			                                                     )
 		return newTree
 
-	def unlinkTreeByData(self, targetRoot: TreeInterface):
+	def unlinkTreeByData(self, target: TreeInterface):
 		"""if the given tree now has a parent, remove it
 		otherwise there isn't much to do to 'delete' the tree in the
 		strong sense"""
-		branch = self.resolveRef(self.branchRef, targetRoot)
+		branch = self.resolveRef(self.branchRef, target)
 		branch.remove()
 
 
@@ -161,27 +156,23 @@ class TreeCreationDelta(_TreeCreationDeletionDeltaBase):
 	operation
 	"""
 
-	def doDelta(self, targetRoot:TreeInterface, refMode=TreeReference.Mode.Uid):
+	def do(self, target:TreeInterface, refMode=TreeReference.Mode.Uid):
 		"""create new tree and add as child"""
-		newTree = self.createTreeFromData(targetRoot)
-		super().doDelta(targetRoot)
+		newTree = self.createTreeFromData(target)
 		return newTree
 
-	def undoDelta(self, targetRoot:TreeInterface=None):
-		self.unlinkTreeByData(targetRoot)
-		super().undoDelta(targetRoot)
+	def undo(self, target:TreeInterface=None):
+		self.unlinkTreeByData(target)
 
 
 @dataclass
 class TreeDeletionDelta(_TreeCreationDeletionDeltaBase):
 	"""creation but backwards"""
-	def doDelta(self, targetRoot:TreeInterface=None, refMode=TreeReference.Mode.Uid):
-		self.unlinkTreeByData(targetRoot)
-		super().doDelta(targetRoot)
+	def do(self, target:TreeInterface=None, refMode=TreeReference.Mode.Uid):
+		self.unlinkTreeByData(target)
 		pass
-	def undoDelta(self, targetRoot:TreeInterface=None):
-		newTree = self.createTreeFromData(targetRoot)
-		super().undoDelta(targetRoot)
+	def undo(self, target:TreeInterface=None):
+		newTree = self.createTreeFromData(target)
 
 
 @dataclass
@@ -192,19 +183,17 @@ class TreeMoveDelta(TreeDeltaAtom):
 	oldIndex: int
 	newIndex:int
 
-	def doDelta(self, targetRoot: TreeInterface):
-		branch = self.resolveRef(self.branchRef, targetRoot)
-		parentBranch = self.resolveRef(self.parentRef, targetRoot)
+	def do(self, target: TreeInterface):
+		branch = self.resolveRef(self.branchRef, target)
+		parentBranch = self.resolveRef(self.parentRef, target)
 		branch.remove()
 		parentBranch.addChild(branch, self.newIndex)
-		super().doDelta(targetRoot)
 
-	def undoDelta(self, targetRoot: TreeInterface):
-		branch = self.resolveRef(self.branchRef, targetRoot)
-		parentBranch = self.resolveRef(self.oldParentRef, targetRoot)
+	def undo(self, target: TreeInterface):
+		branch = self.resolveRef(self.branchRef, target)
+		parentBranch = self.resolveRef(self.oldParentRef, target)
 		branch.remove()
 		parentBranch.addChild(branch, self.oldIndex)
-		super().undoDelta(targetRoot)
 
 @dataclass
 class TreePropertyDelta(TreeDeltaAtom):
@@ -213,15 +202,13 @@ class TreePropertyDelta(TreeDeltaAtom):
 	oldValue : dict
 	newValue : dict
 
-	def doDelta(self, targetRoot:TreeInterface, refMode=TreeReference.Mode.Uid):
+	def do(self, targetRoot:TreeInterface, refMode=TreeReference.Mode.Uid):
 		# self.resolveRef(self.branchRef, targetRoot).setAuxProperty(self.key, self.newValue)
 		self.resolveRef(self.branchRef, targetRoot)._properties = self.newValue
-		super(TreePropertyDelta, self).doDelta(targetRoot)
 
-	def undoDelta(self, targetRoot:TreeInterface, refMode=TreeReference.Mode.Uid):
+	def undo(self, targetRoot:TreeInterface, refMode=TreeReference.Mode.Uid):
 		#self.resolveRef(self.branchRef, targetRoot).setAuxProperty(self.key, self.oldValue)
 		self.resolveRef(self.branchRef, targetRoot)._properties = self.oldValue
-		super(TreePropertyDelta, self).doDelta(targetRoot)
 
 treeDeltaClasses = (TreeNameDelta, TreeValueDelta, TreePropertyDelta, TreeMoveDelta, TreeCreationDelta, TreeDeletionDelta)
 
@@ -293,9 +280,9 @@ def compareBranches(a:TreeInterface, b:TreeInterface,
 		deltas.append(TreeValueDelta(
 			TreeReference(a, mode=TreeReference.Mode.RelPath), a.value, b.value))
 
-	if a.properties != b.properties:
+	if a.auxProperties != b.auxProperties:
 		deltas.append(TreePropertyDelta(
-			TreeReference(a, mode=TreeReference.Mode.RelPath), a.properties, b.properties))
+			TreeReference(a, mode=TreeReference.Mode.RelPath), a.auxProperties, b.auxProperties))
 
 	# check for move
 	if a.parent and b.parent:
@@ -362,6 +349,18 @@ def branchToSyncForDelta(delta:TreeDeltaAtom, relativeRoot:Tree)->Tree:
 	if isinstance(delta, (TreeMoveDelta, )):
 		return delta.parentRef.resolve(relativeRoot)
 	raise TypeError("unknown delta type", delta, type(delta))
+
+
+class TreeDeltaAid(DeltaAid):
+	forTypes = (TreeInterface, )
+
+	@classmethod
+	def gatherDeltas(cls, baseObj:TreeInterface, newObj:TreeInterface
+	                 ) ->list[DeltaAtom]:
+		return compareBranches(baseObj, newObj)
+
+
+
 
 # class TreeDeltaContext(DeltaContext):
 # 	"""delta context specialised for trees"""

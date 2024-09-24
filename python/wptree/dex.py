@@ -5,7 +5,8 @@ import pprint
 import typing as T
 
 from wplib import log
-from wptree import Tree, TreeInterface
+from wplib.delta import DeltaAtom
+from wptree import Tree, TreeInterface, TreeDeltaAid, TreeDeltas
 
 from wpdex import WpDex, WpDexProxy, DexPathable
 
@@ -29,18 +30,34 @@ class TreeDex(WpDex):
 
 	obj : Tree
 
-	def _buildChildren(self) ->dict[DexPathable.keyT, WpDex]:
-		# don't do a single wpdex for the whole tree
-		# for i in self.obj.allBranches(includeSelf=False):
-		# 	self.makeChildPathable((i.,), i)
-		items = {}
-		for i in self.obj.branches:
-			items[i.name] = self.makeChildPathable((i.name, ), i)
-		items["name"] = self.makeChildPathable(("name",), self.obj.name)
-		if self.obj.value is not None:
-			items["value"] = self.makeChildPathable(("value",), self.obj.value)
-		#log("buildChildren items", items)
-		return items
+	# def _buildChildren(self) ->dict[DexPathable.keyT, WpDex]:
+	# 	# don't do a single wpdex for the whole tree
+	# 	# for i in self.obj.allBranches(includeSelf=False):
+	# 	# 	self.makeChildPathable((i.,), i)
+	# 	items = {}
+	# 	for i in self.obj.branches:
+	# 		items[i.name] = self.makeChildPathable((i.name, ), i)
+	# 	items["name"] = self.makeChildPathable(("name",), self.obj.name)
+	# 	if self.obj.value is not None:
+	# 		items["value"] = self.makeChildPathable(("value",), self.obj.value)
+	# 	#log("buildChildren items", items)
+	# 	return items
+
+	def compareState(self, newDex:WpDex, baseDex:WpDex=None) ->(dict, list[DeltaAtom]):
+		"""trees should recurse down into values for everything other than
+		adding/removing branches and changing index"""
+		deltas = super().compareState(newDex=newDex, baseDex=baseDex)
+		deltas = [i for i in deltas if not isinstance(i,
+                  (TreeDeltas.Name, TreeDeltas.Value))]
+		return deltas
+
+	def _consumeFirstPathTokens(self, path:pathT) ->tuple[list[WpDex], pathT]:
+		"""process a path token"""
+		log("consume first tokens", self, path, path in self.keyDexMap, self.keyDexMap)
+		token, *path = path
+		# if isinstance(token, int):
+		# 	return [self.children[token]], path
+		return [self.keyDexMap[(token, )]], path
 
 
 
@@ -51,6 +68,17 @@ class TreeDex(WpDex):
 # 		return "<rx" + str(self._obj) + ">"
 # 	pass
 if __name__ == '__main__':
+
+	# from param import rx
+	# v = 3
+	# rv = rx(v)
+	# rv.rx.watch(lambda x : print("output", x))
+	# v += 1
+	# #rv += 1 # this invalidates rv apparently
+	# rv.rx.value += 1
+	"""raw rx really does seem a non-starter"""
+
+
 
 	eventFn = lambda *args: (print("EVENT"), pprint.pprint(args[0]))
 	t = Tree("root")
@@ -64,8 +92,15 @@ if __name__ == '__main__':
 	p = WpDexProxy(t)
 	print(p.dex().children())
 	p.dex().getEventSignal().connect(eventFn)
+	print("BEFORE SET NAME ###########")
 	p.name = "test"
-
+	print(p.dex().branches)
+	print("##################")
+	p.value = 33
+	print("##################")
+	p.value = 33
+	print("##################")
+	p.value = 55
 	# log("before call")
 	# t = p("a")
 

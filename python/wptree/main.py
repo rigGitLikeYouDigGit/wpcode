@@ -106,7 +106,7 @@ class Tree(TreeInterface,
 		self._name = name
 
 	def _setRawAuxProperties(self, props:dict):
-		self._properties = dict(props)
+		self._properties = props
 
 	def _getRawAuxProperties(self) ->dict:
 		"""return raw aux properties, without any wrapping"""

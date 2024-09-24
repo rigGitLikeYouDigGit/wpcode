@@ -4,12 +4,7 @@ import typing as T
 
 from dataclasses import dataclass, asdict
 
-#from tree.lib.object.decorator import UserDecorator
-#from tree.lib.object.framecontext import FrameContext, FrameContextVendor
 
-#from tree.lib.object.proxy import Proxy
-
-#from tree.signal import Signal
 
 if T.TYPE_CHECKING:
 	pass
@@ -162,7 +157,15 @@ class MoveDelta(PrimDeltaAtom):
 		return target
 
 
+"""looking back, a lot of the stuff below was almost there -
+the frame-aware context decorators were hell to manage, and there
+was still the issue of where to send the deltas once they were detected
 
+the dex system's insight was to have a fully separate structure to
+deal with all the meta-behaviour, rather
+than try and pack every esoteric system into the base definition
+of an object
+"""
 
 #
 # class DeltaContext(FrameContext):

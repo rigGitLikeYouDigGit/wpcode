@@ -21,6 +21,9 @@ class TreeReference(ObjectReference):
 	in a tree - especially when using transform chains
 
 	used as a component to pass-through tree proxies
+
+	TODO: is this REALLY needed, can't we just store the path
+	 and let pathable do everything
 	"""
 	class Mode(Enum):
 		Uid = "uid"
