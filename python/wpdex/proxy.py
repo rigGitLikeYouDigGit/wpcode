@@ -242,9 +242,42 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 
 		# consider instance methods that "return self"
 		# check if a proxy already exists for that object and return it
-		checkExisting = self._existingProxy(toReturn)
-		if checkExisting is not None:
-			toReturn = checkExisting
+		# checkExisting = self._existingProxy(toReturn)
+		# if checkExisting is not None:
+		# 	toReturn = checkExisting
+
+		# get existing dex for this proxy if found
+		"""
+		delta gathering on wpdex side works super well - all we need from the proxy is:
+		- way to detect changes
+		- way to associate objects with a WpDex (with one spot in hierarchy)
+		- wrapper to set up rx expressions
+		
+		if it weren't for immutable numbers and interning this would LITERALLY
+		just work - but of course, there is no way to tell one True apart from another. Anywhere we can use id(), we cruise.
+		SO we do some more digging
+		
+		
+		ok for now we just can't do it.
+		if you want to set up an expression from an integer, you start by referencing that
+		point in hierarchy with a path, and go from there.
+		for any immutable object, we just can't do it.
+		
+		BECAUSE the alternative (as we have right now) is inserting proxy objects directly
+		between the existing objects, regenerating new objects all the time, 
+		all that crazy stuff. 
+		The example of Tree.commonParent() checks if "self.root is otherBranch.root" -
+		totally sane and readable way of coding, and with proxies it's 50/50.
+		for immutable values, the way to associate them consistently would be to wrap literally every attribute of every object throughout the structure, even the internal ones.
+		(I think this is actually what rx does, but shockingly a commercial software company have done a better job)
+		 
+		within a proxy environment, who knows 
+		
+		
+		"""
+		foundDex = WpDex.dexForObj(id(toReturn))
+		toReturn = WpDexProxy(toReturn, wpDex=foundDex)
+
 		return toReturn
 
 	def _beforeProxySetAttr(self, attrName:str, attrVal:T.Any,

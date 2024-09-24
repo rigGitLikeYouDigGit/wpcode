@@ -234,10 +234,11 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		# do we build on init?
 		#self.updateChildren()
 
-	def dexForObj(self, obj)->WpDex:
+	@classmethod
+	def dexForObj(cls, obj)->WpDex:
 		"""if object is immutable, it gets super annoying, since those won't have unique ids across all of the interpreter -
 		consider passing in a known parent object to narrow down?"""
-		return self.objIdDexMap.get(id(obj))
+		return cls.objIdDexMap.get(id(obj))
 
 	def makeChildPathable(self, key:tuple[keyType], obj:T.Any)->WpDex:
 		"""make a child pathable object"""
