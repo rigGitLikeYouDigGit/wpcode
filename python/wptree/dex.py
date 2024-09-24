@@ -101,8 +101,11 @@ if __name__ == '__main__':
 	p.value = 33
 	print("##################")
 	p.value = 55
-	# log("before call")
-	# t = p("a")
+	print("##########")
+	log("before call")
+	t = p("a")
+	print("#########")
+	t = p("a")
 
 
 
