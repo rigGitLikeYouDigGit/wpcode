@@ -107,6 +107,8 @@ if __name__ == '__main__':
 	print("#########")
 	t = p("a")
 
+	log(t.commonParent(p))
+
 
 
 

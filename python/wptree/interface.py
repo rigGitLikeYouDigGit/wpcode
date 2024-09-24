@@ -95,10 +95,17 @@ class TreeInterface(Traversable,
 		#log("tree newObj", baseObj, type(baseObj))
 		# log("tree childDatas", childDatas)
 		#log(getattr(type(baseObj), "_generated", False))
+		kwargs = {}
+		if isinstance(params, dict) and params.get("PreserveUid"):
+			if hasattr(baseObj, "uid"):
+				kwargs["uid"] = baseObj.uid
+
 		tree = type(baseObj)(
 			name=childDatas[0][1], #name
-			value=childDatas[1][1] # value
+			value=childDatas[1][1], # value
+			**kwargs
 		)
+
 		tree._setRawAuxProperties(childDatas[2][1])
 		for key, obj, data in childDatas[3:]:
 			assert isinstance(obj, TreeInterface)
@@ -649,7 +656,7 @@ class TreeInterface(Traversable,
 		if one branch is direct parent of the other,
 		that branch will be returned
 		"""
-		# #print("commonParent")
+		log("commonParent", self.root, otherBranch.root, self.root is otherBranch.root)
 		if self.root is not otherBranch.root:
 			return None
 		otherTrunk = set(otherBranch.trunk(includeSelf=True, includeRoot=True))

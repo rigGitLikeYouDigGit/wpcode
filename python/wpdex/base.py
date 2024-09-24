@@ -203,6 +203,8 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		"split",
 	}
 
+	objIdDexMap : dict[int, WpDex] = {}
+
 	def _newPersistData(self)->dict:
 		"""return a new dict to store data"""
 		return {"deltaBase" : None}
@@ -218,10 +220,8 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		self.parent = parent
 		self.obj = obj
 		self.key = tuple(key or [])
+		self.objIdDexMap[id(obj)] = self
 
-		# keep map of {child object id : WpDex holding that object}
-		# goes against pathable to keep store of child objects
-		self.childIdDexMap : dict[int, WpDex] = {}
 		self.keyDexMap : dict[DexPathable.keyT, WpDex] = {}
 
 		# save data against paths to persist across
@@ -234,6 +234,10 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		# do we build on init?
 		#self.updateChildren()
 
+	def dexForObj(self, obj)->WpDex:
+		"""if object is immutable, it gets super annoying, since those won't have unique ids across all of the interpreter -
+		consider passing in a known parent object to narrow down?"""
+		return self.objIdDexMap.get(id(obj))
 
 	def makeChildPathable(self, key:tuple[keyType], obj:T.Any)->WpDex:
 		"""make a child pathable object"""
@@ -288,14 +292,14 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		log(" after add", self.branches)
 
 
-	def updateChildren(self):
+	def updateChildren(self, recursive=False):
 		self._gatherRootData()
 		self.keyDexMap.clear()
 
 		self.keyDexMap.update(self._buildChildren())
-		self.childIdDexMap.update({id(v.obj) : v for v in self.keyDexMap.values()})
 		for v in self.keyDexMap.values():
-			self.childIdDexMap.update(v.childIdDexMap)
+			if recursive:
+				v.updateChildren(recursive=recursive)
 		self._restoreChildDatasFromRoot()
 
 
@@ -545,13 +549,15 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		delegate to specific dex classes to process deltas between two 
 		objects of their type, where they match
 		"""
+		liveRoot = self.staticCopy()
 		toIter = [baseState]
 		while toIter:
 			baseDex = toIter.pop(0)
 			basePath = tuple(baseDex.path)
 			log(" base", baseDex, basePath, baseDex.branches)
 			try:
-				liveDex : WpDex = self.access(self, basePath, values=False)
+				#liveDex : WpDex = self.access(self, basePath, values=False)
+				liveDex : WpDex = liveRoot.access(liveRoot, basePath, values=False)
 			except KeyError as e: # if a path is missing
 				log("keyError", )
 				#raise e

@@ -70,6 +70,16 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 	we're not adding functionality to edit strings in-place, so we delegate
 	hash to the immutable object as normal - all the proxy does is watch it
 	and provide a hook for rx. the source stays the same
+
+	now go back to interface layer idea, rather than embedding proxies into hierarchy -
+	INTERNALLY, wrappe object should be able to verify itself
+	with "is" and exact checks - shouldn't ever touch a proxy directly
+
+	proxy only exists to capture calls and sets -
+	proxy[0] just returns a simple proxy of that value, if it's already wrapped by a proxy/dex
+
+	proxy.x()[0] returns a dynamic expression of looking up that value whenever it's evaluated (somehow unify with param.rx)
+
 	"""
 	_classProxyCache : dict[type, dict[type, type]] = defaultdict(dict) # { class : { class cache } }
 
@@ -88,6 +98,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 
 		self._proxyData["deltaStartState"] = None
 		self._proxyData["deltaCallDepth"] = 0
+		self._proxyData["externalCallDepth"] = 0
 
 		self._proxyData["parent"] = self._proxyData.get("parent", None)
 
@@ -171,6 +182,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		"""open a delta if mutating method called"""
 		#log(f"before proxy call {methodName}, {methodArgs, methodKwargs}", vars=0)
 		fn, args, kwargs, targetInstance, beforeData = super()._beforeProxyCall(methodName, methodArgs, methodKwargs, targetInstance)
+		self._proxyData["externalCallDepth"] += 1
 
 		# if not self.dex().childIdDexMap:
 		# 	self.dex().updateChildren()
@@ -197,16 +209,13 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		TODO: should we check validation here, or should there be a separate
 		 signal / event before the call to check arguments
 		"""
-		#log(f"after proxy call {methodName}, {methodArgs, methodKwargs}", vars=0)
-
-		#close delta first
-		# if methodName in self.dex().mutatingMethodNames:
-		# 	self._emitDelta()
-
 		callResult = super()._afterProxyCall(
 			methodName, method, methodArgs, methodKwargs, targetInstance, callResult,
 			beforeData, exception
 		)
+		self._proxyData["externalCallDepth"] -= 1
+
+
 		toReturn = callResult
 
 		if methodName in self.dex().mutatingMethodNames:
@@ -243,6 +252,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 	                     ) ->tuple[str, T.Any, object, dict]:
 		"""in general we assume setting an attribute will usually 
 		mutate an object"""
+		self._proxyData["externalCallDepth"] += 1
 		self._openDelta()
 		return super()._beforeProxySetAttr(attrName, attrVal, targetInstance)
 
@@ -250,8 +260,27 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 	                     targetInstance:object, beforeData:dict, exception=None
 	                     ) ->None:
 		self.updateProxy()
+		self._proxyData["externalCallDepth"] -= 1
 		self._emitDelta()
 		return super()._afterProxySetAttr(attrName, attrVal, targetInstance, beforeData, exception)
+	
+	# def _beforeProxyGetAttr(self, attrName:str,
+	#                      targetInstance:object
+	#                      ) ->tuple[str, object, dict]:
+	# 	self._proxyData["externalCallDepth"] += 1
+	# 	return super()._beforeProxyGetAttr(attrName, targetInstance)
+	#
+	# def _afterProxyGetAttr(self, attrName:str, attrVal:T.Any,
+	#                      targetInstance:object, beforeData:dict, exception=None
+	#                      ) ->T.Any:
+	# 	"""if it's an internal call, flatten result if it's a proxy"""
+	# 	result = super()._afterProxyGetAttr(attrName, attrVal, targetInstance, beforeData, exception)
+	# 	self._proxyData["externalCallDepth"] -= 1
+	# 	if self._proxyData["deltaCallDepth"] > 0:
+	# 		if isinstance(result, WpDexProxy):
+	# 			result = result._proxyTarget()
+	# 	return result
+
 
 	def updateProxy(self):
 		""" we can't keep regenerating new proxy objects or no references will
@@ -302,7 +331,8 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 			all the child refs survive as well"""
 			#log("   updating", self, childObjects)
 			#log([type(i[1]) for i in childObjects])
-			newObj = adaptor.newObj(self._proxyData["target"], childObjects, {})
+			newObj = adaptor.newObj(
+				self._proxyData["target"], childObjects, params={"PreserveUid" : True})
 			#log("final childObjects", adaptor.childObjects(newObj, {}))
 			#log([type(i[1]) for i in adaptor.childObjects(newObj, {})])
 			self._setProxyTarget(self, newObj)
