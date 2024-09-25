@@ -111,8 +111,8 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 
 		self._proxyData["branches"] = {}
 
-		#self.dex().updateChildren()
-		self.updateProxy()
+		#self.dex().updateChildren(recursive=1)
+		#self.updateProxy()
 
 
 	def dex(self)->WpDex:
@@ -134,15 +134,15 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 			# 	self._proxyCleanResult(),
 			# 	serialParams={"TreeSerialiseUid" : False}
 			# )
-			log("OPEN ", self, "prepped", self.dex().isPreppedForDeltas, self.dex().branches)
+			#log("OPEN ", self, "prepped", self.dex().isPreppedForDeltas, self.dex().branches)
 			if not self.dex().isPreppedForDeltas:
 				self.dex().prepForDeltas()
 		self._proxyData["deltaCallDepth"] += 1
 
 	def _emitDelta(self):
 		"""emit a delta for this object"""
-		log("emitDelta", self._proxyTarget(), self._proxyTarget().childObjects({}))
-		log( " live dex", self.dex(), self.dex().branches)
+		#log("emitDelta", self._proxyTarget(), self._proxyTarget().childObjects({}))
+		#log( " live dex", self.dex(), self.dex().branches)
 		self._proxyData["deltaCallDepth"] -= 1
 		if self._proxyData["deltaCallDepth"] == 0:
 			# self._proxyData["deltaEndState"] = serialise(
@@ -154,7 +154,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 				# self._proxyData["deltaStartState"],
 				# self._proxyData["deltaEndState"],
 			)
-			log("WPX", self, "result deltaMap", deltaMap)
+			#log("WPX", self, "result deltaMap", deltaMap)
 			#if deltaMap:
 			# delta = DeltaAtom(self._proxyData["deltaStartState"], self._proxyData["target"])
 			self._proxyData["deltaStartState"] = None
@@ -184,14 +184,19 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		fn, args, kwargs, targetInstance, beforeData = super()._beforeProxyCall(methodName, methodArgs, methodKwargs, targetInstance)
 		self._proxyData["externalCallDepth"] += 1
 
-		# if not self.dex().childIdDexMap:
-		# 	self.dex().updateChildren()
-		#
+		# don't pass proxies into the base objects
+		filterArgs = []
+		for i in args:
+			filterArgs.append(i._proxyTarget() if isinstance(i, Proxy) else i)
+		filterKwargs = {}
+		for k, v in kwargs.items():
+			filterKwargs[k] = v._proxyTarget() if isinstance(v, Proxy) else v
+
 		# check if method will mutate data - need to open a delta
 		if methodName in self.dex().mutatingMethodNames:
 			self._openDelta()
 
-		return fn, args, kwargs, targetInstance, beforeData
+		return fn, tuple(filterArgs), filterKwargs, targetInstance, beforeData
 
 	def _afterProxyCall(self, methodName:str,
 	                    method:T.Callable,
@@ -209,12 +214,14 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		TODO: should we check validation here, or should there be a separate
 		 signal / event before the call to check arguments
 		"""
+
 		callResult = super()._afterProxyCall(
 			methodName, method, methodArgs, methodKwargs, targetInstance, callResult,
 			beforeData, exception
 		)
-		self._proxyData["externalCallDepth"] -= 1
 
+		self._proxyData["externalCallDepth"] -= 1
+		#log("after call", methodName, methodArgs, callResult, self._proxyData["externalCallDepth"])
 
 		toReturn = callResult
 
@@ -231,9 +238,9 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 			"""
 
 			# ensure every bit of the structure is still wrapped in a proxy
-			self.updateProxy()
+			#self.updateProxy()
 
-			#self.dex().updateChildren()
+			self.dex().updateChildren(recursive=1)
 
 
 		# if mutating method called, finally emit delta
@@ -275,8 +282,13 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		
 		
 		"""
-		foundDex = WpDex.dexForObj(id(toReturn))
-		toReturn = WpDexProxy(toReturn, wpDex=foundDex)
+		foundDex = WpDex.dexForObj(toReturn)
+		#log("found dex", foundDex, toReturn,  self._proxyData["externalCallDepth"])
+		if foundDex:
+			if self._proxyData["externalCallDepth"] == 0:
+
+				toReturn = WpDexProxy(toReturn, wpDex=foundDex)
+				#log("returning proxy", toReturn)
 
 		return toReturn
 
@@ -287,32 +299,39 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		mutate an object"""
 		self._proxyData["externalCallDepth"] += 1
 		self._openDelta()
+		if isinstance(attrVal, Proxy):
+			attrVal = attrVal._proxyTarget()
 		return super()._beforeProxySetAttr(attrName, attrVal, targetInstance)
 
 	def _afterProxySetAttr(self, attrName:str, attrVal:T.Any,
 	                     targetInstance:object, beforeData:dict, exception=None
 	                     ) ->None:
-		self.updateProxy()
+		#self.updateProxy()
+		self.dex().updateChildren(recursive=1)
 		self._proxyData["externalCallDepth"] -= 1
 		self._emitDelta()
 		return super()._afterProxySetAttr(attrName, attrVal, targetInstance, beforeData, exception)
-	
-	# def _beforeProxyGetAttr(self, attrName:str,
-	#                      targetInstance:object
-	#                      ) ->tuple[str, object, dict]:
-	# 	self._proxyData["externalCallDepth"] += 1
-	# 	return super()._beforeProxyGetAttr(attrName, targetInstance)
-	#
-	# def _afterProxyGetAttr(self, attrName:str, attrVal:T.Any,
-	#                      targetInstance:object, beforeData:dict, exception=None
-	#                      ) ->T.Any:
-	# 	"""if it's an internal call, flatten result if it's a proxy"""
-	# 	result = super()._afterProxyGetAttr(attrName, attrVal, targetInstance, beforeData, exception)
-	# 	self._proxyData["externalCallDepth"] -= 1
-	# 	if self._proxyData["deltaCallDepth"] > 0:
-	# 		if isinstance(result, WpDexProxy):
-	# 			result = result._proxyTarget()
-	# 	return result
+
+	def _beforeProxyGetAttr(self, attrName:str,
+	                     targetInstance:object
+	                     ) ->tuple[str, object, dict]:
+		self._proxyData["externalCallDepth"] += 1
+		return super()._beforeProxyGetAttr(attrName, targetInstance)
+
+	def _afterProxyGetAttr(self, attrName:str, attrVal:T.Any,
+	                     targetInstance:object, beforeData:dict, exception=None
+	                     ) ->T.Any:
+		"""if it's an internal call, flatten result if it's a proxy"""
+		result = super()._afterProxyGetAttr(attrName, attrVal, targetInstance, beforeData, exception)
+		self._proxyData["externalCallDepth"] -= 1
+		if self._proxyData["deltaCallDepth"] > 0:
+			if isinstance(result, WpDexProxy):
+				result = result._proxyTarget()
+		else:
+			foundDex = WpDex.dexForObj(result)
+			if foundDex:
+				result = WpDexProxy(result, wpDex=foundDex)
+		return result
 
 
 	def updateProxy(self):
@@ -329,53 +348,57 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		child objects have to be the same between proxy and wpdex, insane otherwise
 
 		"""
+		raise
 		log("update proxy", self)
-		adaptor = VisitAdaptor.adaptorForObject(self._proxyData["target"])
-		childObjects = list(adaptor.childObjects(self._proxyData["target"], {}))
-		#childObjects = { k : v.obj for k, v in self.dex().keyDexMap.items()}
-		# returns list of 3-tuples (index, value, childType)
-		needsUpdate = False
-		#for i, (k, t) in enumerate(childObjects.items()):
-		for i, t in enumerate(childObjects):
-			#log(" tie", t)
-			if isinstance(t[1], WpDexProxy):
-				# #raise RuntimeError
-				# t[1]._proxyData["parent"] = self
-				# #t[1].dex().parent = self.dex()
-				# self.dex().addBranch(t[1].dex(), key=(t[0], ))
-				# t[1].updateProxy()
-				pass
-			else:
-				needsUpdate = True
+		self.dex().updateChildren(recursive=1)
 
-				# ADD IN PATH LOOKUP HERE to check if proxy is already known
-				log("wrap child", t[1])
-				proxy = WpDexProxy(t[1], isRoot=False,
-				                   proxyData={"parent" : self})
-				if proxy is not None: # if you wrap a proxy of None
-					#log(" add child proxy", self, proxy.dex(), t)
-					self.dex().addBranch(proxy.dex(), key=(t[0], ))
-					#proxy.dex().updateChildren()
+		# adaptor = VisitAdaptor.adaptorForObject(self._proxyData["target"])
+		# childObjects = list(adaptor.childObjects(self._proxyData["target"], {}))
+		# #childObjects = { k : v.obj for k, v in self.dex().keyDexMap.items()}
+		# # returns list of 3-tuples (index, value, childType)
+		# needsUpdate = False
+		# #for i, (k, t) in enumerate(childObjects.items()):
+		#
+		# for i, t in enumerate(childObjects):
+		# 	#log(" tie", t)
+		# 	if isinstance(t[1], WpDexProxy):
+		# 		# #raise RuntimeError
+		# 		# t[1]._proxyData["parent"] = self
+		# 		# #t[1].dex().parent = self.dex()
+		# 		# self.dex().addBranch(t[1].dex(), key=(t[0], ))
+		# 		# t[1].updateProxy()
+		# 		pass
+		# 	else:
+		# 		needsUpdate = True
+		#
+		# 		# ADD IN PATH LOOKUP HERE to check if proxy is already known
+		# 		log("wrap child", t[1])
+		# 		proxy = WpDexProxy(t[1], isRoot=False,
+		# 		                   proxyData={"parent" : self})
+		# 		if proxy is not None: # if you wrap a proxy of None
+		# 			#log(" add child proxy", self, proxy.dex(), t)
+		# 			self.dex().addBranch(proxy.dex(), key=(t[0], ))
+		# 			#proxy.dex().updateChildren()
+		#
+		# 		childObjects[i] = (t[0], proxy, t[2])
+		# if needsUpdate:
+		# 	"""this WORKS, and doesn't break external references, since the refs are
+		# 	to THIS proxy object, not the internal one being changed here.
+		# 	all the child refs survive as well"""
+		# 	#log("   updating", self, childObjects)
+		# 	#log([type(i[1]) for i in childObjects])
+		# 	newObj = adaptor.newObj(
+		# 		self._proxyData["target"], childObjects, params={"PreserveUid" : True})
+		# 	#log("final childObjects", adaptor.childObjects(newObj, {}))
+		# 	#log([type(i[1]) for i in adaptor.childObjects(newObj, {})])
+		# 	self._setProxyTarget(self, newObj)
 
-				childObjects[i] = (t[0], proxy, t[2])
-		if needsUpdate:
-			"""this WORKS, and doesn't break external references, since the refs are
-			to THIS proxy object, not the internal one being changed here.
-			all the child refs survive as well"""
-			#log("   updating", self, childObjects)
-			#log([type(i[1]) for i in childObjects])
-			newObj = adaptor.newObj(
-				self._proxyData["target"], childObjects, params={"PreserveUid" : True})
-			#log("final childObjects", adaptor.childObjects(newObj, {}))
-			#log([type(i[1]) for i in adaptor.childObjects(newObj, {})])
-			self._setProxyTarget(self, newObj)
-
-		for i in adaptor.childObjects(self._proxyData["target"], {}):
-			if i[1] is None:
-				continue
-
-
-		#TODO: WHERE TO RECURSE DEX, UPDATE CHILDREN????
+		# for i in adaptor.childObjects(self._proxyData["target"], {}):
+		# 	if i[1] is None:
+		# 		continue
+		#
+		#
+		# #TODO: WHERE TO RECURSE DEX, UPDATE CHILDREN????
 
 
 		#self.dex().updateChildren()
@@ -392,7 +415,8 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		if not "wpDex" in proxy._proxyData:
 			return
 		proxy.dex().obj = target
-		proxy._linkDexProxyChildren()
+		proxy.dex().updateChildren()
+		#proxy._linkDexProxyChildren()
 
 	def _linkDexProxyChildren(self):
 		"""run at end to regenerate links between structures -

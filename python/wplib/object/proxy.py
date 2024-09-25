@@ -293,15 +293,16 @@ class Proxy(#ABC,
 		return result
 
 	@classmethod
-	def flatten(cls, target):
+	def flatten(cls, target, serialParams=None):
 		"""return a version of a data structure guaranteed to contain no proxies"""
 		op = FlattenProxyOp()
 		visitor = DeepVisitor()
+		serialParams = serialParams or {}
 		params = DeepVisitor.VisitPassParams(
 			topDown=True,
 			transformVisitedObjects=True,
 			visitFn=op.visit,
-			visitKwargs={"serialParams": {"TreeSerialiseUid": False}}
+			visitKwargs={"serialParams": serialParams}
 		)
 		result = visitor.dispatchPass(
 			fromObj=target,

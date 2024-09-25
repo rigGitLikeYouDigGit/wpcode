@@ -53,7 +53,8 @@ class TreeDex(WpDex):
 
 	def _consumeFirstPathTokens(self, path:pathT) ->tuple[list[WpDex], pathT]:
 		"""process a path token"""
-		log("consume first tokens", self, path, path in self.keyDexMap, self.keyDexMap)
+		path = tuple(path)
+		#log("consume first tokens", self, path, path in self.keyDexMap, self.keyDexMap)
 		token, *path = path
 		# if isinstance(token, int):
 		# 	return [self.children[token]], path
@@ -89,26 +90,64 @@ if __name__ == '__main__':
 	# t["a", "b"]
 	#t["a", "b", "c"] = 4
 
+	t("a").value = 33
+	dex = WpDex(t)
+
+	a = dex.staticCopy()
+	b = dex.staticCopy()
+	assert a.obj.uid == b.obj.uid
+
+	log(WpDex.dexForObj(t))
+
 	p = WpDexProxy(t)
-	print(p.dex().children())
 	p.dex().getEventSignal().connect(eventFn)
-	print("BEFORE SET NAME ###########")
-	p.name = "test"
-	print(p.dex().branches)
-	print("##################")
-	p.value = 33
-	print("##################")
-	p.value = 33
-	print("##################")
-	p.value = 55
-	print("##########")
-	log("before call")
-	t = p("a")
-	print("#########")
-	t = p("a")
 
-	log(t.commonParent(p))
 
+	log(p("a") is dex.access(dex, "a", values=False).obj)
+	#log(p("a"))
+
+	log("fffff")
+	# log(id(t) in dex.objIdDexMap)
+	# log(id(t("a")) in dex.objIdDexMap)
+	# log(dex.dexForObj(t("a")))
+
+	a = p("a")
+	log(a, a.root) # both proxies
+	d = a("b", "c", "d")
+	log("###############")
+	#log(d)
+	log(d.dex())
+
+	f = a("b", "gg", "f")
+	print("")
+	log("##########", f)
+	cpar = f.commonParent(d)
+	log(cpar)
+
+
+	#print(dex.allBranches(includeSelf=1))
+
+
+	# p = WpDexProxy(t)
+	# print(p.dex().children())
+	# p.dex().getEventSignal().connect(eventFn)
+	# #print("BEFORE SET NAME ###########")
+	# #p.name = "test"
+	# # print(p.dex().branches)
+	# # print("##################")
+	# # p.value = 33
+	# # print("##################")
+	# # p.value = 33
+	# # print("##################")
+	# # p.value = 55
+	# # print("##########")
+	# # log("before call")
+	# # t = p("a")
+	# print("#########")
+	# t = p("a")
+	#
+	# log(t.commonParent(p))
+	# log(t, type(t))
 
 
 

@@ -92,11 +92,11 @@ class TreeInterface(Traversable,
 		"""create a new tree object from a base object and child type list
 		list of child branches should already have been regenerated
 		"""
-		#log("tree newObj", baseObj, type(baseObj))
+		#log("tree newObj", params, baseObj, type(baseObj))
 		# log("tree childDatas", childDatas)
 		#log(getattr(type(baseObj), "_generated", False))
 		kwargs = {}
-		if isinstance(params, dict) and params.get("PreserveUid"):
+		if params.visitKwargs.get("serialParams").get("PreserveUid"):
 			if hasattr(baseObj, "uid"):
 				kwargs["uid"] = baseObj.uid
 
@@ -396,8 +396,9 @@ class TreeInterface(Traversable,
 		return self._getRawAuxProperties()
 
 	def getAuxProperty(self, key: (str, AuxKeys), default=None):
-		if isinstance(key, self.AuxKeys):
-			key = str(key)
+		# if isinstance(key, self.AuxKeys):
+		# 	key = str(key)
+		key = str(key)
 		return self.auxProperties.get(key, default)
 
 	def setAuxProperty(self, key: str, value):
@@ -656,7 +657,7 @@ class TreeInterface(Traversable,
 		if one branch is direct parent of the other,
 		that branch will be returned
 		"""
-		log("commonParent", self.root, otherBranch.root, self.root is otherBranch.root)
+		#log("commonParent", self.root, otherBranch.root, self.root is otherBranch.root)
 		if self.root is not otherBranch.root:
 			return None
 		otherTrunk = set(otherBranch.trunk(includeSelf=True, includeRoot=True))

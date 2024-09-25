@@ -19,7 +19,7 @@ class DictDex(WpDex):
 		#         for i, (k, v) in enumerate(self.obj.items())]
 		#log("building children for dict", self.obj)
 		items = { k : self.makeChildPathable((k,), v) for k, v in self.obj.items()}
-		items["keys()"] = self.makeChildPathable(("keys()",), list(self.obj.keys()))
+		#items["keys()"] = self.makeChildPathable(("keys()",), list(self.obj.keys()))
 		return items
 
 	def _consumeFirstPathTokens(self, path:pathT) ->tuple[list[Pathable], pathT]:

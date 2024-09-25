@@ -114,7 +114,7 @@ class DexPathable:
 
 		# combine / flatten results
 		results = foundPathables
-		log("results", results)
+		#log("results", results)
 		# check if needed to error
 		if not results:
 			# format of default overrides one/many, since it's provided directly
@@ -232,7 +232,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		self.isPreppedForDeltas = False
 
 		# do we build on init?
-		#self.updateChildren()
+		self.updateChildren(recursive=0)
 
 	@classmethod
 	def dexForObj(cls, obj)->WpDex:
@@ -259,6 +259,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		children = {}
 		adaptor = VisitAdaptor.adaptorForObject(self.obj)
 		childObjects = list(adaptor.childObjects(self.obj, {}))
+		#log("child objects for ", self.obj, childObjects)
 		# childObjects = { k : v.obj for k, v in self.dex().keyDexMap.items()}
 		# returns list of 3-tuples (index, value, childType)
 		needsUpdate = False
@@ -266,7 +267,13 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		for i, t in enumerate(childObjects):
 			if t[1] is None: continue # maybe
 			key = (t[0], )
-			children[key] = self.makeChildPathable(key, t[1])
+			foundDex = self.dexForObj(t[1])
+			#log("id dex map", self.objIdDexMap)
+			#log("found dex for", t[1], foundDex)
+			if foundDex:
+				self.addBranch(foundDex, key)
+			else:
+				children[key] = self.makeChildPathable(key, t[1])
 		return children
 
 
@@ -285,23 +292,25 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		if key:
 			newDex.key = key
 		#key = newDex.key
-		log("addBranch", self, newDex, key, newDex.key)
+		#log("addBranch", self, newDex, key, newDex.key)
 		assert newDex.key
 		self.keyDexMap[tuple(key)] = newDex
 		newDex.parent = self
-		log( " added", newDex, newDex.key, newDex.path, newDex.parent, newDex.parent is self)
-		log(" after add", self.branches)
+		#log( " added", newDex, newDex.key, newDex.path, newDex.parent, newDex.parent is self)
+		#log(" after add", self.branches)
 
 
 	def updateChildren(self, recursive=False):
-		self._gatherRootData()
+		a = 1
+		#log("update children", self, recursive)
+		#self._gatherRootData()
 		self.keyDexMap.clear()
 
 		self.keyDexMap.update(self._buildChildren())
 		for v in self.keyDexMap.values():
 			if recursive:
 				v.updateChildren(recursive=recursive)
-		self._restoreChildDatasFromRoot()
+		#self._restoreChildDatasFromRoot()
 
 
 	# TODO TODO TODO TODO TODO
@@ -459,8 +468,8 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 
 		that way it even works for a diamond shape, without worrying
 		about unique vs alias paths, I think it's cool"""
-		log("handleEvent", self)
-		log(event)
+		#log("handleEvent", self)
+		#log(event)
 		if "path" in event:
 			event["path"].insert(0, self.key)
 		else:
@@ -470,12 +479,13 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 	def staticCopy(self)->WpDex:
 		"""return a fully separate hierarchy, wrapped in a separate
 		network of WpDex objects"""
+		serialParams = {"PreserveUid" : True}
 		dex = WpDex(deserialise(serialise(Proxy.flatten(
-			self.obj
-		), serialParams={"PreserveUid" : True}),
-			serialParams={"PreserveUid" : True}
+			self.obj, serialParams=serialParams,
+		), serialParams=serialParams),
+			serialParams=serialParams
 		))
-		dex.updateChildren()
+		dex.updateChildren(recursive=1)
 		return dex
 
 
@@ -511,7 +521,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		# 	log("prep deltas ", i)
 		# 	i._persistData["deltaBase"] = i.getStateForDelta()
 		self._persistData["deltaBase"] = self.staticCopy()
-		log("static copy", self._persistData["deltaBase"], self._persistData["deltaBase"].branches)
+		#log("static copy", self._persistData["deltaBase"], self._persistData["deltaBase"].branches)
 		self.isPreppedForDeltas = True
 
 	def compareState(self, newDex:WpDex, baseDex:WpDex=None)->(dict, list[DeltaAtom]):
@@ -536,7 +546,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 	def gatherDeltas(self, #startState, endState
 	                 )->dict[DexPathable.pathT, (list, dict)]:
 		deltas = {}
-		log("GATHER", self, self.branches)
+		#log("GATHER", self, self.branches)
 		self.isPreppedForDeltas = False
 		baseState : WpDex = self._persistData["deltaBase"]
 		assert baseState is not None
@@ -555,7 +565,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		while toIter:
 			baseDex = toIter.pop(0)
 			basePath = tuple(baseDex.path)
-			log(" base", baseDex, basePath, baseDex.branches)
+			#log(" base", baseDex, basePath, baseDex.branches)
 			try:
 				#liveDex : WpDex = self.access(self, basePath, values=False)
 				liveDex : WpDex = liveRoot.access(liveRoot, basePath, values=False)
@@ -564,7 +574,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 				#raise e
 				deltas[basePath] = {"remove" : basePath}
 				continue
-			log(" live", liveDex, liveDex.path, liveDex.branches)
+			#log(" live", liveDex, liveDex.path, liveDex.branches)
 
 			if not isinstance(liveDex.obj, type(baseDex.obj)):
 				# type entirely changed
@@ -580,7 +590,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 					deltas[tuple(dex.path)] = {"added" : dex}
 
 			try:
-				log("compare", baseDex.obj, liveDex.obj)
+				#log("compare", baseDex.obj, liveDex.obj)
 				itemDeltas = baseDex.compareState(liveDex)
 
 			except NotImplementedError:

@@ -119,7 +119,8 @@ class Adaptor:
 		if cls.dispatchInit and not cls.forTypes:
 			adaptorType = cls.adaptorForType(type(args[0]))
 			assert adaptorType, f"No adaptor for type {type(args[0])}"
-			return adaptorType(*args, **kwargs)
+			#return adaptorType(*args, **kwargs)
+			return adaptorType.__new__(adaptorType, *args, **kwargs)
 		return object.__new__(cls)
 	# endregion
 
