@@ -27,7 +27,8 @@ move this to lib.object
 
 
 
-class Pathable(Adaptor):
+class Pathable(#Adaptor
+               ):
 	"""pathable object - can be pathed into, and can return a path.
 
 	immutable in the sense that whenever items change, a new object is created
@@ -94,9 +95,9 @@ class Pathable(Adaptor):
 				"""flatten results"""
 				return results[0]
 
-	adaptorTypeMap = Adaptor.makeNewTypeMap()
+	#adaptorTypeMap = Adaptor.makeNewTypeMap()
 
-	dispatchInit = True # Pathable([1, 2, 3]) will return a specialised ListPathable object
+	#dispatchInit = True # Pathable([1, 2, 3]) will return a specialised ListPathable object
 
 	keyT = T.Union[str, int]
 	#keyT = T.Union[keyT, tuple[keyT, ...]]
@@ -119,43 +120,33 @@ class Pathable(Adaptor):
 			dex: roots are any object with a flag set-
 			pathable: _ root _ is _ root _
 		"""
-		self.obj = obj
-		self.parent = parent
-		self.name = name
+		self._obj = None
+		self._parent = None
+		self._name = None
+		self.setObj(obj)
+		self._setParent(parent)
+		self.setName(name)
 
 		self._branchMap = None # built on request
 
-		# self.parents = sequence.toSeq(parents)
-		# self.keys = sequence.toSeq(key)
+	@property
+	def obj(self):
+		return self._obj
+	def setObj(self, obj:T.Any):
+		self._obj = obj
+	@property
+	def parent(self)->(Pathable, None):
+		return self._parent
+	def _setParent(self, parent:Pathable):
+		"""private as you should use addBranch to control hierarchy
+		from parent to child - addBranch will call this internally"""
+		self._parent = parent
+	@property
+	def name(self)->keyT:
+		return self._name
+	def setName(self, name:keyT):
+		self._name = name
 
-	# @property
-	# def parent(self)->Pathable:
-	# 	return self.parents[0] if self.parents else None
-	# @property
-	# def key(self)->keyT:
-	# 	return self.keys[0] if
-
-	# 	self._obj = None
-	# 	self._parent = None
-	# 	self._key = None
-	# 	self.setObj(obj)
-	# 	self.setParent(parent)
-	# 	self.setKey(key)
-	# @property
-	# def obj(self):
-	# 	return self._obj
-	# def setObj(self, obj:T.Any):
-	# 	self._obj = obj
-	# @property
-	# def parent(self)->(Pathable, None):
-	# 	return self._parent
-	# def setParent(self, parent:Pathable):
-	# 	self._parent = parent
-	# @property
-	# def key(self)->keyT:
-	# 	return self._key
-	# def setKey(self, key:keyT):
-	# 	self._key = key
 
 	#region treelike methods
 
@@ -170,7 +161,9 @@ class Pathable(Adaptor):
 
 	#@classmethod
 	def _buildChildPathable(self, obj:T.Any, name:keyT):
-		pathType : type[self] = self.adaptorForType(type(obj))
+		if isinstance(obj, type(self)):
+			return obj
+		pathType : type[PathAdaptor] = type(self).adaptorForType(type(obj))
 		assert pathType, f"no path type for {type(obj)}"
 		return pathType(obj, parent=self, name=name)
 
@@ -180,6 +173,7 @@ class Pathable(Adaptor):
 		OVERRIDE if desired
 		by DEFAULT we reuse logic in Visitor, but be aware the keys
 		may not be the nicest"""
+		log("_buildBranchMap", self)
 		adaptor = VisitAdaptor.adaptorForObject(self.obj)
 		if adaptor is None:
 			log("no visitAdaptor for type", self.obj, type(self.obj))
@@ -194,22 +188,23 @@ class Pathable(Adaptor):
 		return branches
 	def branchMap(self)->dict[keyT, Pathable]:
 		"""get dict of immediate branches below this pathable"""
+		#log("branchMap")
 		if self._branchMap is None:
 			self._branchMap = self._buildBranchMap()
 		return self._branchMap
 
 
-	def addBranch(self, branch:Pathable, name:DexPathable.keyT=None):
+	def addBranch(self, branch:Pathable, name:keyT=None):
 		"""JANK as we shouldn't need to add child objects one by one,
 		but there are situations in WpDex and WpDexProxy that seem to work
 		better with it - leaving it for now"""
 		if name:
-			branch.name = name
+			branch.setName(name)
 		name = branch.name
 		assert branch.name
 		self.branchMap()
 		self._branchMap[name] = branch
-		branch.parent = self
+		branch._setParent(self)
 
 
 
@@ -323,13 +318,15 @@ class Pathable(Adaptor):
 		if self.parent is self: raise RuntimeError("DEX PARENT IS SELF", self.obj)
 		return self.parent.path + [self.name, ]
 
-	def _consumeFirstPathTokens(self, path:pathT)->tuple[list[Pathable], pathT]:
+	def _consumeFirstPathTokens(self, path:pathT, **kwargs
+	                            )->tuple[list[Pathable], pathT]:
 		"""process a path token
 		OVERRIDE to implement custom syntax - really this is the ONLY function
 		that has to be swapped out.
 
 		leave it as method on this class for now, but things like plugins for
 		different syntax in different cases wouldn't be difficult
+		:param **kwargs:
 		"""
 		token, *path = path
 		try:
@@ -341,7 +338,9 @@ class Pathable(Adaptor):
 	@classmethod
 	def access(cls, obj:(Pathable, T.Iterable[Pathable]), path:pathT, one:(bool, None)=True,
 	           values=True, default=Sentinel.FailToFind,
-	           combine:Combine.T()=Combine.First)->(T.Any, list[T.Any], Pathable, list[Pathable]):
+	           combine:Combine.T()=Combine.First,
+	           **kwargs
+	           )->(T.Any, list[T.Any], Pathable, list[Pathable]):
 		"""access an object at a path
 		outer function only serves to avoid recursion on linear paths -
 		DO NOT override this directly, we should delegate max logic
@@ -364,11 +363,12 @@ class Pathable(Adaptor):
 		"""
 		# catch the case of access(obj, [])
 		if not path: return obj
-		toAccess = sequence.toSeq(obj)
-		toAccess = [Pathable(i) for i in toAccess if not isinstance(i, Pathable)]
+		toAccess = list(sequence.toSeq(obj))
+		for i, val in enumerate(toAccess):
+			if not isinstance(val, Pathable):
+				toAccess[i] = PathAdaptor(val)
+		# toAccess = [PathAdaptor(i) for i in toAccess if not isinstance(i, Pathable)]
 		#log("ACCESS", obj, toAccess)
-
-
 
 		foundPathables = [] # end results of path access - unstructured
 		paths = [deepcopy(path) for i in range(len(toAccess))]
@@ -394,6 +394,7 @@ class Pathable(Adaptor):
 				newToAccess.extend(newPathables)
 			paths = newPaths
 			toAccess = newToAccess
+			#log("end paths access", paths, toAccess, foundPathables)
 
 		# combine / flatten results
 		results = foundPathables
@@ -438,7 +439,10 @@ class Pathable(Adaptor):
 keyT = Pathable.keyT
 pathT = Pathable.pathT
 
-class DictPathable(Pathable):
+class PathAdaptor(Pathable, Adaptor):
+	adaptorTypeMap = Adaptor.makeNewTypeMap()
+
+class DictPathable(PathAdaptor):
 	"""
 	list is single path
 	tuple forms a slice
@@ -475,53 +479,20 @@ class DictPathable(Pathable):
 		# )
 		return items
 
-	def _consumeFirstPathTokens(self, path:pathT) ->tuple[list[Pathable], pathT]:
-		"""process a path token"""
+	def _consumeFirstPathTokens(self, path: pathT, **kwargs) ->tuple[list[Pathable], pathT]:
+		"""process a path token
+		:param **kwargs:
+		"""
 		token, *path = path
 		if token == "keys()":
 			return [list(self.obj.keys())], path
 		return [self.branchMap()[token]], path
 
 
-class SeqPathable(Pathable):
+class SeqPathable(PathAdaptor):
 	forTypes = (list, tuple)
-	# def _buildChildren(self):
-	# 	return [self.makeChildPathable((i,), v) for i, v in enumerate(self.obj)]
-	# def _consumeFirstPathTokens(self, path:pathT) ->tuple[list[Pathable], pathT]:
-	# 	"""process a path token
-	#
-	# 	how to do slicing, if a slice is given as
-	# 	"array[2:5]"
-	# 	or "array", "2:5"
-	#
-	# 	SEPARATE matching and checking against path, IN SEQUENCE for each
-	# 	separate path token?
-	#
-	# 	a/b/**/e/f[2:5]/g/**/leaf
-	#
-	# 	return all paths matching a
-	# 	of those, all then matching b
-	# 	of those, all matching a big wildcard
-	#
-	# 	3 values for each anim clip
-	# 	weight, speed, offset
-	#
-	# 	consider single little widget for each? for later,
-	# 	channelbox is cool for now
-	# 	literally change speed by visualising length of clip as a box,
-	# 	offset by moving clip back and forth,
-	# 	careful that it doesn't confuse with the actual graph profile of the attributes,
-	# 	don't try and represent timing, blending etc
-	#
-	# 	"""
-	# 	token, *path = path
-	# 	# if isinstance(token, int):
-	# 	# 	return [self.children[token]], path
-	# 	return [self.children[token]], path
 
-
-
-class IntPathable(Pathable):
+class IntPathable(PathAdaptor):
 	"""this could just be a simple one
 	OR
 	consider the idea of indexing into an int path,
@@ -535,7 +506,7 @@ class IntPathable(Pathable):
 	def _buildChildren(self):
 		return []
 
-class StringPathable(Pathable):
+class StringPathable(PathAdaptor):
 	forTypes = (str,)
 
 	def _buildChildren(self):

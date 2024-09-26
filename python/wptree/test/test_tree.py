@@ -129,7 +129,7 @@ class TestMainTree(unittest.TestCase):
 	# def test_treeInsertion(self):
 	# 	""" test inserting new branch"""
 	# 	newBranch = Tree(name="newBranch", value=69)
-	# 	self.tree("branchA")("leafA").addChild(newBranch)
+	# 	self.tree("branchA")("leafA").addBranch(newBranch)
 	# 	self.assertIs(self.tree("branchA")("leafA")("newBranch"),
 	# 	              newBranch)
 	#
@@ -200,7 +200,7 @@ class TestMainTree(unittest.TestCase):
 	#
 	# def test_treeTyping(self):
 	# 	""" test custom tree types in contiguous hierarchy """
-	# 	self.tree.addChild(
+	# 	self.tree.addBranch(
 	# 		CustomTreeType("customBranch", value=34535))
 	# 	restoreTree = self.tree.deserialise(self.tree.serialise())
 	# 	# self.assertEqual(self.tree, restoreTree,

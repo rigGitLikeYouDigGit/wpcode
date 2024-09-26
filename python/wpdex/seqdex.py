@@ -5,7 +5,6 @@ from __future__ import annotations
 import typing as T
 
 from wplib import log
-from . import DexPathable
 from .base import WpDex
 
 class SeqDex(WpDex):
@@ -19,8 +18,10 @@ class SeqDex(WpDex):
 			#parent=self,
 			name=i)
 			for i, v in enumerate(self.obj)}
-	def _consumeFirstPathTokens(self, path:pathT) ->tuple[list[WpDex], pathT]:
-		"""process a path token"""
+	def _consumeFirstPathTokens(self, path: pathT, **kwargs) ->tuple[list[WpDex], pathT]:
+		"""process a path token
+		:param **kwargs:
+		"""
 		token, *path = path
 		# if isinstance(token, int):
 		# 	return [self.children[token]], path

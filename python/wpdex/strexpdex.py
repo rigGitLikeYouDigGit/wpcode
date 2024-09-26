@@ -1,4 +1,5 @@
-from . import DexPathable
+from __future__ import annotations
+
 from .base import WpDex
 
 class StrDex(WpDex):

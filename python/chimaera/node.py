@@ -629,21 +629,21 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin, Serialisable):
 		t = Tree(name)
 		if uid:
 			t.setElementId(uid)
-		t.addChild(cls.getNewNodeAttrTree("type",
-		                                  incoming=(),
-		                                  defined=(cls.typeName(),)
-		                                  ))
-		t.addChild(cls.getNewNodeAttrTree("nodes",
-		                                  defined=(),
-		                                  incoming=("T",)
-		                                  ))
-		#t.addChild( cls.getNewNodeAttrTree("edges", incoming="T") )
-		t.addChild(cls.getNewNodeAttrTree("value",
-		                                  incoming=("T",),
-		                                  defined=( ),
-		                                  ))
-		t.addChild(cls.getNewNodeAttrTree("params"))
-		t.addChild(cls.getNewNodeAttrTree("storage"))
+		t.addBranch(cls.getNewNodeAttrTree("type",
+		                                   incoming=(),
+		                                   defined=(cls.typeName(),)
+		                                   ))
+		t.addBranch(cls.getNewNodeAttrTree("nodes",
+		                                   defined=(),
+		                                   incoming=("T",)
+		                                   ))
+		#t.addBranch( cls.getNewNodeAttrTree("edges", incoming="T") )
+		t.addBranch(cls.getNewNodeAttrTree("value",
+		                                   incoming=("T",),
+		                                   defined=( ),
+		                                   ))
+		t.addBranch(cls.getNewNodeAttrTree("params"))
+		t.addBranch(cls.getNewNodeAttrTree("storage"))
 		return t
 
 
@@ -885,7 +885,7 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin, Serialisable):
 		# print(self, nodeData, self.nodes.defined())
 
 		# assert nodeData.name not in self.nodes.defined().keys(), f"Node {nodeData.name} already exists in graph {self}"
-		self.nodes.override().addChild(nodeData, force=force)
+		self.nodes.override().addBranch(nodeData, force=force)
 
 	def children(self)->list[ChimaeraNode]:
 		"""return the children of this node"""

@@ -30,7 +30,7 @@ class FileOp(MayaOp):
 		todo: update with import/export enum
 		"""
 		t : Tree = clsSuper(cls).getDefaultParams()
-		t.addChild(cls.newFileEntry())
+		t.addBranch(cls.newFileEntry())
 
 
 

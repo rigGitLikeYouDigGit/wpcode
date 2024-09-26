@@ -40,7 +40,7 @@ class MyTool(Tree):
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
-		self.addChild(showModel())
+		self.addBranch(showModel())
 		#self["show"] = ShowModel()
 
 

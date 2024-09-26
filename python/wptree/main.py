@@ -54,12 +54,12 @@ class Tree(TreeInterface,
 		#log("tree init start", name, type(name))
 
 		UidElement.__init__(self, uid)
-		TreeInterface.__init__(self)
+		TreeInterface.__init__(self, None, name=name)
 		#self._frameContextEnabled = False
 		assert name is not None, "Name must be specified for tree"
-		self._name = name
+
 		self._value = value
-		self._parent: TreeInterface = None
+		#self._parent: TreeInterface = None
 		self._branches: T.List[TreeType] = []  # direct list of child branch objects, main target for overriding
 		self._properties = self.defaultAuxProperties()
 
@@ -178,7 +178,7 @@ class Tree(TreeInterface,
 			if i.name in targetBranch.keys() and recursive:
 				i.mergeTo(targetBranch(i.name))
 				continue
-			targetBranch.addChild(i)
+			targetBranch.addBranch(i)
 		self.remove()
 
 
@@ -227,7 +227,7 @@ class Tree(TreeInterface,
 		if clean:
 			self.clear()
 			for i in otherTree.branches:
-				self.addChild(i.copy())
+				self.addBranch(i.copy())
 			return
 
 		for thisBranch, targetBranch in zip(

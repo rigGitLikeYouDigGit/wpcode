@@ -128,7 +128,7 @@ class Adaptor:
 			if isinstance(args[0], cls): return args[0]
 
 			adaptorType = cls.adaptorForType(type(args[0]))
-			assert adaptorType, f"No adaptor for type {type(args[0])}"
+			assert adaptorType, f"No adaptor type {cls} for type {type(args[0])}"
 			#return adaptorType(*args, **kwargs)
 			return adaptorType.__new__(adaptorType, *args, **kwargs)
 		return object.__new__(cls)

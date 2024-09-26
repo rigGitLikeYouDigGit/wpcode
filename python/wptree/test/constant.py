@@ -14,7 +14,7 @@ tempTree = Tree(name="testRoot", value="tree root")
 
 branch = Tree(name="newBranch")
 
-tempTree.addChild(branch)
+tempTree.addBranch(branch)
 
 #raise
 tempTree("branchA", create=True)

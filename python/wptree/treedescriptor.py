@@ -31,7 +31,7 @@ class TreeBranchDescriptor:
 			assert isinstance(value, TreeInterface), "Replacement branch given to descriptor must be a tree or tree subclass"
 
 			parentBranch = instance(self.key[:-1], create=self.create)
-			parentBranch.addChild(value, force=True)
+			parentBranch.addBranch(value, force=True)
 			return
 
 		branch = instance(self.key, create=self.create)

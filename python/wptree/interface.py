@@ -15,6 +15,7 @@ from wplib import CodeRef
 
 from wplib.object import VisitAdaptor, Visitable
 from wplib.serial import Serialisable, SerialAdaptor
+from wplib.pathable import Pathable
 
 
 #from wptree.delta import TreeDeltas
@@ -64,10 +65,9 @@ ChildData = VisitAdaptor.ChildData
 
 keyT = Traversable.keyT
 TreeType = T.TypeVar("TreeType", bound="TreeInterface")
-class TreeInterface(Traversable,
+class TreeInterface(Pathable,
                     Serialisable,
                     Visitable,
-                    #EventDispatcher
                     ):
 	"""base class for tree-like objects -
 	no requirements for internal storage or structure,
@@ -109,7 +109,7 @@ class TreeInterface(Traversable,
 		tree._setRawAuxProperties(childDatas[2][1])
 		for key, obj, data in childDatas[3:]:
 			assert isinstance(obj, TreeInterface)
-			tree.addChild(obj)
+			tree.addBranch(obj)
 		return tree
 
 
@@ -176,15 +176,11 @@ class TreeInterface(Traversable,
 	def defaultAuxProperties(cls)->dict:
 		return {}
 
-	def __init__(self):
-		EventDispatcher.__init__(self)
-		self.scratch = {}
-		#self._signalComponent : TreeSignalComponent = None
+	# def __init__(self):
+	# 	"""now that tree inherits from pathable, we should switch around the obj / childObjects targeting"""
+	# 	self.scratch = {}
+	# 	if type(self) is TreeInterface: raise TypeError("Do not instantiate interface directly, use main Tree object instead")
 
-
-	# def _nextEventDestinations(self, forEvent:EventBase, key:str) ->list[EventDispatcher]:
-	# 	"""return only parent"""
-	# 	return [self.parent] if self.parent else []
 
 	def __repr__(self):
 		return "<{} ({}) : {}>".format(self.__class__, self.getName(), self.getValue())
@@ -219,9 +215,11 @@ class TreeInterface(Traversable,
 		return all(flags)
 
 	#region name
+
+	#TODO: I know all these layers are ridiculous, I'll simplify them once there's definitely no use for them
 	def _getRawName(self)->str:
 		"""OVERRIDE for backend"""
-		raise NotImplementedError
+		return self._name
 	def getName(self)->str:
 		"""interface and outer function may be redundant, since getting tree's
 		direct name should never trigger any complex computation"""
@@ -247,14 +245,6 @@ class TreeInterface(Traversable,
 		# set name internally
 		self._setRawName(name)
 
-		# self.sendEvent(TreeDeltas.Name(self, oldName, name),
-		#                			self.SignalKeys.NameChanged)
-		#
-		# # if something is listening to this tree's signals, emit nameChanged
-		# if self._signalComponent and oldName != name:
-		# 	self._signalComponent.nameChanged.emit(
-		# 		TreeDeltas.Name(self, oldName, name)
-		# 	)
 		return name
 
 	@property
@@ -344,15 +334,15 @@ class TreeInterface(Traversable,
 	# region parent
 	def _getRawParent(self)->TreeType:
 		"""OVERRIDE for backend"""
-		raise NotImplementedError
+		return self._parent
 	def getParent(self)->TreeType:
 		"""OVERRIDE for backend"""
 		return self._getRawParent()
 
-	def _setParent(self, parentBranch:(TreeInterface, None)):
-		"""should be internal to addChild(), not to be used in client code
-		set to None to remove branch from parent"""
-		raise NotImplementedError
+	# def _setParent(self, parentBranch:(TreeInterface, None)):
+	# 	"""should be internal to addBranch(), not to be used in client code
+	# 	set to None to remove branch from parent"""
+	# 	raise NotImplementedError
 
 	@property
 	def parent(self)->TreeType:
@@ -427,13 +417,14 @@ class TreeInterface(Traversable,
 		""" given single address token, return a known branch or none """
 		if token == self.parentChar:
 			return self.parent
-		return self.branchMap.get(token)
+		return self.branchMap().get(token)
 
 	def getBranch(self, key:keyT,
 	              traverseParams:defaultTraverseParamCls()=None)->(TreeType, None):
 		"""return branch for this tree, or None"""
 		try:
-			return self.traverse(key, traverseParams or self.defaultTraverseParamCls()())
+			#return self.traverse(key, traverseParams or self.defaultTraverseParamCls()())
+			return self.access(self, key)
 		except KeyError:
 			return None
 
@@ -473,10 +464,33 @@ class TreeInterface(Traversable,
 		obj = self._createChildBranch(token)
 
 		# add it to this tree
-		self.addChild(obj)
+		self.addBranch(obj)
 
 		# return it
 		return obj
+
+	def _consumeFirstPathTokens(self, path: pathT, **kwargs) ->tuple[list[Pathable], pathT]:
+		#log("consume tokens", path, kwargs)
+		token, *path = path
+		# check if branch is directly found - return it if so
+		found = self._branchFromToken(token)
+		if found:
+			return [found], path
+		if token == ".." :
+			return [self.parent], path
+
+		# if branch should not be created, lookup is invalid
+		create = kwargs.get("create", self.lookupCreate)
+		#log("create", self.lookupCreate, create)
+		if not create:
+			raise KeyError("tree {} has no child {} in branches {}".format(self, token, self.branches))
+
+		# create new child branch for lookup
+		obj = self._createChildBranch(token)
+
+		# add it to this tree
+		self.addBranch(obj)
+		return [obj], path
 
 	def buildTraverseParamsFromRawKwargs(self, **kwargs) ->TraversableParams:
 		"""build traverse params object from raw kwargs"""
@@ -489,17 +503,17 @@ class TreeInterface(Traversable,
 
 	def __call__(self, *path:keyT,
 	             create=None,
-	             traverseParams:defaultTraverseParamCls()=None,
+	             one=None,
+	             #traverseParams:defaultTraverseParamCls()=None,
 	             **kwargs)->TreeInterface:
 		""" index into tree hierarchy via address sequence,
 		return matching branch"""
 		#log("__call__", self, path, [type(i) for i in self.branches])
 
 		try:
-			# path = flatten(path)
-			if traverseParams is None:
-				traverseParams = self.buildTraverseParamsFromRawKwargs(**kwargs)
-			result = self.traverse(path, traverseParams, **kwargs)
+			result = self.access(self, path, one=one, values=False,
+			                     create=create, **kwargs)
+			#log("_call return", result)
 		except Exception as e:
 			print("unable to index path", path)
 			raise e
@@ -510,21 +524,6 @@ class TreeInterface(Traversable,
 
 
 	# connected nodes
-	def getRoot (self)->TreeType:
-		"""no recursion
-		"""
-		test = self
-		while test.getParent():
-			test = test.getParent()
-		return test
-
-	@property
-	def root(self)->TreeType:
-		"""return the current root for this tree - respects any
-		active """
-		return self.getRoot()
-
-	@property
 	def branchMap(self)-> dict[str, TreeType]:
 		"""return a nice view of {tree name : tree}
 		generated from uid map"""
@@ -553,7 +552,7 @@ class TreeInterface(Traversable,
 
 
 	def keys(self)->tuple[str]:
-		return tuple(self.branchMap.keys())
+		return tuple(self.branchMap().keys())
 
 	@property
 	def siblings(self)->list[TreeType]:
@@ -590,8 +589,8 @@ class TreeInterface(Traversable,
 	def index(self, lookup=None, *args, **kwargs)->int:
 		if lookup is None: # get tree's own index
 			return self._ownIndex()
-		if lookup in self.branchMap.keys():
-			return list(self.branchMap.keys()).index(lookup, *args, **kwargs)
+		if lookup in self.branchMap().keys():
+			return list(self.branchMap().keys()).index(lookup, *args, **kwargs)
 		else:
 			return -1
 
@@ -798,7 +797,7 @@ class TreeInterface(Traversable,
 
 
 
-	def _addChild(self, newBranch:TreeInterface, index:int)->TreeType:
+	def _addBranch(self, newBranch:TreeInterface, index:int)->TreeType:
 		"""OVERRIDE for backend"""
 		self._getRawBranches().append(newBranch)
 		newBranch._setParent(self)
@@ -815,11 +814,14 @@ class TreeInterface(Traversable,
 
 		return newBranch
 
-	def addChild(self, newBranch:TreeInterface, index:int=None, force=False)->TreeType:
+	def addBranch(self, newBranch:TreeInterface, index:int=None, force=False)->TreeType:
 		"""called on parent to add new child node
 		also calls _setParent() on new child
 		RAISES ERROR if name already in branches - could allow it silently,
 		but that raises ambiguity on new index, what happens to references etc
+
+		this is a different signature to what we have in the base Pathable, but maybe
+		it's actually fine for now
 		"""
 
 		if newBranch.uid in self.uidBranchMap:
@@ -836,7 +838,8 @@ class TreeInterface(Traversable,
 
 		# get correct index
 		index = resolveSeqIndex(index if index is not None else len(self.branches), len(self.branches))
-		self._addChild(newBranch, index)
+		self._addBranch(newBranch, index)
+		return newBranch
 
 
 
@@ -1005,7 +1008,7 @@ class TreeInterface(Traversable,
 					#print("child deserialise", i)
 					newChild = branchCls._deserialiseNested(i, preserveUid=preserveUid)
 					#print("add new child", newChild, baseTree.getBranches())
-					baseTree.addChild(newChild)
+					baseTree.addBranch(newChild)
 					#raise
 		except Exception as e:
 			print("------------------")
@@ -1026,7 +1029,7 @@ class TreeInterface(Traversable,
 		}
 		firstBranch = branches.pop(next(branches.keys()))
 		for address, branch in branches.items():
-			firstBranch(address[:-1]).addChild(branch)
+			firstBranch(address[:-1]).addBranch(branch)
 		return firstBranch
 
 
@@ -1083,7 +1086,7 @@ class TreeInterface(Traversable,
 		"""unified function to build trees from given elements"""
 		branch = cls(name=name, value=value)
 		for i in branches or []:
-			branch.addChild(i)
+			branch.addBranch(i)
 		for k, v in (properties or {}).items():
 			branch.setAuxProperty(k, v)
 		return branch
@@ -1103,7 +1106,7 @@ class TreeInterface(Traversable,
 			tree.setValue(literal[1])
 		if len(literal) > 2:
 			for i in literal[2]:
-				tree.addChild(cls.fromLiteral(i))
+				tree.addBranch(cls.fromLiteral(i))
 		if len(literal) > 3:
 			for k, v in literal[3].items():
 				tree.setAuxProperty(k, v)
@@ -1171,7 +1174,7 @@ class TreeInterface(Traversable,
 			tree.setValue(literal[1])
 		if len(literal) > 2:
 			for i in literal[2]:
-				tree.addChild(cls.fromLiteral(i))
+				tree.addBranch(cls.fromLiteral(i))
 		if len(literal) > 3:
 			for k, v in literal[3].items():
 				tree.setAuxProperty(k, v)

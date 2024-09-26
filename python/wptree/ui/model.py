@@ -185,7 +185,7 @@ class TreeModel(QtGui.QStandardItemModel, UidElement):
 				print("found", found)
 
 
-				parentTree.addChild(found, force=True, index=row)
+				parentTree.addBranch(found, force=True, index=row)
 			print("after drop")
 			self.tree.display()
 		self.setTree(self.tree)
@@ -273,7 +273,7 @@ class TreeModel(QtGui.QStandardItemModel, UidElement):
 
 			# assign non-duplicate name for new tree
 			newTree.name = treeParent.getUniqueBranchName(newTree.name)
-			treeParent.addChild(newTree)
+			treeParent.addBranch(newTree)
 			newTrees.append(newTree)
 		return newTrees
 
@@ -291,7 +291,7 @@ class TreeModel(QtGui.QStandardItemModel, UidElement):
 
 		# assign non-duplicate name for new tree
 		newTree.name = treeParent.getUniqueBranchName(newTree.name)
-		treeParent.addChild(newTree)
+		treeParent.addBranch(newTree)
 		return newTree
 
 
@@ -340,8 +340,8 @@ class TreeModel(QtGui.QStandardItemModel, UidElement):
 			if grandparent:
 				log("unparent row", branch)
 				branch.remove()
-				#grandparent.addChild(branch)
-				grandparent.addChild(branch, index=parent.index() + 1)
+				#grandparent.addBranch(branch)
+				grandparent.addBranch(branch, index=parent.index() + 1)
 				log("found new row", self.rowFromTree(branch))
 
 	def parentRows(self, rows:list[QtCore.QModelIndex], target:QtCore.QModelIndex, targetIndex:int=None):
@@ -362,7 +362,7 @@ class TreeModel(QtGui.QStandardItemModel, UidElement):
 				continue
 			branch.remove()
 			#print("add child", branch)
-			parent.addChild(branch, index=targetIndex)
+			parent.addBranch(branch, index=targetIndex)
 			#print("after add", parent.branches)
 
 

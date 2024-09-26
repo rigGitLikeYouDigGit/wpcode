@@ -26,8 +26,10 @@ class DictDex(WpDex):
 		#items["keys()"] = self.makeChildPathable(("keys()",), list(self.obj.keys()))
 		return items
 
-	def _consumeFirstPathTokens(self, path:pathT) ->tuple[list[Pathable], pathT]:
-		"""process a path token"""
+	def _consumeFirstPathTokens(self, path: pathT, **kwargs) ->tuple[list[Pathable], pathT]:
+		"""process a path token
+		:param **kwargs:
+		"""
 		token, *path = path
 		if token == "keys()":
 			return [self.branchMap()["keys()"]], path

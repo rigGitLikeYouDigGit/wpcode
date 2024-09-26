@@ -863,7 +863,7 @@ def addAttrFromSpec(node, spec:AttrSpec, parentAttrFn=None):
 
 	# if parent is given, add to it - else to node
 	if parentAttrFn:
-		parentAttrFn.addChild(obj)
+		parentAttrFn.addBranch(obj)
 	else:
 		mfn.addAttribute(obj)
 

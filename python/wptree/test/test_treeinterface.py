@@ -141,7 +141,7 @@ class TestMainTree(unittest.TestCase):
 	def test_treeInsertion(self):
 		""" test inserting new branch"""
 		newBranch = self.treeCls(name="newBranch", value=69)
-		self.tree("branchA")("leafA").addChild(newBranch)
+		self.tree("branchA")("leafA").addBranch(newBranch)
 		self.assertIs(self.tree("branchA")("leafA")("newBranch"),
 		              newBranch)
 

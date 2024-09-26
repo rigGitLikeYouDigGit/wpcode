@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing as T
 
 
-from .base import WpDex, DexPathable
+from .base import WpDex
 
 
 # dexes for primitives

@@ -135,8 +135,8 @@ class _TreeCreationDeletionDeltaBase(TreeDeltaAtom):
 		treeType: TreeInterface = self.treeType if self.treeType else target.defaultBranchCls()
 		newTree = treeType.deserialiseSingle(self.serialData, preserveUid=self.preserveUid)  #
 		if self.parentRef is not None:
-			self.resolveRef(self.parentRef, target).addChild(newTree,  # index=self.index
-			                                                     )
+			self.resolveRef(self.parentRef, target).addBranch(newTree,  # index=self.index
+			                                                  )
 		return newTree
 
 	def unlinkTreeByData(self, target: TreeInterface):
@@ -187,13 +187,13 @@ class TreeMoveDelta(TreeDeltaAtom):
 		branch = self.resolveRef(self.branchRef, target)
 		parentBranch = self.resolveRef(self.parentRef, target)
 		branch.remove()
-		parentBranch.addChild(branch, self.newIndex)
+		parentBranch.addBranch(branch, self.newIndex)
 
 	def undo(self, target: TreeInterface):
 		branch = self.resolveRef(self.branchRef, target)
 		parentBranch = self.resolveRef(self.oldParentRef, target)
 		branch.remove()
-		parentBranch.addChild(branch, self.oldIndex)
+		parentBranch.addBranch(branch, self.oldIndex)
 
 @dataclass
 class TreePropertyDelta(TreeDeltaAtom):

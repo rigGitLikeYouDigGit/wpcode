@@ -55,13 +55,13 @@ def overlayTreeInPlace(baseTree:TreeInterface, overlay:TreeInterface,
 			if mode == "union":
 				# add branch to base tree
 				# get parent branch and
-				baseBranch.addChild(overlayBranch)
+				baseBranch.addBranch(overlayBranch)
 				continue
 
 		lookupBranch = baseBranch
 		if lookupBranch is None:
 			if mode == "union":
-				baseTree.addChild(overlayBranch)
+				baseTree.addBranch(overlayBranch)
 				continue
 				#lookupBranch = baseTree.getBranch(overlayBranch.relAddress(fromBranch=overlay))
 			else:

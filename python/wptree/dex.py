@@ -8,7 +8,7 @@ from wplib import log
 from wplib.delta import DeltaAtom
 from wptree import Tree, TreeInterface, TreeDeltaAid, TreeDeltas
 
-from wpdex import WpDex, WpDexProxy, DexPathable
+from wpdex import WpDex, WpDexProxy
 
 class TreeDex(WpDex):
 
@@ -21,7 +21,7 @@ class TreeDex(WpDex):
 		"setValue",
 		#"setParent",
 		"__call__",
-		"addChild",
+		"addBranch",
 		"setIndex",
 		"__setitem__",
 		#"__getitem__",
@@ -82,9 +82,12 @@ if __name__ == '__main__':
 
 	# set up our base data structure
 	t = Tree("root")
-
+	print(t)
+	assert isinstance(t, Tree)
+	#raise
 	# wrap it in a proxy layer
 	p = WpDexProxy(t)
+	log("p", p)
 
 	# connect a function on the root to listen to its events
 	eventFn = lambda *args: (print("EVENT"), pprint.pprint(args[0]))
@@ -92,6 +95,7 @@ if __name__ == '__main__':
 
 	# use it like we would any other structure
 	f = p("a", "b", "gg", "f")
+	log("f", f)
 	# rename a deep branch of the tree
 	f.name = "eyyyy"
 	# \/ observe in log that we get a relevant event \/

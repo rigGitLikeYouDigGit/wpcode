@@ -11,7 +11,7 @@ from wplib.serial import serialise, deserialise, Serialisable, SerialAdaptor
 from wplib.object import DeepVisitor, Adaptor, Proxy, ProxyData, ProxyMeta, VisitObjectData, DeepVisitOp, Visitable, VisitAdaptor
 from wplib.constant import SEQ_TYPES, MAP_TYPES, STR_TYPES, LITERAL_TYPES, IMMUTABLE_TYPES
 from wplib.sentinel import Sentinel
-from wpdex.base import WpDex, DexPathable
+from wpdex.base import WpDex
 
 
 class WpDexProxyData(ProxyData):
@@ -221,7 +221,8 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		)
 
 		self._proxyData["externalCallDepth"] -= 1
-		#log("after call", methodName, methodArgs, callResult, self._proxyData["externalCallDepth"])
+		#log("after call", methodName, methodArgs, callResult, self._proxyData["externalCallDepth"], methodName in self.dex().mutatingMethodNames)
+		#log("dex", self.dex())
 
 		toReturn = callResult
 
@@ -239,7 +240,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 
 			# ensure every bit of the structure is still wrapped in a proxy
 			#self.updateProxy()
-
+			log(" send dex update children")
 			self.dex().updateChildren(recursive=1)
 
 

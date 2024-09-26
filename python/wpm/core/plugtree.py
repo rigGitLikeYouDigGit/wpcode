@@ -236,7 +236,7 @@ class PlugTree(
 				pass
 			if not self.getBranch(plugName):
 				newBranch = PlugTree(plug)
-				#self.addChild(newBranch)
+				#self.addBranch(newBranch)
 			try:
 				resultBranches.append(self.branchMap[plugName])
 			except KeyError:

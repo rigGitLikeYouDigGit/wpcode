@@ -126,7 +126,7 @@ class TestTreeReference(unittest.TestCase):
 		self.assertEqual("postLiveName", proxyBranch.name)
 
 		# test through reparenting reference branch
-		self.tree("dictBranch").addChild(refTargetBranch)
+		self.tree("dictBranch").addBranch(refTargetBranch)
 
 		# rename source branch after reparenting
 		refTargetBranch.name = "shiftedBranchName"

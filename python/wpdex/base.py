@@ -49,7 +49,7 @@ class OverrideMap:
 
 
 
-class WpDex(#Adaptor,  # integrate with type adaptor system
+class WpDex(Adaptor,  # integrate with type adaptor system
 			Pathable,
             #HashIdElement,  # each wrapper has a transient hash for caching
 
@@ -193,7 +193,7 @@ class WpDex(#Adaptor,  # integrate with type adaptor system
 		"""todo: this could be moved to pathable
 		    but for now it's not needed
 		    """
-		#log("update children", self, recursive)
+		#log("update children", self, self.obj, recursive)
 		#self._gatherRootData()
 
 		if self._branchMap is None: # jank
