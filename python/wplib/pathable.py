@@ -31,6 +31,8 @@ class Pathable(Adaptor):
 	"""pathable object - can be pathed into, and can return a path.
 
 	immutable in the sense that whenever items change, a new object is created
+	store no state
+	store a bit of state
 
 	'/' is valid, can be useful in string patterns, equivalent to a space between tokens
 
@@ -50,15 +52,32 @@ class Pathable(Adaptor):
 	root/**/branch/array[:4]/leaf ?
 	where only the ArrayPathable adaptor has any idea what slicing means
 
-
 	NOW we can start unifying all our path stuff -
 	classmethod access() can look up the right adaptor class to manage the given object
 
 	pathable handles accessing, data structures like tree deal with holding
-	data
+	data. pathable can add extra syntax beyond the keys we get from Visitable
 
+	Pathable is an adaptor and a valid class to inherit from in custom objects
+
+	TODO: we specialise Pathable for primitives, but then we INHERIT from pathable in WpDex, and specialise THAT for primitives too. MADNESS
+	for now use WpDex as the all-in-one toolbox wrapper
+
+	TODO: builtins obviously don't know anything about their parent,
+		so there is no concept of a consistent path for them.
+		Wherever you start the path access is the root of that operation
+
+	NO TUPLE KEYS. get that jank outta here
+
+	renaming "key" to "name" - keeps consistent with the original tree interface
+	do we rename "obj" to "value"? closer still, but less clear?
+	would mean you only have to check "isinstance(branch, Tree)" to change any processing
+	logic, access would be indentical
 
 	"""
+
+	class PathKeyError(Exception):
+		pass
 
 	class Combine(TypeNamespace):
 		"""operators to flatten multiple results into one"""
@@ -80,67 +99,249 @@ class Pathable(Adaptor):
 	dispatchInit = True # Pathable([1, 2, 3]) will return a specialised ListPathable object
 
 	keyT = T.Union[str, int]
-	keyT = T.Union[keyT, tuple[keyT, ...]]
-	pathT = T.List[keyT]
+	#keyT = T.Union[keyT, tuple[keyT, ...]]
+	pathT = T.Sequence[keyT]
 
+	def __init__(self, obj,
+	             parent:Pathable=None,
+	             name:keyT=None
+	             # parents:(Pathable, T.Sequence[Pathable])=None,
+	             # key:(keyT, T.Sequence[keyT])=None
+	             ):
+		"""getters and setters here are excessive
+		TODO: if you need complex logic like for tree, make properties
 
-	@classmethod
-	def searchChars(cls)->list[str]:
-		"""return characters to look for in queries that
-		require"""
+		this could be a full dag if we allow multiple parents for multiple
+		paths leading to the same object
+		LATER
 
-
-	def __init__(self, obj, parent:DictPathable=None, key:T.Iterable[keyType]=None):
-		"""initialise with object and parent"""
-		self.parent = parent
+		TODO: breakpoints (blast from like 5 years ago) - best left to WpDex
+			dex: roots are any object with a flag set-
+			pathable: _ root _ is _ root _
+		"""
 		self.obj = obj
-		self.key = list(key or [])
-		#log("init", self,)# obj, parent, key)
+		self.parent = parent
+		self.name = name
 
-		self.children = self._buildChildren() # only build lazily
+		self._branchMap = None # built on request
 
-	def __repr__(self):
-		try:
-			return f"<{self.__class__.__name__}({self.obj}, {self.path()})>"
-		except:
-			return f"<{self.__class__.__name__}({self.obj}, (PATH ERROR))>"
+		# self.parents = sequence.toSeq(parents)
+		# self.keys = sequence.toSeq(key)
+
+	# @property
+	# def parent(self)->Pathable:
+	# 	return self.parents[0] if self.parents else None
+	# @property
+	# def key(self)->keyT:
+	# 	return self.keys[0] if
+
+	# 	self._obj = None
+	# 	self._parent = None
+	# 	self._key = None
+	# 	self.setObj(obj)
+	# 	self.setParent(parent)
+	# 	self.setKey(key)
+	# @property
+	# def obj(self):
+	# 	return self._obj
+	# def setObj(self, obj:T.Any):
+	# 	self._obj = obj
+	# @property
+	# def parent(self)->(Pathable, None):
+	# 	return self._parent
+	# def setParent(self, parent:Pathable):
+	# 	self._parent = parent
+	# @property
+	# def key(self)->keyT:
+	# 	return self._key
+	# def setKey(self, key:keyT):
+	# 	self._key = key
+
+	#region treelike methods
 
 	@property
 	def root(self)->Pathable:
 		"""get the root
-		the similarity between this thing and tree is not lost on me,
-		I don't know if there's merit in looking for yet more unification
 		"""
 		test = self
 		while test.parent:
 			test = test.parent
 		return test
 
-	def makeChildPathable(self, key:tuple[keyType], obj:T.Any)->Pathable:
-		"""make a child pathable object"""
-		pathType = self.adaptorForType(type(obj))
+	#@classmethod
+	def _buildChildPathable(self, obj:T.Any, name:keyT):
+		pathType : type[self] = self.adaptorForType(type(obj))
 		assert pathType, f"no path type for {type(obj)}"
-		return pathType(obj, parent=self, key=key)
+		return pathType(obj, parent=self, name=name)
 
-	def _buildChildren(self):
-		raise NotImplementedError(self, f"no buildChildren")
+	def _buildBranchMap(self)->dict[keyT, Pathable]:
+		"""return a dict of the immediate branches of this pathable, and
+		their keys
+		OVERRIDE if desired
+		by DEFAULT we reuse logic in Visitor, but be aware the keys
+		may not be the nicest"""
+		adaptor = VisitAdaptor.adaptorForObject(self.obj)
+		if adaptor is None:
+			log("no visitAdaptor for type", self.obj, type(self.obj))
+			return {}
+		branches = {}
+		for childData in adaptor.childObjects(
+				self.obj,
+				params=VisitAdaptor.PARAMS_T()):
+			branches[childData[0]] = self._buildChildPathable(
+				obj=childData[1], name=childData[2]
+			)
+		return branches
+	def branchMap(self)->dict[keyT, Pathable]:
+		"""get dict of immediate branches below this pathable"""
+		if self._branchMap is None:
+			self._branchMap = self._buildBranchMap()
+		return self._branchMap
 
-	def objToPathKey(self, obj:T.Any)->str:
-		"""convert an object to a key"""
-		return str(obj)
 
-	# this object's path
-	def path(self)->list[str]:
-		if self.parent is None:
-			return []
-		return self.parent.path() + list(self.key)
+	def addBranch(self, branch:Pathable, name:DexPathable.keyT=None):
+		"""JANK as we shouldn't need to add child objects one by one,
+		but there are situations in WpDex and WpDexProxy that seem to work
+		better with it - leaving it for now"""
+		if name:
+			branch.name = name
+		name = branch.name
+		assert branch.name
+		self.branchMap()
+		self._branchMap[name] = branch
+		branch.parent = self
 
-	# path access
+
+
+	@property
+	def branches(self):
+		return list(self.branchMap().values())
+
+	def allBranches(self, includeSelf=True, depthFirst=True, topDown=True) -> list[Pathable]:
+		""" returns list of all child objects
+		depth first
+		if not topDown, reverse final list
+		we avoid recursion here, don't insert any crazy logic in this
+		"""
+		toIter = [self]
+		found = []
+		while toIter:
+			current = toIter.pop(0)
+			found.append(current)
+			if depthFirst:
+				toIter = current.branches + toIter
+			else:
+				toIter = toIter + current.branches
+		if not includeSelf:
+			found.pop(0)
+		if not topDown:
+			found.reverse()
+		return found
+
+	def trunk(self, includeSelf=True, includeRoot=True)->list[Pathable]:
+		"""return sequence of ancestor trees in descending order to this tree"""
+		branches = []
+		current = self
+		while current.parent:
+			branches.insert(0, current)
+			current = current.parent
+		if includeRoot:
+			branches.insert(0, current)
+		if branches and not includeSelf:
+			branches.pop(-1)
+		return branches
+
+	def depth(self) -> int:
+		"""return int depth of this tree from root"""
+		return len(self.trunk(includeSelf=True, includeRoot=False))
+
+	@property
+	def siblings(self)->list[Pathable]:
+		if self.parent:
+			l = self.parent.branches
+			l.remove(self)
+			return l
+		return []
+
+	def commonParent(self, otherBranch: Pathable)->(Pathable, None):
+		""" return the lowest common parent between given branches
+		or None
+		if one branch is direct parent of the other,
+		that branch will be returned
+		"""
+		#TODO: the line below is suspicious
+		if self.root is not otherBranch.root:
+			return None
+		otherTrunk = set(otherBranch.trunk(includeSelf=True, includeRoot=True))
+		test = self
+		while test not in otherTrunk:
+			test = test.parent
+		return test
+
+	def relativePath(self, fromBranch:Pathable)->list[str]:
+		""" retrieve the relative path from the given branch to this one"""
+		fromBranch = fromBranch or self.root
+
+		# check that branches share a common tree (root)
+		#print("reladdress", self, self.trunk(includeSelf=True, includeRoot=True))
+		common = self.commonParent(fromBranch)
+		if not common:
+			raise LookupError("Branches {} and {} "
+			                  "do not share a common root".format(self, fromBranch))
+
+		addr = []
+		commonDepth = common.depth()
+		# parent tokens to navigate up from other
+		for i in range(commonDepth - fromBranch.depth()):
+			addr.append("..")
+		# add address to this node
+		addr.extend(
+			self.path[commonDepth:])
+		return addr
+
+	def _ownIndex(self)->int:
+		if self.parent:
+			return self.parent.index(self.name)
+		else: return -1
+
+	def index(self, lookup=None, *args, **kwargs)->int:
+		if lookup is None: # get tree's own index
+			return self._ownIndex()
+		if lookup in self.branchMap().keys():
+			return list(self.branchMap().keys()).index(lookup, *args, **kwargs)
+		else:
+			return -1
+
+
+	#endregion
+
+	# region actual path things
+	@property
+	def path(self)->pathT:
+		"""return path to this object"""
+		if not self.parent: return []
+		if self.parent is self: raise RuntimeError("DEX PARENT IS SELF", self.obj)
+		return self.parent.path + [self.name, ]
+
+	def _consumeFirstPathTokens(self, path:pathT)->tuple[list[Pathable], pathT]:
+		"""process a path token
+		OVERRIDE to implement custom syntax - really this is the ONLY function
+		that has to be swapped out.
+
+		leave it as method on this class for now, but things like plugins for
+		different syntax in different cases wouldn't be difficult
+		"""
+		token, *path = path
+		try:
+			return [self.branchMap()[token]], path
+		except KeyError:
+			raise Pathable.PathKeyError(f"Invalid token {token} for branches:\n{self.branchMap()}")
+
+
 	@classmethod
-	def access(cls, obj:(Adaptor, T.Iterable[Adaptor]), path:pathT, one:(bool, None)=True,
+	def access(cls, obj:(Pathable, T.Iterable[Pathable]), path:pathT, one:(bool, None)=True,
 	           values=True, default=Sentinel.FailToFind,
-	           combine:Combine.T()=Combine.First)->(T.Any, list[T.Any],
-	                                                Pathable, list[Pathable]):
+	           combine:Combine.T()=Combine.First)->(T.Any, list[T.Any], Pathable, list[Pathable]):
 		"""access an object at a path
 		outer function only serves to avoid recursion on linear paths -
 		DO NOT override this directly, we should delegate max logic
@@ -155,9 +356,19 @@ class Pathable(Adaptor):
 		if values, return actual result values
 		if not, return Pathable objects
 
+		TODO: how to integrate "false" children like Dict["keys()"] ?
+			need to dynamically create new pathables during this call
 
+		TODO: error management - makes sense to me to throw an error if
+			a pathable gets a token it can't interpret
 		"""
+		# catch the case of access(obj, [])
+		if not path: return obj
 		toAccess = sequence.toSeq(obj)
+		toAccess = [Pathable(i) for i in toAccess if not isinstance(i, Pathable)]
+		#log("ACCESS", obj, toAccess)
+
+
 
 		foundPathables = [] # end results of path access - unstructured
 		paths = [deepcopy(path) for i in range(len(toAccess))]
@@ -176,7 +387,7 @@ class Pathable(Adaptor):
 				depthB += 1
 
 				newPathables, newPath = pathable._consumeFirstPathTokens(path)
-				if not newPath:
+				if not newPath: # terminate
 					foundPathables.extend(newPathables)
 					continue
 				newPaths.append(newPath)
@@ -186,6 +397,7 @@ class Pathable(Adaptor):
 
 		# combine / flatten results
 		results = foundPathables
+		#log("results", results)
 		# check if needed to error
 		if not results:
 			# format of default overrides one/many, since it's provided directly
@@ -206,10 +418,8 @@ class Pathable(Adaptor):
 			return combine.flatten(results)
 		return results
 
-
-	def _consumeFirstPathTokens(self, path:pathT)->tuple[list[Pathable], pathT]:
-		"""process a path token"""
-		raise NotImplementedError(self, f"no _processPathToken for ", path)
+	# def ref(self, path:DexPathable.pathT="")->DexRef:
+	# 	return DexRef(self, path)
 
 	def __getitem__(self, item):
 		"""get item by path -
@@ -225,7 +435,8 @@ class Pathable(Adaptor):
 		return self.access(self, list(sequence.toSeq(item)), one=None)
 
 
-
+keyT = Pathable.keyT
+pathT = Pathable.pathT
 
 class DictPathable(Pathable):
 	"""
@@ -246,57 +457,67 @@ class DictPathable(Pathable):
 	"""
 	forTypes = (dict,)
 
-	def _buildChildren(self):
-		# return [(self.makeChildPathable(("keys()", ), k),
-		#          self.makeChildPathable((k,), v) )
-		#         for i, (k, v) in enumerate(self.obj.items())]
-		items = { k : self.makeChildPathable((k,), v) for k, v in self.obj.items()}
-		items["keys()"] = self.makeChildPathable(("keys()",), list(self.obj.keys()))
+	def _buildBranchMap(self)->dict[keyT, Pathable]:
+		"""visitAdaptor creates a list of ties for dict items -
+		we skip that for paths and use dict keys as normal keys,
+		more intuitive that way
+		"""
+
+		items = { k : self._buildChildPathable(
+			obj=v,
+			#parent=self,
+			name=k)
+			for k, v in self.obj.items()}
+		# items["keys()"] = self._buildChildPathable(
+		# 	parent=self,
+		# 	obj=list(self.obj.keys()),
+		# 	name="keys()",
+		# )
 		return items
 
 	def _consumeFirstPathTokens(self, path:pathT) ->tuple[list[Pathable], pathT]:
 		"""process a path token"""
 		token, *path = path
 		if token == "keys()":
-			return [self.children["keys()"]], path
-		return [self.children[token]], path
+			return [list(self.obj.keys())], path
+		return [self.branchMap()[token]], path
 
 
 class SeqPathable(Pathable):
 	forTypes = (list, tuple)
-	def _buildChildren(self):
-		return [self.makeChildPathable((i,), v) for i, v in enumerate(self.obj)]
-	def _consumeFirstPathTokens(self, path:pathT) ->tuple[list[Pathable], pathT]:
-		"""process a path token
-
-		how to do slicing, if a slice is given as
-		"array[2:5]"
-		or "array", "2:5"
-
-		SEPARATE matching and checking against path, IN SEQUENCE for each
-		separate path token?
-
-		a/b/**/e/f[2:5]/g/**/leaf
-
-		return all paths matching a
-		of those, all then matching b
-		of those, all matching a big wildcard
-
-		3 values for each anim clip
-		weight, speed, offset
-
-		consider single little widget for each? for later,
-		channelbox is cool for now
-		literally change speed by visualising length of clip as a box,
-		offset by moving clip back and forth,
-		careful that it doesn't confuse with the actual graph profile of the attributes,
-		don't try and represent timing, blending etc
-
-		"""
-		token, *path = path
-		# if isinstance(token, int):
-		# 	return [self.children[token]], path
-		return [self.children[token]], path
+	# def _buildChildren(self):
+	# 	return [self.makeChildPathable((i,), v) for i, v in enumerate(self.obj)]
+	# def _consumeFirstPathTokens(self, path:pathT) ->tuple[list[Pathable], pathT]:
+	# 	"""process a path token
+	#
+	# 	how to do slicing, if a slice is given as
+	# 	"array[2:5]"
+	# 	or "array", "2:5"
+	#
+	# 	SEPARATE matching and checking against path, IN SEQUENCE for each
+	# 	separate path token?
+	#
+	# 	a/b/**/e/f[2:5]/g/**/leaf
+	#
+	# 	return all paths matching a
+	# 	of those, all then matching b
+	# 	of those, all matching a big wildcard
+	#
+	# 	3 values for each anim clip
+	# 	weight, speed, offset
+	#
+	# 	consider single little widget for each? for later,
+	# 	channelbox is cool for now
+	# 	literally change speed by visualising length of clip as a box,
+	# 	offset by moving clip back and forth,
+	# 	careful that it doesn't confuse with the actual graph profile of the attributes,
+	# 	don't try and represent timing, blending etc
+	#
+	# 	"""
+	# 	token, *path = path
+	# 	# if isinstance(token, int):
+	# 	# 	return [self.children[token]], path
+	# 	return [self.children[token]], path
 
 
 
@@ -324,17 +545,22 @@ class StringPathable(Pathable):
 
 if __name__ == '__main__':
 
-	structure = {
-		1 : {"key1" : 2,
-		     "key3" : {"a" : "b"},
-		},
-		"b" : {}
-	}
+	s = [1, 2, 3]
+	print(next(iter(s)))
+	s = []
+	print(next(iter(s)))
 
-	path = Pathable(structure)
-
-	log("r1", path[1, "key1"])
-	log("r2", path["keys()", 0])
+	# structure = {
+	# 	1 : {"key1" : 2,
+	# 	     "key3" : {"a" : "b"},
+	# 	},
+	# 	"b" : {}
+	# }
+	#
+	# path = Pathable(structure)
+	#
+	# log("r1", path[1, "key1"])
+	# log("r2", path["keys()", 0])
 
 	# structure = [
 	# 	"a",

@@ -114,9 +114,19 @@ class Adaptor:
 
 	@staticmethod
 	def __new__(cls, *args, **kwargs):
-		"""new"""
+		"""new
+
+		TODO: watch for any jank coming from using __new__ instead of
+		__call__ , it's not as safe as I thought
+
+		dispatchInit allows shorthand to get the right adaptor type initialised on the
+		argument, eg Pathable([1, 2, 3]) returns a ListPathable wrapping that list
+		"""
 		#log(f"Adaptor.__new__({cls, args, kwargs})")
 		if cls.dispatchInit and not cls.forTypes:
+			# type coercion if argument is already this adaptor, just returns it
+			if isinstance(args[0], cls): return args[0]
+
 			adaptorType = cls.adaptorForType(type(args[0]))
 			assert adaptorType, f"No adaptor for type {type(args[0])}"
 			#return adaptorType(*args, **kwargs)

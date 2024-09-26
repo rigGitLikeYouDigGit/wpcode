@@ -13,12 +13,16 @@ class DictDex(WpDex):
 		"""validate this object"""
 		pass
 
-	def _buildChildren(self):
+	def _buildBranchMap(self):
 		# return [(self.makeChildPathable(("keys()", ), k),
 		#          self.makeChildPathable((k,), v) )
 		#         for i, (k, v) in enumerate(self.obj.items())]
 		#log("building children for dict", self.obj)
-		items = { k : self.makeChildPathable((k,), v) for k, v in self.obj.items()}
+		items = { k : self._buildChildPathable(
+			obj=v,
+			#parent=self,
+			name=k
+		) for k, v in self.obj.items()}
 		#items["keys()"] = self.makeChildPathable(("keys()",), list(self.obj.keys()))
 		return items
 
@@ -26,8 +30,8 @@ class DictDex(WpDex):
 		"""process a path token"""
 		token, *path = path
 		if token == "keys()":
-			return [self.children()["keys()"]], path
-		return [self.children()[token]], path
+			return [self.branchMap()["keys()"]], path
+		return [self.branchMap()[token]], path
 
 
 

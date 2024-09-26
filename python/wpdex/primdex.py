@@ -11,7 +11,7 @@ from .base import WpDex, DexPathable
 class PrimDex(WpDex):
 	forTypes = (int, float, bool, type(None))
 
-	def _buildChildren(self) ->dict[DexPathable.keyT, WpDex]:
+	def _buildBranchMap(self) ->dict[DexPathable.keyT, WpDex]:
 		return {}
 
 

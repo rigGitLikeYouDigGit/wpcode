@@ -17,6 +17,7 @@ from wplib.object import Adaptor, TypeNamespace, HashIdElement, ObjectReference,
 from wplib.serial import serialise, deserialise
 from wplib.object.visitor import VisitAdaptor, Visitable, CHILD_LIST_T, DeepVisitor
 from wplib.object.proxy import Proxy, FlattenProxyOp
+from wplib.pathable import Pathable
 from wplib.delta import DeltaAtom, DeltaAid, SetValueDelta
 
 
@@ -27,116 +28,6 @@ class DexRef(ObjectReference):
 		self.path = path
 	def resolve(self) ->WpDex:
 		return self.obj.access(self.path)
-
-class DexPathable:
-	"""base class for objects that can be pathed to"""
-	keyT = T.Union[str, int]
-	keyT = T.Union[keyT, tuple[keyT, ...]]
-	pathT = T.List[keyT]
-
-	# region combine operators
-	#TODO: pass in full call info to combine operators
-	class Combine(TypeNamespace):
-		"""operators to flatten multiple results into one"""
-		class _Base(TypeNamespace.base()):
-			@classmethod
-			def flatten(cls, results:(list[T.Any], list[DexPathable]))->T.Any:
-				"""flatten results"""
-				raise NotImplementedError(cls, f"no flatten for {cls}")
-
-		class First(_Base):
-			"""return the first result"""
-			@classmethod
-			def flatten(cls, results:(list[T.Any], list[DexPathable]))->T.Any:
-				"""flatten results"""
-				return results[0]
-	# endregion
-
-	def path(self)->pathT:
-		"""return path to this object"""
-		raise NotImplementedError(self)
-
-	def _consumeFirstPathTokens(self, path:pathT)->tuple[list[Pathable], pathT]:
-		"""process a path token"""
-		raise NotImplementedError(self, f"no _processPathToken for ", path)
-
-	@classmethod
-	def access(cls, obj:(Adaptor, T.Iterable[Adaptor]), path:pathT, one:(bool, None)=True,
-	           values=True, default=Sentinel.FailToFind,
-	           combine:Combine.T()=Combine.First)->(T.Any, list[T.Any], Pathable, list[Pathable]):
-		"""access an object at a path
-		outer function only serves to avoid recursion on linear paths -
-		DO NOT override this directly, we should delegate max logic
-		to the pathable objects
-
-		feed copy of whole path to each pathable object - let each consume the
-		first however many tokens and return the result
-
-		track which object returned which path, and match the next chunk of path
-		to the associated result
-
-		if values, return actual result values
-		if not, return Pathable objects
-
-
-		"""
-		# catch the case of access(obj, [])
-		if not path: return obj
-		toAccess = sequence.toSeq(obj)
-		#log("ACCESS", obj, toAccess)
-
-
-
-		foundPathables = [] # end results of path access - unstructured
-		paths = [deepcopy(path) for i in range(len(toAccess))]
-		depthA = 0
-		while paths:
-			#newPaths = [None] * len(toAccess)
-			newPaths = []
-			newToAccess = []
-			#log( " "* depthA + "outer iter", paths)
-			depthA += 1
-			depthB = 1
-			for pathId, (path, pathable) \
-					in enumerate(zip(paths, toAccess)):
-
-				#log((" " * (depthA + depthB)), "path iter", path, pathable)
-				depthB += 1
-
-				newPathables, newPath = pathable._consumeFirstPathTokens(path)
-				if not newPath: # terminate
-					foundPathables.extend(newPathables)
-					continue
-				newPaths.append(newPath)
-				newToAccess.extend(newPathables)
-			paths = newPaths
-			toAccess = newToAccess
-
-		# combine / flatten results
-		results = foundPathables
-		#log("results", results)
-		# check if needed to error
-		if not results:
-			# format of default overrides one/many, since it's provided directly
-			if default is not Sentinel.FailToFind:
-				return default
-			raise KeyError(f"Path not found: {path}")
-
-		if values:
-			results = [r.obj for r in results]
-
-		if one is None: # shape explicitly not specified, return natural shape of result
-			# why would you ever do this
-			if len(results) == 1:
-				return results[0]
-			return results
-
-		if one:
-			return combine.flatten(results)
-		return results
-
-	def ref(self, path:DexPathable.pathT="")->DexRef:
-		return DexRef(self, path)
 
 
 class OverrideMap:
@@ -158,13 +49,15 @@ class OverrideMap:
 
 
 
-class WpDex(Adaptor,  # integrate with type adaptor system
-            HashIdElement,  # each wrapper has a transient hash for caching
+class WpDex(#Adaptor,  # integrate with type adaptor system
+			Pathable,
+            #HashIdElement,  # each wrapper has a transient hash for caching
 
             # interfaces that must be implemented
             Visitable,  # compatible with visitor pattern
             EventDispatcher, # can send events
-            DexPathable,
+            #DexPathable,
+
             #DexValidator,
             ):
 	"""base for wrapping arb structure in a
@@ -209,20 +102,26 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		"""return a new dict to store data"""
 		return {"deltaBase" : None}
 
-	def __init__(self, obj:T.Any, parent:WpDex=None, key:T.Iterable[DexPathable.keyT]=None,
-	             overrideMap:OverrideMap=None, **kwargs):
+	def __init__(self, obj:T.Any,
+	             parent:WpDex=None,
+	             name:T.Iterable[DexPathable.keyT]=None,
+	             **kwargs):
 		"""initialise with object and parent"""
 		# superclass inits
-		HashIdElement.__init__(self)
+		#HashIdElement.__init__(self)
 		EventDispatcher.__init__(self)
+		Pathable.__init__(self,
+		                  obj,
+		                  parent=parent,
+		                  name=name)
 
 		# should these attributes be moved into pathable? probably
-		self.parent = parent
-		self.obj = obj
-		self.key = tuple(key or [])
+		# self.parent = parent
+		# self.obj = obj
+		# self.key = tuple(key or [])
 		self.objIdDexMap[id(obj)] = self
 
-		self.keyDexMap : dict[DexPathable.keyT, WpDex] = {}
+		#self.keyDexMap : dict[DexPathable.keyT, WpDex] = {}
 
 		# save data against paths to persist across
 		# destroying and regenerating dex structure
@@ -240,30 +139,29 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		consider passing in a known parent object to narrow down?"""
 		return cls.objIdDexMap.get(id(obj))
 
-	def makeChildPathable(self, key:tuple[keyType], obj:T.Any)->WpDex:
-		"""make a child pathable object"""
-		pathType : type[WpDex] = self.adaptorForType(type(obj))
-		assert pathType, f"no path type for {type(obj)}"
-		return pathType(obj, parent=self, key=key)
+	# def makeChildPathable(self, key:tuple[keyType], obj:T.Any)->WpDex:
+	# 	"""make a child pathable object"""
+	# 	pathType : type[WpDex] = self.adaptorForType(type(obj))
+	# 	assert pathType, f"no path type for {type(obj)}"
+	# 	return pathType(obj, parent=self, key=key)
 		# dex = pathType(obj, parent=self, key=key)
 		# self.childIdDexMap[id(obj)] = dex
 		# return dex
 
-	def _buildChildren(self)->dict[DexPathable.keyT, WpDex]:
+	def _buildBranchMap(self)->dict[DexPathable.keyT, WpDex]:
 		"""build child objects, return keyDexMap
-		make this uniform with visitable / pathable
+		check for existing dex objects and add them if found
 
 		overriding might be illegal - maybe dex can add additional,
 		false children on top for pathing syntax"""
 		#raise NotImplementedError(self, f"no _buildChildren")
 		children = {}
 		adaptor = VisitAdaptor.adaptorForObject(self.obj)
+		#log("adaptor", adaptor, self.obj)
+		#raise RuntimeError
 		childObjects = list(adaptor.childObjects(self.obj, {}))
 		#log("child objects for ", self.obj, childObjects)
-		# childObjects = { k : v.obj for k, v in self.dex().keyDexMap.items()}
 		# returns list of 3-tuples (index, value, childType)
-		needsUpdate = False
-		# for i, (k, t) in enumerate(childObjects.items()):
 		for i, t in enumerate(childObjects):
 			if t[1] is None: continue # maybe
 			key = (t[0], )
@@ -273,9 +171,11 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 			if foundDex:
 				self.addBranch(foundDex, key)
 			else:
-				children[key] = self.makeChildPathable(key, t[1])
+				children[key] = self._buildChildPathable(
+					obj=t[1],
+					#parent=self,
+				name=key)
 		return children
-
 
 	def _gatherRootData(self):
 		"""iter over all children, save persist data to this
@@ -288,146 +188,24 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		for i in self.allBranches(includeSelf=False):
 			i._persistData.update(self._rootData.get(tuple(i.path), {}))
 
-	def addBranch(self, newDex:WpDex, key:DexPathable.keyT=None):
-		if key:
-			newDex.key = key
-		#key = newDex.key
-		#log("addBranch", self, newDex, key, newDex.key)
-		assert newDex.key
-		self.keyDexMap[tuple(key)] = newDex
-		newDex.parent = self
-		#log( " added", newDex, newDex.key, newDex.path, newDex.parent, newDex.parent is self)
-		#log(" after add", self.branches)
-
 
 	def updateChildren(self, recursive=False):
-		a = 1
+		"""todo: this could be moved to pathable
+		    but for now it's not needed
+		    """
 		#log("update children", self, recursive)
 		#self._gatherRootData()
-		self.keyDexMap.clear()
 
-		self.keyDexMap.update(self._buildChildren())
-		for v in self.keyDexMap.values():
+		if self._branchMap is None: # jank
+			self._branchMap = {} # trash
+		self._branchMap.clear()
+
+		self.branchMap().update(self._buildBranchMap())
+		#self._buildBranchMap()
+		for v in self.branchMap().values():
 			if recursive:
 				v.updateChildren(recursive=recursive)
 		#self._restoreChildDatasFromRoot()
-
-
-	# TODO TODO TODO TODO TODO
-	#  UNIFY THIS WITH TREE AND PATHABLE
-
-	def children(self)->dict[WpDex.keyT, WpDex]:
-		"""return child objects
-		maybe move to pathable superclass"""
-		#return self._buildChildren()
-		# if not self.keyDexMap:
-		# 	self.updateChildren()
-		return self.keyDexMap
-		# return { v.key : v for k, v in self.childIdDexMap.items()
-		#          if v is not None
-		# }
-
-	@property
-	def branches(self):
-		return list(self.children().values())
-
-	def allBranches(self, includeSelf=True, depthFirst=True, topDown=True)->list[WpDex]:
-		""" returns list of all child objects
-		depth first
-		if not topDown, reverse final list
-		we avoid recursion here, don't insert any crazy logic in this
-		"""
-
-		#found = [ self ] if includeSelf else []
-		toIter = [ self ]
-		found = []
-
-		while toIter:
-			current = toIter.pop(0)
-			found.append(current)
-			if depthFirst:
-				toIter = current.branches + toIter
-			else:
-				toIter = toIter + current.branches
-
-		if not includeSelf:
-			found.pop(0)
-		if not topDown:
-			found.reverse()
-		return found
-
-	#@cached_property
-	@property
-	def root(self)->WpDex:
-		"""get the root
-		the similarity between this thing and tree is not lost on me,
-		I don't know if there's merit in looking for yet more unification
-		"""
-		test = self
-		while test.parent:
-			test = test.parent
-		return test
-
-	#@cached_property
-	@property
-	def path(self)->list[str]:
-		if self.parent is None:
-			return []
-		return self.parent.path + list(self.key)
-
-	def trunk(self, includeSelf=True, includeRoot=True)->list[WpDex]:
-		"""return sequence of ancestor trees in descending order to this tree"""
-		branches = []
-		current = self
-		while current.parent:
-			branches.insert(0, current)
-			current = current.parent
-		if includeRoot:
-			branches.insert(0, current)
-		if branches and not includeSelf:
-			branches.pop(-1)
-		return branches
-
-
-	def commonParent(self, otherBranch: TreeType)->(TreeType, None):
-		""" return the lowest common parent between given branches
-		or None
-		if one branch is direct parent of the other,
-		that branch will be returned
-		"""
-		# #print("commonParent")
-		if self.root is not otherBranch.root:
-			return None
-		otherTrunk = set(otherBranch.trunk(includeSelf=True, includeRoot=True))
-		# otherTrunk.add(otherBranch)
-		test = self
-		while test not in otherTrunk:
-			test = test.parent
-		return test
-
-	def relativePath(self, fromDex:WpDex)->list[str]:
-		""" retrieve the relative path from the given branch to this one"""
-		fromDex = fromDex or self.root
-
-		# check that branches share a common tree (root)
-		#print("reladdress", self, self.trunk(includeSelf=True, includeRoot=True))
-		common = self.commonParent(fromDex)
-		if not common:
-			raise LookupError("Branches {} and {} "
-			                  "do not share a common root".format(self, fromDex))
-
-		addr = []
-		commonDepth = common.depth()
-		# parent tokens to navigate up from other
-		for i in range(commonDepth - fromDex.depth()):
-			addr.append("..")
-		# add address to this node
-		addr.extend(
-			self.path[commonDepth:])
-		return addr
-
-
-
 
 	def __repr__(self):
 		try:
@@ -436,21 +214,10 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 			return f"<{self.__class__.__name__}({self.obj}, (PATH ERROR))>"
 
 
-	def __getitem__(self, item):
-		"""get item by path -
-		getitem is faster and less safe version of access,
-		may variably return a single result or a list from a slice -
-		up to user to know what they're putting.
-
-		If any part of the path is not known, and may contain a slice,
-		prefer using access() to define return format explicitly
-		"""
-		#log("getitem", item)
-
-		return self.access(self, list(sequence.toSeq(item)), one=None)
-
 	# events
-	def _nextEventDestinations(self, forEvent:EventBase, key:str)->list[EventDispatcher]:
+	def _nextEventDestinations(self,
+	                           forEvent:dict,
+	                           key:str)->list[EventDispatcher]:
 		"""
 		OVERRIDE
 		return a list of objects to pass this event
@@ -471,7 +238,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		#log("handleEvent", self)
 		#log(event)
 		if "path" in event:
-			event["path"].insert(0, self.key)
+			event["path"].insert(0, self.name)
 		else:
 			event["path"] = []
 		return super()._handleEvent(event, key)
@@ -544,7 +311,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 
 
 	def gatherDeltas(self, #startState, endState
-	                 )->dict[DexPathable.pathT, (list, dict)]:
+	                 )->dict[Pathable.pathT, (list, dict)]:
 		deltas = {}
 		#log("GATHER", self, self.branches)
 		self.isPreppedForDeltas = False
@@ -585,8 +352,8 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 				continue
 
 			# get any added dex paths
-			for i, dex in liveDex.keyDexMap.items():
-				if not i in baseDex.keyDexMap:
+			for i, dex in liveDex.branchMap().items():
+				if not i in baseDex.branchMap():
 					deltas[tuple(dex.path)] = {"added" : dex}
 
 			try:

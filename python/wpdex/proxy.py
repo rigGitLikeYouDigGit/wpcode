@@ -279,8 +279,6 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		(I think this is actually what rx does, but shockingly a commercial software company have done a better job)
 		 
 		within a proxy environment, who knows 
-		
-		
 		"""
 		foundDex = WpDex.dexForObj(toReturn)
 		#log("found dex", foundDex, toReturn,  self._proxyData["externalCallDepth"])
@@ -334,81 +332,6 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		return result
 
 
-	def updateProxy(self):
-		""" we can't keep regenerating new proxy objects or no references will
-		ever be stable
-		we can't just update objects directly because immutable types exist
-
-		compare CHILD objects, find any that are NOT PROXIES
-		create proxies of them,
-		update the TARGET OF THIS PROXY to the newObj(), formed by THOSE PROXIES.
-
-		before update, save each proxy and its value against its path on the root
-
-		child objects have to be the same between proxy and wpdex, insane otherwise
-
-		"""
-		raise
-		log("update proxy", self)
-		self.dex().updateChildren(recursive=1)
-
-		# adaptor = VisitAdaptor.adaptorForObject(self._proxyData["target"])
-		# childObjects = list(adaptor.childObjects(self._proxyData["target"], {}))
-		# #childObjects = { k : v.obj for k, v in self.dex().keyDexMap.items()}
-		# # returns list of 3-tuples (index, value, childType)
-		# needsUpdate = False
-		# #for i, (k, t) in enumerate(childObjects.items()):
-		#
-		# for i, t in enumerate(childObjects):
-		# 	#log(" tie", t)
-		# 	if isinstance(t[1], WpDexProxy):
-		# 		# #raise RuntimeError
-		# 		# t[1]._proxyData["parent"] = self
-		# 		# #t[1].dex().parent = self.dex()
-		# 		# self.dex().addBranch(t[1].dex(), key=(t[0], ))
-		# 		# t[1].updateProxy()
-		# 		pass
-		# 	else:
-		# 		needsUpdate = True
-		#
-		# 		# ADD IN PATH LOOKUP HERE to check if proxy is already known
-		# 		log("wrap child", t[1])
-		# 		proxy = WpDexProxy(t[1], isRoot=False,
-		# 		                   proxyData={"parent" : self})
-		# 		if proxy is not None: # if you wrap a proxy of None
-		# 			#log(" add child proxy", self, proxy.dex(), t)
-		# 			self.dex().addBranch(proxy.dex(), key=(t[0], ))
-		# 			#proxy.dex().updateChildren()
-		#
-		# 		childObjects[i] = (t[0], proxy, t[2])
-		# if needsUpdate:
-		# 	"""this WORKS, and doesn't break external references, since the refs are
-		# 	to THIS proxy object, not the internal one being changed here.
-		# 	all the child refs survive as well"""
-		# 	#log("   updating", self, childObjects)
-		# 	#log([type(i[1]) for i in childObjects])
-		# 	newObj = adaptor.newObj(
-		# 		self._proxyData["target"], childObjects, params={"PreserveUid" : True})
-		# 	#log("final childObjects", adaptor.childObjects(newObj, {}))
-		# 	#log([type(i[1]) for i in adaptor.childObjects(newObj, {})])
-		# 	self._setProxyTarget(self, newObj)
-
-		# for i in adaptor.childObjects(self._proxyData["target"], {}):
-		# 	if i[1] is None:
-		# 		continue
-		#
-		#
-		# #TODO: WHERE TO RECURSE DEX, UPDATE CHILDREN????
-
-
-		#self.dex().updateChildren()
-
-			# if isinstance(i[1], WpDexProxy):
-			#
-			# 	# maybe we don't need to proxy primitive types?
-			#
-			# 	i[1].updateProxy()
-
 	@classmethod
 	def _setProxyTarget(cls, proxy:WpDexProxy, target):
 		super()._setProxyTarget(proxy, target)
@@ -418,63 +341,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		proxy.dex().updateChildren()
 		#proxy._linkDexProxyChildren()
 
-	def _linkDexProxyChildren(self):
-		"""run at end to regenerate links between structures -
-		assumes that all child objects are already wrapped in proxies"""
-		log("link dex proxies", self, self.dex())
-		self.dex().updateChildren()
-		adaptor = VisitAdaptor.adaptorForObject(self._proxyTarget())
-		childObjects = list(adaptor.childObjects(self._proxyTarget(), {}))
-		log(childObjects)
-		for k, v, data in childObjects:
-			log("child", k, (k, ) in self.dex().keyDexMap, v, type(v))
-			if (k, ) in self.dex().keyDexMap:
-				if v is None: continue
-				#if not isinstance(v, WpDexProxy): continue
-				#assert isinstance(v, WpDexProxy)
-				v._proxyData["wpDex"] = self.dex().keyDexMap[(k, )]
-				v._linkDexProxyChildren()
 
-
-	# @class
-	# def updateRecursive(self):
-	#
-	# 	adaptor = VisitAdaptor.adaptorForObject(self._proxyData["target"])
-	# 	childObjects = list(adaptor.childObjects(self._proxyData["target"], {}))
-	# 	for i, t in enumerate(childObjects):
-	# 		if not isinstance(t[1], WpDexProxy):
-	# 			needsUpdate = True
-	#
-	# 			# ADD IN PATH LOOKUP HERE to check if proxy is already known
-	# 			childObjects[i] = (t[0], WpDexProxy(t[1], isRoot=False), t[2])
-
-
-@dataclass
-class DeepProxyOp(DeepVisitOp):
-	proxyCls : type
-	rootObj : T.Any
-	transformRoot : bool = True
-
-	def visit(self,
-	          obj:T.Any,
-              visitor:DeepVisitor,
-              visitObjectData:VisitObjectData,
-              #visitPassParams:VisitPassParams,
-              ) ->T.Any:
-		"""Transform to apply to each object during deserialisation.
-		"""
-		log("visit", obj, type(obj))
-		log("data", visitObjectData)
-		isRoot = False
-		if obj is visitObjectData["visitPassParams"].rootObj:
-			log("visit root" )
-			isRoot = True
-		return self.proxyCls(obj, proxyData={}, parent=None,
-		                     isRoot=isRoot)
-
-
-# class ProxyRecursive(Proxy):
-# 	pass
 
 if __name__ == '__main__':
 	s = [[3]]

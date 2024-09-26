@@ -8,7 +8,7 @@ class StrDex(WpDex):
 	"""
 	forTypes = (str,)
 
-	def _buildChildren(self) ->dict[DexPathable.keyT, WpDex]:
+	def _buildChildPathable(self) ->dict[DexPathable.keyT, WpDex]:
 		"""build children"""
 		return {}
 	pass
@@ -16,7 +16,7 @@ class StrDex(WpDex):
 
 class ExpDex(WpDex):
 	"""holds final parsed expression"""
-	def _buildChildren(self) ->dict[DexPathable.keyT, WpDex]:
+	def _buildChildPathable(self) ->dict[DexPathable.keyT, WpDex]:
 		"""build children"""
 		return {}
 

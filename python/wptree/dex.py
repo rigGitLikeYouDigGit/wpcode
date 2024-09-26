@@ -51,14 +51,14 @@ class TreeDex(WpDex):
                   (TreeDeltas.Name, TreeDeltas.Value))]
 		return deltas
 
-	def _consumeFirstPathTokens(self, path:pathT) ->tuple[list[WpDex], pathT]:
-		"""process a path token"""
-		path = tuple(path)
-		#log("consume first tokens", self, path, path in self.keyDexMap, self.keyDexMap)
-		token, *path = path
-		# if isinstance(token, int):
-		# 	return [self.children[token]], path
-		return [self.keyDexMap[(token, )]], path
+	# def _consumeFirstPathTokens(self, path:pathT) ->tuple[list[WpDex], pathT]:
+	# 	"""process a path token"""
+	# 	path = tuple(path)
+	# 	#log("consume first tokens", self, path, path in self.keyDexMap, self.keyDexMap)
+	# 	token, *path = path
+	# 	# if isinstance(token, int):
+	# 	# 	return [self.children[token]], path
+	# 	return [self.branchMap()[token, )]], path
 
 
 
@@ -80,49 +80,23 @@ if __name__ == '__main__':
 	"""raw rx really does seem a non-starter"""
 
 
-
-	eventFn = lambda *args: (print("EVENT"), pprint.pprint(args[0]))
+	# set up our base data structure
 	t = Tree("root")
-	#t["a"]
 
-	#print(t.branches)
-	#raise
-	# t["a", "b"]
-	#t["a", "b", "c"] = 4
-
-	t("a").value = 33
-	dex = WpDex(t)
-
-	a = dex.staticCopy()
-	b = dex.staticCopy()
-	assert a.obj.uid == b.obj.uid
-
-	log(WpDex.dexForObj(t))
-
+	# wrap it in a proxy layer
 	p = WpDexProxy(t)
+
+	# connect a function on the root to listen to its events
+	eventFn = lambda *args: (print("EVENT"), pprint.pprint(args[0]))
 	p.dex().getEventSignal().connect(eventFn)
 
+	# use it like we would any other structure
+	f = p("a", "b", "gg", "f")
+	# rename a deep branch of the tree
+	f.name = "eyyyy"
+	# \/ observe in log that we get a relevant event \/
 
-	log(p("a") is dex.access(dex, "a", values=False).obj)
-	#log(p("a"))
 
-	log("fffff")
-	# log(id(t) in dex.objIdDexMap)
-	# log(id(t("a")) in dex.objIdDexMap)
-	# log(dex.dexForObj(t("a")))
-
-	a = p("a")
-	log(a, a.root) # both proxies
-	d = a("b", "c", "d")
-	log("###############")
-	#log(d)
-	log(d.dex())
-
-	f = a("b", "gg", "f")
-	print("")
-	log("##########", f)
-	cpar = f.commonParent(d)
-	log(cpar)
 
 
 	#print(dex.allBranches(includeSelf=1))
