@@ -53,7 +53,14 @@ class Chainable:
 	def __call__(self, *args, **kwargs):
 		"""janky to call the looked up attribute, while still passing
 		the last found instance as self argument"""
-		op = lambda obj, instance : obj.__call__(instance, *args, **kwargs)
+		def _op(obj, instance):
+
+			try:
+				return obj.__call__(instance, *args, **kwargs)
+			except TypeError: # it's a class or static method
+				return obj.__call__(*args, **kwargs)
+		#op = lambda obj, instance : obj.__call__(instance, *args, **kwargs)
+		op = _op
 		op.__qualname__ = "call()"
 		return Chainable(self.base,
 		                 ops=self.ops + [self],
@@ -62,17 +69,13 @@ class Chainable:
 
 	def __eval__(self):
 		result = self.base
-		i = 0
 		instance = self.base
 		log("EVAL")
-		#while i < len(self.ops):
+		prev = None
 		for i in self.ops + [self]:
 			log("op", i)
 			if i.fn is None:
 				continue
-			# if self.fn is None:
-			# 	i += 1
-			# 	continue
 			log(instance, result)
 			if i.isCall:
 				log("do call", i.fn, result, instance)
@@ -81,6 +84,7 @@ class Chainable:
 			else:
 				log("do noncall", i.fn, result)
 				result = i.fn(result)
+			prev = i
 
 		return result
 
@@ -95,12 +99,12 @@ if __name__ == '__main__':
 	print(upper)
 	print(upper.__eval__())
 
-	"""
+
 	t = dict
 	ct = Chainable(t)
 	emptyItems = ct().items()
 	print(emptyItems)
 	print(emptyItems.__eval__())
-	"""
+
 	#TODO: see above, passing a callable base object freaks out
 

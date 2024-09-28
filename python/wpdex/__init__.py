@@ -34,4 +34,4 @@ from .dictdex import *
 from .seqdex import *
 from .strexpdex import *
 
-from .proxy import WpDexProxy
+from .proxy import WpDexProxy, Reference

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import copy
 import pickle
+import pprint
 import typing as T
 
 from copy import deepcopy
@@ -95,8 +96,10 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		"update", "add", "discard",
 		"split",
 	}
-
 	objIdDexMap : dict[int, WpDex] = {}
+
+	parent : WpDex
+	branches : list[WpDex]
 
 	def _newPersistData(self)->dict:
 		"""return a new dict to store data"""
@@ -132,6 +135,19 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 
 		# do we build on init?
 		self.updateChildren(recursive=0)
+
+	def write(self, value, setAttr=False):
+		"""rudimentary support for writing values back into the structure
+		"""
+		log("WRITE", self, value)
+		self.parent.prepForDeltas()
+		if setAttr:
+			setattr(self.parent.obj, self.name, value)
+		else:
+			self.parent.obj[self.name] = value
+		self.parent.updateChildren(recursive=1)
+		# trigger delta / event on parent
+		self.parent.gatherDeltas()
 
 	@classmethod
 	def dexForObj(cls, obj)->WpDex:
@@ -255,29 +271,6 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		dex.updateChildren(recursive=1)
 		return dex
 
-
-	def extractDeltas(self, baseState, endState)->list[dict]:
-		"""
-		extract changes between two states
-		if list is empty, no changes done -
-
-		should compare only this level of dex, children will extract
-		their own deltas and emit events with their own path
-		"""
-		log("extract deltas", self.path, "states:", )
-		log(baseState)
-		log( endState)
-		if baseState is None:
-			return [{"added" : endState}]
-
-		# check for what could have changed - might switch to deepdiff here,
-		# as fully diffing 2 objects is very involved
-		# changes = []
-		# baseMap = {i[0] : i[1] for i in VisitAdaptor.adaptorForObject(baseState).childObjects(baseState, {})}
-		if pickle.dumps(baseState) != pickle.dumps(endState):
-			return [{"change": None}]
-		return []
-
 	def prepForDeltas(self):
 		"""check for deltas below this dex -
 		if called by outside process, be aware that internal
@@ -311,13 +304,14 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 
 
 	def gatherDeltas(self, #startState, endState
+	                 emit=True,
 	                 )->dict[Pathable.pathT, (list, dict)]:
 		deltas = {}
-		#log("GATHER", self, self.branches)
+		log("GATHER", self, self.branches)
 		self.isPreppedForDeltas = False
 		baseState : WpDex = self._persistData["deltaBase"]
 		assert baseState is not None
-		#log("base", baseState)
+		log("base", baseState)
 
 		# we compare FROM the base state to this dex as the live current one
 		"""iter top-down -
@@ -371,7 +365,13 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 				deltas[basePath] = itemDeltas
 			toIter.extend(baseDex.branches)
 
-
+		log("deltas")
+		pprint.pp(deltas)
+		if emit:
+			if deltas:
+				event = {"type":"deltas",
+				         "paths" : deltas}
+				self.sendEvent(event)
 
 		return deltas
 

@@ -332,7 +332,7 @@ class Pathable(#Adaptor
 		try:
 			return [self.branchMap()[token]], path
 		except KeyError:
-			raise Pathable.PathKeyError(f"Invalid token {token} for branches:\n{self.branchMap()}")
+			raise Pathable.PathKeyError(f"Invalid token {token} for {self} branches:\n{self.branchMap()}")
 
 
 	@classmethod

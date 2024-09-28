@@ -6,7 +6,7 @@ import typing as T
 from collections import defaultdict
 from dataclasses import dataclass
 
-from wplib import inheritance, dictlib, log
+from wplib import inheritance, dictlib, log, sequence
 from wplib.object import Signal
 from wplib.serial import serialise, deserialise, Serialisable, SerialAdaptor
 from wplib.object import DeepVisitor, Adaptor, Proxy, ProxyData, ProxyMeta, VisitObjectData, DeepVisitOp, Visitable, VisitAdaptor
@@ -96,9 +96,6 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		#log("WP init", obj, type(obj), type(self), self._proxyParentCls, self._proxySuperCls)
 		self._proxySuperCls.__init__(self, obj, proxyData, **kwargs)
 
-
-		self._proxyData["deltaStartState"] = None
-		self._proxyData["deltaCallDepth"] = 0
 		self._proxyData["externalCallDepth"] = 0
 
 		self._proxyData["parent"] = self._proxyData.get("parent", None)
@@ -140,16 +137,14 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		if self._proxyData["deltaCallDepth"] == 0:
 
 			deltaMap = self.dex().gatherDeltas(
+				emit=True
 			)
 			#log("WPX", self, "result deltaMap", deltaMap)
 
-			self._proxyData["deltaStartState"] = None
-			self._proxyData["deltaEndState"] = None
-
-			if deltaMap:
-				event = {"type":"deltas",
-				         "paths" : deltaMap}
-				self.dex().sendEvent(event)
+			# if deltaMap:
+			# 	event = {"type":"deltas",
+			# 	         "paths" : deltaMap}
+			# 	self.dex().sendEvent(event)
 
 
 
@@ -334,7 +329,7 @@ class Reference:
 	with custom rxpy methods and any other like a mock chain"""
 	def __init__(self, root:WpDexProxy, path:WpDex.pathT):
 		self.root = root
-		self.path = path
+		self.path = sequence.toSeq(path)
 		self.changed = Signal(name="changed(" + str(self.path) + ")")
 
 	def __str__(self):
@@ -349,13 +344,16 @@ class Reference:
 		pprint.pp(event)
 		self.changed( self() )
 
+	def dex(self)->WpDex:
+		return self.root.dex().access(self.root.dex(), self.path, values=0)
 
 	def __call__(self, *args, **kwargs):
 		"""evaluate this ref and return the result -
 		if any methods are chained, evaluate those too.
 		unsure if we want to allow args to this call"""
+		#log("call")
 		return self.root.dex().access(
-			self.root, self.path, values=1)
+			self.root.dex(), self.path, values=1)
 
 	def setValue(self, value):
 		"""TODO: we don't have a way to do this yet -
