@@ -30,6 +30,4 @@ from .signal import Signal
 from .singleton import SingletonDecorator
 from .stringlike import StringLike
 
-from .traversable import Traversable, TraversableParams
-
 from .visitor import DeepVisitor, DeepVisitOp, VisitObjectData, VisitPassParams, Visitable, VisitAdaptor

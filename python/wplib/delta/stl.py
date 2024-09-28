@@ -32,7 +32,7 @@ class ListDeltaAid(DeltaAid):
 			deltas.append(MoveDelta(oldIndex=i, newIndex=newIndex))
 		for newVal in toCheckNew:
 			deltas.append(InsertDelta(
-				newIndex=newObj.index(newVal),
+				index=newObj.index(newVal),
 				value=newVal
 			))
 		return deltas

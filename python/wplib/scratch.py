@@ -4,7 +4,6 @@ from wplib.serial import SerialRegister
 
 from wplib.coderef import CodeRef
 
-from wplib.object.traversable import Traversable
 
 from enum import Enum
 # print(getCodeRef(Test))

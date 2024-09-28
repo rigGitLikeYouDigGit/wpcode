@@ -16,6 +16,8 @@ line widget for showing path to item, and for listing / collapsing
 
 text option for editing full structure as json / serialised string
 
+
+atomic widget is more specialised still, literally just exists for consistent set/get value interface for stock qt widgets like text and checkbox
 """
 
 from .base import WpDexWidget, WpDexWindow

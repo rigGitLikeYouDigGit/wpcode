@@ -7,6 +7,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 
 from wplib import inheritance, dictlib, log
+from wplib.object import Signal
 from wplib.serial import serialise, deserialise, Serialisable, SerialAdaptor
 from wplib.object import DeepVisitor, Adaptor, Proxy, ProxyData, ProxyMeta, VisitObjectData, DeepVisitOp, Visitable, VisitAdaptor
 from wplib.constant import SEQ_TYPES, MAP_TYPES, STR_TYPES, LITERAL_TYPES, IMMUTABLE_TYPES
@@ -111,9 +112,6 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 
 		self._proxyData["branches"] = {}
 
-		#self.dex().updateChildren(recursive=1)
-		#self.updateProxy()
-
 
 	def dex(self)->WpDex:
 		return self._proxyData["wpDex"]
@@ -129,11 +127,6 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		"""open a delta for this object -
 		if mutating functions are reentrant, only open one delta"""
 		if self._proxyData["deltaCallDepth"] == 0:
-			#self._proxyData["deltaStartState"] = copy.deepcopy(self._proxyData["target"])
-			# self._proxyData["deltaStartState"] = serialise(
-			# 	self._proxyCleanResult(),
-			# 	serialParams={"TreeSerialiseUid" : False}
-			# )
 			#log("OPEN ", self, "prepped", self.dex().isPreppedForDeltas, self.dex().branches)
 			if not self.dex().isPreppedForDeltas:
 				self.dex().prepForDeltas()
@@ -145,18 +138,11 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		#log( " live dex", self.dex(), self.dex().branches)
 		self._proxyData["deltaCallDepth"] -= 1
 		if self._proxyData["deltaCallDepth"] == 0:
-			# self._proxyData["deltaEndState"] = serialise(
-			# 	self._proxyCleanResult(),
-			# 	serialParams={"TreeSerialiseUid": False}
-			# )
 
 			deltaMap = self.dex().gatherDeltas(
-				# self._proxyData["deltaStartState"],
-				# self._proxyData["deltaEndState"],
 			)
 			#log("WPX", self, "result deltaMap", deltaMap)
-			#if deltaMap:
-			# delta = DeltaAtom(self._proxyData["deltaStartState"], self._proxyData["target"])
+
 			self._proxyData["deltaStartState"] = None
 			self._proxyData["deltaEndState"] = None
 
@@ -164,14 +150,6 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 				event = {"type":"deltas",
 				         "paths" : deltaMap}
 				self.dex().sendEvent(event)
-
-			# event = {"type":"delta", "delta":None,
-			#                       "path" : self.dex().path
-			#                       }
-			# log("event destinations", self.dex()._allEventDestinations(
-			# 	event, "main"
-			# ), self.dex()._nextEventDestinations(event, "main"))
-
 
 
 
@@ -240,7 +218,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 
 			# ensure every bit of the structure is still wrapped in a proxy
 			#self.updateProxy()
-			log(" send dex update children")
+			#log(" send dex update children")
 			self.dex().updateChildren(recursive=1)
 
 
@@ -342,33 +320,60 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		proxy.dex().updateChildren()
 		#proxy._linkDexProxyChildren()
 
+	#region reactive referencing
+	def ref(self, path:WpDex.pathT):
+		ref = Reference(root=self, path=path)
+		self.dex().getEventSignal("main").connect(ref._onRootEvent)
+		return ref
+
+	#endregion
+
+class Reference:
+	"""consistent pathed reference a part of a structure
+	also try some way to let this be reactive,
+	with custom rxpy methods and any other like a mock chain"""
+	def __init__(self, root:WpDexProxy, path:WpDex.pathT):
+		self.root = root
+		self.path = path
+		self.changed = Signal(name="changed(" + str(self.path) + ")")
+
+	def __str__(self):
+		return f"REF({self.root} - {self.path})"
+
+
+	def _onRootEvent(self, event):
+		"""filter any event sent through the root dex - check if this
+		reference's path is found in that of the event.
+		if yes, fire self.changed( self() )"""
+		log("on root event", self)
+		pprint.pp(event)
+		self.changed( self() )
+
+
+	def __call__(self, *args, **kwargs):
+		"""evaluate this ref and return the result -
+		if any methods are chained, evaluate those too.
+		unsure if we want to allow args to this call"""
+		return self.root.dex().access(
+			self.root, self.path, values=1)
+
+	def setValue(self, value):
+		"""TODO: we don't have a way to do this yet -
+		    allow setting values back to the source path
+			 """
+		raise NotImplementedError
+
 
 
 if __name__ == '__main__':
-	s = [[3]]
-	# v = DeepVisitor()
-	# op = DeepProxyOp()
-	# r = v.dispatchPass(s, passParams=v.VisitPassParams(
-	# 	topDown=False, depthFirst=True, transformVisitedObjects=True,
-	# 	visitFn=op.visit
-	# ))
-	r = WpDexProxy(s)
-	print(r, type(r))
-	print(r[0], type(r[0]))
-	print(r[0][0], type(r[0][0]))
+	s = {"a" : 2,
+	     "b" : [4, 5, 6],
+	     "c" : 3
+	     }
+	p = WpDexProxy(s)
+	print(p.dex().allBranches())
+	r = p.ref("b")
+	print(r)
+	p["b"][2] = "hello"
+	p["b"] = "hello"
 
-
-	# s = 5
-	# r = React(s)
-	# print(r, type(r))
-
-	#
-	# s = [[3]]
-	# #s = [3]
-	# r = React(s)
-	# #r = React.__new__(React, s) # THIS WORKS ._.
-	# log(r, type(r))
-	# log(r)
-	# print(r[0], type(r[0]))
-	# print(r[0][0], type(r[0][0]))
-	# pass

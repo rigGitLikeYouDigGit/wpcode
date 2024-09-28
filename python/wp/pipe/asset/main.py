@@ -72,7 +72,7 @@ class Asset(UidElement):
 	def show(self)->Show:
 		return Show.get(name=self.showName())
 
-	def smartFolder(self):
+	def smartFolder(self)->AssetFolder:
 		if self._folder is None:
 			self._folder = AssetFolder(path=self.diskPath())
 		return self._folder
