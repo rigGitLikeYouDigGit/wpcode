@@ -82,7 +82,8 @@ class Adaptor:
 	def adaptorForType(cls, forType:type)->[Adaptor]:
 		"""Get the adaptor for the given type.
 		"""
-		return superClassLookup(cls.adaptorTypeMap.classMap, forType, default=None)
+		#return superClassLookup(cls.adaptorTypeMap.classMap, forType, default=None)
+		return cls.adaptorTypeMap.lookup(forType, default=None)
 
 	@classmethod
 	def adaptorForObject(cls, forObj:T.Any)->type[Adaptor]:

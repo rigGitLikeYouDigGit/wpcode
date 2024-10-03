@@ -97,6 +97,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		"split",
 	}
 	objIdDexMap : dict[int, WpDex] = {}
+	writeDefault = "setItem" # or "setAttr"
 
 	parent : WpDex
 	branches : list[WpDex]
@@ -136,10 +137,13 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		# do we build on init?
 		self.updateChildren(recursive=0)
 
-	def write(self, value, setAttr=False):
+	def write(self, value, setAttr=None):
 		"""rudimentary support for writing values back into the structure
+		OVERRIDE if you need to do something custom,
+		else we go off the "writeDefault" class attribute
 		"""
 		log("WRITE", self, value)
+		setAttr = setAttr if setAttr is not None else (self.writeDefault == "setAttr")
 		self.parent.prepForDeltas()
 		if setAttr:
 			setattr(self.parent.obj, self.name, value)
@@ -173,6 +177,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		#raise NotImplementedError(self, f"no _buildChildren")
 		children = {}
 		adaptor = VisitAdaptor.adaptorForObject(self.obj)
+		assert adaptor, f"Base dex branchMap implementation relies on VisitAdaptor;\n no adaptor found for obj {self.obj}, type {type(self.obj)} "
 		#log("adaptor", adaptor, self.obj)
 		#raise RuntimeError
 		childObjects = list(adaptor.childObjects(self.obj, {}))

@@ -8,7 +8,7 @@ import typing as T
 import inspect
 from types import FunctionType
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, is_dataclass, asdict, fields
 from collections import deque, namedtuple
 from typing import TypedDict
 
@@ -174,6 +174,8 @@ class SeqVisitAdaptor(VisitAdaptor):
 			return type(baseObj)(*(i[1] for i in childDatas))
 		return type(baseObj)(i[1] for i in childDatas)
 
+
+
 class Visitable:
 	"""custom base interface for custom types -
 	we associate an adaptor type for these later"""
@@ -198,3 +200,13 @@ class VisitableVisitAdaptor(VisitAdaptor):
 	@classmethod
 	def newObj(cls, baseObj: T.Any, childDatas:CHILD_LIST_T, params:PARAMS_T) ->T.Any:
 		return baseObj.newObj(baseObj, childDatas, params)
+
+class DataclassVisitAdaptor(VisitAdaptor):
+	forTypes = (is_dataclass, )
+	@classmethod
+	def childObjects(cls, obj:T.Any, params:PARAMS_T) ->CHILD_LIST_T:
+		return [ChildData(k, v, {}) for k, v in asdict(obj).items()]
+
+	@classmethod
+	def newObj(cls, baseObj: T.Any, childDatas:CHILD_LIST_T, params:PARAMS_T) ->T.Any:
+		return type(baseObj)(**{i[0] : i[1] for i in childDatas})

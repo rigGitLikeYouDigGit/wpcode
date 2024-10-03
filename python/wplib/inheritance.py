@@ -1,5 +1,6 @@
 from __future__ import annotations, print_function
 
+import types
 import typing as T
 
 from wplib import log
@@ -72,6 +73,7 @@ class SuperClassLookupMap:
 	def __init__(self, classMap:dict[type, T.Any]=None):
 		self.classMap : dict[type, T.Any] = {}
 		self.cacheMap : dict[type, T.Any] = {}
+		self._hasMatchFunctions = False
 		if classMap is not None:
 			self.updateClassMap(classMap)
 
@@ -102,12 +104,17 @@ class SuperClassLookupMap:
 			       key=lambda i: len(i[0].__mro__) if isinstance(i[0], type) else 0,
 			       reverse=True)
 		)
+		for i in self.classMap.keys():
+			if isinstance(i, types.FunctionType):
+				self._hasMatchFunctions = True
 
 	def updateClassMap(self, classMap:dict[(type, tuple[type, ...]), T.Any]):
 		"""register a map of {type : value}"""
+		#log("updateClassMap", classMap)
 		self.classMap.update(self._expandTypeTupleKeys(classMap))
 		self._sortMap()
 		self.cacheMap.clear()
+		#log("end hasfn", self._hasMatchFunctions)
 
 	def lookup(self, lookupCls:type, default=Sentinel.FailToFind):
 		"""lookup a value using lookupCls,
@@ -125,9 +132,18 @@ class SuperClassLookupMap:
 			result = superClassLookup(
 				self.classMap, lookupCls, default=Sentinel.FailToFind)
 		#log(f"result {result}")
+		if result is Sentinel.FailToFind: # not found in map
+			if self._hasMatchFunctions: # check against functions now
+				for k, v in self.classMap.items():
+					#log("check", k, v)
+					if isinstance(k, types.FunctionType):
+						if k(lookupCls):
+							result = v
+
 		if result is not Sentinel.FailToFind: # found in map
 			self.cacheMap[lookupCls] = result
 			return result
+
 		if default is Sentinel.FailToFind :
 			raise KeyError(f"No value registered in {self.classMap}\n\nfor {lookupCls}")
 		return default
