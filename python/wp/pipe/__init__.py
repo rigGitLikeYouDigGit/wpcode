@@ -1,4 +1,4 @@
 
 
 from .show import Show
-from .asset import Asset, AssetBank
+#from .asset import Asset, AssetBank

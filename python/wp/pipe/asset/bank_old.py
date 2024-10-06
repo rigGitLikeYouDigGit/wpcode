@@ -18,6 +18,16 @@ from .main import Asset
 # if T.TYPE_CHECKING:
 from ..show import Show
 
+"""
+this was from an earlier version running on only tags, using
+whoosh searching as a backbone to present the tag sets as user-friendly
+hierarchies
+
+ended up overkill, but still an interesting idea for future
+
+"""
+
+
 # match these tags against a config
 validAssetTags = {
 	"character" : {

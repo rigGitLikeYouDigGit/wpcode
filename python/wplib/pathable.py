@@ -147,6 +147,19 @@ class Pathable(#Adaptor
 	def setName(self, name:keyT):
 		self._name = name
 
+	#region comparing
+	def __eq__(self, other):
+		if not isinstance(other, Pathable):
+			raise NotImplementedError
+		return tuple(self.path) == tuple(other.path)
+	#endregion
+
+	# region display
+	_autoReprAttrs = ["path"]
+	def __repr__(self):
+		attrDisplay = ",".join(f"{i}={getattr(self, i)}" for i in self._autoReprAttrs)
+		return f"{self.__class__}({self.name}, {attrDisplay})"
+	#endregion
 
 	#region treelike methods
 
@@ -160,7 +173,7 @@ class Pathable(#Adaptor
 		return test
 
 	#@classmethod
-	def _buildChildPathable(self, obj:T.Any, name:keyT):
+	def _buildChildPathable(self, obj:T.Any, name:keyT)->Pathable:
 		if isinstance(obj, type(self)):
 			return obj
 		pathType : type[PathAdaptor] = type(self).adaptorForType(type(obj))

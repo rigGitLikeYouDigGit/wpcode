@@ -11,14 +11,14 @@ from wpdex import WpDex, WpDexProxy
 
 
 def setModel(proxy:WpDexProxy):
-	proxy.setRule("show", options=lambda : Show.availableShows())
+	proxy.setRule("show", options=lambda : Show.showsDict())
 
 # relying on Trees doesn't cover things like setting limits of min/max for numeric values
 # in nested data structures
 # BUT it would be so much simpler than the full wpdex proxy
 def showModel(name="show", default="tempest"):
 	t = Tree(name, value=default)
-	t.auxProperties["options"] = lambda : Show.availableShows()
+	t.auxProperties["options"] = lambda : Show.showsDict()
 	t.auxProperties["ui"] = None
 	return t
 
@@ -27,7 +27,7 @@ def showModel(name="show", default="tempest"):
 	"model" : {
 		"rules" : {
 			("*/leaf", ) : {"minMax" : (-1, None)},
-			"/show" : {"options" : lambda : Show.availableShows()}
+			"/show" : {"options" : lambda : Show.showsDict()}
 		} # list of wpDex rules to apply to values when set?
 	}
 }}
@@ -60,7 +60,7 @@ def runTool():
 if __name__ == '__main__':
 	"""minimum test for me - make """
 
-	print(Show.availableShows())
+	print(Show.showsDict())
 	from param import rx
 
 
