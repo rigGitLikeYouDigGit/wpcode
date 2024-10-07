@@ -331,6 +331,10 @@ class Pathable(#Adaptor
 		if self.parent is self: raise RuntimeError("DEX PARENT IS SELF", self.obj)
 		return self.parent.path + [self.name, ]
 
+	def strPath(self, root=False)->str:
+		tokens = [self.root.name] + list(self.path) if root else self.path
+		return "/".join(map(str, tokens))
+
 	def _consumeFirstPathTokens(self, path:pathT, **kwargs
 	                            )->tuple[list[Pathable], pathT]:
 		"""process a path token

@@ -7,7 +7,7 @@ import typing as T
 from pathlib import Path, PurePath
 import orjson
 
-from wplib import log
+from wplib import log, string as libstr
 from wplib.object import UidElement, SmartFolder, DiskDescriptor
 from wplib.pathable import Pathable
 from wplib.sequence import toSeq, flatten
@@ -35,10 +35,14 @@ class Show(Pathable):
 
 	 """
 
-	def __init__(self, name, prefix):
-		super().__init__(obj=self, parent=None,
+	def __init__(self, name, parent:AssetRoot):
+		super().__init__(obj=self, parent=parent,
 		                 name=name)
-		self.prefix = prefix
+		#self.prefix = prefix
+		self._diskPath = parent.diskPath() / self.name
+
+	def diskPath(self):
+		return Path(self._diskPath)
 
 	@classmethod
 	def get(cls, *args, showDir:Path=None, name=""):
@@ -70,15 +74,16 @@ class Show(Pathable):
 		(showDir / "_show.json").write_text(orjson.dumps(self.configDict()))
 		#return
 
-	def diskPath(self)->Path:
-		return WP_ROOT / self.name
+	@classmethod
+	def isShowDir(cls, path:Path):
+		return ( path / "_show.json" ).exists()
 
 	@staticmethod
-	def showsDict():
-		return showsDict()
+	def showsDict()->dict[str, Show]:
+		return root().branchMap()
 	@staticmethod
-	def shows():
-		return list(showsDict().values())
+	def shows()->list[Show]:
+		return list(Show.showsDict().values())
 
 	@classmethod
 	def fromDiskPath(cls, path:Path)->Show:
@@ -89,12 +94,28 @@ class Show(Pathable):
 		d = Show.showsDict()
 		show = None
 		for token in Path(path).parts:
-			log(token, token in d)
+			#log(token, token in d)
 			if token in d:
 				showKey = token
 				show = d[showKey]
 				break
 		return show
+
+	@classmethod
+	def fromPath(cls, path):
+		"""could be ANY format of path - find some way
+		to get to the show level, else error.
+
+		maybe there should be some unified separate way of resolving
+		paths like this
+		maybe we should just use USD
+		"""
+		path = toAssetPath(path)
+
+		try:
+			return cls.showsDict()[path[0]]
+		except KeyError:
+			raise KeyError(f"no show found for path {path}\n in show map\n{cls.showsDict()}")
 
 	def _buildBranchMap(self) ->dict[keyT, Pathable]:
 		"""look at top-level folders under this show,
@@ -122,17 +143,17 @@ class Show(Pathable):
 			return None
 
 
-def showsDict()->dict[str, Show]:
-	"""check any top-level folders having a "_show.json" file
-	"""
-	result = {}
-	for childDir in WP_ROOT.iterdir():
-		if not childDir.is_dir():
-			continue
-		if not (childDir / "_show.json").exists():
-			continue
-		result[childDir.name] = Show.get(childDir)
-	return result
+# def showsDict()->dict[str, Show]:
+# 	"""check any top-level folders having a "_show.json" file
+# 	"""
+# 	result = {}
+# 	for childDir in WP_ROOT.iterdir():
+# 		if not childDir.is_dir():
+# 			continue
+# 		if not (childDir / "_show.json").exists():
+# 			continue
+# 		result[childDir.name] = Show.get(childDir)
+# 	return result
 
 
 class StepDir(Pathable):
@@ -277,7 +298,10 @@ class Asset(Pathable):
 	@classmethod
 	def fromDiskPath(cls, path:Path):
 		"""from path like 'F:\\wp\\wpcore\\asset\\character\\sourceHuman\\_asset.json'
-		return a new asset properly parented to its show and top dirs"""
+		return a new asset properly parented to its show and top dirs
+
+		:raises KeyError
+		"""
 
 		# get show
 		show = Show.fromDiskPath(path)
@@ -286,9 +310,31 @@ class Asset(Pathable):
 		assetTokens = tokens[tokens.index(show.name) + 1:]
 
 		assetTokens = [i for i in assetTokens if not "." in i and not i.startswith("_")]
-		log(assetTokens)
+		#log(assetTokens)
 		return show.access(show, assetTokens, one=True)
 
+	@classmethod
+	def fromPath(cls, path)->Asset:
+		#log("init path", path)
+		path = toAssetPath(path)
+		#log("found path", path)
+		show = Show.fromPath(path)
+		#log("show", show, "path", path)
+		return show.access(show, path=path[1:])
+
+def toAssetPath(path)->list[str]:
+	"""filter given path to start with a show token, strip
+	out any file stuff, etc
+
+	this won't work if we allow complex path expressions,
+	might need some kind of RE to only strip top level
+	"""
+	if isinstance(path, str):
+		path = path.replace(str(WP_ROOT), "")
+		path = list(filter( None, libstr.multiSplit(path, [" ", ",", "/", "\\"],
+		                         preserveSepChars=False
+		                         )))
+	return path
 
 def topLevelAssetFiles(show:Show):
 	"""list all paths for top-level assets in show - maybe should
@@ -298,6 +344,46 @@ def topLevelAssetFiles(show:Show):
 	searchDir = show.diskPath() / "*" / "*" / "*" / "_asset.json"
 	return glob.glob(str(searchDir))
 
+class AssetRoot(Pathable):
+	"""simplifies all kinds of logic to have a persistent root node
+	holding shows as first children"""
+
+	def __init__(self):
+		super().__init__(obj=self, name="wp")
+		self._diskPath = WP_ROOT
+
+	def diskPath(self)->Path:
+		return self._diskPath
+
+	def _buildBranchMap(self) ->dict[keyT, Pathable]:
+		"""look at top-level folders under this show,
+		allowing pathing into rich assets or the medial
+		AssetFolder objects
+		"""
+		children = {}
+		for childDir in self.diskPath().glob("*"):
+			#log("childDir", childDir)
+			if not childDir.is_dir(): continue
+			child = self._buildChildPathable(
+				childDir, name=childDir.name)
+			if child is None: continue
+			children[childDir.name] = child
+		return children
+
+	def _buildChildPathable(self, obj:Path, name:keyT):
+		"""we pass a Path object as obj, check if that should be a full
+		Asset wrapper or not"""
+		if Show.isShowDir(obj):
+			return Show(name=obj.parts[-1],
+			            parent=self,
+			            )
+
+_root = None
+def root()->AssetRoot:
+	global _root
+	if _root is None:
+		_root = AssetRoot()
+	return _root
 
 if __name__ == '__main__':
 	# for show in Show.shows():
@@ -310,6 +396,10 @@ if __name__ == '__main__':
 	a2 = Asset.fromDiskPath(p)
 	log("identical object?", a is a2, a == a2)
 	# do we want them to be identical? do we care?
+
+	# get from normal path
+	a3 = Asset.fromPath("wpcore/asset/character/sourceHuman")
+	log(a3)
 
 
 

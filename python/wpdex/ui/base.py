@@ -15,7 +15,7 @@ from wplib.object import Adaptor, VisitAdaptor
 from wplib.serial import SerialAdaptor, Serialisable, serialise, deserialise
 
 from wpdex import WpDex
-from wpui.model import iterAllItems
+#from wpui.model import iterAllItems
 #from wpui.typelabel import TypeLabel
 
 """

@@ -1,5 +1,4 @@
 
 
 """infrastructure for asset system"""
-from .main import Asset
-#from .bank import AssetBank
+from .main import Asset, Show, StepDir

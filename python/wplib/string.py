@@ -5,7 +5,6 @@ import typing as T
 
 import string, re, fnmatch
 
-
 def cap(s:str): # fight me
 	"""capitalize first letter of string"""
 	return s[0].upper() + s[1:]
@@ -63,17 +62,20 @@ def mergeRepeated(s:str, chars:str)->str:
 
 def multiSplit(s:str, separators:T.Iterable[str], preserveSepChars=False)->list[str]:
 	"""if preserveSepChars, each separator char will be returned as a separate token"""
+	#from wplib import log
 	tokens = []
 	startIndex = 0
 	endIndex = -1
 	for i in range(len(s)):
+		#log("tokens", tokens, i, s[i])
 		if s[i] in separators:
 			if preserveSepChars:
 				tokens.append(s[i])
 			tokens.append(s[startIndex:i])
 			startIndex = i + 1
-	if not tokens:
-		return [s]
+	# if not tokens:
+	# 	return [s]
+	tokens.append(s[startIndex:])
 	return tokens
 
 def splitBefore(s:str, splitChar:str):
