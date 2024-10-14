@@ -3,21 +3,16 @@ import typing as T
 
 from PySide2 import QtCore, QtWidgets, QtGui
 
+import reactivex as rx
+
 from wplib import log
+from wplib.object import Signal
 
-"""
-abc for uniform widget interface for getting and setting values
-"""
+from wpdex import WpDexProxy, Reference
+from wpdex.ui.react import ReactiveWidget
 
 
-class AtomicWidget:
-	"""MAYBE it's worth turning fields like value, options etc
-	into generated descriptors or something
-
-	i say "etc" but I can't think of any real uses outside those
+class AtomicWidget(ReactiveWidget):
+	"""a base class for atomics like this may be pointless,
+	ReactiveWidget has everything we need anyway
 	"""
-
-	def getValue(self):
-		raise NotImplementedError
-	def setValue(self, value, **kwargs):
-		raise NotImplementedError

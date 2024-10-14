@@ -23,6 +23,8 @@ WP_ROOT = Path(__file__).parent.parent.parent.parent
 CODE_ROOT = WP_ROOT / "code"
 WP_CONFIG = WP_ROOT / "config.json"
 
+WP_LOCAL_ROOT = WP_ROOT / "_local" # stuff that shouldn't be versioned
+
 TEMPEST_ROOT = WP_ROOT / "tempest"
 # work out how to get this from the environment when we need different projects lol
 ASSET_ROOT = TEMPEST_ROOT / "asset"

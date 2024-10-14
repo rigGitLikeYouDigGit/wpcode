@@ -16,3 +16,5 @@ shiftKeys = (QtCore.Qt.Key_Shift, ) # no qt equivalent for left/right shift
 escKeys = (QtCore.Qt.Key_Escape,)
 spaceKeys = (QtCore.Qt.Key_Space, )
 
+
+

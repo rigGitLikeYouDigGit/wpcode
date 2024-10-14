@@ -5,6 +5,7 @@ import typing as T
 
 from copy import deepcopy
 import fnmatch
+from pathlib import Path
 
 from wplib.object import Adaptor
 from wplib.log import log
@@ -126,6 +127,8 @@ class Pathable(#Adaptor
 		self.setObj(obj)
 		self._setParent(parent)
 		self.setName(name)
+
+		self._overrides = {} # we're doing it
 
 		self._branchMap = None # built on request
 
@@ -372,6 +375,8 @@ class Pathable(#Adaptor
 		if values, return actual result values
 		if not, return Pathable objects
 
+		:raises Pathable.PathKeyError
+
 		TODO: how to integrate "false" children like Dict["keys()"] ?
 			need to dynamically create new pathables during this call
 
@@ -421,7 +426,7 @@ class Pathable(#Adaptor
 			# format of default overrides one/many, since it's provided directly
 			if default is not Sentinel.FailToFind:
 				return default
-			raise KeyError(f"Path not found: {path}")
+			raise Pathable.PathKeyError(f"Path not found: {path}")
 
 		if values:
 			results = [r.obj for r in results]
@@ -529,6 +534,61 @@ class StringPathable(PathAdaptor):
 	def _buildChildren(self):
 		return []
 
+
+### test for abstracting this to use in file folders
+class DirPathable(Pathable):
+	"""
+
+	TODO: how should we integrate this with smartFolder
+	"""
+	
+	def __init__(self, name, parent:DirPathable):
+		super().__init__(obj=self, parent=parent, name=name)
+		self._diskPath = self.parent.diskPath() / self.name
+
+	def diskPath(self) -> Path:
+		return Path(self._diskPath)
+
+	# def file(self, name):
+	# 	"""unsure how to do individual files"""
+	#
+
+	def _buildBranchMap(self) ->dict[keyT, Pathable]:
+		"""look at top-level folders under this folder,
+		"""
+		children = {}
+		for childDir in self.diskPath().glob("*"):
+
+			#log("childDir", childDir)
+			if not childDir.is_dir(): continue
+			child = self._buildChildPathable(
+				childDir, name=childDir.name)
+			if child is None: continue
+			children[childDir.name] = child
+		return children
+
+	def _buildChildPathable(self, obj:Path, name:keyT)->(DirPathable, None):
+		"""we pass a Path object as obj, check if that should be a full
+		Asset wrapper or not"""
+		if not obj.is_dir(): return
+		return DirPathable(name=name, parent=self)
+
+	@classmethod
+	def isValidDir(cls, path:Path):
+		""" OVERRIDE
+		check if the given folder is a valid source for this class
+		"""
+		return True
+
+class RootDirPathable(DirPathable):
+	"""same as above, but acting as a local root
+	TODO: this is just temp, all tied up with how we manage local
+		roots and overrides in Pathable
+	"""
+	def __init__(self, path:Path, name=""):
+		#super().__init__(name, parent=None)
+		Pathable.__init__(self, name, parent=None) # jank af
+		self._diskPath = path
 
 
 if __name__ == '__main__':

@@ -1,92 +1,120 @@
 
-from __future__ import  annotations
+from __future__ import annotations
+
+import types
 import typing as T
-
-import param
-from param import rx
-
-from wpdex import WpDex, WpDexProxy
 
 from PySide2 import QtCore, QtWidgets, QtGui
 
+from wplib import log
+from wplib.object import Signal
+
+from wpdex import WpDexProxy, Reference
+#from wpdex.ui.atomic.base import AtomicWidget
 """
-tests for proper reactive widgets in Qt visualising arbitrary structures -
-this is the second half of the work, now that the proxy system works
-
-pyreaqtive is quite comprehensive but only works with their custom data structures
- as model - I couldn't immediately see where to modify it, but could return to it
- if needed
- 
- 
-need single holder widget class to dynamic-dispatch into whatever wpdex type is shown
-
-
-break up ui more - for smallest atomic widget go back to a consistent
-interface to get/set value
-consider how we might expose "plugs" on ui elements - for a text box, we pass in the
-current value, but also the options? or a callable to return the options?
-
+could have these descriptors for show(), enabled() etc
 """
+class WidgetHook:
 
-class WxBox(QtWidgets.QCheckBox):
-	""" where ref is something like
+	def __init__(self, w:QtWidgets.QWidget,
+	             getFn:callable=None,
+	             setFn:callable=None,
+	             ):
+		self.w = w
+		self.getFn = getFn
+		self.setFn = setFn
+		self.uiChangedSignal = Signal(name="uiChanged")
+		self.uiChangedSignal.connect(self.onUiChanged)
 
-	dataRoot.ref("branch", "leaf", "myBoolKey")
+	def __repr__(self):
+		return f"Hook({self.getFn}, {self.setFn}, {self.w})"
 
-	seems pointless to go through models for all of these, we still
-	need to set up the dependency stuff on either end
-	"""
+	def onUiChanged(self, *args, **kwargs):
+		"""triggered whenever the ui changes -
+		both on direct edit and on sync"""
+		#log("onUIChanged", self, args, kwargs)
 
+	def link(self, ref:Reference):
+		"""set up bidirectional dependence between this
+		ui field and the given reference -
+		we can't insert any transformation here (unless it's reversible)
+		"""
+		# set to ref value first
+		log("setting first")
+		self.setFn( ref() )
+		def onRefChanged(*args, **kwargs):
+			log("on ref changed", self, args, kwargs)
+			log("new value", ref() )
+			self.setFn( ref() )
+		# ref.dex().root.getEventSignal("main").connect(
+		# 	lambda event : self.setFn( ref() ))
+		ref.dex().root.getEventSignal("main").connect(onRefChanged)
+		self.uiChangedSignal.connect(
+			lambda *args : ref.dex().write( self.getFn() )
+		                       )
 
-	def __init__(self, ref, parent=None):
-		super().__init__(parent=parent)
-		# self.dataRoot = dataRoot
-		# self.path = path
-		ref.sync(self.setChecked)
-		# in this extreme simple case, we want something like this
-		# we could capture setChecked() being called to update the ref,
-		# and somehow set the ref to the same thing?
+	def driveWith(self, source):
+		"""when hook cannot write back, for options, validation etc
+		how do we signal to widgets to "sync", to pull new values to display?
+		"""
+		if isinstance(source, types.FunctionType):
 
-		# for properly formatting text, we might want a proper chain like
-		textRef.upper().join(",").output( self.setText)
-		textRef.setFrom( self.text, when=self.textChanged ) # trigger when a qt signal goes off?
-		# we're never going to hit all of this first try, this is a good start
+			def onRefChanged(*args, **kwargs):
+				pass
 
-
-
-def makeUi():
-	data = {"root" : True}
-	rdata = rx(data)
-	rdata.rx.watch(lambda *args : print(f"changed {args} {data}"))
-
-	rdata.rx.value["root"] = False
-
-	parentWidget = QtWidgets.QWidget()
-	checkBoxWidgetA : QtWidgets.QCheckBox = rx(QtWidgets.QCheckBox(parent=parentWidget))
-	checkBoxWidgetB : QtWidgets.QCheckBox = rx(QtWidgets.QCheckBox(parent=parentWidget))
-	checkBoxWidgetA.setChecked(rdata["root"])
-	checkBoxWidgetB.setChecked(rdata["root"])
-	layout = QtWidgets.QVBoxLayout()
-	layout.addWidget(checkBoxWidgetA.rx.value)
-	layout.addWidget(checkBoxWidgetB.rx.value)
-	parentWidget.setLayout(layout)
-
-	return parentWidget
-
-
-
-
-if __name__ == '__main__':
-	data = {"root" : True}
-	rdata = rx(data)
-	rdata.rx.watch(lambda *args : print(f"changed {args} {rdata.rx.value}"))
-
-	rdata.rx.value["root"] = True
-
-	# app = QtWidgets.QApplication()
-	# w = makeUi()
-	# w.show()
+	# def connections(self)->dict[str, list[callable]]:
 	#
-	# app.exec_()
 
 
+base = object
+if T.TYPE_CHECKING:
+	base = QtWidgets.QWidget
+class ReactiveWidget(base):
+
+
+	def __init__(self, name:str=""):
+		self.setObjectName(name)
+		self.ENABLED = WidgetHook(
+			self, getFn=self.isEnabled, setFn=self.setEnabled	)
+		self.VISIBLE = WidgetHook(
+			self, getFn=self.isVisible, setFn=self.setVisible		)
+		self.VALUE = WidgetHook(
+			self, getFn=self.getValue, setFn=self.setValue)
+
+		# connect signals to drive
+		for i in self._uiChangeQtSignals():
+			i.connect(self.onUiChanged)
+		#TODO: the old agony of Qt widget init sequencing might strike here -
+		#  it shouldn't matter when hooks are created though
+
+	def __repr__(self):
+		return f"{type(self)}({self.objectName()})"
+
+	def _uiChangeQtSignals(self)->list[QtCore.Signal]:
+		"""return the qt signals of this widget to connect to the
+		onUiChanged() manager function"""
+		raise NotImplementedError
+
+	def hooks(self)->dict[str, WidgetHook]:
+		return {k : v for k, v in self.__dict__.items() if isinstance(v, WidgetHook)}
+
+	def onUiChanged(self, *args, **kwargs):
+		"""top level trigger for any ui change -
+		this will trigger regardless of source, so either filter
+		or mute	signals outside this scope where needed
+		"""
+		if self.sender() is self:
+			log("skipping box", self)
+		for hookName, hook in self.hooks().items():
+			hook.uiChangedSignal(*args, **kwargs)
+
+	# uniform interface for getting and setting values on common widgets
+	def getValue(self, **kwargs):
+		raise NotImplementedError
+	def setValue(self, value, **kwargs):
+		raise NotImplementedError
+
+	def getOptions(self):
+		raise NotImplementedError
+	def setOptions(self, value, **kwargs):
+		raise NotImplementedError
