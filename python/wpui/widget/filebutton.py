@@ -6,7 +6,7 @@ from pathlib import Path, PurePath
 from PySide2 import QtCore, QtWidgets, QtGui
 
 from wplib import TypeNamespace
-from wpexp import EVAL
+#from wpexp import EVAL
 class FileSelectMode(TypeNamespace):
 	"""should options look for a file or for a directory"""
 	class _Base(TypeNamespace.base()):

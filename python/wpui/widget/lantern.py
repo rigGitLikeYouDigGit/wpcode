@@ -27,15 +27,19 @@ class Status(TypeNamespace):
 		colour = (0.5, 0.5, 0.5)
 		pass
 
-	class Success(_Base):
+	class Success(_Base): # green
 		colour = (0.1, 0.9, 0.3)
 		pass
 
-	class Failure(_Base):
+	class Warning(_Base): # orange
+		colour = (0.8, 0.6, 0.1)
+
+	class Failure(_Base): # red
 		colour = (0.9, 0.0, 0.4)
 		pass
 
-	class Neutral(_Base): pass
+	class Neutral(_Base): # grey
+		pass
 
 
 class Lantern(QtWidgets.QWidget):

@@ -14,5 +14,7 @@ a core python datastructure as the "model", and everything else
 updating from it
 """
 
-
+from .scene import WpCanvasScene
+from .view import WpCanvasView
+from .element import WpCanvasItem
 

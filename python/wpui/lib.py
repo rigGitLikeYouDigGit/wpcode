@@ -46,3 +46,15 @@ def qTransformToArr(mat:QtGui.QTransform)->np.ndarray:
 	return np.array([[mat.m11(), mat.m12(), mat.dx()],
 	                 [mat.m21(), mat.m22(), mat.dy()],
 	                 [0, 0, 1]])
+
+def qRectToArr(rect:(QtCore.QRect, QtCore.QRectF),
+               originSize=True)->np.ndarray:
+	dtype = float
+	if isinstance(rect, QtCore.QRect):
+		dtype = int
+	if originSize:
+		arr = np.array([rect.topLeft().toTuple(), rect.size().toTuple()], dtype=dtype)
+	else:
+		arr = np.array([rect.topLeft().toTuple(), rect.bottomRight().toTuple()], dtype=dtype)
+	return arr
+

@@ -1,21 +1,145 @@
 
+
 from __future__ import annotations
+
+import math
 import typing as T
 
-"""
-core scene for canvas
-usually we won't store much state in canvas itself
-
-"""
+import numpy as np
 
 from PySide2 import QtWidgets, QtCore, QtGui
+#from param import rx
+
+from wplib import log, sequence
+from wptree import Tree
+from wpdex import WpDexProxy
+from wplib.serial import Serialisable
+
+from wpui.keystate import KeyState
+from wpui import lib as uilib
+
+
+def drawGridOverRect(rect:QtCore.QRect,
+                     painter:QtGui.QPainter,
+                     cellSize=(10, 10)
+                     ):
+	"""basic qt brush cross fill is trash, so we need to roll our own -
+	get the integer coordinates enclosing the given view, and draw pen
+	lines between them -
+	assume the rect has already been transformed by whatever mat you
+	want"""
+	cellSize = [int(i) for i in cellSize]
+	points = np.array((rect.topLeft().toTuple(), rect.bottomRight().toTuple()),
+	                  dtype=int)#.transpose()
+	#log("points", points)
+	# intPoints = np.array(map(int, points))
+	# log("intpoints", intPoints)
+	for x in range(points[0][0], points[1][0]): # verticals
+		if x % cellSize[0]: continue
+		painter.drawLine(QtCore.QLine(x, points[0][1],
+		                              x, points[1][1]))
+	for y in range(points[0][1], points[1][1]): # horizontals
+		if y % cellSize[1] : continue
+		painter.drawLine(QtCore.QLine(points[0][0], y,
+		                              points[1][0], y))
+
+
+
+def toArr(obj)->np.ndarray:
+	"""we will eventually define adaptors for every random numeric type
+	of every random library
+	to get them into numpy"""
+	if isinstance(obj, (QtCore.QPoint, QtCore.QPointF)):
+		return np.array(obj.toTuple())
+
 
 class WpCanvasScene(QtWidgets.QGraphicsScene):
-	"""scene for a single canvas"""
+	"""scene for a single canvas
+
+	- setting all the single-use property things to be dynamic/reactive would be rad
+	- setting the more complicated event callbacks to be reactive may not be useful
+
+	TODO: ACTIONS
+		for changing selection state
+		moving objects
+		doing anything really - THAT is another advantage of having everything as data
+	"""
 
 	def __init__(self, parent=None):
 		super().__init__(parent=parent)
 
 		self.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(0, 0, 0, 255)))
 		self.setSceneRect(0, 0, 1000, 1000)
+		# create brushes to use - base one for black background,
+		# 2 more for the grid (eventually have this as an option for snapping
+		self.baseBrush = QtGui.QBrush(QtCore.Qt.black)
 
+		self.gridScale = 20
+		self.gridPen = QtGui.QPen(QtGui.QColor.fromRgbF(0, 0, 0.5))
+		self.gridPen.setCosmetic(True)
+		self.coarseScale = 5.0 * self.gridScale
+		self.coarsePen = QtGui.QPen(QtGui.QColor.fromRgbF(0.3, 0.4, 1.0))
+		self.coarsePen.setCosmetic(True)
+		self.coarsePen.setStyle(QtCore.Qt.DashLine)
+
+	def itemsDragged(self, items:list[QtWidgets.QGraphicsItem],
+	                 delta:tuple[int, int]):
+		#log("items dragged", delta, items)
+		#delta = toArr(delta)
+		for i in items:
+			#item.setPos(i.pos())
+			#continue
+			# log("pointArr", np.array(i.pos().toTuple()))
+			# log("deltaArr", np.array(delta))
+			# log("added", np.array(i.pos().toTuple()) + np.array(delta))
+			#finalPoint = np.array(i.pos().toTuple()) + np.array(delta, dtype=int)
+			finalPoint = i.pos() + delta
+			#log("finalPoint", finalPoint)
+			self.trySetPos(i, pos=finalPoint)
+
+	def trySetPos(self, item:QtWidgets.QGraphicsItem, pos:tuple[int, int]):
+		"""check if there are any constraints, then set position"""
+		#log("pos", pos, type(pos))
+		item.setPos(pos)
+
+	def select(self, items:list[QtWidgets.QGraphicsItem],
+	           mode="add"):
+		""" do we keep the same key behaviour as maya, or something slightly
+		more kind
+		WHY is toggle the default with shift
+
+		mode can be either
+		replace (nothing),
+		add (control + shift),
+		remove (control),
+		toggle (shift)
+
+		"""
+		#log("select", mode, mode=="replace", items)
+		if mode == "replace" :
+			self.clearSelection()
+			for i in items: i.setSelected(True)
+			return
+		for i in items:
+			if mode == "toggle":
+				i.setSelected(not i.isSelected())
+			if mode == "add":
+				i.setSelected(True)
+			if mode == "remove" :
+				i.setSelected(False)
+
+	def centreItem(self, item:QtWidgets.QGraphicsItem):
+		centrePos = self.sceneRect().center()
+		item.setPos(centrePos)
+
+	def drawBackground(self, painter:QtGui.QPainter, rect):
+		""""""
+		painter.save()
+		painter.fillRect(rect, self.baseBrush)
+
+		painter.setPen(self.gridPen)
+		drawGridOverRect(rect, painter, cellSize=(self.gridScale, self.gridScale))
+
+		painter.setPen(self.coarsePen)
+		drawGridOverRect(rect, painter, cellSize=(self.coarseScale, self.coarseScale))
+		painter.restore()

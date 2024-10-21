@@ -5,12 +5,17 @@ from collections import defaultdict
 
 from PySide2 import QtCore, QtGui, QtWidgets
 
+from wplib import log
 from wpui.constant import keyDict, dropActionDict, shiftKeys, tabKeys, spaceKeys
 
 class KeyState(object):
 	""" holds variables telling if shift, LMB etc are held down
 	currently requires events to update, may not be a good idea to
-	query continuously """
+	query continuously
+
+	 TODO: the bool refs as keys is quite readable in code but we're missing
+	    robust ways of associating the string name of a key, its value and its qt constant
+	 """
 
 	class _BoolRef(object):
 		""" wrapper for consistent references to bool value """
@@ -81,6 +86,9 @@ class KeyState(object):
 		# test - register functions to be called when key is pressed
 		self.keyFunctionMap :dict[QtCore.Qt.Key, set[T.Callable]] = defaultdict(set)
 
+		self.lastPressed = set()
+		self.lastReleased = set()
+
 	def initialiseMouseTrackList(self, neutralPos=None)->list[QtCore.QPoint]:
 		pos = neutralPos or QtCore.QPoint()
 		return [pos for i in range(self.mouseTrackLength)]
@@ -123,6 +131,7 @@ class KeyState(object):
 	def mousePressed(self, event:QtGui.QMouseEvent):
 		for button, v in self.mouseMap.items():
 			button( event.button() == v)
+		self.lastPressed = {k for k, v in self.mouseMap.items() if int(v & event.buttons())}
 		# update last position
 		self.lastMousePosMap.pop(event.button())
 		self.lastMousePosMap[event.button()] = event.pos()
@@ -137,6 +146,7 @@ class KeyState(object):
 		for button, v in self.mouseMap.items():
 			if event.button() == v:
 				button(False)
+		self.lastReleased = {k for k, v in self.mouseMap.items() if int(v & event.buttons())}
 		self.syncModifiers(event)
 		# clear mouse tracking if no mouse buttons are pressed
 		if not any((self.LMB, self.MMB, self.RMB)):
