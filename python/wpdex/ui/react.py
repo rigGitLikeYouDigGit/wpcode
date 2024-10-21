@@ -15,6 +15,8 @@ from wpdex import WpDexProxy, Reference
 could have these descriptors for show(), enabled() etc
 """
 class WidgetHook:
+	"""live reactive properties to assign to widgets
+	as instance attributes - linked to live value or driven by expression"""
 
 	def __init__(self, w:QtWidgets.QWidget,
 	             getFn:callable=None,

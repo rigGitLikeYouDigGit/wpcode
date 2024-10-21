@@ -9,17 +9,9 @@ cursor colour
 selected colour
 unselected colour
 
-
-
-
-wouldn't it be nice if there was a way of having a 
-single "spine" of data, and all this graphics stuff be
-a view into a single bit of it?
-similar to the chimaera nodes built over the main tree - 
-probably needs too much specialisation anyway in 
-moveable graphics objects, but maybe it's worth
-exploring?
-
+after a long and lonely road we have a decent way of doing this using 
+a core python datastructure as the "model", and everything else
+updating from it
 """
 
 

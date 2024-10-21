@@ -39,6 +39,8 @@ class Status(TypeNamespace):
 
 
 class Lantern(QtWidgets.QWidget):
+
+	Status = Status
 	
 	def __init__(self, status=Status.Neutral, parent=None):
 		super().__init__(parent)
@@ -46,7 +48,6 @@ class Lantern(QtWidgets.QWidget):
 		self.setAutoFillBackground(True)
 		#self.setWindowOpacity(1.0)
 		self.setContentsMargins(0, 0, 0, 0)
-
 
 
 	def setStatus(self, status:Status.T()):

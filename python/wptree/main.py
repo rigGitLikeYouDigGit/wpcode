@@ -46,6 +46,7 @@ class Tree(TreeInterface,
 	             lookupCreate=None,
 	             default=Sentinel.Empty,
 	             desc="",
+	             branches=()
 	             ):
 		"""initialise real internal values for interface to affect.
 
@@ -73,6 +74,11 @@ class Tree(TreeInterface,
 		#log("tree init end")
 		#log(self.childObjects({}))
 		#log([type(i[1]) for i in self.childObjects({})])
+
+		# allow passing in branches to append - this way we can declare trees literally
+		# TODO: (it's still a bit verbose - revisit this)
+		for i in branches or ():
+			self.addBranch(i, force=0)
 
 	def __hash__(self):
 		return hash(self.uid)

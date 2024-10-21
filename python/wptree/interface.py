@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from collections import namedtuple
 
 from wplib.sequence import flatten, resolveSeqIndex
-from wplib.object import Signal, Traversable, TraversableParams, EventDispatcher#, EventBase, DeepVisitor
+from wplib.object import Signal, EventDispatcher#, EventBase, DeepVisitor
 from wplib import TypeNamespace, log
 from wplib.sentinel import Sentinel
 from wplib.string import incrementName
@@ -36,17 +36,6 @@ TODO: breakpoints are probably still useful for parent/root encapsulation in
 """
 
 
-@dataclass
-class TreeTraversalParams(TraversableParams):
-	"""parameters for traversing a tree
-	:param create:
-		if True, create any missing branches;
-		if False, raise KeyError if any branches are missing
-		if None, use tree's auxProperty of "lookupCreate"
-
-	"""
-	create : bool = None
-
 # class TreeSignalComponent:
 # 	"""Signal object constructed lazily -
 # 	any signal used by a tree should go here
@@ -63,7 +52,7 @@ CHILD_LIST_T = VisitAdaptor.CHILD_LIST_T
 PARAMS_T = VisitAdaptor.PARAMS_T
 ChildData = VisitAdaptor.ChildData
 
-keyT = Traversable.keyT
+keyT = Pathable.keyT
 TreeType = T.TypeVar("TreeType", bound="TreeInterface")
 class TreeInterface(Pathable,
                     Serialisable,
@@ -408,10 +397,6 @@ class TreeInterface(Pathable,
 	}
 	parentChar = "^"
 
-	@classmethod
-	def defaultTraverseParamCls(cls) ->T.Type[TreeTraversalParams]:
-		"""return the default class for traverse params"""
-		return TreeTraversalParams
 
 	def _branchFromToken(self, token:keyT)->(TreeType, None):
 		""" given single address token, return a known branch or none """
@@ -434,40 +419,6 @@ class TreeInterface(Pathable,
 		if result:
 			return result.value
 		return default
-
-	def findNextTraversable(self, separator:str, token:str,
-	                        params:defaultTraverseParamCls()) ->Traversable:
-		"""find next traversable object from this tree, given a separator and token
-		:param separator: separator character to use
-		:param token: token to search for
-		:param params: traverse params object
-		:return: Traversable object
-		"""
-		#log("findNextTraversable", self, separator, token, params)
-		# check if branch is directly found - return it if so
-		found = self._branchFromToken(token)
-		#log("found", found, type(found), bool(found))
-		if found:
-			return found
-
-		# if create is passed directly, use it -
-		# else use lookupcreate default
-		# activeCreate = params.create if params.create is not None \
-		# 	else self.getAuxProperty("lookupCreate", default=False)
-		activeCreate = params.create
-
-		# if branch should not be created, lookup is invalid
-		if not activeCreate:
-			raise KeyError("tree {} has no child {} in branches {}".format(self, token, self.branches))
-
-		# create new child branch for lookup
-		obj = self._createChildBranch(token)
-
-		# add it to this tree
-		self.addBranch(obj)
-
-		# return it
-		return obj
 
 	def _consumeFirstPathTokens(self, path: pathT, **kwargs) ->tuple[list[Pathable], pathT]:
 		#log("consume tokens", path, kwargs)

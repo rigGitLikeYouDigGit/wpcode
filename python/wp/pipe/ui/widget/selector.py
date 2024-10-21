@@ -59,15 +59,6 @@ class MenuLineEdit(QtWidgets.QLineEdit):
 		self.completer().highlighted.connect(self._onHighlighted)
 		self.textChanged.connect(self._onTextChanged)
 
-		self._basePopupMethod = self._completer.popup().keyPressEvent
-		self._completer.popup().keyPressEvent = self._completerKeyPressEvent
-
-	def _completerKeyPressEvent(self, completer, *args, **kwargs):
-		type(completer).keyPressEvent(completer, *args, **kwargs)
-		print("after patched key press")
-		if self._lastHighlighted:
-			self.afterOptionHighlighted.emit(self._lastHighlighted)
-
 	def _saveText(self):
 		self._prevCursor = self.cursorPosition()
 		self._prevText = self.text()
@@ -95,7 +86,7 @@ class MenuLineEdit(QtWidgets.QLineEdit):
 		if not self._lastHighlighted:
 			self._saveText()
 		self._lastHighlighted = args[0]
-		print("end highlighted")
+		#print("end highlighted")
 
 	def _onTextChanged(self, *args, **kwargs):
 		"""naively one might think that
@@ -152,6 +143,10 @@ class AssetSelectorWidget(QtWidgets.QWidget, ReactiveWidget):
 
 
 	it turns out QCompleter is quite difficult to dissuade from changing a lineedit's text as you change options - after trying a load of signal stuff and rolling own, just gonna hack around it somehow, and manage the cursor and selection manually
+
+	TODO: we still have the annoying bug where the highlighting behaviour breaks after you
+		show, hide, then show the completion widget again
+		but I've spent too long on this
 	"""
 
 	def __init__(self, parent=None, name="asset",
@@ -167,32 +162,6 @@ class AssetSelectorWidget(QtWidgets.QWidget, ReactiveWidget):
 		ReactiveWidget.__init__(self, name)
 		# get all scanned asset paths to
 		log("all paths", list(search.allPaths()))
-		# self.completer = AssetCompleter(list(search.allPaths()), parent=self)
-		# self.line.setCompleter(self.completer)
-
-		# #self.completer.highlighted.disconnect()
-		# QtCore.QObject.disconnect(self.completer, None, None, None)
-		# QtCore.QObject.disconnect(self.completer.model(), None, None, None)
-		# QtCore.QObject.disconnect(self.completer.popup(), None, None, None)
-		# log("highlighted receivers", self.completer.receivers(
-		# 	QtCore.SIGNAL("highlighted(QString)")))
-
-		#self.completer.highlighted.connect(self._onOptionHighlighted)
-		#self.line.setObjectName("line")
-		# self.completer.disconnect("highlighted(QString)",
-		#                           self.line, "setText")
-		# self.completer.disconnect("highlighted(QString)",
-		#                           self.line, "_q_completionHighlighted")
-
-		# log("highlighted receivers", self.completer.receivers(self.completer.highlighted))
-
-		#self.completer.highlighted.disconnect(self.line.setText)
-
-		# self._falseLine = QtWidgets.QLineEdit(self)
-		# self._falseLine.setObjectName("falseLine")
-		# self.completer.setWidget(self._falseLine)
-		# self._falseLine.hide()
-		# log("completer widget", self.completer.widget(), self.completer.widget() == self.line)
 
 		self.lantern = Lantern(status=Status.Neutral, parent=self)
 
@@ -218,7 +187,7 @@ class AssetSelectorWidget(QtWidgets.QWidget, ReactiveWidget):
 
 		this fires after option selected in completer dropdown
 		"""
-		log("highlighted", args, kwargs)
+		#log("highlighted", args, kwargs)
 		baseText = self.line.text()
 		#log("base text", baseText)
 		suggestPath = args[0]
@@ -226,10 +195,7 @@ class AssetSelectorWidget(QtWidgets.QWidget, ReactiveWidget):
 		self.line.setText(suggestPath)
 		if baseText in suggestPath:
 			self.line.setSelection(highlightStartId, len(suggestPath) - 1)
-		# self.line.setFocus()
-		#self.line.selectAll()
-		log("line selected text", self.line.selectedText())
-		#self.line.repaint()
+		#log("line selected text", self.line.selectedText())
 
 	def _uiChangeQtSignals(self):
 		return []

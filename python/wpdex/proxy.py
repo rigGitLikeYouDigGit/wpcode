@@ -344,6 +344,11 @@ class Reference:
 		pprint.pp(event)
 		self.changed( self() )
 
+	def drive(self, fn:callable):
+		"""drive the given callable with the result of this reference,
+		whenever the source changes"""
+		self.changed.connect(fn)
+
 	def dex(self)->WpDex:
 		return self.root.dex().access(self.root.dex(), self.path, values=0)
 

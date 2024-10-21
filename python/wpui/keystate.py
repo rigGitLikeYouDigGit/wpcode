@@ -41,10 +41,10 @@ class KeyState(object):
 		self.LMB = self._BoolRef(False)
 		self.RMB = self._BoolRef(False)
 		self.MMB = self._BoolRef(False)
-		self.alt = self._BoolRef(False)
-		self.ctrl = self._BoolRef(False)
-		self.shift = self._BoolRef(False)
-		self.space = self._BoolRef(False)
+		self.ALT = self._BoolRef(False)
+		self.CTRL = self._BoolRef(False)
+		self.SHIFT = self._BoolRef(False)
+		self.SPACE = self._BoolRef(False)
 
 		self.lastMousePosMap  = {
 			QtCore.Qt.LeftButton : (0, 0),
@@ -58,10 +58,10 @@ class KeyState(object):
 			self.MMB : QtCore.Qt.MiddleButton }
 
 		self.keyMap = {
-			self.alt: QtCore.Qt.AltModifier,
-			self.ctrl: QtCore.Qt.ControlModifier,
-			self.shift: QtCore.Qt.ShiftModifier,
-			self.space: QtCore.Qt.Key_Space
+			self.ALT: QtCore.Qt.AltModifier,
+			self.CTRL: QtCore.Qt.ControlModifier,
+			self.SHIFT: QtCore.Qt.ShiftModifier,
+			self.SPACE: QtCore.Qt.Key_Space
 		}
 		# shift and ctrl are swapped for me I kid you not
 		# I swear to god they actually are
@@ -71,11 +71,19 @@ class KeyState(object):
 		# add position tracking for mouse
 		self.mousePositions = self.initialiseMouseTrackList()
 
+		# need separate tracks so we can track initial presses
+		self.mouseKeyTracks = {
+			self.LMB : self.initialiseMouseTrackList(),
+			self.RMB : self.initialiseMouseTrackList(),
+			self.MMB : self.initialiseMouseTrackList(),
+		}
+
 		# test - register functions to be called when key is pressed
 		self.keyFunctionMap :dict[QtCore.Qt.Key, set[T.Callable]] = defaultdict(set)
 
-	def initialiseMouseTrackList(self)->list[QtCore.QPoint]:
-		return [QtCore.QPoint() for i in range(self.mouseTrackLength)]
+	def initialiseMouseTrackList(self, neutralPos=None)->list[QtCore.QPoint]:
+		pos = neutralPos or QtCore.QPoint()
+		return [pos for i in range(self.mouseTrackLength)]
 
 	def holdDuration(self):
 		"""not sure how to best do this - consider on mouse press / key press,
@@ -120,6 +128,11 @@ class KeyState(object):
 		self.lastMousePosMap[event.button()] = event.pos()
 		self.syncModifiers(event)
 
+		for button in self.mouseKeyTracks.keys():
+			if button:
+				self.mouseKeyTracks[button] = self.initialiseMouseTrackList(event.pos())
+
+
 	def mouseReleased(self, event:QtGui.QMouseEvent):
 		for button, v in self.mouseMap.items():
 			if event.button() == v:
@@ -127,14 +140,23 @@ class KeyState(object):
 		self.syncModifiers(event)
 		# clear mouse tracking if no mouse buttons are pressed
 		if not any((self.LMB, self.MMB, self.RMB)):
-			self.mousePositions = self.initialiseMouseTrackList()
+			self.mousePositions = self.initialiseMouseTrackList(event.pos())
 
 	def mouseMoved(self, event:QtGui.QMouseEvent):
 		for i in range(len(self.mousePositions) - 1):
 			self.mousePositions[-(i + 1)] = self.mousePositions[-(i + 2)]
 		self.mousePositions[0] = event.pos()
 
-	def mouseDelta(self)->QtCore.QPoint:
+		for button, v in self.mouseKeyTracks.items():
+			if button:
+				for i in range(len(v) - 1):
+					v[-(i + 1)] = v[-(i + 2)]
+				v[0] = event.pos()
+
+
+	def mouseDelta(self, forKey=None)->QtCore.QPoint:
+		if forKey:
+			return self.mouseKeyTracks[forKey][0] - self.mouseKeyTracks[forKey][1]
 		return self.mousePositions[0] - self.mousePositions[1]
 
 	def keyPressed(self, event:QtGui.QKeyEvent):
@@ -153,8 +175,8 @@ class KeyState(object):
 		for key, v in self.keyMap.items():
 			key((event.modifiers() == v)) # not iterable
 		if event.modifiers() == (QtCore.Qt.ShiftModifier | QtCore.Qt.ControlModifier):
-			self.ctrl(True)
-			self.shift(True)
+			self.CTRL(True)
+			self.SHIFT(True)
 
 
 	def debug(self):

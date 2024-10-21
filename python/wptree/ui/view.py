@@ -182,7 +182,7 @@ class TreeView( SuperViewBase, QtWidgets.QTreeView,):
 		if event.key() in tabKeys:
 			for index in self.selectedRowIndices():#type:QtCore.QModelIndex
 				#print("index", index, self.model().branchFromIndex(index))
-				if self.keyState.shift: #unparent one level
+				if self.keyState.SHIFT: #unparent one level
 					parentIndex = index.parent()
 					grandParentIndex = parentIndex.parent()
 					if not grandParentIndex.isValid():
@@ -201,18 +201,18 @@ class TreeView( SuperViewBase, QtWidgets.QTreeView,):
 				self.model().deleteRow(index)
 
 		if event.key() == QtCore.Qt.Key_P: #reparent
-			if self.keyState.shift:
+			if self.keyState.SHIFT:
 				self.model().parentRows(self.selectedRowIndices(), self.model().index(0,0))
 			else:
 				self.model().parentRows(self.selectedRowIndices()[:-1], self.selectedRowIndices()[-1])
 
-		if event.key() == QtCore.Qt.Key_D and self.keyState.ctrl: # duplicate
+		if event.key() == QtCore.Qt.Key_D and self.keyState.CTRL: # duplicate
 			newTrees = self.model().duplicateRows(self.selectedRowIndices())
 
 
 
 		if event.key() == QtCore.Qt.Key_Return: # edit branch
-			if self.keyState.shift:
+			if self.keyState.SHIFT:
 				self.edit(self.model().index(
 					self.currentIndex().row(), 0, self.currentIndex().parent()))
 			else:
@@ -343,14 +343,14 @@ class TreeView( SuperViewBase, QtWidgets.QTreeView,):
 
 		index = self.model().index(index.row(), 0, index.parent())
 
-		if not self.keyState.shift:
+		if not self.keyState.SHIFT:
 			# no contiguous selection
 
 			#print("key state", self.keyState.ctrl, self.keyState.debug())
 
-			if self.keyState.ctrl:
+			if self.keyState.CTRL:
 				command = QtCore.QItemSelectionModel.Toggle
-			elif self.keyState.alt:
+			elif self.keyState.ALT:
 				print("deselect")
 				command = QtCore.QItemSelectionModel.Deselect
 			else:
@@ -366,7 +366,7 @@ class TreeView( SuperViewBase, QtWidgets.QTreeView,):
 			# )
 			# return
 
-		elif self.keyState.shift: # contiguous span
+		elif self.keyState.SHIFT: # contiguous span
 
 			clickRow = self.model().rowFromIndex(index)
 			if not self.selectionModel().currentIndex().isValid():
@@ -417,9 +417,9 @@ class TreeView( SuperViewBase, QtWidgets.QTreeView,):
 			# 	self.sel.add(row)
 
 			operation = QtCore.QItemSelectionModel.Toggle
-			if self.keyState.ctrl:
+			if self.keyState.CTRL:
 				operation = QtCore.QItemSelectionModel.Select
-			if self.keyState.alt:
+			if self.keyState.ALT:
 				operation = QtCore.QItemSelectionModel.Deselect
 
 			for row in targets:

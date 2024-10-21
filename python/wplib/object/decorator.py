@@ -96,7 +96,7 @@ formalises accepting no arguments, an empty call, or arbitrary arguments
 		return targetFunction
 
 
-def clsInstanceMethod(cls):
+def clsInstanceMethod(func):
 	"""decorator to pass a class if called on
 	a class, or instance if called on instance
 	"""
@@ -104,11 +104,22 @@ def clsInstanceMethod(cls):
 		@wraps(func)
 		def wrappedFunc(self=None, *args, **kwargs):
 			if self is None:
-				return func(cls, *args, **kwargs)
+				return func(None, *args, **kwargs)
 			return func(self, *args, **kwargs)
 		return wrappedFunc
-	return
+	return wrapper(func)
 
+# class Test:
+#
+# 	@clsInstanceMethod
+# 	def myMethod(self):
+# 		from wplib import log
+# 		log("self", self)
+#
+#
+# t = Test()
+# t.myMethod()
+# Test.myMethod()
 
 if __name__ == '__main__':
 

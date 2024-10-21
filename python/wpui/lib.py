@@ -40,3 +40,9 @@ def qmatrixToArr(mat:QtGui.QMatrix)->np.ndarray:
 	return np.array([[mat.m11(), mat.m12(), mat.dx()],
 	                 [mat.m21(), mat.m22(), mat.dy()],
 	                 [0, 0, 1]])
+
+def qTransformToArr(mat:QtGui.QTransform)->np.ndarray:
+	"""convert QMatrix to numpy array"""
+	return np.array([[mat.m11(), mat.m12(), mat.dx()],
+	                 [mat.m21(), mat.m22(), mat.dy()],
+	                 [0, 0, 1]])

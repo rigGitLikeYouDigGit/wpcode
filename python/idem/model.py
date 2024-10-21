@@ -68,9 +68,16 @@ DEFAULT_CHI = "strategy.chi"
 def newModel():
 	""" add """
 	root = Tree("root")
-	root["asset"] = Field(Asset,
-	                      value=None)
-	root["chiPath"] = Field(str, value=DEFAULT_CHI)
+	root["asset"] = AssetField(default=None,
+	                           optional=False,
+	                           single=True
+	                           )
+	#root["chiPath"] = PathField(default=lambda : root["asset"].value.diskPath() / "stategy.chi")
+	root["chiPath"] = PathField(
+		parentDir=ref("../asset").diskPath(),
+		default="strategy.chi",
+		conditions=[ref("v").in_(ref("../asset").diskPath().iterdir())]
+	)
 
 	# set default paths
 

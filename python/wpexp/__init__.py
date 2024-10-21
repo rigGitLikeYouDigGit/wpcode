@@ -10,5 +10,5 @@ from .syntax import SyntaxPasses, ExpTokens#, ExpSyntaxError, ExpSyntaxProcessor
 from .new import Expression, ExpPolicy#, EvaluationError, ExpEvaluator
 from .dirty import DirtyExp
 
-
+from .react import *
 
