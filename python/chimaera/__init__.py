@@ -12,5 +12,6 @@ on your own.
 """
 
 
-from .node import ChimaeraNode, NodeAttrWrapper
+from .node import ChimaeraNode#, NodeAttrWrapper
 
+from .dex import ChiDex, ChiDeltaAid

@@ -115,6 +115,12 @@ class TypeNamespace(ClassMagicMethodMixin):
 		return cls.members()[item]
 
 	@classmethod
+	def __class_hash__(cls):
+		"""index maps with the string of a type's name -
+		more flexible this way"""
+		return hash(cls.__name__)
+
+	@classmethod
 	def __class_len__(cls):
 		return len(cls.members())
 

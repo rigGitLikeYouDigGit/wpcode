@@ -8,6 +8,8 @@ from PySide2 import QtCore, QtWidgets, QtGui
 """this module represents weeks of sporadic misery"""
 
 def syncViewLayout(view:QtWidgets.QAbstractItemView):
+	"""update the arrangement of items drawn in an item view
+	"""
 	view.scheduleDelayedItemsLayout()
 	view.executeDelayedItemsLayout()
 

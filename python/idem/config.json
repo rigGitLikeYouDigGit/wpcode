@@ -3,6 +3,7 @@
   "dcc" : {
     "maya" : {
       "exe" : "C:/Program Files/Autodesk/Maya2023/bin/maya.exe",
+      "icon" : "C:/Program Files/Autodesk/Maya2023/icons/mayaico.png",
       "version" : "no",
       "2023" : {},
       "startup": "wpm.startup"

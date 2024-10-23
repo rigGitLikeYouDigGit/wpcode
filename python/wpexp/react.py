@@ -1,28 +1,141 @@
 
 from __future__ import  annotations
 import typing as T
-
-
-#todo: put this somewhere
-#todo: unify with the reactive tests, I think it should all be the same thing
+import types
 from param.reactive import rx
 from types import FunctionType, MethodType
-def EVAL(subject):
-	"""single-shot function to call on anything,
-	to retrieve a static value:
-	if it's a function, call it
-		how do we pass in variables to the function?
-		with EvalGlobals{a : b, self : self} as g:
-			EVAL(exp) ?
-	if it's an rx chain, get its value
-	else just return the input
+from functools import partial, partialmethod
+from wplib import log
 
-	TODO: just checking for callable isn't enough, since we use call for pathing syntax in trees
-	 - consider a default map of types that can be eval'd
-	 - mixin with instance method to control further
+class WX:
 	"""
-	if isinstance(subject, (FunctionType, MethodType)): return subject()
-	return subject
+	chain attribute and method access into a pipeline, drawing from a base
+	getting on a WX does not modify that object, but returns a new WX,
+	whose latest op is that lookup.
+	That way,
+	chainableA.name.upper()
+	chainableA.split(",").filter(None)
+	doesn't mutate chainableA
+
+	If we were to integrate this with the proxy system, the danger is in WX pipelines
+	spreading throughout our code,
+	"""
+
+	def __init__(self, base, ops=None,
+	             fn=None,
+	             isCall=False,
+	             ):
+		self.base = base
+		#self._instance = _instance
+		self.fn : callable = fn
+		self.ops : list[WX] = ops or []
+		self.isCall = isCall
+
+		# if you wrap a function as a chainable
+		self._isRawFn = isinstance(self.base, types.FunctionType)
+
+	def __str__(self):
+		fnStr = "None"
+		if self.fn:
+			fnStr = self.fn.__qualname__.split(" at ")[0]
+		opStr = ""
+		if self.ops:
+			opStr = f"ops={self.ops[-1]}"
+		return f"<WX(fn={fnStr}, base={self.base} {opStr})>"
+
+	def __repr__(self):
+		return str(self)
+
+	def __getattr__(self, item):
+		if self._isRawFn: # attributes of functions aren't dynamic
+			return getattr(self.base, item)
+		def chainGetAttr(obj):
+			try: return obj.__getattr__(item)
+			except AttributeError:
+				return type(obj).__dict__[item]
+		op = chainGetAttr
+		chainGetAttr.__name__ = f"getAttr({item})"
+		chainGetAttr.__qualname__ = f"getAttr({item})"
+		#self.fn = op
+		return WX(self.base, ops=self.ops + [self],
+		          fn=op)
+
+	def __getitem__(self, item):
+		def chainGetItem(obj):
+			return obj.__getitem__(item)
+		op = chainGetItem
+		chainGetItem.__name__ = f"getItem({item})"
+		chainGetItem.__qualname__ = f"getItem({item})"
+		#self.fn = op
+		return WX(self.base, ops=self.ops + [self],
+		          fn=op)
+
+	def __call__(self, *args, **kwargs):
+		"""janky to call the looked up attribute, while still passing
+		the last found instance as self argument"""
+
+		if self._isRawFn:
+			def _op():
+				fnArgs, fnKwargs = EVAL(*args, **kwargs)
+				return self.base(*fnArgs, **fnKwargs)
+		else:
+			def _op(obj, instance):
+				fnArgs, fnKwargs = EVAL(*args, **kwargs)
+				try:
+					return obj.__call__(instance, *fnArgs, **fnKwargs)
+				except TypeError: # it's a class or static method
+					return obj.__call__(*fnArgs, **fnKwargs)
+		op = _op
+		op.__qualname__ = "call()"
+		return WX(self.base,
+		          ops=self.ops + [self],
+		          fn=op,
+		          isCall=True)
+
+	def __eval__(self):
+		result = self.base
+		instance = self.base
+		#log("EVAL")
+		prev = None
+		for i in self.ops + [self]:
+			#log("op", i)
+			if i.fn is None:
+				continue
+			#log(instance, result)
+			if i.isCall:
+				#log("do call", i.fn, result, instance)
+				result = i.fn(result, instance)
+				instance = result
+			else:
+				#log("do noncall", i.fn, result)
+				result = i.fn(result)
+			prev = i
+
+		return result
+
+	EVAL = __eval__
+
+def _evalSingle(i):
+	"""this will have to be integrated with expressions later, somehow"""
+	if isinstance(i, types.FunctionType):
+		return i()
+	if isinstance(i, WX):
+		return i.__eval__()
+	return i
+
+def EVAL(*args, **kwargs):
+	"""call this on all args of all functions in live networks to check
+	if we have anything live inserted there"""
+	return (
+		*map(_evalSingle, args),
+		{k : _evalSingle(v) for k, v in kwargs.items()}
+	)
+
+
+
+def myFn(inStr:str):
+	return inStr + "_addendum"
+
 
 def BIND(subject, outputFn:callable):
 	pass
@@ -53,66 +166,30 @@ def task():
 		time.sleep(0.2)
 	pass
 
-# def makeWidget():
-# 	line = QtWidgets.QLineEdit()
-# 	rxline = WRX(line)
-# 	rxline.setText(rxval)
-# 	log(rxline)
-# 	log(rxline.setText)
-# 	log(rxline.text().rx.value)
-# 	rxline.setText(val)
-# 	line.setText(val)
-#
-#
-# 	return line
-#
-#
-# if __name__ == '__main__':
-#
-# 	app = QtWidgets.QApplication()
-# 	w = makeWidget()
-# 	w.show()
-#
-# 	t = Thread(target=task)
-# 	#t.start()
-# 	#print("after run")
-# 	#time.sleep(5)
-# 	#print("after end")
-# 	#run = False
-# 	# t.join(timeout=1)
-#
-# 	app.exec_()
-#
-#
 
+if __name__ == '__main__':
+	s = "hello"
 
-from param.reactive import rx
-from PySide2 import QtWidgets # or PySide6, I get the same result
+	# print(type(s).__dict__["upper"].__call__(s))
+	#
+	# c = WX(s)
+	# upper = c.upper().title()
+	# print(upper)
+	# print(upper.__eval__())
+	#
+	#
+	# t = dict
+	# ct = WX(t)
+	# emptyItems = ct().items()
+	# print(emptyItems)
+	# print(emptyItems.__eval__())
+	#
+	#
 
-text = "initial_value" # raw str text value
-rxtext = rx(text)
+	baseDict = {"a" : [0, 1, 2]}
+	cDict = WX(baseDict)
+	log("get item", cDict["a"][1], cDict["a"][1].EVAL() )
 
-# create the Qt application, required to start building widgets
-# event loop doesn't run yet
-app = QtWidgets.QApplication()
-
-
-line = QtWidgets.QLineEdit() # create a QLineEdit widget instance
-rxline = rx(line) # wrap widget instance in rx - which should also wrap all its methods
-# by default QLineEdit has no displayed text
-
-rxline.setText(rxtext) # link rx wrappers together
-# observe that the widget still has no text ._.
-
-# if we just call the normal method on the normal instance, obviously it works
-# uncomment the line below to see desired result
-#line.setText(text)
-#display the widget
-line.show()
-
-rxtext.rx.value = "new val"
-# run the Qt application
-app.exec_()
 
 
 

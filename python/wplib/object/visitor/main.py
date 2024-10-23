@@ -283,7 +283,7 @@ class DeepVisitor:
 				 )
 			#print("resultObjs", resultObjs)
 		#log("resultObjs", resultObjs)
-		adaptor = VisitAdaptor.adaptorForType(parentObj)
+		adaptor = VisitAdaptor.adaptorForType(type(parentObj))
 		try:
 			#log("call newobj", parentObj, resultObjs)
 			newObj = adaptor.newObj(parentObj, resultObjs, visitParams)

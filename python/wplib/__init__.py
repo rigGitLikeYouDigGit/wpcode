@@ -38,3 +38,6 @@ except AssertionError:
 # set code path constants
 WP_CODE_ROOT = WP_ROOT_PATH / "code"
 WP_PY_ROOT = WP_CODE_ROOT / "python"
+
+# extra convenience imports
+from .pathable import Pathable

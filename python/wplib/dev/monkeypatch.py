@@ -5,7 +5,11 @@ import typing as T
 """a very beautiful thing by bricef on github - adding new methods to
 builtin types
 maybe we can replace the proxy madness
-this of course is way more sensible"""
+this of course is way more sensible
+
+didn't move forwards with this since it means modifying every single instance
+of a builtin in the interpreter
+"""
 
 # found this from Armin R. on Twitter, what a beautiful gem ;)
 
@@ -194,15 +198,15 @@ class Watchman:
 def enemies_changed(old, new, name='list'):
     print(f"{name} was {old}, now are {new}")
 
+if __name__ == '__main__':
+	# update the list methods with the wrapper
+	monkey_patch_list(before_after)
 
-# update the list methods with the wrapper
-monkey_patch_list(before_after)
+	enemies = ["Moloch", "Twilight Lady", "Big Figure", "Captain Carnage", "Nixon"]
+	owl = Watchman()
+	owl.watch(enemies, enemies_changed, 'Enemies')
 
-enemies = ["Moloch", "Twilight Lady", "Big Figure", "Captain Carnage", "Nixon"]
-owl = Watchman()
-owl.watch(enemies, enemies_changed, 'Enemies')
-
-enemies.Append('Alien')
-# prints:
-# Enemies was ['Moloch', 'Twilight Lady', 'Big Figure', 'Captain Carnage', 'Nixon'],
-# now are ['Moloch', 'Twilight Lady', 'Big Figure', 'Captain Carnage', 'Nixon', 'Alien']
+	enemies.Append('Alien')
+	# prints:
+	# Enemies was ['Moloch', 'Twilight Lady', 'Big Figure', 'Captain Carnage', 'Nixon'],
+	# now are ['Moloch', 'Twilight Lady', 'Big Figure', 'Captain Carnage', 'Nixon', 'Alien']

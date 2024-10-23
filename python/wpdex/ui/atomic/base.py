@@ -8,7 +8,7 @@ import reactivex as rx
 from wplib import log
 from wplib.object import Signal
 
-from wpdex import WpDexProxy, Reference
+from wpdex import WpDexProxy
 from wpdex.ui.react import ReactiveWidget
 
 

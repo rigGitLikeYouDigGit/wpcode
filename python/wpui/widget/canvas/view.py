@@ -1,5 +1,7 @@
 
 from __future__ import annotations
+
+import types
 import typing as T
 
 """
@@ -7,6 +9,8 @@ import typing as T
 - visibility filtering
 """
 import numpy as np
+from collections import namedtuple
+from dataclasses import dataclass
 
 from PySide2 import QtWidgets, QtCore, QtGui
 #from param import rx
@@ -116,25 +120,30 @@ class WpCanvasMiniMap(QtWidgets.QWidget):
 		painter.drawRoundRect(toDrawRect, 2, 2)
 
 
-
-
 class WpCanvasView(QtWidgets.QGraphicsView):
 	"""add some conveniences to serialise camera positions
 	surely selected items should be per-viewport? not per-scene?
 	well per-scene is how qt handles it and for now we're keeping it
 
-	TODO: momentum?
+	TODO: camera momentum?
+
+	TODO: context menu / radial menu setup
 	"""
 
 	if T.TYPE_CHECKING:
 		def scene(self)->WpCanvasScene: pass
 
+	@dataclass
+	class KeySlot:
+		fn : T.Callable[[WpCanvasView], (QtWidgets.QWidget, T.Any)]
+		keys : tuple[QtCore.Qt.Key] = ()
+		closeWidgetOnFocusOut : bool = True
+
 	cameraChanged = QtCore.Signal(dict)
 
-	def __init__(self, parent=None,
-	             scene:WpCanvasScene=None):
+	def __init__(self,scene:WpCanvasScene, parent=None,
+	             ):
 		super().__init__(parent)
-		assert scene
 		self.setScene(scene)
 
 
@@ -160,9 +169,85 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 		self.minimap.minimapDragged.connect(self._onMiniMapDragged)
 		self.cameraChanged.connect(self.minimap._onViewCameraChanged)
 
+		# set up functions to fire when specific keys are pressed
+		# if these functions return a widget, widget will be shown and
+		# given modal focus
+		self.keySlotMap : dict[tuple[QtCore.Qt.Key],
+			WpCanvasView.KeySlot] = {}
 
+		# set init camera pos
 		self.moveCamera([0, 0], relative=False)
 
+	def addKeyPressSlot(self,
+	                    slot: (T.Callable[[WpCanvasView], (QtWidgets.QWidget, T.Any)],
+	                           WpCanvasView.KeySlot),
+	                    keys:tuple[QtCore.Qt.Key]=(),
+
+	                    ):
+		"""set a function to fire when the set keys are pressed
+		TODO: could probably spin this out into some kind of component -
+		"""
+		if not isinstance(slot, WpCanvasView.KeySlot):
+			slot = WpCanvasView.KeySlot(slot, keys=keys)
+		self.keySlotMap[tuple(slot.keys)] = slot
+
+	def checkFireKeySlots(self, event:QtGui.QKeyEvent):
+		"""check if any key functions should be fired -
+		if so, activate functions, then show the widget if returned
+		and give it focus
+
+		Q : Why not just use QT hotkey actions?
+		A : they mess up the control flow of the whole program, even if you block events
+			the hotkeys can "leak" up if you declare them higher
+		"""
+		# this is some of the dumbest code I've ever written
+		for keys, slot in self.keySlotMap.items():
+
+			matches = True
+			for i in keys:
+				if i in self.ks.keyPressedMap.keys():
+					if not self.ks.keyPressedMap[i]:
+						matches = False
+						break
+				else:
+					if i != event.key():
+						matches = False
+						break
+			if not matches: continue
+			# code equivalent of shovelling mud
+
+			result = slot.fn(self)
+			if isinstance(result, QtWidgets.QWidget): # show the returned widget
+				# unsure if we should enforce it being a parent of this widget
+				result.setEnabled(True)
+				result.show()
+				# move it to the last shown mouse position
+				pos = self.ks.lastMousePosMap[0]
+				pos = self.mapTo(result.parent(), pos)
+				result.move(pos)
+				result.setFocus()
+
+				# if we say to close after losing focus, set up that as a patch
+				if slot.closeWidgetOnFocusOut:
+					def _patchFocusEvent(w:QtWidgets.QWidget, focusEvent:QtGui.QFocusEvent):
+						log("run slot focus out event")
+						type(w).focusOutEvent(w, focusEvent)
+						w.hide(); w.setEnabled(False)
+					result.focusOutEvent = _patchFocusEvent
+
+
+	def keyPressEvent(self, event):
+		self.ks.keyPressed(event)
+		self.checkFireKeySlots(event)
+
+
+	def keyReleaseEvent(self, event):
+		self.ks.keyReleased(event)
+
+
+	def selection(self)->list[QtWidgets.QGraphicsItem]:
+		"""seems weird that the view can't access this natively"""
+		return self.scene().selectedItems()
 	def selectionMode(self)->str:
 		#TODO: FIX
 		return self.data["selectionMode"]
@@ -216,8 +301,6 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 
 	def _onMiniMapDragged(self, data):
 		self.moveCamera(data["delta"], relative=True)
-
-
 
 
 	def mouseReleaseEvent(self, event):

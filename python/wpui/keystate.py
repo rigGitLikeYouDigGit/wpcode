@@ -68,6 +68,9 @@ class KeyState(object):
 			self.SHIFT: QtCore.Qt.ShiftModifier,
 			self.SPACE: QtCore.Qt.Key_Space
 		}
+
+		self.keyPressedMap = { v : k for k, v in self.keyMap.items()}
+
 		# shift and ctrl are swapped for me I kid you not
 		# I swear to god they actually are
 

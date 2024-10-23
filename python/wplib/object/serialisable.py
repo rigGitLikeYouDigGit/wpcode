@@ -25,6 +25,12 @@ from wplib.constant import LITERAL_TYPES
 converts live python object to dict,
 and regenerates one from dict.
 should be compatible with json as well
+
+OLD version of the more recent adaptor system - left here for the 
+cool function source tracking that I still haven't moved
+
+TODO: rehome anything useful, remove anything not
+
 """
 
 

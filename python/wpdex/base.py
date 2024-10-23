@@ -312,11 +312,11 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 	                 emit=True,
 	                 )->dict[Pathable.pathT, (list, dict)]:
 		deltas = {}
-		log("GATHER", self, self.branches)
+		#log("GATHER", self, self.branches)
 		self.isPreppedForDeltas = False
 		baseState : WpDex = self._persistData["deltaBase"]
 		assert baseState is not None
-		log("base", baseState)
+		#log("base", baseState)
 
 		# we compare FROM the base state to this dex as the live current one
 		"""iter top-down -
@@ -360,7 +360,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 				itemDeltas = baseDex.compareState(liveDex)
 
 			except NotImplementedError:
-				log("no delta compare implemented for", self)
+				log("no delta compare implemented for", baseDex)
 				itemDeltas = {"change" : "any"}
 				if itemDeltas:
 					deltas[basePath] = itemDeltas

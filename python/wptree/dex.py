@@ -30,19 +30,6 @@ class TreeDex(WpDex):
 
 	obj : Tree
 
-	# def _buildChildren(self) ->dict[DexPathable.keyT, WpDex]:
-	# 	# don't do a single wpdex for the whole tree
-	# 	# for i in self.obj.allBranches(includeSelf=False):
-	# 	# 	self.makeChildPathable((i.,), i)
-	# 	items = {}
-	# 	for i in self.obj.branches:
-	# 		items[i.name] = self.makeChildPathable((i.name, ), i)
-	# 	items["name"] = self.makeChildPathable(("name",), self.obj.name)
-	# 	if self.obj.value is not None:
-	# 		items["value"] = self.makeChildPathable(("value",), self.obj.value)
-	# 	#log("buildChildren items", items)
-	# 	return items
-
 	def compareState(self, newDex:WpDex, baseDex:WpDex=None) ->(dict, list[DeltaAtom]):
 		"""trees should recurse down into values for everything other than
 		adding/removing branches and changing index"""

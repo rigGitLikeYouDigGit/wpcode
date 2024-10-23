@@ -15,3 +15,5 @@ from .interface import TreeInterface, TreeType
 from .main import Tree
 from .delta import TreeDeltaAid, TreeDeltas
 
+from .dex import TreeDex
+

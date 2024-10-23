@@ -14,6 +14,33 @@ from wplib.constant import SEQ_TYPES, MAP_TYPES, STR_TYPES, LITERAL_TYPES, IMMUT
 from wplib.sentinel import Sentinel
 from wpdex.base import WpDex
 
+from param import rx
+
+class WX(rx):
+	"""By default, printing an rx object freaks out because it returns
+	an implicit __str__() call, not an actual string that can be printed
+
+	putting in caps so that it's obvious when we do stuff with it
+	"""
+	def __repr__(self):
+		return f"WX({repr(self.rx.value)}"
+	def __str__(self):
+		return f"WX({repr(self.rx.value)}"
+	def __init__(self, *args,# path:WpDex.pathT=(),
+	             **kwargs):
+		if kwargs.get("_writeSignal", None) is None:
+			kwargs["_writeSignal"] = Signal("WX-write")
+		super().__init__(*args,# _dexPath=path,
+		                 **kwargs
+		                 )
+		# pack path in _kwargs to ensure it gets copied on _clone()
+		# also signal, they're expensive to build
+
+	def WRITE(self, val):
+		"""emit (path, value)
+		"""
+		self._kwargs["_writeSignal"].emit(self._kwargs["_dexPath"], val)
+
 
 class WpDexProxyData(ProxyData):
 	parent : weakref.ref
@@ -88,6 +115,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 	_generated = False
 	_objIdProxyCache : dict[int, WpDexProxy] = {}
 
+
 	def __init__(self, obj:VT, proxyData: WpDexProxyData=None,
 	             wpDex:WpDex=None,# parentDex:WpDex=None,
 	             **kwargs)->VT:
@@ -97,6 +125,8 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		self._proxySuperCls.__init__(self, obj, proxyData, **kwargs)
 
 		self._proxyData["externalCallDepth"] = 0
+		self._proxyData["deltaCallDepth"] = 0
+		self._proxyData["wxRefs"] : dict[WpDex.pathT, WX] = {}
 
 		self._proxyData["parent"] = self._proxyData.get("parent", None)
 
@@ -316,55 +346,94 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		#proxy._linkDexProxyChildren()
 
 	#region reactive referencing
-	def ref(self, path:WpDex.pathT):
-		ref = Reference(root=self, path=path)
-		self.dex().getEventSignal("main").connect(ref._onRootEvent)
-		return ref
+	def ref(self, path:WpDex.pathT)->WX:
+		"""unsure if this should return a wx on the TARGET object,
+		or on the FUNCTION to GET the target object
+		hmmmmmmm
+
+		test returning a lifted call, on the method to get the target.
+		every time we recompute the rx expression result, we have to start
+		by retrieving the live value of the structure at this path.
+		wew lad
+		"""
+
+		#TODO: PATH doesn't do anything here yet ._.
+		path = tuple(path)
+		if self._proxyData["wxRefs"].get(path) is None:
+			ref = WX(self._proxyTarget, path=path)()
+			self._proxyData["wxRefs"][path] = ref
+			# flag that it should dirty whenever this proxy's
+			# value changes (on delta)
+			def _setDirtyRxValue(*_, **__):
+				"""need to make a temp closure because we can't
+				easily set values as a function call"""
+				_ = ref.rx.value # can we just ping it?
+				# ref.rx.value = self.dex().access(
+				# 	self.dex(), path, values=1
+				# )
+			self.dex().getEventSignal("main").connect(_setDirtyRxValue)
+
+			# allow writing back by "WRITE" method on WX
+			# TODO: maybe move more of this into WX, pass in reference to wpdex root?
+			def _onRefWrite(path, value):
+				targetDex : WpDex = self.dex().access(self, path, values=False)
+				targetDex.write(value)
+			ref._kwargs["_writeSignal"].connect(_onRefWrite)
+
+			# self.uiChangedSignal.connect(
+			# 	lambda *args: ref.dex().write(self.getFn())
+			# )
+
+		return self._proxyData["wxRefs"][path]
+
+		# ref = Reference(root=self, path=path)
+		# self.dex().getEventSignal("main").connect(ref._onRootEvent)
+		# return ref
 
 	#endregion
 
-class Reference:
-	"""consistent pathed reference a part of a structure
-	also try some way to let this be reactive,
-	with custom rxpy methods and any other like a mock chain"""
-	def __init__(self, root:WpDexProxy, path:WpDex.pathT):
-		self.root = root
-		self.path = sequence.toSeq(path)
-		self.changed = Signal(name="changed(" + str(self.path) + ")")
-
-	def __str__(self):
-		return f"REF({self.root} - {self.path})"
-
-
-	def _onRootEvent(self, event):
-		"""filter any event sent through the root dex - check if this
-		reference's path is found in that of the event.
-		if yes, fire self.changed( self() )"""
-		log("on root event", self)
-		pprint.pp(event)
-		self.changed( self() )
-
-	def drive(self, fn:callable):
-		"""drive the given callable with the result of this reference,
-		whenever the source changes"""
-		self.changed.connect(fn)
-
-	def dex(self)->WpDex:
-		return self.root.dex().access(self.root.dex(), self.path, values=0)
-
-	def __call__(self, *args, **kwargs):
-		"""evaluate this ref and return the result -
-		if any methods are chained, evaluate those too.
-		unsure if we want to allow args to this call"""
-		#log("call")
-		return self.root.dex().access(
-			self.root.dex(), self.path, values=1)
-
-	def setValue(self, value):
-		"""TODO: we don't have a way to do this yet -
-		    allow setting values back to the source path
-			 """
-		raise NotImplementedError
+# class Reference:
+# 	"""consistent pathed reference a part of a structure
+# 	also try some way to let this be reactive,
+# 	with custom rxpy methods and any other like a mock chain"""
+# 	def __init__(self, root:WpDexProxy, path:WpDex.pathT):
+# 		self.root = root
+# 		self.path = sequence.toSeq(path)
+# 		self.changed = Signal(name="changed(" + str(self.path) + ")")
+#
+# 	def __str__(self):
+# 		return f"REF({self.root} - {self.path})"
+#
+#
+# 	def _onRootEvent(self, event):
+# 		"""filter any event sent through the root dex - check if this
+# 		reference's path is found in that of the event.
+# 		if yes, fire self.changed( self() )"""
+# 		log("on root event", self)
+# 		pprint.pp(event)
+# 		self.changed( self() )
+#
+# 	def drive(self, fn:callable):
+# 		"""drive the given callable with the result of this reference,
+# 		whenever the source changes"""
+# 		self.changed.connect(fn)
+#
+# 	def dex(self)->WpDex:
+# 		return self.root.dex().access(self.root.dex(), self.path, values=0)
+#
+# 	def __call__(self, *args, **kwargs):
+# 		"""evaluate this ref and return the result -
+# 		if any methods are chained, evaluate those too.
+# 		unsure if we want to allow args to this call"""
+# 		#log("call")
+# 		return self.root.dex().access(
+# 			self.root.dex(), self.path, values=1)
+#
+# 	def setValue(self, value):
+# 		"""TODO: we don't have a way to do this yet -
+# 		    allow setting values back to the source path
+# 			 """
+# 		raise NotImplementedError
 
 
 

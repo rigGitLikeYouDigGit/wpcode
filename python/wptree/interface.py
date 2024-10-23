@@ -26,27 +26,13 @@ from wptree.treedescriptor import TreePropertyDescriptor
 Ignoring tree auxProperties / traits for now, not sure how best
 to override them
 
-TODO: events only when needed - somehow need to switch out
-code dynamically from root, or downwards
 
-TODO: events superceded by wpdex, remove it from the core data structure here
-TODO: combine and collate pathable, traversable and visitable in some jeff-goldlum's-the-fly-esque process
 TODO: breakpoints are probably still useful for parent/root encapsulation in
 	nested tools; everything else should be done with wpdex and paths
+TODO: GENERATOR branches
+	and then ways to specify overrides on the generated data
+	maybe we should just leave this to chimaera
 """
-
-
-# class TreeSignalComponent:
-# 	"""Signal object constructed lazily -
-# 	any signal used by a tree should go here
-#
-# 	signals will now emit Delta objects
-# 	"""
-# 	def __init__(self, tree):
-# 		self.nameChanged = Signal()
-# 		self.valueChanged = Signal()
-# 		self.propertyChanged = Signal()
-# 		self.structureChanged = Signal()
 
 CHILD_LIST_T = VisitAdaptor.CHILD_LIST_T
 PARAMS_T = VisitAdaptor.PARAMS_T
@@ -70,9 +56,9 @@ class TreeInterface(Pathable,
 	def childObjects(self, params:PARAMS_T)->CHILD_LIST_T:
 		"""maximum delegation to this tree's children"""
 		return (
-			ChildData("TreeName", self._getRawName() ),
-			ChildData("TreeValue", self._getRawValue() ),
-			ChildData("TreeProperties",self._getRawAuxProperties() ),
+			ChildData("@N", self._getRawName() ),
+			ChildData("@V", self._getRawValue() ),
+			ChildData("@AUX",self._getRawAuxProperties() ),
 			*(ChildData(i._getRawName(), i ) for i in self.branches)
 		)
 
@@ -85,7 +71,7 @@ class TreeInterface(Pathable,
 		# log("tree childDatas", childDatas)
 		#log(getattr(type(baseObj), "_generated", False))
 		kwargs = {}
-		if params.visitKwargs.get("serialParams").get("PreserveUid"):
+		if params.visitKwargs.get("serialParams", {}).get("PreserveUid"):
 			if hasattr(baseObj, "uid"):
 				kwargs["uid"] = baseObj.uid
 
@@ -302,13 +288,6 @@ class TreeInterface(Pathable,
 		value = self.validateNewValue(value)
 		# set value internally
 		self._setRawValue(value)
-
-		# self.sendEvent(TreeDeltas.Value(self, oldValue, value),
-		#                key=self.SignalKeys.ValueChanged)
-		# if self.getSignalComponent(create=False) and oldValue != value:
-		# 	self.getSignalComponent(create=False).valueChanged.emit(
-		# 		TreeDeltas.Value(self, oldValue, value)
-		# 	)
 
 	@property
 	def value(self)->T:
@@ -734,18 +713,8 @@ class TreeInterface(Pathable,
 				result = self.parent._removeBranch(self)
 			else:
 				raise ValueError("Cannot remove root branch")
-		#event = TreeDeltas.Delete(result, parent, result.serialise())
-		# self.sendEvent(event, self.SignalKeys.StructureChanged)
-		# parent.sendEvent(event, parent.SignalKeys.StructureChanged)
+
 		return result
-		# if self.getSignalComponent(create=False):
-		# 	self.getSignalComponent(create=False).structureChanged.emit(
-		# 		TreeDeltas.Delete(
-		# 			result, self, result.serialise()
-		# 		)
-		# 	)
-
-
 
 
 	def _addBranch(self, newBranch:TreeInterface, index:int)->TreeType:
