@@ -141,18 +141,32 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		# do we build on init?
 		self.updateChildren(recursive=0)
 
-	def write(self, value, setAttr=None):
+
+	def writeChildToKey(self, key:Pathable.keyT, value):
+		"""OVERRIDE -
+		manage the process of writing a value to child more closely
+		"""
+		setAttr = False # by default
+		if setAttr:
+			setattr(self.obj, key, value)
+		else:
+			self.obj[key] = value
+
+
+	def write(self, value):
 		"""rudimentary support for writing values back into the structure
-		OVERRIDE if you need to do something custom,
-		else we go off the "writeDefault" class attribute
+		this is split across this method and writeChildToKey() on the parent
+
+		if no parent, we can't really write
 		"""
 		log("WRITE", self, value)
-		setAttr = setAttr if setAttr is not None else (self.writeDefault == "setAttr")
+		if not self.parent:
+			self.setObj(value)
+			return
 		self.parent.prepForDeltas()
-		if setAttr:
-			setattr(self.parent.obj, self.name, value)
-		else:
-			self.parent.obj[self.name] = value
+
+		self.parent.writeChildToKey(self.name, value)
+
 		self.parent.updateChildren(recursive=1)
 		# trigger delta / event on parent
 		self.parent.gatherDeltas()
@@ -163,14 +177,6 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		consider passing in a known parent object to narrow down?"""
 		return cls.objIdDexMap.get(id(obj))
 
-	# def makeChildPathable(self, key:tuple[keyType], obj:T.Any)->WpDex:
-	# 	"""make a child pathable object"""
-	# 	pathType : type[WpDex] = self.adaptorForType(type(obj))
-	# 	assert pathType, f"no path type for {type(obj)}"
-	# 	return pathType(obj, parent=self, key=key)
-		# dex = pathType(obj, parent=self, key=key)
-		# self.childIdDexMap[id(obj)] = dex
-		# return dex
 
 	def _buildBranchMap(self)->dict[DexPathable.keyT, WpDex]:
 		"""build child objects, return keyDexMap
@@ -178,6 +184,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 
 		overriding might be illegal - maybe dex can add additional,
 		false children on top for pathing syntax"""
+		#log("BUILD branch map", self)
 		#raise NotImplementedError(self, f"no _buildChildren")
 		children = {}
 		adaptor = VisitAdaptor.adaptorForObject(self.obj)
@@ -331,7 +338,8 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		delegate to specific dex classes to process deltas between two 
 		objects of their type, where they match
 		"""
-		liveRoot = self.staticCopy()
+		#liveRoot = self.staticCopy()
+		liveRoot = self
 		toIter = [baseState]
 		while toIter:
 			baseDex = toIter.pop(0)

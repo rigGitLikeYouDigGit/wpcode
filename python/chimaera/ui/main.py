@@ -64,6 +64,10 @@ def showW():
 	# from param.display import _display_accessors, _reactive_display_objs
 	# print("final display accessors", _display_accessors)
 	# print("final display objs", _reactive_display_objs)
+
+	ref.WRITE("eyyyyy")
+
+	#raise
 	w.show()
 	return w
 

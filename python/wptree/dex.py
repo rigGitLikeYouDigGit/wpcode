@@ -4,7 +4,7 @@ from __future__ import annotations
 import pprint
 import typing as T
 
-from wplib import log
+from wplib import log, Pathable
 from wplib.delta import DeltaAtom
 from wptree import Tree, TreeInterface, TreeDeltaAid, TreeDeltas
 
@@ -37,6 +37,21 @@ class TreeDex(WpDex):
 		deltas = [i for i in deltas if not isinstance(i,
                   (TreeDeltas.Name, TreeDeltas.Value))]
 		return deltas
+
+	def writeChildToKey(self, key:Pathable.keyT, value):
+		"""set value back to tree attributes
+		TODO: surely we can reuse the branchmap of the wpdex itself for this somehow
+		"""
+		log("write to tree", key, value)
+		if key == "@N" :
+			self.obj.setName(value)
+			log("after write name", self.obj)
+		elif key == "@V" : self.obj.setValue(value)
+		elif key == "@AUX" : self.obj._setRawAuxProperties(value)
+		else:
+			log("writing new key to tree", key, value)
+			assert isinstance(value, TreeInterface)
+			self.obj.addBranch(newBranch=value)
 
 	# def _consumeFirstPathTokens(self, path:pathT) ->tuple[list[WpDex], pathT]:
 	# 	"""process a path token"""

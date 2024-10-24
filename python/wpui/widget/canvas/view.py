@@ -128,6 +128,11 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 	TODO: camera momentum?
 
 	TODO: context menu / radial menu setup
+
+	TODO: E_V_E_M_T_S
+		i forgot how fun this is - events pass through this view before they hit
+		embedded widgets, so we need a way of checking if a graphics widget is
+		under the cursor to receive focus, if it's already got focus, etc
 	"""
 
 	if T.TYPE_CHECKING:
@@ -242,6 +247,7 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 	def keyPressEvent(self, event):
 		self.ks.keyPressed(event)
 		self.checkFireKeySlots(event)
+		super().keyPressEvent(event)
 
 
 	def keyReleaseEvent(self, event):
@@ -299,7 +305,8 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 				elif self.ks.CTRL : mode = "remove"
 
 				self.scene().select(items, mode=mode)
-
+				#return
+		super().mousePressEvent(event)
 		#log("end selection", self.scene().selectedItems())
 
 	def _onMiniMapDragged(self, data):
@@ -308,6 +315,7 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 
 	def mouseReleaseEvent(self, event):
 		self.ks.mouseReleased(event)
+		super().mouseReleaseEvent(event)
 
 	def _updateIncludedSelectionItems(self):
 		"""check any """
@@ -351,6 +359,7 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 				# we send the drag event to scene
 				self.scene().itemsDragged(items=self.scene().selectedItems(),
 				                          delta=self.ks.mouseDelta(forKey=self.ks.LMB))
+		super().mouseMoveEvent(event)
 
 
 

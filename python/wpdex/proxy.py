@@ -409,17 +409,19 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 
 			# allow writing back by "WRITE" method on WX
 			# TODO: maybe move more of this into WX, pass in reference to wpdex root?
+
 			def _onRefWrite(path, value):
 				log("start dex", self.dex(), self.dex().parent, self.dex().branchMap())
-				log(self.dex().branchMap()["@N"].parent)
+				#log(self.dex().branchMap()["@N"].parent)
 				dex = self.dex()
-				log("path", path, self.dex().toPath(path))
+				#log("path", path, self.dex().toPath(path))
 				targetDex : WpDex = dex.access(dex, self.dex().toPath(path), values=False)
-				log("targetDex", targetDex, targetDex.parent)
-				log(targetDex.branchMap())
+				#log("targetDex", targetDex, targetDex.parent)
+				#log(targetDex.branchMap())
 				assert isinstance(targetDex, WpDex)
 				assert isinstance(targetDex.parent, WpDex)
 				targetDex.write(value)
+				log("after write", self.dex(), self.dex().branchMap())
 			ref._kwargs["_writeSignal"].connect(_onRefWrite)
 
 			#_onRefWrite("@N", "test_val")

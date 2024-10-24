@@ -54,14 +54,19 @@ class ReactLineEdit(QtWidgets.QLineEdit):
 		self.textEdited.connect(self._onTextEdited)
 		self.editingFinished.connect(self._tryCommitText)
 		self.valueCommitted.connect(lambda *args, **kwargs : ref.WRITE(*args, **kwargs))
+		#self.valueCommitted.connect(self._onValueCommitted)
 
 	def _onTextEdited(self, s:str):
 		"""runs anytime user modifies text by hand at all -
 		check validations here"""
 
+	def _onValueCommitted(self, t):
+		log("ON VALUE COMMITTED")
+
 	def _tryCommitText(self,):
 		"""can't muddy waters here - WRITE gets the exact new value,
 		nothing more or less"""
+		log("TRY COMMIT TEXT")
 		# oldValue = self.ref.rx.value
 		# newValue = s
 		self.valueCommitted.emit(self.text())
@@ -97,20 +102,20 @@ class NodeDelegate(QtWidgets.QGraphicsItem, Adaptor):
 		# TODO: maybe make it easier to use multiple graphics widgets,
 		#  map of proxy widgets and holders etc
 		#  but this makes layout so much more difficult
-		self.proxyW = QtWidgets.QGraphicsProxyWidget(parent=self)
+		self.proxyW = QtWidgets.QGraphicsProxyWidget(parent=self
+		                                             )
 		self.w = QtWidgets.QWidget(parent=None)
-		self.proxyW.setWidget(self.w)
-		self.wLayout = QtWidgets.QVBoxLayout()
+		self.setWidgetResult = self.proxyW.setWidget(self.w)
+		self.wLayout = QtWidgets.QVBoxLayout(self.w)
 		self.w.setLayout(self.wLayout)
 
 		self.nameLine = ReactLineEdit(
 			#parent=self.w,
-			parent=None,
+			#parent=self.w,
+			text=self.node.ref("@N"))
+		self.wLayout.addWidget(self.nameLine)
 
-		                              text=self.node.ref("@N"))
-		#self.wLayout.addWidget(self.nameLine)
-		#
-		# self.syncSize()
+		#self.syncSize()
 
 	def syncSize(self):
 		baseRect = self.proxyW.rect()
@@ -118,7 +123,7 @@ class NodeDelegate(QtWidgets.QGraphicsItem, Adaptor):
 		self.setRect(expanded)
 
 	def boundingRect(self)->QtCore.QRectF:
-		return QtCore.QRectF(0, 0, 50, 50)
+		#return QtCore.QRectF(0, 0, 50, 50)
 		baseRect = self.proxyW.rect()
 		expanded = baseRect.marginsAdded(QtCore.QMargins(10, 10, 10, 10))
 		return expanded
