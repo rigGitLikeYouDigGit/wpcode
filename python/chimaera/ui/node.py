@@ -41,9 +41,7 @@ class ReactLineEdit(QtWidgets.QLineEdit):
 	             #options=()
 	             ):
 		super().__init__(parent=parent)
-		# if isinstance(text, str):
-		# 	self.setText(text)
-		# else:
+		#log("LINE init")
 		self.ref = text
 		ref = text
 		# if isinstance(ref, WpDexProxy):

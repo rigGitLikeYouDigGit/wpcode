@@ -24,14 +24,14 @@ def printFn(*args, **kwargs):
 
 def showW():
 
-	# w = ChimaeraView(scene=ChimaeraScene())
-	# w.show()
-	# node = ChimaeraNode.create(name="testNode")
-	# delegate = NodeDelegate(node)
-	# log("del", delegate)
-	# #log(delegate.nameLine.text())
-	# w.scene().addItem(NodeDelegate(node))
-	# return w
+	w = ChimaeraView(scene=ChimaeraScene())
+	w.show()
+	node = ChimaeraNode.create(name="testNode")
+	delegate = NodeDelegate(node)
+	log("del", delegate)
+	#log(delegate.nameLine.text())
+	w.scene().addItem(delegate)
+	return w
 	from param import rx, bind
 
 	t = Tree("testTree")
