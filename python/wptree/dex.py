@@ -42,10 +42,10 @@ class TreeDex(WpDex):
 		"""set value back to tree attributes
 		TODO: surely we can reuse the branchmap of the wpdex itself for this somehow
 		"""
-		log("write to tree", key, value)
+		#log("write to tree", key, value)
 		if key == "@N" :
 			self.obj.setName(value)
-			log("after write name", self.obj)
+			#log("after write name", self.obj)
 		elif key == "@V" : self.obj.setValue(value)
 		elif key == "@AUX" : self.obj._setRawAuxProperties(value)
 		else:

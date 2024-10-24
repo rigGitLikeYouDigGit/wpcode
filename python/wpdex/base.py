@@ -167,7 +167,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 
 		self.parent.writeChildToKey(self.name, value)
 
-		self.parent.updateChildren(recursive=1)
+		#self.parent.updateChildren(recursive=1)
 		# trigger delta / event on parent
 		self.parent.gatherDeltas()
 
@@ -327,6 +327,8 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		#log("GATHER", self, self.branches)
 		self.isPreppedForDeltas = False
 		baseState : WpDex = self._persistData["deltaBase"]
+		if baseState is None:
+			log("nooo")
 		assert baseState is not None
 		#log("base", baseState)
 
@@ -373,7 +375,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 				itemDeltas = baseDex.compareState(liveDex)
 
 			except NotImplementedError:
-				log("no delta compare implemented for", baseDex)
+				#log("no delta compare implemented for", baseDex)
 				itemDeltas = {"change" : "any"}
 				if itemDeltas:
 					deltas[basePath] = itemDeltas
@@ -383,8 +385,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 				deltas[basePath] = itemDeltas
 			toIter.extend(baseDex.branches)
 
-		log("deltas")
-		pprint.pp(deltas)
+		#log("deltas"); pprint.pp(deltas)
 		if emit:
 			if deltas:
 				event = {"type":"deltas",

@@ -384,34 +384,17 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 			def _setDirtyRxValue(*_, **__):
 				"""need to make a temp closure because we can't
 				easily set values as a function call"""
-				log("set dirty value")
-				#ref._dirty = True
-				#ref.rx._dirty = True
+				#log("set dirty value")
 
-				#dirtyRef.rx.value = ()
-				#ref._invalidate_obj()
-				#ref._invalidate_current()
-				# dirtyRef._invalidate_obj()
-				# dirtyRef._invalidate_current()
 				dirtyKwarg.rx.value += 1
-				#dirtyRef.rx.value = path
-				#dirtyRef.rx.value = tuple(path)
-				# oldVal = ref.rx.value
-				# ref.rx.value = "eyyyy"
-				# ref.rx.value = oldVal
-				#_ = ref.rx.value # can we just ping it?
-				#log("value after dirty", ref.rx.value)
 
-				# ref.rx.value = self.dex().access(
-				# 	self.dex(), path, values=1
-				# )
 			self.dex().getEventSignal("main").connect(_setDirtyRxValue)
 
 			# allow writing back by "WRITE" method on WX
 			# TODO: maybe move more of this into WX, pass in reference to wpdex root?
 
 			def _onRefWrite(path, value):
-				log("start dex", self.dex(), self.dex().parent, self.dex().branchMap())
+				#log("start dex", self.dex(), self.dex().parent, self.dex().branchMap())
 				#log(self.dex().branchMap()["@N"].parent)
 				dex = self.dex()
 				#log("path", path, self.dex().toPath(path))

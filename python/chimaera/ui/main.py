@@ -28,7 +28,7 @@ def showW():
 	w.show()
 	node = ChimaeraNode.create(name="testNode")
 	delegate = NodeDelegate(node)
-	log("del", delegate)
+	#log("del", delegate)
 	#log(delegate.nameLine.text())
 	w.scene().addItem(delegate)
 	return w

@@ -63,14 +63,93 @@ class ReactLineEdit(QtWidgets.QLineEdit):
 	def _tryCommitText(self,):
 		"""can't muddy waters here - WRITE gets the exact new value,
 		nothing more or less"""
-		log("TRY COMMIT TEXT")
+		#log("TRY COMMIT TEXT")
 		# oldValue = self.ref.rx.value
 		# newValue = s
 		self.valueCommitted.emit(self.text())
 
 
+def paintDropdownSquare(rect:QtCore.QRect, painter:QtGui.QPainter,
+          canExpand=True, expanded=False):
+	painter.drawRect(rect)
+	innerRect = QtCore.QRect(rect)
+	innerRect.setSize(rect.size() / 3.0 )
+	innerRect.moveCenter(rect.center())
+	if expanded:
+		rect.moveCenter(QtCore.QPoint(rect.center().x(), rect.bottom()))
+	if canExpand:
+		painter.drawRect(innerRect)
 
 
+
+
+class TreePlugSpine(QtWidgets.QGraphicsItem):
+	"""draw an expanding tree structure"""
+
+	def __init__(self, parent=None, size=10.0):
+		super().__init__(parent)
+		self._expanded = False
+		self.size = 10.0
+
+	def childTreeSpines(self)->list[TreePlugSpine]:
+		return [i for i in self.childItems() if isinstance(i, TreePlugSpine)]
+
+	def expanded(self): return self._expanded
+	def setExpanded(self, state): self._expanded = state; self.update()
+
+	def boundingRect(self):
+		return QtCore.QRectF(0, 0, self.size, self.size)
+	def paint(self, painter:QtGui.QPainter, option, widget=...):
+		"""draw a line backwards,
+		a cross if not expanded,
+		and the vertical bar down if expanded
+		"""
+		mid = self.size / 2.0
+		painter.drawLine(-mid, mid, mid, mid)
+		childSpines = self.childTreeSpines()
+		if not self.childTreeSpines(): return
+		paintDropdownSquare(rect=self.boundingRect(), painter=painter,
+		                    canExpand=True, expanded=self.expanded())
+
+expandPolicy = QtWidgets.QSizePolicy(
+	QtWidgets.QSizePolicy.Expanding,
+	QtWidgets.QSizePolicy.Expanding
+)
+shrinkPolicy = QtWidgets.QSizePolicy(
+	QtWidgets.QSizePolicy.Maximum,
+	QtWidgets.QSizePolicy.Maximum
+)
+class ShrinkWrapWidget(QtWidgets.QWidget):
+
+	def sizeHint(self):
+		baseRect = QtCore.QRect()
+		for i in self.children():
+			for at in ["boundingRect", "rect"]:
+				try:
+					r = getattr(i, at)()
+					baseRect = baseRect.united(r)
+					break
+				except: continue
+		size = baseRect.size()
+		return size
+
+class LabelWidget(QtWidgets.QWidget):
+	"""simple way of showing a label alongside
+	a normal widget"""
+
+	def __init__(self, label="", w:QtWidgets.QWidget=None, parent=None):
+		super().__init__(parent)
+		self.w = w
+		self.setLayout(QtWidgets.QHBoxLayout(self))
+		self.label = QtWidgets.QLabel(label, parent=self)
+		self.layout().addWidget(self.label)
+		self.layout().addWidget(self.w)
+		self.setContentsMargins(0, 0, 0, 0)
+		self.label.setContentsMargins(0, 0, 0, 0)
+		self.w.setContentsMargins(0, 0, 0, 0)
+
+		self.setSizePolicy(expandPolicy)
+		self.layout().setContentsMargins(0, 0, 0, 0)
 
 class NodeDelegate(QtWidgets.QGraphicsItem, Adaptor):
 	"""node has:
@@ -80,11 +159,22 @@ class NodeDelegate(QtWidgets.QGraphicsItem, Adaptor):
 
 	adaptor allows defining new delegates for specific node types?
 
+	sizing :)
+	height:
+		shrink central widgets as much as possible
+	width :
+		minimum of
+			- central widgets
+			- top port tree
+			- bottom port tree
+		dependency of width goes trees -> widgets
+
 	"""
 	adaptorTypeMap = Adaptor.makeNewTypeMap()
 	forTypes = (ChimaeraNode, )
 	if T.TYPE_CHECKING:
 		def scene(self)->ChimaeraScene: pass
+
 
 	def __init__(self, node:ChimaeraNode,
 	             parent=None,
@@ -94,6 +184,7 @@ class NodeDelegate(QtWidgets.QGraphicsItem, Adaptor):
 
 		# not making a whole special subclass to make this call less annoying
 		self.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable)
+		self.setFlag(QtWidgets.QGraphicsItem.ItemIsMovable)
 
 		# central widget to contain views -
 		# TODO: maybe make it easier to use multiple graphics widgets,
@@ -101,16 +192,36 @@ class NodeDelegate(QtWidgets.QGraphicsItem, Adaptor):
 		#  but this makes layout so much more difficult
 		self.proxyW = QtWidgets.QGraphicsProxyWidget(parent=self
 		                                             )
-		self.w = QtWidgets.QWidget(parent=None)
+		self.w = ShrinkWrapWidget(parent=None)
+		self.w.setContentsMargins(QtCore.QMargins(0, 0, 0, 0))
+		self.w.setAutoFillBackground(False)
 		self.setWidgetResult = self.proxyW.setWidget(self.w)
 		self.wLayout = QtWidgets.QVBoxLayout(self.w)
 		self.w.setLayout(self.wLayout)
 
-		self.nameLine = ReactLineEdit(
-			#parent=self.w,
-			#parent=self.w,
-			text=self.node.ref("@N"))
+		shrinkPolicy = QtWidgets.QSizePolicy(
+			QtWidgets.QSizePolicy.Maximum,
+			QtWidgets.QSizePolicy.Maximum
+		)
+		expandPolicy = QtWidgets.QSizePolicy(
+			QtWidgets.QSizePolicy.Expanding,
+			QtWidgets.QSizePolicy.Expanding
+		)
+
+		#self.w.setSizePolicy(shrinkPolicy)
+		self.w.setSizePolicy(expandPolicy)
+
+		self.nameLine = LabelWidget(
+			label="name",
+			w=ReactLineEdit(
+				parent=self.w,
+				#parent=self.w,
+				text=self.node.ref("@N")),
+            parent=self.w)
+
+
 		self.wLayout.addWidget(self.nameLine)
+		self.nameLine.setSizePolicy(shrinkPolicy)
 
 		#self.syncSize()
 
