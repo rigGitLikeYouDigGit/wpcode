@@ -66,7 +66,7 @@ class WpCanvasMiniMap(QtWidgets.QWidget):
 		if self.ks.LMB in self.ks.lastPressed:
 			#log("drag minimap")
 			self.minimapDragged.emit({
-				"delta" : self.ks.mouseDelta(forKey=self.ks.LMB)
+				"delta" : - self.ks.mouseDelta(forKey=self.ks.LMB)
 			})
 
 	def paintEvent(self, event):
@@ -152,6 +152,9 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 		self.setTransformationAnchor(self.NoAnchor) # ????
 		self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
 		self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+
+		# self.setRenderHints(QtGui.QPainter.Antialiasing# | QtGui.QPainter.HighQualityAntialiasing
+		#                     )
 
 		#TODO: rewrite this with the model stuff
 		self.data = {

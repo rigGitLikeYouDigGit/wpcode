@@ -78,6 +78,10 @@ class Pathable(#Adaptor
 
 	"""
 
+	@classmethod
+	def getPathAdaptorType(cls)->type[PathAdaptor]:
+		return PathAdaptor
+
 	class PathKeyError(Exception):
 		pass
 
@@ -354,6 +358,12 @@ class Pathable(#Adaptor
 		except KeyError:
 			raise Pathable.PathKeyError(f"Invalid token {token} for {self} branches:\n{self.branchMap()}")
 
+	@classmethod
+	def toPath(cls, arg:(keyT, pathT))->pathT:
+		"""check that given argument is a sequence"""
+		if not isinstance(arg, sequence.SEQUENCE_TYPES):
+			return sequence.toSeq(arg)
+		return arg
 
 	@classmethod
 	def access(cls, obj:(Pathable, T.Iterable[Pathable]), path:pathT, one:(bool, None)=True,
@@ -385,10 +395,11 @@ class Pathable(#Adaptor
 		"""
 		# catch the case of access(obj, [])
 		if not path: return obj
+		path = cls.toPath(path)
 		toAccess = list(sequence.toSeq(obj))
 		for i, val in enumerate(toAccess):
-			if not isinstance(val, Pathable):
-				toAccess[i] = PathAdaptor(val)
+			if not isinstance(val, (cls, Pathable)):
+				toAccess[i] = cls.getPathAdaptorType()(val)
 		# toAccess = [PathAdaptor(i) for i in toAccess if not isinstance(i, Pathable)]
 		#log("ACCESS", obj, toAccess)
 
@@ -409,6 +420,12 @@ class Pathable(#Adaptor
 				depthB += 1
 
 				newPathables, newPath = pathable._consumeFirstPathTokens(path)
+				#log("found", newPathables, newPath)
+				# TODO: EDGE CASE when we need to wrap in a temp thing like a string,
+				#  path[0] NOT GUARANTEED to be the same as the first path tokens
+				newPathables = [i if isinstance(i, Pathable)
+				                else cls.getPathAdaptorType()(i, parent=pathable, name=path[0])
+				                for i in newPathables]
 				if not newPath: # terminate
 					foundPathables.extend(newPathables)
 					continue

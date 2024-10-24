@@ -58,7 +58,7 @@ class TreeInterface(Pathable,
 		return (
 			ChildData("@N", self._getRawName() ),
 			ChildData("@V", self._getRawValue() ),
-			ChildData("@AUX",self._getRawAuxProperties() ),
+			ChildData("@AUX", self._getRawAuxProperties() ),
 			*(ChildData(i._getRawName(), i ) for i in self.branches)
 		)
 
@@ -408,6 +408,13 @@ class TreeInterface(Pathable,
 			return [found], path
 		if token == ".." :
 			return [self.parent], path
+		# check if it's a special token
+		#TODO: maybe formalise this somehow, but also maybe it's ok as jank
+		if token.startswith("@"):
+			if token == "@N" : return [self.name], path
+			if token == "@V" : return [self.value], path
+			if token == "@AUX" : return [self.auxProperties], path
+			#return self.childObjects()
 
 		# if branch should not be created, lookup is invalid
 		create = kwargs.get("create", self.lookupCreate)

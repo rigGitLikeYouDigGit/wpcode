@@ -18,7 +18,7 @@ from wplib.object import Adaptor, TypeNamespace, HashIdElement, ObjectReference,
 from wplib.serial import serialise, deserialise
 from wplib.object.visitor import VisitAdaptor, Visitable, CHILD_LIST_T, DeepVisitor
 from wplib.object.proxy import Proxy, FlattenProxyOp
-from wplib.pathable import Pathable
+from wplib.pathable import Pathable, PathAdaptor
 from wplib.delta import DeltaAtom, DeltaAid, SetValueDelta
 
 
@@ -106,6 +106,10 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		"""return a new dict to store data"""
 		return {"deltaBase" : None}
 
+	@classmethod
+	def getPathAdaptorType(cls) ->type[PathAdaptor]:
+		return WpDex
+
 	def __init__(self, obj:T.Any,
 	             parent:WpDex=None,
 	             name:T.Iterable[DexPathable.keyT]=None,
@@ -185,7 +189,8 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		# returns list of 3-tuples (index, value, childType)
 		for i, t in enumerate(childObjects):
 			if t[1] is None: continue # maybe
-			key = (t[0], )
+			#key = (t[0], )
+			key = t[0]
 			foundDex = self.dexForObj(t[1])
 			#log("id dex map", self.objIdDexMap)
 			#log("found dex for", t[1], foundDex)

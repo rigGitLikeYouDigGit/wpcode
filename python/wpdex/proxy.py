@@ -23,9 +23,9 @@ class WX(rx):
 	putting in caps so that it's obvious when we do stuff with it
 	"""
 	def __repr__(self):
-		return f"WX({repr(self.rx.value)}"
+		return f"WX({repr(self.rx.value)})"
 	def __str__(self):
-		return f"WX({repr(self.rx.value)}"
+		return f"WX({repr(self.rx.value)})"
 	def __init__(self, *args,# path:WpDex.pathT=(),
 	             **kwargs):
 		if kwargs.get("_writeSignal", None) is None:
@@ -38,6 +38,7 @@ class WX(rx):
 
 	def WRITE(self, val):
 		"""emit (path, value)
+		if it's a di
 		"""
 		self._kwargs["_writeSignal"].emit(self._kwargs["_dexPath"], val)
 
@@ -358,16 +359,49 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		"""
 
 		#TODO: PATH doesn't do anything here yet ._.
-		path = tuple(path)
+
+		path = WpDex.toPath(path)
+		log("get ref", self, path)
 		if self._proxyData["wxRefs"].get(path) is None:
-			ref = WX(self._proxyTarget, path=path)()
+			#ref = WX(self._proxyTarget, path=path)()
+			#if 1: self.dex().access()
+			#dirtyRef = rx(path)
+			dirtyKwarg = rx(1)
+			ref = WX(self.dex().access, _dexPath=path)(
+				obj=self,
+				#path=dirtyRef,
+				path=path,
+				values=True,
+				dirtyKwarg=dirtyKwarg
+			)
+
+			#log("ref is", ref)
+			#log("ref call", type(ref), ref._obj, ref._operation)
+
 			self._proxyData["wxRefs"][path] = ref
 			# flag that it should dirty whenever this proxy's
 			# value changes (on delta)
 			def _setDirtyRxValue(*_, **__):
 				"""need to make a temp closure because we can't
 				easily set values as a function call"""
-				_ = ref.rx.value # can we just ping it?
+				log("set dirty value")
+				#ref._dirty = True
+				#ref.rx._dirty = True
+
+				#dirtyRef.rx.value = ()
+				#ref._invalidate_obj()
+				#ref._invalidate_current()
+				# dirtyRef._invalidate_obj()
+				# dirtyRef._invalidate_current()
+				dirtyKwarg.rx.value += 1
+				#dirtyRef.rx.value = path
+				#dirtyRef.rx.value = tuple(path)
+				# oldVal = ref.rx.value
+				# ref.rx.value = "eyyyy"
+				# ref.rx.value = oldVal
+				#_ = ref.rx.value # can we just ping it?
+				#log("value after dirty", ref.rx.value)
+
 				# ref.rx.value = self.dex().access(
 				# 	self.dex(), path, values=1
 				# )
@@ -376,9 +410,19 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 			# allow writing back by "WRITE" method on WX
 			# TODO: maybe move more of this into WX, pass in reference to wpdex root?
 			def _onRefWrite(path, value):
-				targetDex : WpDex = self.dex().access(self, path, values=False)
+				log("start dex", self.dex(), self.dex().parent, self.dex().branchMap())
+				log(self.dex().branchMap()["@N"].parent)
+				dex = self.dex()
+				log("path", path, self.dex().toPath(path))
+				targetDex : WpDex = dex.access(dex, self.dex().toPath(path), values=False)
+				log("targetDex", targetDex, targetDex.parent)
+				log(targetDex.branchMap())
+				assert isinstance(targetDex, WpDex)
+				assert isinstance(targetDex.parent, WpDex)
 				targetDex.write(value)
 			ref._kwargs["_writeSignal"].connect(_onRefWrite)
+
+			#_onRefWrite("@N", "test_val")
 
 			# self.uiChangedSignal.connect(
 			# 	lambda *args: ref.dex().write(self.getFn())

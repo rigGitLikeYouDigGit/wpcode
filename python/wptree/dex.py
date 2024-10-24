@@ -49,22 +49,8 @@ class TreeDex(WpDex):
 
 
 
-# from param import rx
-#
-# class myrx(rx):
-# 	def __str__(self):
-# 		return "<rx" + str(self._obj) + ">"
-# 	pass
-if __name__ == '__main__':
 
-	# from param import rx
-	# v = 3
-	# rv = rx(v)
-	# rv.rx.watch(lambda x : print("output", x))
-	# v += 1
-	# #rv += 1 # this invalidates rv apparently
-	# rv.rx.value += 1
-	"""raw rx really does seem a non-starter"""
+if __name__ == '__main__':
 
 
 	# set up our base data structure
@@ -76,16 +62,18 @@ if __name__ == '__main__':
 	p = WpDexProxy(t)
 	log("p", p)
 
-	# connect a function on the root to listen to its events
-	eventFn = lambda *args: (print("EVENT"), pprint.pprint(args[0]))
-	p.dex().getEventSignal().connect(eventFn)
-
-	# use it like we would any other structure
-	f = p("a", "b", "gg", "f")
-	log("f", f)
-	# rename a deep branch of the tree
-	f.name = "eyyyy"
-	# \/ observe in log that we get a relevant event \/
+	log("access name", p.dex().access(p, "@N"))
+	#
+	# # connect a function on the root to listen to its events
+	# eventFn = lambda *args: (print("EVENT"), pprint.pprint(args[0]))
+	# p.dex().getEventSignal().connect(eventFn)
+	#
+	# # use it like we would any other structure
+	# f = p("a", "b", "gg", "f")
+	# log("f", f)
+	# # rename a deep branch of the tree
+	# f.name = "eyyyy"
+	# # \/ observe in log that we get a relevant event \/
 
 
 
