@@ -48,9 +48,8 @@ class ReactLineEdit(QtWidgets.QLineEdit):
 		ref = text
 		# if isinstance(ref, WpDexProxy):
 		# 	ref = ref.ref(path=())
+		self.setText(ref.rx.value)
 		ref.rx.watch(self.setText)
-		ref.rx.watch(fn=lambda *a, **kwargs : log("WATCHED", a, kwargs))
-		#self.textEdited.connect(lambda *args, **kwargs : ref.WRITE(*args, **kwargs))
 		self.textEdited.connect(self._onTextEdited)
 		self.editingFinished.connect(self._tryCommitText)
 		self.valueCommitted.connect(lambda *args, **kwargs : ref.WRITE(*args, **kwargs))

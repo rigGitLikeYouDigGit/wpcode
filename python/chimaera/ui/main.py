@@ -37,15 +37,15 @@ def showW():
 	t = Tree("testTree")
 	p = WpDexProxy(t)
 	ref = p.ref("@N")
-	log("ref", ref, ref.rx.value)
-	p.name = "2ND NAME"
-	log("after rename", ref, ref.rx.value)
+	# log("ref", ref, ref.rx.value)
+	# p.name = "2ND NAME"
+	# log("after rename", ref, ref.rx.value)
 	w = ReactLineEdit(text=ref)
 
 	#printFn = lambda *a, **kwargs: log("WATCHED", a, kwargs)
 	#ref.rx.watch()
 	ref.rx.watch(fn=(printFn),
-	             onlychanged=False,
+	             onlychanged=True,
 	             #queued=True,
 	             #precedence=1
 	             )
@@ -60,12 +60,12 @@ def showW():
 	#      #ref.rx,
 	#      watch=True)
 
-	p.name = "3RD NAME"
+	#p.name = "3RD NAME"
 	# from param.display import _display_accessors, _reactive_display_objs
 	# print("final display accessors", _display_accessors)
 	# print("final display objs", _reactive_display_objs)
 
-	ref.WRITE("eyyyyy")
+	#ref.WRITE("eyyyyy")
 
 	#raise
 	w.show()
