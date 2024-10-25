@@ -26,5 +26,5 @@ from .seqitem import SeqDexWidget
 from .primitem import PrimDexWidget
 from .stritem import StrDexWidget
 
-from .react import ReactiveWidget, WidgetHook
+#from .react import ReactiveWidget, WidgetHook
 from .atomic import *

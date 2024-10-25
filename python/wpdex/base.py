@@ -167,9 +167,13 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 
 		self.parent.writeChildToKey(self.name, value)
 
-		#self.parent.updateChildren(recursive=1)
 		# trigger delta / event on parent
 		self.parent.gatherDeltas()
+
+		# self.parent._gatherRootData()
+		# self.parent.updateChildren(recursive=1)
+		# self.parent._restoreChildDatasFromRoot()
+
 
 	@classmethod
 	def dexForObj(cls, obj)->WpDex:

@@ -399,8 +399,8 @@ class Pathable(#Adaptor
 		toAccess = list(sequence.toSeq(obj))
 		for i, val in enumerate(toAccess):
 			if not isinstance(val, (cls, Pathable)):
-				toAccess[i] = cls.getPathAdaptorType()(val)
-		# toAccess = [PathAdaptor(i) for i in toAccess if not isinstance(i, Pathable)]
+				toAccess[i] = cls.getPathAdaptorType()(val) # create new root objects
+		# toAccess = [cls.getPathAdaptorType()(i) if not isinstance(i, Pathable) else i for i in toAccess ]
 		#log("ACCESS", obj, toAccess)
 
 		foundPathables = [] # end results of path access - unstructured

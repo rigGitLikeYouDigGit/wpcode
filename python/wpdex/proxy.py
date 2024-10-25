@@ -358,8 +358,9 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		wew lad
 		"""
 
-		#TODO: PATH doesn't do anything here yet ._.
-
+		#TODO: couldn't get rx.when() to work for gating eval,
+		# it would always return an rx() instance, not WX(),
+		# so for this case I use a dummy argument to the function itself
 		path = WpDex.toPath(path)
 		log("get ref", self, path)
 		if self._proxyData["wxRefs"].get(path) is None:
@@ -368,15 +369,18 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 			#dirtyRef = rx(path)
 			dirtyKwarg = rx(1)
 			ref = WX(self.dex().access, _dexPath=path)(
-				obj=self,
+				obj=self.dex(),
 				#path=dirtyRef,
 				path=path,
 				values=True,
 				dirtyKwarg=dirtyKwarg
 			)
 
+			assert isinstance(ref, WX)
 			#log("ref is", ref)
 			#log("ref call", type(ref), ref._obj, ref._operation)
+
+			#ref.rx.when(dirtyKwarg)
 
 			self._proxyData["wxRefs"][path] = ref
 			# flag that it should dirty whenever this proxy's
@@ -472,9 +476,20 @@ if __name__ == '__main__':
 	     "c" : 3
 	     }
 	p = WpDexProxy(s)
-	print(p.dex().allBranches())
+	log("p", p)
+	log(p.dex(), p.dex().branchMap())
+	log(p.dex().access(p.dex(), "b", values=True))
+	log(p.dex().allBranches())
 	r = p.ref("b")
 	print(r)
 	p["b"][2] = "hello"
 	p["b"] = "hello"
+
+	r.rx.watch(lambda x : print("changed", x))
+
+	p["b"] = "WOW"
+	p["b"] = [1, 2, 3]
+	p["b"][1] = "WOOOOOOW"
+
+
 

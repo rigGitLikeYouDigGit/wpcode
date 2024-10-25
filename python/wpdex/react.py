@@ -1,0 +1,123 @@
+
+from __future__ import annotations
+import typing as T, types
+import functools
+
+from param import rx
+
+"""
+like the third time in the past week I've got rid of and brought back 
+this file
+
+now we're on to something, put functions here to integrate the
+reference and rx proxies with other systems (namely UI)
+
+"""
+
+liveT = (types.FunctionType, rx)
+
+def isRxRoot(obj):
+	"""check if the given object is the root of an rx chain -
+	if not, it'll error if you try to set its value"""
+	if not isinstance(obj, rx):
+		return False
+	return obj._compute_root() is obj
+
+def canBeSet(obj):
+	if not isinstance(obj, liveT):
+		return True
+	if isinstance(obj, types.FunctionType): return False
+	return not isRxRoot(obj)
+
+def EVAL1(i):
+	"""this will have to be integrated with expressions later, somehow
+	evaluate a single input and return a single result
+	"""
+	if isinstance(i, rx):
+		return i.rx.value
+	if isinstance(i, types.FunctionType):
+		return i()
+	return i
+
+def EVAL(*args, **kwargs):
+	"""call this on all args of all functions in live networks to check
+	if we have anything live inserted there
+	need to call as *EVAL(*args), **EVAL(**kwargs)
+	since there's no easy way to inline-unpack a tuple of ( tuple, dict )
+
+	at scale this might turn a lot of our UI code into some godforsaken
+	C-macro java lovechild, but let's stick with it for now
+
+	to eval a single value, use EVAL1
+	"""
+	if args:
+		return tuple(map(EVAL1, args))
+	if kwargs:
+		return {k: EVAL1(v) for k, v in kwargs.items()}
+
+def wrapEval(fn):
+	@functools.wraps(fn)
+	def _evalArgsKwargs(*args, **kwargs):
+		return fn(*EVAL(*args), **EVAL(**kwargs))
+	return _evalArgsKwargs
+
+
+class _ReactPatchTracker:
+	"""
+	TODO: this is for later, get the more verbose stuff working for now
+	"""
+	@staticmethod
+	def __reactGetAttr__(selfObj, name):
+		assert hasattr(selfObj, "_preRCache")
+		baseResult = selfObj.__dict__["preRCache"]["__orig_getattr__"](name)
+		if not isinstance(baseResult, types.FunctionType):
+			return baseResult
+		d = object.__getattribute__(selfObj, "__dict__")
+		if not baseResult in d["preRCache"]["origFnReactMap"]:
+			# wrap function to eval arguments
+			wrapped = wrapEval(baseResult)
+			d["preRCache"]["origFnReactMap"][baseResult] = wrapped
+		return d["preRCache"]["origFnReactMap"][baseResult]
+
+	@classmethod
+	def wrap(cls, obj):
+		obj.__dict__["preRCache"] = {
+			"__orig_getattr__" : obj.__getattr__,
+			"preRCache" : {
+				"origFnReactMap" : {}
+			}
+		}
+
+def WRAP_MEMBERS(obj): # good idea
+	return _ReactPatchTracker.wrap(obj)
+
+def BIND(src:(rx, T.Any), fn:callable, *args, **kwargs):
+	"""
+	all-in-one driving system - if source is a live reactive
+	object, drive fn live, else just set it with a static value
+
+	args and kwargs are passed in the same way as a partial,
+	and eval'd themselves
+
+	BIND(myReactiveSource, function, fnArg1, fnKwarg2=maybeReactiveKwarg)
+
+	"""
+	if isinstance(src, rx):
+		def _watchWithEval(v):
+			fargs, fkwargs = EVAL(*args), EVAL(**kwargs)
+			return fn(v, *fargs, **fkwargs)
+		src.rx.watch(_watchWithEval, onlychanged=False)
+		return
+	if isinstance(src, types.FunctionType):
+		"""this isn't as strong a relation since we can't guarantee all the
+		inputs to the raw function even with rx, """
+		raise TypeError(f"cannot bind a raw function {src} to {fn},\n use EVAL synchronously instead")
+		src.rx = rx(src)
+
+	fn(src, *EVAL(*args), **EVAL(**kwargs))
+
+
+class Reactive:
+	""""""
+	def __init__(self):
+		self.dirtyFlag = rx(False)

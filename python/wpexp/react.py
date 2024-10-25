@@ -115,22 +115,6 @@ class WX:
 
 	EVAL = __eval__
 
-def _evalSingle(i):
-	"""this will have to be integrated with expressions later, somehow"""
-	if isinstance(i, types.FunctionType):
-		return i()
-	if isinstance(i, WX):
-		return i.__eval__()
-	return i
-
-def EVAL(*args, **kwargs):
-	"""call this on all args of all functions in live networks to check
-	if we have anything live inserted there"""
-	return (
-		*map(_evalSingle, args),
-		{k : _evalSingle(v) for k, v in kwargs.items()}
-	)
-
 
 
 def myFn(inStr:str):

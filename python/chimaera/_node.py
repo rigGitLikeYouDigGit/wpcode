@@ -962,6 +962,7 @@ class ChimaeraNode(UidElement, ClassMagicMethodMixin, Serialisable):
 	def getAvailableNodesToCreate(self)->list[str]:
 		"""return a list of node types that this node can support as
 		children - by default allow all registered types
+		TODO: update this as a combined class/instance method
 		"""
 		return list(self.nodeTypeRegister.keys())
 

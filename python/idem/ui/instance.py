@@ -5,8 +5,10 @@ import typing as T
 
 
 from PySide2 import QtCore, QtWidgets, QtGui
-
+from wplib import log
+from wpdex import *
 from wp.pipe.ui import AssetSelectorWidget
+from wpdex.ui.atomic import *
 
 """overall window representing single instance of Idem - 
 
@@ -24,5 +26,7 @@ path = PathWidget(parent=None,
     
 """
 
-
+class IdemWidget(QtWidgets.QWidget):
+	"""on left, panel displying current target idem file
+	on right, big graph"""
 

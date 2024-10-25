@@ -31,6 +31,8 @@ class DictDex(WpDex):
 		:param **kwargs:
 		"""
 		token, *path = path
+		#log("dict consume first", token, path)
+		#log(self.branchMap())
 		if token == "keys()":
 			return [self.branchMap()["keys()"]], path
 		return [self.branchMap()[token]], path

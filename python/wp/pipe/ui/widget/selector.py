@@ -10,7 +10,7 @@ import whoosh
 
 from wplib import log
 from wpui.widget.lantern import Status, Lantern
-from wpdex.ui import ReactiveWidget, WidgetHook
+from wpdex.ui import AtomicWidget, StringWidget, FileStringWidget, FileBrowserButton
 
 from wp.pipe.asset import Asset, Show, StepDir, search
 
@@ -31,92 +31,14 @@ class AssetCompleter(QtWidgets.QCompleter):
 		return [path]
 	pass
 
-class MenuLineEdit(QtWidgets.QLineEdit):
-	"""completer seems to always modify the text in its line -
-	we want to micromanage how that happens, so we can't use completer.
-	line edit where the completer just chills the f out
-	don't actually modify the text of lineedit, just emit
-	that a selection has changed
-	"""
-
-	# fires after option has been highlighted, and all the string restoring has calmed down
-	afterOptionHighlighted = QtCore.Signal(str)
-
-	def __init__(self, *args,
-	             suggestionsForTextFn:T.Callable[[str], list[str]]=None,
-	             **kwargs):
-		super().__init__(*args, **kwargs)
-		#self.setEditable(True)
-		self.suggestionsForTextFn=suggestionsForTextFn
-		self.lastSuggestions = []
-		self._completer = QtWidgets.QCompleter(self)
-		self._completer.setObjectName("completer")
-		self.setCompleter(self._completer)
-		self.setObjectName("line")
-		self._prevText = ""
-		self._prevCursor = None
-		self._lastHighlighted = "" # i commend to thee my soul o god
-		self.completer().highlighted.connect(self._onHighlighted)
-		self.textChanged.connect(self._onTextChanged)
-
-	def _saveText(self):
-		self._prevCursor = self.cursorPosition()
-		self._prevText = self.text()
-
-	def _restoreText(self):
-		self.setText(self._prevText)
-		self.setCursorPosition(self._prevCursor)
-
-	def keyPressEvent(self, arg__1):
-		# feels filthy to put this here
-		if arg__1.key() in (QtCore.Qt.Key_Down, QtCore.Qt.Key_Up):
-			pass
-		else:
-			self._lastHighlighted = "" # see the great shame of man
-			self._saveText()
-		super().keyPressEvent(arg__1)
-		#print("end key press", self._lastHighlighted)
-
-
-	def _onHighlighted(self, *args, **kwargs):
-		"""restore previous text"""
-		#print("")
-		#log("onHighlighted", self._lastHighlighted, self.text(), self._prevText)
-		#log("current text", self.text())
-		if not self._lastHighlighted:
-			self._saveText()
-		self._lastHighlighted = args[0]
-		#print("end highlighted")
-
-	def _onTextChanged(self, *args, **kwargs):
-		"""naively one might think that
-		highlighting new options in the completer dropdown would set the completer
-		to be the signal sender
-		only a fool would be so naive
-		I can't see a strong way to tell a highlight signal from a text changed signal,
-		so we do something quite disgusting here
-
-		textChanged() also gets some kind of double-tap if you bring up the completion popup, hide it by typing input that matches no options, then bring it back again -
-		for that reason we need to split the "_lastHighlighted" state tracking across these
-		signal slots AND keyPressEvent
-		"""
-		#log("onTextChanged", self._lastHighlighted, self.text(), self._prevText)
-		if self._lastHighlighted:
-			self.blockSignals(True)
-			self._restoreText()
-			self.blockSignals(False)
-			tempLastHighlighted = self._lastHighlighted
-			self._lastHighlighted = ""
-			self.afterOptionHighlighted.emit(tempLastHighlighted)
-			self._lastHighlighted = tempLastHighlighted
-			#self._lastHighlighted = ""
 
 
 
 
 
 
-class AssetSelectorWidget(QtWidgets.QWidget, ReactiveWidget):
+
+class AssetSelectorWidget(QtWidgets.QWidget, AtomicWidget):
 	"""widget representing an asset reference -
 	asset path or expression, version options, vcs status.
 	rich data not represented
@@ -147,58 +69,63 @@ class AssetSelectorWidget(QtWidgets.QWidget, ReactiveWidget):
 	TODO: we still have the annoying bug where the highlighting behaviour breaks after you
 		show, hide, then show the completion widget again
 		but I've spent too long on this
+
+	TODO: as seen here, we can't easily compose atomic widgets of other ones
+		hmmmmmmmm
 	"""
 
+	if T.TYPE_CHECKING:
+		def value(self)->Asset: pass
+
 	def __init__(self, parent=None, name="asset",
-	             default:Asset=None):
-		super().__init__(parent)
+	             value:Asset=None
+	             ):
+		QtWidgets.QWidget.__init__(self, parent)
+		AtomicWidget.__init__(self, value=value or Asset.topAssets()[0])
 		#self.line = QtWidgets.QLineEdit(self)
-		self.line = MenuLineEdit(self,
-		                         suggestionsForTextFn=search.searchPaths)
+		self.line = StringWidget(value=self.value().strPath(),
+		                         options=search.allPaths(),
+		                         enableInteractionOnLocked=True
+		                         )
 		self.line.setPlaceholderText("path/uid/exp...")
 
-		self.line.completer().setModel(QtCore.QStringListModel(search.allPaths()))
+		#self.line.completer().setModel(QtCore.QStringListModel(search.allPaths()))
 
-		ReactiveWidget.__init__(self, name)
 		# get all scanned asset paths to
 		log("all paths", list(search.allPaths()))
 
 		self.lantern = Lantern(status=Status.Neutral, parent=self)
 
-		self.line.textChanged.connect(self._onTextChanged)
-		self.line.editingFinished.connect(self._tryCommitText)
+		# the line is effectively the display for the asset
+		self.line.valueCommitted.connect(self._fireDisplayCommitted)
+		self.line.displayEdited.connect(self._fireDisplayEdited)
 
-		self.line.afterOptionHighlighted.connect(self._onOptionHighlighted)
-
-
-		asset = default or Asset.topAssets()[0]
-		self.line.setText(asset.strPath())
-		self._lastValue = asset
+		#self.line.afterOptionHighlighted.connect(self._onOptionHighlighted)
 
 		layout = QtWidgets.QHBoxLayout()
 		layout.addWidget(self.line)
 		layout.addWidget(self.lantern)
 		self.setLayout(layout)
 
-		self.lantern.setFixedSize(10, 10)
+		self.postInit()
 
-	def _onOptionHighlighted(self, *args, **kwargs):
-		"""complete only the rest of the highlighted option in the line
+	def _rawUiValue(self):
+		return self.line.text()
+	def _setRawUiValue(self):
+		"""we don't actually set anything directly here,
+		value asset updating automatically triggers the line edit"""
+		pass
 
-		this fires after option selected in completer dropdown
-		"""
-		#log("highlighted", args, kwargs)
-		baseText = self.line.text()
-		#log("base text", baseText)
-		suggestPath = args[0]
-		highlightStartId = len(baseText)
-		self.line.setText(suggestPath)
-		if baseText in suggestPath:
-			self.line.setSelection(highlightStartId, len(suggestPath) - 1)
-		#log("line selected text", self.line.selectedText())
+	def _processValueForUi(self, value):
+		pass
+		#return value.strPath()
+	def _processResultFromUi(self, value):
+		return value
+		#return Asset.fromPath(value)
+	def _tryCommitValue(self, value):
+		pass
 
-	def _uiChangeQtSignals(self):
-		return []
+
 
 	#def _onTextChangedByUi(self, *args, **kwargs ):
 	def _onTextChanged(self, *args, **kwargs ):
@@ -217,14 +144,6 @@ class AssetSelectorWidget(QtWidgets.QWidget, ReactiveWidget):
 			self.setValue(self._lastValue)
 			log("fail commit")
 
-	def getValue(self, **kwargs):
-		try:
-			return Asset.fromPath(self.line.text())
-		except (Asset.PathKeyError, KeyError):
-			return None
-
-	def setValue(self, val:Asset, **kwargs):
-		self.line.setText(val.strPath(root=0))
 
 
 if __name__ == '__main__':

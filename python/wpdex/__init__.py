@@ -1,6 +1,6 @@
 
 from __future__ import annotations
-import typing as T
+import typing as T, types
 
 """lib for wpdex - doesn't stand for anything, just a name
 
@@ -35,3 +35,8 @@ from .seqdex import *
 from .strexpdex import *
 
 from .proxy import WpDexProxy, WX#, Reference
+
+from .react import *
+
+from .modeled import Modelled
+

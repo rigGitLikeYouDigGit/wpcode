@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing as T
 
 from wplib import log, Sentinel, TypeNamespace
-
+from wpdex import *
 from PySide2 import QtCore, QtWidgets, QtGui
 
 """
@@ -52,6 +52,7 @@ class Lantern(QtWidgets.QWidget):
 		self.setAutoFillBackground(True)
 		#self.setWindowOpacity(1.0)
 		self.setContentsMargins(0, 0, 0, 0)
+		self.setFixedSize(10, 10)
 
 
 	def setStatus(self, status:Status.T()):
@@ -60,7 +61,7 @@ class Lantern(QtWidgets.QWidget):
 
 	def paintEvent(self, event):
 		painter = QtGui.QPainter(self)
-		status = self.status or Status.Neutral
+		status = EVAL(self.status)
 		#brush = QtGui.QBrush(QtGui.QColor.fromRgb(128, 200, 128, 128))
 		brush = QtGui.QBrush(QtGui.QColor.fromRgbF(*status.colour, 1))
 		painter.setBrush(

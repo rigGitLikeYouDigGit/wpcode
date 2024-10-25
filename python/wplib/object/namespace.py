@@ -58,6 +58,13 @@ class NamespaceElement(ClassMagicMethodMixin):
 	def __class_bool__(cls):
 		return True
 
+	@classmethod
+	def __class_eq__(cls, other):
+		if isinstance(other, str):
+			return cls.clsName().lower() == other.lower()
+		return hash(cls) == hash(other)
+
+
 class TypeNamespace(ClassMagicMethodMixin):
 	"""namespace container to hold discrete elements as types
 	this is like an Enum where each member can have arbitrary

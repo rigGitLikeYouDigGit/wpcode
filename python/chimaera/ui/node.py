@@ -23,6 +23,13 @@ if T.TYPE_CHECKING:
 	from .scene import ChimaeraScene
 	from .view import ChimaeraView
 
+"""
+
+TODO: consider maybe inverting the flow for painting widgets? if every one in a hierarchy
+	called back to a single root-defined function to see if it needs overrides
+	or special treatment, colours etc ?
+"""
+
 refType = (WpDexProxy, WX)
 
 class ReactLineEdit(QtWidgets.QLineEdit):
@@ -61,11 +68,12 @@ class ReactLineEdit(QtWidgets.QLineEdit):
 		log("ON VALUE COMMITTED")
 
 	def _tryCommitText(self,):
-		"""can't muddy waters here - WRITE gets the exact new value,
-		nothing more or less"""
-		#log("TRY COMMIT TEXT")
-		# oldValue = self.ref.rx.value
-		# newValue = s
+		"""can't muddy waters here by emitting before/after as a dict
+		 - WRITE gets the exact new value,
+		nothing more or less
+		(or we could emit a dict here, as long as we use yet another layer of
+		function to strip it away again - doesn't seem useful)
+		"""
 		self.valueCommitted.emit(self.text())
 
 
@@ -133,6 +141,68 @@ class ShrinkWrapWidget(QtWidgets.QWidget):
 		size = baseRect.size()
 		return size
 
+
+class RoundLabel(QtWidgets.QLabel):
+	def __init__(self, text="", parent=None,
+	             backgroundBrush=QtGui.QColor.fromRgbF(0.5, 0.5, 0.5),
+	             framePen=QtGui.QColor.fromRgbF(0.5, 0.5, 0.5, 0.0),
+	             textPen=QtGui.QColor.fromRgbF(0.8, 0.8, 0.8),
+	             ):
+		"""
+		TODO: drop in EVAL() calls all over this for dynamic colours
+
+		TODO: there has to be a better way of changing element colours
+			dynamically in qt
+		"""
+		super().__init__(text, parent)
+		self.backgroundBrush : QtGui.QBrush = None
+		self.framePen : QtGui.QPen = None
+		self.textPen : QtGui.QPen = None
+		self.setAutoFillBackground(True)
+		self.setBackgroundBrush(backgroundBrush)
+		self.setFramePen(framePen)
+		self.setTextPen(textPen)
+
+	def setBackgroundBrush(self, b:(QtGui.QColor, QtGui.QBrush, tuple)):
+		if isinstance(b, (tuple, list)):
+			b = QtGui.QColor.fromRgbF(*b)
+		if isinstance(b, QtGui.QColor):
+			b = QtGui.QBrush(b)
+		assert isinstance(b, QtGui.QBrush)
+		self.backgroundBrush = b
+		self.update()
+
+	def setFramePen(self, b:(QtGui.QColor, QtGui.QPen, tuple)):
+		if isinstance(b, (tuple, list)):
+			b = QtGui.QColor.fromRgbF(*b)
+		if isinstance(b, QtGui.QColor):
+			b = QtGui.QPen(b)
+		assert isinstance(b, QtGui.QPen)
+		self.framePen = b
+		self.update()
+
+	def setTextPen(self, b:(QtGui.QColor, QtGui.QPen, tuple)):
+		if isinstance(b, (tuple, list)):
+			b = QtGui.QColor.fromRgbF(*b)
+		if isinstance(b, QtGui.QColor):
+			b = QtGui.QPen(b)
+		assert  isinstance(b, QtGui.QPen)
+		self.textPen = b
+		self.update()
+
+	def paintEvent(self, arg__1:QtGui.QPaintEvent):
+		painter = QtGui.QPainter(self)
+		path = QtGui.QPainterPath()
+		path.addRoundedRect(self.rect(), 2, 2)
+		painter.fillPath(path, self.backgroundBrush)
+		painter.setPen(self.framePen)
+		painter.drawPath(path)
+		painter.setPen(self.textPen)
+		painter.drawText(
+			self.rect(), self.text(), QtGui.QTextOption(QtCore.Qt.AlignCenter))
+
+
+
 class LabelWidget(QtWidgets.QWidget):
 	"""simple way of showing a label alongside
 	a normal widget"""
@@ -142,6 +212,9 @@ class LabelWidget(QtWidgets.QWidget):
 		self.w = w
 		self.setLayout(QtWidgets.QHBoxLayout(self))
 		self.label = QtWidgets.QLabel(label, parent=self)
+
+		#self.label.setAutoFillBackground(True)
+
 		self.layout().addWidget(self.label)
 		self.layout().addWidget(self.w)
 		self.setContentsMargins(0, 0, 0, 0)
@@ -195,6 +268,8 @@ class NodeDelegate(QtWidgets.QGraphicsItem, Adaptor):
 		self.w = ShrinkWrapWidget(parent=None)
 		self.w.setContentsMargins(QtCore.QMargins(0, 0, 0, 0))
 		self.w.setAutoFillBackground(False)
+		self.w.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+		#self.w.setWindowOpacity(1)
 		self.setWidgetResult = self.proxyW.setWidget(self.w)
 		self.wLayout = QtWidgets.QVBoxLayout(self.w)
 		self.w.setLayout(self.wLayout)
@@ -236,16 +311,23 @@ class NodeDelegate(QtWidgets.QGraphicsItem, Adaptor):
 		expanded = baseRect.marginsAdded(QtCore.QMargins(10, 10, 10, 10))
 		return expanded
 
+	def getColour(self):
+		return self.node.colour()
+
 	def paint(self,
 	          painter:QtGui.QPainter,
 	          option:QtWidgets.QStyleOptionGraphicsItem,
 	          widget=...):
 		painter.drawRoundedRect(self.boundingRect(), 5, 5)
-		brush = QtGui.QBrush(QtGui.QColor.fromRgbF(1, 1, 1))
+		brush = QtGui.QBrush(QtGui.QColor.fromRgbF(*self.getColour()).darker(300))
 
 		path = QtGui.QPainterPath()
 		path.addRoundedRect(QtCore.QRectF(self.boundingRect()), 5, 5)
 		painter.fillPath(path, brush)
+
+		pen = QtGui.QPen(QtGui.QColor.fromRgbF(*self.getColour()))
+		painter.setPen(pen)
+		painter.drawPath(path)
 
 
 

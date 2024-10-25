@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import types
 import typing as T
-
+from pathlib import Path
 
 from wplib import Sentinel, log
 from wplib.object import Signal
 from wptree import Tree
+from wpdex import *
+from wp import Asset, constant
 
-from wp import Asset
+from .node import IdemGraph, MayaSessionNode
 
 """
 a single idem instance targets a single chi file, and for now a single asset
@@ -21,6 +23,34 @@ overall
 target .chi file - look up a default from asset
 asset from that file 
 
+
+Q: now that we're so advanced, is there really much stopping us from going
+	full object-hierarchy instead of full container-hierarchy?
+A: yes, because user-exposed data has to be editable by hand,
+	that's more difficult if you have to express a custom object in strings
+"""
+
+class IdemSession(Modelled):
+
+	@classmethod
+	def dataT(cls):
+		return Tree
+
+	@classmethod
+	def newDataModel(cls, **kwargs) ->dataT():
+		root = Tree("idem")
+		root["asset"] = None
+		root["filePath"] = Path("plan.chi")
+		root["graph"] = IdemGraph.create(name="graph")
+		return root
+
+
+
+###### TODO #######
+""" I have no idea how the stuff below will work, but
+# from sketches it might evidently let us build more
+# complex behaviour, and give a more stable structure
+for the path referencing
 """
 
 class Field:

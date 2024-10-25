@@ -9,7 +9,7 @@ import reactivex as rx
 from wplib import log
 from wplib.object import Signal
 
-from wpdex import WpDexProxy, Reference
+from wpdex import WpDexProxy#, Reference
 #from wpdex.ui.react import ReactiveWidget
 from wpdex.ui.atomic.base import AtomicWidget
 """a widget might have multiple 'slots' to link - 

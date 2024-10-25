@@ -19,7 +19,7 @@ from wplib.serial import Serialisable
 
 from wptree import Tree
 
-from wpdex import WpDexProxy, WpDex, WX
+from wpdex import *
 
 
 from chimaera.lib import tree as treelib
@@ -27,42 +27,10 @@ from chimaera.lib import tree as treelib
 
 
 """
-start over just for the moment,
-get a full cycle of it working -
- nodes affecting data
-  data driving UI
-   UI modifying data
-only node name for now
+simplest version works with node name and UI fully reactive :D
 """
 
-class Modelled:
-	"""test if it's useful to have a base class -
-	represents a python object that refers to
-	and modifies a static data model for all
-	its state.
 
-	data used in this way has to be wrapped in a proxy,
-	so that modifications made by this object
-	trigger events to other items pointing to the data
-
-	can we use this to hold a tree schema for validation too?
-	"""
-
-	@classmethod
-	def dataT(cls):
-		return T.Any
-
-	@classmethod
-	def newDataModel(cls, **kwargs)->dataT():
-		raise NotImplementedError("Define a new data structure expected "
-		                          f"for Modelled {cls}")
-
-	def __init__(self, data:dataT()):
-		self.data : self.dataT() = WpDexProxy(data)
-
-	@classmethod
-	def create(cls, **kwargs):
-		return cls(cls.newDataModel(**kwargs))
 
 class ChimaeraNode(Modelled,
                    Pathable):
@@ -81,15 +49,21 @@ class ChimaeraNode(Modelled,
 		t.addBranch( Tree("nodes") ) #TODO: replace with the crazy incoming/defined etc
 		return t
 
-	@classmethod
-	def create(cls, name="node", **kwargs):
-		return cls(cls.newDataModel(**kwargs))
+	nodeTypeRegister : dict[str, type[ChimaeraNode]] = {}
+
+
+	def getAvailableNodesToCreate(self)->list[str]:
+		"""return a list of node types that this node can support as
+		children - by default allow all registered types
+		TODO: update this as a combined class/instance method
+		"""
+		return list(self.nodeTypeRegister.keys())
 
 	def __init__(self, data:Tree):
 		Modelled.__init__(self, data)
 
-	def ref(self, path:Pathable.pathT)->WX:
-		return self.data.ref(path)
+	def colour(self)->tuple[float, float, float]:
+		return (0.2, 0.3, 0.7)
 
 	@property
 	def name(self) -> keyT:
@@ -134,6 +108,10 @@ class ChimaeraNode(Modelled,
 	def nodeForTree(cls, data:Tree):
 		pass
 
+
+	@classmethod
+	def create(cls, name="node", **kwargs):
+		return cls(cls.newDataModel(name=name, **kwargs))
 
 
 if __name__ == '__main__':
