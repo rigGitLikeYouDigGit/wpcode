@@ -1,5 +1,5 @@
 
 
 
-
+from .main import ChimaeraWidget
 

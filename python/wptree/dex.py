@@ -53,14 +53,23 @@ class TreeDex(WpDex):
 			assert isinstance(value, TreeInterface)
 			self.obj.addBranch(newBranch=value)
 
-	# def _consumeFirstPathTokens(self, path:pathT) ->tuple[list[WpDex], pathT]:
-	# 	"""process a path token"""
-	# 	path = tuple(path)
-	# 	#log("consume first tokens", self, path, path in self.keyDexMap, self.keyDexMap)
-	# 	token, *path = path
-	# 	# if isinstance(token, int):
-	# 	# 	return [self.children[token]], path
-	# 	return [self.branchMap()[token, )]], path
+	def _buildBranchMap(self) ->dict[DexPathable.keyT, WpDex]:
+		result = super()._buildBranchMap()
+		#log("treedex branch map", self.obj, result)
+		return result
+
+	def _consumeFirstPathTokens(self, path:pathT) ->tuple[list[WpDex], pathT]:
+		"""process a path token"""
+		log("treedex consume", path, self.branchMap(), self.obj._getRawValue())
+		token, *path = path
+		if token == "@V" and self.obj._getRawValue() is None:
+			return [None], path
+		try:
+			return [self.branchMap()[token]], path
+		except KeyError:
+			if token == "@V" and self.obj._getRawValue() is None:
+				return [None], path
+			raise Pathable.PathKeyError(f"Invalid token {token} for {self} branches:\n{self.branchMap()}")
 
 
 

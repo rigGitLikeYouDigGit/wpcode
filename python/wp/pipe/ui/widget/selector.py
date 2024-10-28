@@ -11,7 +11,7 @@ import whoosh
 from wplib import log
 from wpui.widget.lantern import Status, Lantern
 from wpdex.ui import AtomicWidget, StringWidget, FileStringWidget, FileBrowserButton
-
+from wpdex import react
 from wp.pipe.asset import Asset, Show, StepDir, search
 
 
@@ -83,18 +83,37 @@ class AssetSelectorWidget(QtWidgets.QWidget, AtomicWidget):
 		QtWidgets.QWidget.__init__(self, parent)
 		AtomicWidget.__init__(self, value=value or Asset.topAssets()[0])
 		#self.line = QtWidgets.QLineEdit(self)
-		self.line = StringWidget(value=self.value().strPath(),
-		                         options=search.allPaths(),
-		                         enableInteractionOnLocked=True
+
+		log("assetSelector init", react.canBeSet(self.rxValue), self.rxValue().rx.value)
+		#testResult = self.rxValue().rx.where("a", "b")
+		#log("test r", testResult.rx.value)
+		#testResult = self.rxValue().rx.where(self.rxValue().upper(), "b")
+		#log("test r", testResult.rx.value)
+
+		self.line = StringWidget(
+			# value=self.rxValue().rx.where(
+			# 	self.rxValue().strPath(),
+			# 	"<None>"),
+			value=self.rxValue().rx.where(
+				self.rxValue().strPath(),
+				""),
+			options=lambda : search.allPaths(),
+			enableInteractionOnLocked=True
 		                         )
 		self.line.setPlaceholderText("path/uid/exp...")
 
 		#self.line.completer().setModel(QtCore.QStringListModel(search.allPaths()))
 
 		# get all scanned asset paths to
-		log("all paths", list(search.allPaths()))
+		#log("all paths", list(search.allPaths()))
 
-		self.lantern = Lantern(status=Status.Neutral, parent=self)
+		statusMap = {None : Lantern.Status.Neutral,
+		             False : Lantern.Status.Failure,
+		             }
+		self.lantern = Lantern(
+			value=self.rxImmediateValue().rx.pipe(statusMap.get, Lantern.Status.Success),
+			parent=self
+		)
 
 		# the line is effectively the display for the asset
 		self.line.valueCommitted.connect(self._fireDisplayCommitted)
@@ -109,22 +128,39 @@ class AssetSelectorWidget(QtWidgets.QWidget, AtomicWidget):
 
 		self.postInit()
 
+	def _resultForString(self, s)->(None, False, Asset):
+		"""if not result : catches both fail states"""
+		if not s or s == "<None>":
+			return None
+		return Asset.fromPath(self.line.text(), default=False)
+
+	def setValue(self, value:(str, Asset)):
+		if isinstance(value, str):
+			value = self._resultForString(value)
+		AtomicWidget.setValue(self, value)
+
 	def _rawUiValue(self):
 		return self.line.text()
-	def _setRawUiValue(self):
+	def _setRawUiValue(self, value):
 		"""we don't actually set anything directly here,
 		value asset updating automatically triggers the line edit"""
 		pass
 
 	def _processValueForUi(self, value):
+		if value is None:
+			return ""
+		assert isinstance(value, Asset) # or list of assets?
+		return value.strPath()
 		pass
 		#return value.strPath()
 	def _processResultFromUi(self, value):
-		return value
-		#return Asset.fromPath(value)
+		return self._resultForString(value)
 	def _tryCommitValue(self, value):
-		pass
-
+		#if value is None:
+		if not value:
+			return
+		assert isinstance(value, Asset)
+		self._commitValue(value)
 
 
 	#def _onTextChangedByUi(self, *args, **kwargs ):

@@ -7,7 +7,7 @@ import typing as T
 from pathlib import Path, PurePath
 import orjson
 
-from wplib import log, string as libstr
+from wplib import log, string as libstr, Sentinel
 from wplib.object import UidElement, SmartFolder, DiskDescriptor
 from wplib.pathable import Pathable, DirPathable, RootDirPathable
 from wplib.sequence import toSeq, flatten
@@ -298,15 +298,26 @@ class Asset(Pathable):
 		return show.access(show, assetTokens, one=True)
 
 	@classmethod
-	def fromPath(cls, path, allowStepDirs=False)->Asset:
+	def fromPath(cls, path, allowStepDirs=False, default=Sentinel.FailToFind)->Asset:
 		#log("from path", path)
 		path = toAssetPath(path)
 		#log("found path", path)
-		show = Show.fromPath(path)
+		try:
+			show = Show.fromPath(path)
+		except KeyError as e:
+			if default is Sentinel.FailToFind:
+				raise e
+			return default
+
 		#log("show", show, "path", path)
-		result = show.access(show, path=path[1:])
+		try:
+			result = show.access(show, path=path[1:], default=None)
+		except (cls.PathKeyError, KeyError):
+			result = None
 		if not isinstance(result, Asset):
-			raise cls.PathKeyError(f"No asset found for path {path}")
+			if default is Sentinel.FailToFind:
+				raise cls.PathKeyError(f"No asset found for path {path}")
+			return default
 		return result
 
 	@classmethod

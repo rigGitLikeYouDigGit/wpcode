@@ -11,6 +11,8 @@ from wplib.uid import getUid4
 from wplib.inheritance import clsSuper
 from wplib.object import UidElement, ClassMagicMethodMixin, CacheObj, Adaptor
 from wplib.serial import Serialisable
+from wplib.object import VisitAdaptor, Visitable
+
 
 from PySide2 import QtCore, QtWidgets, QtGui
 

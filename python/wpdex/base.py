@@ -4,6 +4,7 @@ from __future__ import annotations
 import copy
 import pickle
 import pprint
+import traceback
 import typing as T
 
 from copy import deepcopy
@@ -21,14 +22,6 @@ from wplib.object.proxy import Proxy, FlattenProxyOp
 from wplib.pathable import Pathable, PathAdaptor
 from wplib.delta import DeltaAtom, DeltaAid, SetValueDelta
 
-
-class DexRef(ObjectReference):
-	"""reference to a dex object"""
-	def __init__(self, obj:WpDex, path:DexPathable.pathT=""):
-		self.obj = obj
-		self.path = path
-	def resolve(self) ->WpDex:
-		return self.obj.access(self.path)
 
 
 class OverrideMap:
@@ -181,6 +174,14 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		consider passing in a known parent object to narrow down?"""
 		return cls.objIdDexMap.get(id(obj))
 
+	def _buildChildPathable(self, obj:T.Any, name:keyT)->Pathable:
+		"""redeclaring default method because otherwise tracking the inheritance
+		gets a bit scary"""
+		if isinstance(obj, WpDex):
+			return obj
+		pathType : type[WpDex] = WpDex.adaptorForType(type(obj))
+		assert pathType, f"no wpdex type for {type(obj)}"
+		return pathType(obj, parent=self, name=name)
 
 	def _buildBranchMap(self)->dict[DexPathable.keyT, WpDex]:
 		"""build child objects, return keyDexMap
@@ -384,6 +385,13 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 				if itemDeltas:
 					deltas[basePath] = itemDeltas
 				continue
+
+			except Exception as e: # could be any error, serialise it here and get on with program
+				itemDeltas = {"error" : traceback.format_exc(),
+				              "change" : "any"}
+				deltas[basePath] = itemDeltas
+				continue
+
 
 			if itemDeltas:
 				deltas[basePath] = itemDeltas

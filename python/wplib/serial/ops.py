@@ -25,7 +25,7 @@ class SerialiseOp(DeepVisitor.DeepVisitOp):
 		# get adaptor for the given data
 		adaptorCls = SerialAdaptor.adaptorForType(type(obj))
 		if adaptorCls is None:
-			raise Exception(f"No adaptor for class {type(obj)}")
+			raise Exception(f"No {SerialAdaptor} adaptor for class {type(obj)}")
 		#log("adaptor", adaptorCls)
 		# copy params and update with class defaults
 		dictlib.defaultUpdate(serialParams, adaptorCls.defaultEncodeParams(obj)

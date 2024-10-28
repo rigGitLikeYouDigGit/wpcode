@@ -11,11 +11,14 @@ from collections import namedtuple
 import wplib.sequence
 from wplib import log, Sentinel, TypeNamespace, Pathable
 from wplib.constant import MAP_TYPES, SEQ_TYPES, STR_TYPES, LITERAL_TYPES, IMMUTABLE_TYPES
+from wplib.object.visitor import PARAMS_T, CHILD_LIST_T
 from wplib.uid import getUid4
 from wplib.inheritance import clsSuper
 from wplib.object import UidElement, ClassMagicMethodMixin, CacheObj
 from wplib.serial import Serialisable
 #from wplib.pathable import Pathable
+from wplib.object import VisitAdaptor, Visitable
+
 
 from wptree import Tree
 
@@ -33,7 +36,9 @@ simplest version works with node name and UI fully reactive :D
 
 
 class ChimaeraNode(Modelled,
-                   Pathable):
+                   Pathable,
+                   Visitable,
+                   ):
 	keyT = Pathable.keyT
 	pathT = Pathable.pathT
 
@@ -41,7 +46,6 @@ class ChimaeraNode(Modelled,
 	def dataT(cls):
 		return Tree
 	data : Tree | WpDexProxy
-
 
 	@classmethod
 	def newDataModel(cls, name="node", **kwargs) ->dataT():
@@ -51,6 +55,9 @@ class ChimaeraNode(Modelled,
 
 	nodeTypeRegister : dict[str, type[ChimaeraNode]] = {}
 
+	def branchMap(self):
+		return {name : ChimaeraNode(branch)
+		        for name, branch in self.data("nodes").branchMap().items()}
 
 	def getAvailableNodesToCreate(self)->list[str]:
 		"""return a list of node types that this node can support as

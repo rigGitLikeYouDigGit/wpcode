@@ -41,7 +41,7 @@ class ChimaeraScene(WpCanvasScene):
 	def sync(self, elements=()):
 		if not elements:
 			self.clear()
-		for i in self.graph().children(): pass
+		for name, node in self.graph().branchMap(): pass
 
 
 	pass

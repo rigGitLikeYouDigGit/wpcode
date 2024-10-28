@@ -10,6 +10,7 @@ from wptree import Tree, TreeInterface, TreeDeltaAid, TreeDeltas
 
 from chimaera.node import ChimaeraNode
 
+from wplib.object import VisitAdaptor, Visitable
 from wpdex import WpDex, WpDexProxy
 from wplib.delta import DeltaAtom, DeltaAid, SetValueDelta
 

@@ -16,7 +16,11 @@ Maybe on mouse over can bring up asset info window on given uid
 class UidWidget(QtWidgets.QLabel,
                 BorderFrame,
                 ):
-	"""label directly displaying truncated uid"""
+	"""label directly displaying truncated uid
+
+	TODO: REWORK ALL OF THIS with proper reactive base
+		probably way more simple
+	"""
 	def __init__(self, uid:str="", parent=None):
 		QtWidgets.QLabel.__init__(self, parent=parent)
 		self._uid = ""

@@ -33,10 +33,12 @@ from .primdex import *
 from .dictdex import *
 from .seqdex import *
 from .strexpdex import *
+from .pathdex import *
+from .dataclassdex import *
 
 from .proxy import WpDexProxy, WX#, Reference
 
-from .react import *
+from .react import EVAL1, EVAL, BIND, WRAP_MEMBERS, rx
 
 from .modeled import Modelled
 

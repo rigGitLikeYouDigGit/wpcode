@@ -3,8 +3,9 @@ from __future__ import annotations
 import typing as T, types
 import functools
 
-from param import rx
+from param import rx, Parameter
 
+from wplib import log
 """
 like the third time in the past week I've got rid of and brought back 
 this file
@@ -16,18 +17,38 @@ reference and rx proxies with other systems (namely UI)
 
 liveT = (types.FunctionType, rx)
 
+
+def rxAllowsSet(obj):
+	"""copy the logic from the original .rx.value =
+	function to check if base rx would allow the given object
+	to be set
+	"""
+	obj = obj.rx
+	if isinstance(obj._reactive, Parameter): return False
+	elif not isinstance(obj._reactive, rx): return False
+	elif obj._reactive._root is not obj._reactive: return False
+	if obj._reactive._wrapper is None: return False
+	return True
+
 def isRxRoot(obj):
 	"""check if the given object is the root of an rx chain -
 	if not, it'll error if you try to set its value"""
+	#log("isRxRoot", isinstance(obj, rx), obj._compute_root() is obj)
 	if not isinstance(obj, rx):
 		return False
-	return obj._compute_root() is obj
+	#return obj._compute_root() is obj
+	return rxAllowsSet(obj)
 
 def canBeSet(obj):
+	from wpdex.proxy import WX
+	#log("canbeset", isinstance(obj, liveT))
 	if not isinstance(obj, liveT):
 		return True
 	if isinstance(obj, types.FunctionType): return False
-	return not isRxRoot(obj)
+	if "_dexPath" in obj._kwargs and hasattr(obj, "WRITE"):
+		log("obj has path", obj._kwargs["_dexPath"])
+		return True
+	return isRxRoot(obj)
 
 def EVAL1(i):
 	"""this will have to be integrated with expressions later, somehow

@@ -7,8 +7,6 @@ import typing as T
 
 from PySide2 import QtCore, QtWidgets, QtGui
 
-import reactivex as rx
-
 import wplib.sequence
 from wplib import log
 from wplib.object import Signal
@@ -111,11 +109,12 @@ class _MenuLineEdit(QtWidgets.QLineEdit):
 class StringWidget(QtWidgets.QLineEdit, AtomicWidget):
 
 	def __init__(self, value="", parent=None,
-	             options=(),
+	             options:T.Sequence[str]=(),
 	             conditions:T.Sequence[AtomicWidget.Condition]=(),
 	             warnLive=False,
 	             light=False,
-	             enableInteractionOnLocked=False
+	             enableInteractionOnLocked=False,
+	             placeHolderText=""
 	             ):
 		QtWidgets.QLineEdit.__init__(self, parent=parent)
 		AtomicWidget.__init__(self, value=value,
@@ -125,15 +124,32 @@ class StringWidget(QtWidgets.QLineEdit, AtomicWidget):
 		                      )
 
 		self.setCompleter(QtWidgets.QCompleter(self))
-		if options:
-			rx(options).rx.pipe(QtCore.QStringListModel).rx.watch(self.completer().setModel)
+
+		self.options = rx(options)
+		self.options.rx.watch(
+			self._setOptions,
+			onlychanged=False)
+		self.options.rx.value = self.options.rx.value
+		self._placeHolderText = rx(placeHolderText)
+		self._placeHolderText.rx.watch(self.setPlaceholderText)
+		canBeSet = react.canBeSet(self.rxValue())
+		log(self, "init can be set", canBeSet)
+		#assert not canBeSet
 
 		# connect signals
+		self.textChanged.connect(self._syncImmediateValue)
 		self.textEdited.connect(self._fireDisplayEdited)
 		self.editingFinished.connect(self._fireDisplayCommitted)
 		self.returnPressed.connect(self._fireDisplayCommitted)
 
 		self.postInit()
+
+	def _setOptions(self, *args):
+		#log("setOptions", args)
+		a = EVAL1(args[0])
+		if not isinstance(a, QtCore.QStringListModel):
+			a = QtCore.QStringListModel(a)
+		self.completer().setModel(a)
 
 	def _setRawUiValue(self, value):
 		self.setText(value)
@@ -165,7 +181,7 @@ class StringWidget(QtWidgets.QLineEdit, AtomicWidget):
 		
 
 
-class FileStringWidget(QtWidgets.QWidget, AtomicWidget):
+class FileStringWidget(StringWidget):
 	"""
 	we might declare this as
 	path = PathWidget(parent=None,
@@ -196,49 +212,64 @@ class FileStringWidget(QtWidgets.QWidget, AtomicWidget):
 	             allowMultiple=True,
 	             dialogCaption="",
 	             showRelativeFromParent=True,
-				pathCls=pathlib.Path
+				pathCls=pathlib.Path,
+	             placeHolderText=""
 	             ):
 		"""
 		"""
-		QtWidgets.QWidget.__init__(self, parent)
-		AtomicWidget.__init__( self, value=value, #name=name
-		                       )
-		self.line = QtWidgets.QLineEdit(self)
+		self.showRelativeFromParent = rx(showRelativeFromParent)
 		self.pathCls = pathCls
 		self.parentDir = rx(parentDir or "").rx.pipe(self.pathCls)
 		self.fileSelectMode = rx(fileSelectMode)
-		self.showRelativeFromParent = rx(showRelativeFromParent)
 		self.fileMask = rx(fileMask)
 		self.allowMultiple = rx(allowMultiple)
 		self.dialogCaption = rx(dialogCaption) if dialogCaption else \
 			rx("Choose {}").format(self.fileMask.rx.pipe(str))
 
-		# connect signals
-		self.line.textEdited.connect(self._fireDisplayEdited)
-		self.editingFinished.connect(self._fireDisplayCommitted)
-		self.line.returnPressed.connect(self._fireDisplayCommitted)
+		StringWidget.__init__(self, value, parent,
+		                            placeHolderText=placeHolderText)
 
-		# layout
-		hl = QtWidgets.QHBoxLayout(self)
-		hl.addWidget(self.line)
-		self.setLayout(hl)
-		self.layout().setContentsMargins(1, 1, 1, 1)
-		self.layout().setSpacing(0)
+		# AtomicWidget.__init__( self, value=value, #name=name
+		#                        )
+		#self.line = QtWidgets.QLineEdit(self)
+		# self.line = StringWidget(value=value, parent=self)
+
+		# self.placeholderText = rx(placeHolderText)
+		# self.placeholderText.rx.watch(self.line.setPlaceholderText)
 
 		# add button to bring up file browser
 		self.button = FileBrowserButton(parent=self,
-			defaultBrowserPath=self.parentDir,
-			mode=self.fileSelectMode,
-			fileMask=self.fileMask,
-			browserDialogCaption=self.dialogCaption,
-			allowMultiple=self.allowMultiple
+		                                defaultBrowserPath=self.parentDir,
+		                                mode=self.fileSelectMode,
+		                                fileMask=self.fileMask,
+		                                browserDialogCaption=self.dialogCaption,
+		                                allowMultiple=self.allowMultiple
 
-			)
-		self.layout().addWidget(self.button)
+		                                )
 
 		self.button.pathSelected.connect(self._onPathSelected)
-
 		self.postInit()
+		# # connect signals
+		# self.line.displayEdited.connect(self._fireDisplayEdited)
+		# self.line.displayCommitted.connect(self._fireDisplayCommitted)
+
+		# # layout
+		# hl = QtWidgets.QHBoxLayout(self)
+		# hl.addWidget(self.line)
+		# self.setLayout(hl)
+		# self.layout().setContentsMargins(1, 1, 1, 1)
+		# self.layout().setSpacing(0)
+
+
+		#self.layout().addWidget(self.button)
+
+	def resizeEvent(self, event):
+		self.setContentsMargins(0, 0, self.button.sizeHint().width(), 0)
+		self.button.setGeometry(
+			self.rect().width() - self.button.sizeHint().width(), 0,
+			self.button.sizeHint().width(), self.button.sizeHint().height()
+		)
+		super().resizeEvent(event)
 
 	def _onPathSelected(self, paths:list[pathlib.Path]):
 		"""
@@ -252,10 +283,10 @@ class FileStringWidget(QtWidgets.QWidget, AtomicWidget):
 		self._setRawUiValue(result)
 		self._fireDisplayCommitted()
 
-	def _setRawUiValue(self, value):
-		self.line.setText(str(value))
-	def _rawUiValue(self):
-		return self.line.text()
+	# def _setRawUiValue(self, value):
+	# 	self.line.setText(str(value))
+	# def _rawUiValue(self):
+	# 	return self.line.text()
 
 	def _processResultFromUi(self, value):
 		if not value.strip():
@@ -273,7 +304,8 @@ class FileStringWidget(QtWidgets.QWidget, AtomicWidget):
 		value = wplib.sequence.toSeq(value)
 		if EVAL1(self.showRelativeFromParent):
 			return " ; ".join(
-				str(self.pathCls(i).relative_to(EVAL1(self.parentDir)))
+				#str(self.pathCls(i).relative_to(EVAL1(self.parentDir)))
+				str(self.pathCls(i))
 				for i in value)
 		return " ; ".join(map(str, value))
 

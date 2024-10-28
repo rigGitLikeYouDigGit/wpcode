@@ -181,9 +181,13 @@ class TreeInterface(Pathable,
 		the given object """
 		flags = [
 			self.name == branch.name,
-			self.value == branch.value,
+			# self.value == branch.value,
 			#self.extras == branch.extras
 		]
+		try:
+			flags.append(self.value == branch.value)
+		except (TypeError, NotImplementedError):
+			return False
 		if includeBranches:
 			flags.append(all([i.isEquivalent(n, includeBranches=True)
 				for i, n in zip(self.branches, branch.branches)]))
@@ -281,12 +285,12 @@ class TreeInterface(Pathable,
 		return value
 	def setValue(self, value):
 		"""outer function to do any validation or processing"""
-		oldValue = self.getValue()
-		if oldValue == value: # no change, skip
-			return
-		# check value is valid
-		value = self.validateNewValue(value)
-		# set value internally
+		# oldValue = self.getValue()
+		# if oldValue == value: # no change, skip
+		# 	return
+		# # check value is valid
+		# value = self.validateNewValue(value)
+		# # set value internally
 		self._setRawValue(value)
 
 	@property
@@ -400,7 +404,7 @@ class TreeInterface(Pathable,
 		return default
 
 	def _consumeFirstPathTokens(self, path: pathT, **kwargs) ->tuple[list[Pathable], pathT]:
-		#log("consume tokens", path, kwargs)
+		#log("tree consume tokens", path, kwargs)
 		token, *path = path
 		# check if branch is directly found - return it if so
 		found = self._branchFromToken(token)
@@ -458,6 +462,19 @@ class TreeInterface(Pathable,
 		return result
 	#endregion
 
+	def __setitem__(self, key:(str, tuple), value:T, **kwargs):
+		""" assuming that setting tree valueExpressions is far more frequent than
+		setting actual tree objects """
+		self(*self.toPath(key), **kwargs).value = value
+
+	def __getitem__(self, address:(str, tuple),
+	                **kwargs)->T:
+		""" returns direct value of lookup branch
+		:rtype T
+		"""
+		return self(*self.toPath(address),
+		            #address,
+		            **kwargs).value
 
 
 	# connected nodes
@@ -623,19 +640,6 @@ class TreeInterface(Pathable,
 		addr.extend(
 			self.address(includeSelf=True)[commonDepth:])
 		return addr
-
-
-	def __setitem__(self, key:(str, tuple), value:T, **kwargs):
-		""" assuming that setting tree valueExpressions is far more frequent than
-		setting actual tree objects """
-		self(key, **kwargs).value = value
-
-	def __getitem__(self, address:(str, tuple),
-	                **kwargs)->T:
-		""" returns direct value of lookup branch
-		:rtype T
-		"""
-		return self(address, **kwargs).value
 
 	def __len__(self):
 		return len(self.getBranches())

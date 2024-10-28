@@ -1,3 +1,3 @@
 
 from .selector import AssetSelectorWidget
-from .uid import UidWidget
+#from .uid import UidWidget

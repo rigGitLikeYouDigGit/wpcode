@@ -90,6 +90,7 @@ class AtomicWidget(base):
 		use this for fancy sliders, etc
 		"""
 		self._value = rx(value) if not isinstance(value, rx) else value
+		self._immediateValue = rx(None) # changes as ui updates
 		self.conditions = conditions
 		self.warnLive = warnLive
 
@@ -101,25 +102,39 @@ class AtomicWidget(base):
 		"""check that the given value is a root, and can be set -
 		if not, disable the widget, since otherwise RX has a fit
 		"""
-		if not self._value._compute_root() is self._value:
+		if not react.canBeSet(self._value):
 			if not enableInteractionOnLocked:
 				log(f"widget {self} passed value not at root, \n disabling for display only")
 				self.setEnabled(False)
 
+	def _syncImmediateValue(self, *args, **kwargs):
+		#log("sync immediate")
+		val = self._processResultFromUi(self._rawUiValue())
+		#log("processed", val)
+		self._immediateValue.rx.value = val
 
 	def postInit(self):
 		"""yes I know post-inits are terrifying in qt,
 		for this one, just call it manually yourself,
 		i'm not your mother
 		"""
-		try: self._syncUiFromValue()
-		except: pass
+		log("postInit", self, self.value())
+		log(self._processValueForUi(self.value()))
+		self._syncUiFromValue()
+		# try: self._syncUiFromValue()
+		# except: pass
+		self._syncImmediateValue()
 
 
 	def _fireDisplayEdited(self, *args):
+		"""TODO: find a way to stop double-firing this
+			if you connect 2 signals to it
+			"""
+		self._syncImmediateValue()
 		self.displayEdited.emit(args)
 
 	def _fireDisplayCommitted(self, *args):
+		self._syncImmediateValue()
 		self.displayCommitted.emit(args)
 
 	def _rawUiValue(self):
@@ -132,12 +147,16 @@ class AtomicWidget(base):
 		this runs after any pretty formatting"""
 		raise NotImplementedError
 
-	def rxValue(self):
+	def rxValue(self)->rx:
 		return self._value
-
 	def value(self)->valueType:
 		"""return widget's value as python object"""
 		return self._value.rx.value
+
+	def rxImmediateValue(self)->rx:
+		return self._immediateValue
+	def immediateValue(self):
+		return self._immediateValue.rx.value
 
 	def _processResultFromUi(self, rawResult):
 		"""override to do any conversions from raw ui representation"""
@@ -151,9 +170,10 @@ class AtomicWidget(base):
 		"""connect to base widget signal to update live -
 		an error thrown here shows up as a warning,
 		maybe change text colours"""
+		#self._immediateValue.rx.value = self._processResultFromUi(self._rawUiValue())
 		if self.warnLive:
-			self._checkPossibleValue(
-				self._processResultFromUi(self._rawUiValue()))
+			self._checkPossibleValue(self._immediateValue.rx.value
+				)
 
 	def _onDisplayCommitted(self, *args, **kwargs):
 		"""connect to signal when user is happy, pressed enter etc"""
@@ -170,6 +190,10 @@ class AtomicWidget(base):
 			return
 
 	def _tryCommitValue(self, value):
+		"""TODO:
+			calling _commitValue() directly in this prevents us from
+			using super() in inheritor classes before extending the checks -
+			find a better way to split the validation step up"""
 		try:
 			Condition.checkConditions(value, self.conditions)
 		except Exception as e:
@@ -186,6 +210,8 @@ class AtomicWidget(base):
 		TODO: see if we actually need to block signals here"""
 		# block signals around ui update
 		self.blockSignals(True)
+		toSet = self._processValueForUi(self.value())
+		log("_sync", toSet, type(toSet))
 		self._setRawUiValue(self._processValueForUi(self.value()))
 		self.blockSignals(False)
 
@@ -193,9 +219,13 @@ class AtomicWidget(base):
 		"""run finally after any checks, update held value and trigger signals"""
 		# if widget is expressly enabled, we catch the error from setting value
 		# on a non-root rx
-		if react.canBeSet(self._value):
+		canBeSet = react.canBeSet(self._value)
+
+		#log("root", self._value._root is self._value, self._value._compute_root() is self._value)
+		log(self, "can be set", canBeSet)
+		if canBeSet:
 			self._value.rx.value = value # rx fires ui sync function
-		#self._syncUiFromValue()
+		self._syncImmediateValue()
 		self.valueCommitted.emit(value)
 
 

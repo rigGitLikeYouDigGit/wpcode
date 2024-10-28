@@ -46,22 +46,30 @@ class Lantern(QtWidgets.QWidget):
 
 	Status = Status
 	
-	def __init__(self, status=Status.Neutral, parent=None):
+	def __init__(self, value=Status.Neutral, parent=None):
 		super().__init__(parent)
-		self.status = status
+		self._value = rx(value)
 		self.setAutoFillBackground(True)
 		#self.setWindowOpacity(1.0)
 		self.setContentsMargins(0, 0, 0, 0)
 		self.setFixedSize(10, 10)
+		self._value.rx.watch(lambda *a : self.repaint(),
+		                     onlychanged=False)
+
+	def value(self):
+		return self._value.rx.value
+	def rxValue(self):
+		return self._value
+		#self.status. self.update()
 
 
 	def setStatus(self, status:Status.T()):
-		self.status = status
-		self.repaint()
+		self._value.rx.value = status
+		#self.repaint()
 
 	def paintEvent(self, event):
 		painter = QtGui.QPainter(self)
-		status = EVAL(self.status)
+		status = self.value()
 		#brush = QtGui.QBrush(QtGui.QColor.fromRgb(128, 200, 128, 128))
 		brush = QtGui.QBrush(QtGui.QColor.fromRgbF(*status.colour, 1))
 		painter.setBrush(

@@ -94,3 +94,34 @@ class TypeNamespaceAdaptor(SerialAdaptor):
 	           serialType:type,
 	           decodeParams:dict=None) ->TypeNamespace:
 		return CodeRef.resolve(serialData[2:])
+
+#TODO: ###
+# we REALLY should unify this with VisitAdaptor
+from pathlib import PurePath
+class PathSerialAdaptor(SerialAdaptor):
+	forTypes = (PurePath,)# WindowsPath, Path, PurePosixPath, PosixPath, PureWindowsPath)
+
+	@classmethod
+	def encode(cls, obj, encodeParams:dict=None) ->dict:
+		return str(obj)
+	@classmethod
+	def decode(cls,
+	           serialData:dict,
+	           serialType:type,
+	           decodeParams:dict=None) ->T.Any:
+		return serialType(serialData)
+
+from dataclasses import dataclass, is_dataclass, asdict
+class DataclassSerialAdaptor(SerialAdaptor):
+	forTypes = (is_dataclass, )
+	@classmethod
+	def encode(cls, obj, encodeParams:dict=None) ->dict:
+		return asdict(obj)
+	@classmethod
+	def decode(cls,
+	           serialData:dict,
+	           serialType:type,
+	           decodeParams:dict=None) ->T.Any:
+		return serialType(**serialData)
+
+

@@ -210,3 +210,13 @@ class DataclassVisitAdaptor(VisitAdaptor):
 	@classmethod
 	def newObj(cls, baseObj: T.Any, childDatas:CHILD_LIST_T, params:PARAMS_T) ->T.Any:
 		return type(baseObj)(**{i[0] : i[1] for i in childDatas})
+
+from pathlib import PurePath, WindowsPath, Path, PurePosixPath, PosixPath, PureWindowsPath
+class PathVisitAdaptor(VisitAdaptor):
+	forTypes = (PurePath,)# WindowsPath, Path, PurePosixPath, PosixPath, PureWindowsPath)
+	@classmethod
+	def childObjects(cls, obj:T.Any, params:PARAMS_T) ->CHILD_LIST_T:
+		return [ChildData("s", str(obj), {})]
+	@classmethod
+	def newObj(cls, baseObj: T.Any, childDatas:CHILD_LIST_T, params:PARAMS_T) ->T.Any:
+		return type(baseObj)(childDatas[0][1])

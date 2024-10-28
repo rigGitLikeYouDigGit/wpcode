@@ -12,7 +12,7 @@ from wptree import Tree
 from wpdex import *
 from wp import Asset, constant
 
-from .node import IdemGraph, MayaSessionNode
+from idem.node import IdemGraph, MayaSessionNode
 
 """
 a single idem instance targets a single chi file, and for now a single asset
@@ -38,11 +38,29 @@ class IdemSession(Modelled):
 
 	@classmethod
 	def newDataModel(cls, **kwargs) ->dataT():
-		root = Tree("idem")
+		root = Tree(kwargs.get("name", "idem"))
 		root["asset"] = None
 		root["filePath"] = Path("plan.chi")
 		root["graph"] = IdemGraph.create(name="graph")
 		return root
+
+if __name__ == '__main__':
+	s = IdemSession.create(name="testIdem")
+	# log("    ")
+	# log(s, type(s), s.data, type(s.data))
+	# value = s.data.ref("asset", "@V")
+	# log(value.rx.value)
+
+	caitAsset = Asset.fromPath("tempest/asset/character/cait")
+	ursusAsset = Asset.fromPath("tempest/asset/character/ursus")
+	# s.data["asset"] = caitAsset
+	# log("retrieved", s.data["asset"]) # works
+
+	#ref = s.data.ref("filePath", "@V") # this also messes up, INVESTIGATE
+	ref = s.data.ref("asset", "@V") # TODO: set wpdex to refresh children properly
+	log("ref", ref, ref.rx.value)
+	ref.WRITE(ursusAsset)
+	log("new ref", ref, ref.rx.value)
 
 
 

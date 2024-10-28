@@ -5,19 +5,25 @@ from PySide2 import QtCore, QtWidgets, QtGui
 from wplib import log
 from wptree import Tree
 from wpdex import WpDexProxy
+from wpdex.ui.atomic import AtomicWidget
 from chimaera.node import ChimaeraNode
 from chimaera.ui.scene import ChimaeraScene
 from chimaera.ui.view import ChimaeraView
 from chimaera.ui.node import NodeDelegate, ReactLineEdit
 
 
-class ChimaeraWidget(QtWidgets.QWidget):
+class ChimaeraWidget(QtWidgets.QWidget, AtomicWidget):
 
-	def __init__(self, parent=None):
-		super().__init__(parent=parent)
-		self.scene = ChimaeraScene(parent=self)
+	def __init__(self, value:ChimaeraNode=None, parent=None):
+		QtWidgets.QWidget.__init__(self, parent=parent)
+		AtomicWidget.__init__(self, value=value)
+		self.scene = ChimaeraScene(
+			graph=self.value(),
+			parent=self,
+		                           )
 		self.view = ChimaeraView(scene=self.scene, parent=self)
-		layout = QtWidgets.QVBoxLayout
+		layout = QtWidgets.QVBoxLayout(self)
+		layout.addWidget(self.view)
 
 def printFn(*args, **kwargs):
 	log("WATCHED", args, kwargs)

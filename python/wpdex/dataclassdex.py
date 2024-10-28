@@ -24,6 +24,22 @@ class DataClassDex(WpDex):
 	visitor for it"""
 	forTypes = (is_dataclass, )
 
+# from dataclasses import dataclass, is_dataclass, asdict
+# class DataclassDex(WpDex):
+# 	forTypes = (is_dataclass, )
+# 	def _buildBranchMap(self) ->dict[DexPathable.keyT, WpDex]:
+# 		return
+# 	@classmethod
+# 	def encode(cls, obj, encodeParams:dict=None) ->dict:
+# 		return asdict(obj)
+# 	@classmethod
+# 	def decode(cls,
+# 	           serialData:dict,
+# 	           serialType:type,
+# 	           decodeParams:dict=None) ->T.Any:
+# 		return serialType(**serialData)
+#
+
 
 
 

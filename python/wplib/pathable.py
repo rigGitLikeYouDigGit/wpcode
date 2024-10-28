@@ -1,6 +1,8 @@
 
 
 from __future__ import annotations
+
+import pathlib
 import typing as T
 
 from copy import deepcopy
@@ -135,6 +137,9 @@ class Pathable(#Adaptor
 		self._overrides = {} # we're doing it
 
 		self._branchMap = None # built on request
+
+	def __hash__(self):
+		return hash((self.parent, self.keyT))
 
 	@property
 	def obj(self):
@@ -551,7 +556,24 @@ class StringPathable(PathAdaptor):
 	def _buildChildren(self):
 		return []
 
+from pathlib import Path, PurePath
+class PathPathable(PathAdaptor):
+	"""TODO: I don't know how this should interact
+	with the separate type hierarchy below
+	"""
+	forTypes = (PurePath, Path)
+	def _buildBranchMap(self) ->dict[keyT, Pathable]:
+		return {i : self._buildChildPathable(
+			part, i
+		) for i, part in enumerate(self.obj.parts)}
+# import pathlib
+# getType = PathAdaptor.adaptorForType(pathlib.WindowsPath)
+# assert getType
 
+# class ObjectPathable(Pathable):
+# 	forTypes = (object, )
+# 	def _buildBranchMap(self) ->dict[keyT, Pathable]:
+# 		return {}
 ### test for abstracting this to use in file folders
 class DirPathable(Pathable):
 	"""
