@@ -14,6 +14,7 @@ class PathDex(WpDex):
 	forTypes = (pathlib.PurePath, )
 
 	def _buildBranchMap(self) ->dict[DexPathable.keyT, WpDex]:
+		return {}
 		return {i: self._buildChildPathable(
 			part, i
 		) for i, part in enumerate(self.obj.parts)}

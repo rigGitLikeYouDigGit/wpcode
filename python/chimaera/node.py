@@ -55,19 +55,52 @@ class ChimaeraNode(Modelled,
 
 	nodeTypeRegister : dict[str, type[ChimaeraNode]] = {}
 
-	def branchMap(self):
-		return {name : ChimaeraNode(branch)
-		        for name, branch in self.data("nodes").branchMap().items()}
+	@classmethod
+	def prefix(cls)->tuple[str]:
+		"""return the prefix for this node type -
+		maybe use to define domain-specific node types.
+		c : chimaera (always available)
+		m : maya
+		h : houdini
+		b : blender
+		n : nuke
+		"""
+		return ("c", )
+	@classmethod
+	def typeName(cls)->str:
+		return "node" if cls is ChimaeraNode else cls.__name__
 
-	def getAvailableNodesToCreate(self)->list[str]:
+	@classmethod
+	def canBeCreated(cls):
+		"""use if you need to define abstract types of nodes"""
+		return True
+
+	@staticmethod
+	def registerNodeType(cls:type[ChimaeraNode]):
+		"""register the given node type -
+		deal with prefixes some other time"""
+		cls.nodeTypeRegister[":".join((*cls.prefix(), cls.typeName()))] = cls
+	@classmethod
+	def __init_subclass__(cls, **kwargs):
+		"""register a derived ChimaeraNode type"""
+		super().__init_subclass__(**kwargs)
+		if cls.canBeCreated():
+			if "Proxy(" in cls.__name__: # weird interaction with generating proxy classes
+				return
+			cls.registerNodeType(cls)
+
+
+	def getAvailableNodeTypes(self)->dict[str, type[ChimaeraNode]]:
 		"""return a list of node types that this node can support as
 		children - by default allow all registered types
 		TODO: update this as a combined class/instance method
 		"""
-		return list(self.nodeTypeRegister.keys())
+		return dict(self.nodeTypeRegister)
 
 	def __init__(self, data:Tree):
 		Modelled.__init__(self, data)
+
+
 
 	def colour(self)->tuple[float, float, float]:
 		return (0.2, 0.3, 0.7)
@@ -107,9 +140,16 @@ class ChimaeraNode(Modelled,
 		self.data("nodes").addBranch(branch)
 		return ChimaeraNode(branch)
 
-	def branchMap(self) ->dict[keyT, Pathable]:
-		return {k : ChimaeraNode(v) for k, v
-		        in self.data("nodes").branchMap().items()}
+	def branchMap(self)->[keyT, ChimaeraNode]:
+		return {name : ChimaeraNode(branch)
+		        for name, branch in self.data("nodes").branchMap().items()}
+
+	def createNode(self, nodeType:type[ChimaeraNode]=None, name="")->ChimaeraNode:
+		nodeType = nodeType or ChimaeraNode
+		name = name or nodeType.typeName()
+		newNode = nodeType.create(name=name)
+		self.addBranch(newNode)
+		return newNode
 
 	@classmethod
 	def nodeForTree(cls, data:Tree):

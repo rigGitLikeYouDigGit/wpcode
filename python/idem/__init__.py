@@ -11,6 +11,17 @@ not yet.
 
 just get it to launch the programs and add the WP code paths
 
+STRUCTURE :
+anything in top-level is abstract base classes and/or pure python, that can run
+	directly in the standalone Idem program
+
+".dcc" package holds outwards-facing wrapper objects to handle program sessions -
+	finding windows, getting processes, startup, and actually sending commands to
+	start up an idem process in a dcc session live (if the program can support it)
+
+we define a separate package for each supported dcc, where we specialise the
+relevant classes and chimaera nodes
+each dcc-specific package may import domain-specific code
 
 TODO: a better name
  ilex

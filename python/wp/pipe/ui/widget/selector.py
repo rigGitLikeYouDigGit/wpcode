@@ -9,9 +9,13 @@ from PySide2 import QtCore, QtGui, QtWidgets
 import whoosh
 
 from wplib import log
+from wptree import Tree
+from wpui import lib
 from wpui.widget.lantern import Status, Lantern
+from wpui.treemenu import buildMenuFromTree
 from wpdex.ui import AtomicWidget, StringWidget, FileStringWidget, FileBrowserButton
 from wpdex import react
+
 from wp.pipe.asset import Asset, Show, StepDir, search
 
 
@@ -102,10 +106,15 @@ class AssetSelectorWidget(QtWidgets.QWidget, AtomicWidget):
 		                         )
 		self.line.setPlaceholderText("path/uid/exp...")
 
+		openAction = Tree("open folder...", value=lambda : lib.openExplorerOnPath(self.value().diskPath()))
+		openAction.auxProperties["enable"] = lambda : self.value() is not None
+		self.line.menuTree.addBranch(openAction)
+
 		#self.line.completer().setModel(QtCore.QStringListModel(search.allPaths()))
 
 		# get all scanned asset paths to
 		#log("all paths", list(search.allPaths()))
+
 
 		statusMap = {None : Lantern.Status.Neutral,
 		             False : Lantern.Status.Failure,

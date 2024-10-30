@@ -12,7 +12,8 @@ from chimaera.ui.view import ChimaeraView
 from chimaera.ui.node import NodeDelegate, ReactLineEdit
 
 
-class ChimaeraWidget(QtWidgets.QWidget, AtomicWidget):
+class ChimaeraWidget(QtWidgets.QWidget, AtomicWidget
+                     ):
 
 	def __init__(self, value:ChimaeraNode=None, parent=None):
 		QtWidgets.QWidget.__init__(self, parent=parent)
@@ -22,8 +23,20 @@ class ChimaeraWidget(QtWidgets.QWidget, AtomicWidget):
 			parent=self,
 		                           )
 		self.view = ChimaeraView(scene=self.scene, parent=self)
+		self.scene.setGraph(self.scene.graph()) #TODO: cringe forcing graph rxs to fire
 		layout = QtWidgets.QVBoxLayout(self)
 		layout.addWidget(self.view)
+		self.setFocusPolicy(QtCore.Qt.NoFocus)
+
+	# def focusNextPrevChild(self, next):
+	# 	return False
+	#
+	# def nextInFocusChain(self):
+	# 	return self
+	#
+	# def focusOutEvent(self, event:QtGui.QFocusEvent):
+	# 	return
+
 
 def printFn(*args, **kwargs):
 	log("WATCHED", args, kwargs)

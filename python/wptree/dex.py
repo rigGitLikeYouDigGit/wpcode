@@ -42,7 +42,7 @@ class TreeDex(WpDex):
 		"""set value back to tree attributes
 		TODO: surely we can reuse the branchmap of the wpdex itself for this somehow
 		"""
-		#log("write to tree", key, value)
+		log("write to tree", key, value)
 		if key == "@N" :
 			self.obj.setName(value)
 			#log("after write name", self.obj)
@@ -52,15 +52,17 @@ class TreeDex(WpDex):
 			log("writing new key to tree", key, value)
 			assert isinstance(value, TreeInterface)
 			self.obj.addBranch(newBranch=value)
+		log("after write to tree", self, self.obj, self.obj.value)
 
 	def _buildBranchMap(self) ->dict[DexPathable.keyT, WpDex]:
 		result = super()._buildBranchMap()
 		#log("treedex branch map", self.obj, result)
 		return result
 
+
 	def _consumeFirstPathTokens(self, path:pathT) ->tuple[list[WpDex], pathT]:
 		"""process a path token"""
-		log("treedex consume", path, self.branchMap(), self.obj._getRawValue())
+		#log("treedex consume", self, path, self.branchMap(), self.obj._getRawValue())
 		token, *path = path
 		if token == "@V" and self.obj._getRawValue() is None:
 			return [None], path

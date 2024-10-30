@@ -18,6 +18,8 @@ from PySide2 import QtCore, QtWidgets, QtGui
 
 from wpui.widget.canvas import *
 
+from wpdex.ui import StringWidget
+
 from chimaera import ChimaeraNode
 from wpdex import WpDexProxy, WX
 
@@ -151,7 +153,7 @@ class RoundLabel(QtWidgets.QLabel):
 	             textPen=QtGui.QColor.fromRgbF(0.8, 0.8, 0.8),
 	             ):
 		"""
-		TODO: drop in EVAL() calls all over this for dynamic colours
+		TODO: drop in EVALAK() calls all over this for dynamic colours
 
 		TODO: there has to be a better way of changing element colours
 			dynamically in qt
@@ -290,10 +292,10 @@ class NodeDelegate(QtWidgets.QGraphicsItem, Adaptor):
 
 		self.nameLine = LabelWidget(
 			label="name",
-			w=ReactLineEdit(
-				parent=self.w,
-				#parent=self.w,
-				text=self.node.ref("@N")),
+			w=StringWidget(self.node.ref("@N"), #TODO: conditions
+			               parent=self.w,       # don't set node to empty name, you'll mess stuff up
+			               placeHolderText="",
+			               ),
             parent=self.w)
 
 

@@ -9,7 +9,7 @@ from wplib import TypeNamespace
 
 from wpdex import *
 
-#from wpexp import EVAL
+#from wpexp import EVALAK
 class FileSelectMode(TypeNamespace):
 	"""should options look for a file or for a directory"""
 	class _Base(TypeNamespace.base()):
@@ -73,16 +73,16 @@ class FileBrowserButton(QtWidgets.QPushButton):
 		evaling all arguments, etc
 		"""
 
-		log("caption", EVAL1(self.browserDialogCaption))
-		mode = EVAL1(self.mode)
-		log("mode", mode, mode == "dir")
+		log("caption", EVAL(self.browserDialogCaption))
+		mode = EVAL(self.mode)
+		log("mode", mode, mode == "dir", "parent dir", EVAL(self.defaultBrowserPath))
 		if mode == self.Mode.File:
-			if EVAL1(self.allowMultiple):
+			if EVAL(self.allowMultiple):
 				result = self.browserDialogCls.getOpenFileNames(
 					parent=self,
-					caption=str(EVAL1(self.browserDialogCaption)),
-					dir=str(EVAL1(self.defaultBrowserPath)),
-					filter=EVAL1(self.fileMask)
+					caption=str(EVAL(self.browserDialogCaption)),
+					dir=str(EVAL(self.defaultBrowserPath)),
+					filter=EVAL(self.fileMask)
 				) or ""
 				log("result files", result)
 				# returns ([list of string paths], filter str)
@@ -91,24 +91,24 @@ class FileBrowserButton(QtWidgets.QPushButton):
 			else:
 				result = self.browserDialogCls.getOpenFileName(
 					parent=self,
-					caption=str(EVAL1(self.browserDialogCaption)),
-					dir=str(EVAL1(self.defaultBrowserPath)),
-					filter=EVAL1(self.fileMask)
+					caption=str(EVAL(self.browserDialogCaption)),
+					dir=str(EVAL(self.defaultBrowserPath)),
+					filter=EVAL(self.fileMask)
 				) or ""
 				log("result file", result)
 				# returns (str file, filter str)
-				if not result:
+				if not any(map(bool, result)):
 					return
 				result = [result[0]]
 				# result = [Path(i) for i in result]
 				# self.pathSelected.emit(result)
 
 		else:
-			#if EVAL1(self.allowMultiple):
+			#if EVAL(self.allowMultiple):
 			result = self.browserDialogCls.getExistingDirectory(
 				parent=self,
-				caption=EVAL1(self.browserDialogCaption),
-				dir=str(EVAL1(self.defaultBrowserPath)),
+				caption=EVAL(self.browserDialogCaption),
+				dir=str(EVAL(self.defaultBrowserPath)),
 			) or ""
 			log("result dir", result)
 			# returns raw dir string
@@ -119,14 +119,18 @@ class FileBrowserButton(QtWidgets.QPushButton):
 			# 	raise RuntimeError("No multiple dirs yet, no easy QT method for it")
 			# 	result = self.browserDialogCls.getExistingDirectory(
 			# 		parent=self,
-			# 		caption=EVAL1(self.browserDialogCaption),
-			# 		dir=str(EVAL1(self.defaultBrowserPath)),
+			# 		caption=EVAL(self.browserDialogCaption),
+			# 		dir=str(EVAL(self.defaultBrowserPath)),
 			# 	) or ""
 			# 	log("result dir", result)
 			# 	# returns raw dir string
 			# 	if not result:
 			# 		return
 				#result = [result]
+
+		# if no paths are selected, just don't do anything
+		if not result: return
+
 		result = [Path(i) for i in result]
 		log("emit result", result)
 		self.pathSelected.emit(result)

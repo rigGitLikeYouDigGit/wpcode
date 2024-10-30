@@ -118,8 +118,8 @@ class AtomicWidget(base):
 		for this one, just call it manually yourself,
 		i'm not your mother
 		"""
-		log("postInit", self, self.value())
-		log(self._processValueForUi(self.value()))
+		#log("postInit", self, self.value())
+		#log(self._processValueForUi(self.value()))
 		self._syncUiFromValue()
 		# try: self._syncUiFromValue()
 		# except: pass
@@ -211,7 +211,7 @@ class AtomicWidget(base):
 		# block signals around ui update
 		self.blockSignals(True)
 		toSet = self._processValueForUi(self.value())
-		log("_sync", toSet, type(toSet))
+		#log("_sync", toSet, type(toSet))
 		self._setRawUiValue(self._processValueForUi(self.value()))
 		self.blockSignals(False)
 
@@ -222,7 +222,7 @@ class AtomicWidget(base):
 		canBeSet = react.canBeSet(self._value)
 
 		#log("root", self._value._root is self._value, self._value._compute_root() is self._value)
-		log(self, "can be set", canBeSet)
+		#log(self, "can be set", canBeSet)
 		if canBeSet:
 			self._value.rx.value = value # rx fires ui sync function
 		self._syncImmediateValue()

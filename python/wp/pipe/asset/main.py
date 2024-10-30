@@ -8,7 +8,8 @@ from pathlib import Path, PurePath
 import orjson
 
 from wplib import log, string as libstr, Sentinel
-from wplib.object import UidElement, SmartFolder, DiskDescriptor
+from wplib.object import UidElement, SmartFolder, DiskDescriptor, VisitAdaptor, Visitable
+from wplib.object.visitor import PARAMS_T, CHILD_LIST_T
 from wplib.pathable import Pathable, DirPathable, RootDirPathable
 from wplib.sequence import toSeq, flatten
 
@@ -184,7 +185,7 @@ class AssetFolder(SmartFolder):
 	createMissingFilesOnInit = False
 
 
-class Asset(Pathable):
+class Asset(Pathable, Visitable):
 	"""this may also be used for components
 
 	path contains show for now
@@ -205,6 +206,14 @@ class Asset(Pathable):
 
 		self._folder = None
 		self._data = None
+
+
+	def childObjects(self, params:PARAMS_T) ->CHILD_LIST_T:
+		return [self.ChildData("path", self.path)]
+	@classmethod
+	def newObj(cls, baseObj: Visitable, childDatas:CHILD_LIST_T, params:PARAMS_T) ->T.Any:
+		return cls.fromPath(childDatas[0][1], default=None)
+
 
 	def _buildBranchMap(self) ->dict[keyT, Pathable]:
 		"""look at top-level folders under this show,

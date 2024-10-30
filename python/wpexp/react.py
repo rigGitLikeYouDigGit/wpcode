@@ -95,7 +95,7 @@ class WX:
 	def __eval__(self):
 		result = self.base
 		instance = self.base
-		#log("EVAL")
+		#log("EVALAK")
 		prev = None
 		for i in self.ops + [self]:
 			#log("op", i)

@@ -18,6 +18,8 @@ from wplib.serial import Serialisable
 from wpui.keystate import KeyState
 from wpui import lib as uilib
 
+if T.TYPE_CHECKING:
+	from .element import WpCanvasElement
 
 def drawGridOverRect(rect:QtCore.QRect,
                      painter:QtGui.QPainter,
@@ -68,6 +70,9 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 	def __init__(self, parent=None):
 		super().__init__(parent=parent)
 
+		self.objDelegateMap : dict[T.Any, T.Sequence[QtWidgets.QGraphicsItem]] = {}
+		self.delegateObjMap : dict[QtWidgets.QGraphicsItem, T.Any] = {}
+
 		self.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(0, 0, 0, 255)))
 		self.setSceneRect(0, 0, 1000, 1000)
 		# create brushes to use - base one for black background,
@@ -81,6 +86,46 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 		self.coarsePen = QtGui.QPen(QtGui.QColor.fromRgbF(0.3, 0.4, 1.0))
 		self.coarsePen.setCosmetic(True)
 		self.coarsePen.setStyle(QtCore.Qt.DashLine)
+
+	def addItem(self, item):
+		super().addItem(item)
+		if not getattr(item, "elementChanged", None): return
+		item.itemChange.connect(self._onItemChanged)
+
+
+	def _onItemChanged(self, item:WpCanvasElement,
+	                   change:QtWidgets.QGraphicsItem.GraphicsItemChange,
+	                   value:T.Any):
+		"""process each change of each item"""
+
+
+	# TODO: get this working for large scale scenes, processing multiple nodes at once
+	def _onItemsChanged(self,
+	                    changeItemMap:dict[
+	                                  QtWidgets.QGraphicsItem.GraphicsItemChange :
+	                                  T.Sequence[WpCanvasElement]]):
+		"""signal from scene when one or more items change as part of single operation
+		passed map of 
+		{ itemsMoved : (all items that moved) } etc
+		
+		TODO: order events by priority? we would want removed to come after everything
+		"""
+
+	"""single real object may have multiple delegates, be drawn in multiple
+	places at once"""
+	def setDelegatesForItem(self, obj, delegates:T.Sequence[WpCanvasElement]):
+		delegates = sequence.toSeq(delegates)
+		for i in delegates:
+			self.delegateObjMap[id(i)] = obj
+		self.objDelegateMap[obj] = delegates
+
+	def delegatesForItem(self, obj)->tuple[WpCanvasElement]:
+		return tuple(self.objDelegateMap[obj])
+
+	def itemFromDelegate(self, delegate):
+		return self.delegateObjMap.get(id(delegate))
+
+
 
 	def itemsDragged(self, items:list[QtWidgets.QGraphicsItem],
 	                 delta:tuple[int, int]):

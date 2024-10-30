@@ -211,18 +211,22 @@ class Pathable(#Adaptor
 				obj=childData[1], name=childData[2]
 			)
 		return branches
+
+	def updateBranchMap(self):
+		self._branchMap = self._buildBranchMap()
 	def branchMap(self)->dict[keyT, Pathable]:
 		"""get dict of immediate branches below this pathable"""
 		#log("branchMap")
 		if self._branchMap is None:
-			self._branchMap = self._buildBranchMap()
+			self.updateBranchMap()
 		return self._branchMap
 
 
 	def addBranch(self, branch:Pathable, name:keyT=None):
 		"""JANK as we shouldn't need to add child objects one by one,
 		but there are situations in WpDex and WpDexProxy that seem to work
-		better with it - leaving it for now"""
+		better with it - leaving it for now
+		don't call this from internal functions"""
 		if name:
 			branch.setName(name)
 		name = branch.name
@@ -566,6 +570,26 @@ class PathPathable(PathAdaptor):
 		return {i : self._buildChildPathable(
 			part, i
 		) for i, part in enumerate(self.obj.parts)}
+
+
+# class PathableVisitAdaptor(VisitAdaptor):
+# 	forTypes = (Pathable, )
+# 	@classmethod
+# 	def childObjects(cls, obj:Pathable, params:PARAMS_T) ->CHILD_LIST_T:
+# 		return [VisitAdaptor.ChildData(k, v) for k, v in obj.branchMap()] + [
+# 			VisitAdaptor.ChildData("OBJ", obj.obj)
+# 		]
+# 		#return [VisitAdaptor.ChildData("s", str(obj), {})]
+# 	@classmethod
+# 	def newObj(cls, baseObj: Pathable, childDatas:CHILD_LIST_T, params:PARAMS_T) ->T.Any:
+# 		raise NotImplementedError()
+# 		# new = baseObj( childDatas[-1], )
+# 		# return type(baseObj)(childDatas[0][1])
+
+# TODO: gets super tangled if we start making adaptor links between the core types
+
+
+
 # import pathlib
 # getType = PathAdaptor.adaptorForType(pathlib.WindowsPath)
 # assert getType

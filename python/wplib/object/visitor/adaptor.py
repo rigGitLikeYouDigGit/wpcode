@@ -179,6 +179,9 @@ class SeqVisitAdaptor(VisitAdaptor):
 class Visitable:
 	"""custom base interface for custom types -
 	we associate an adaptor type for these later"""
+	ChildData = ChildData
+	CHILD_T = CHILD_T
+	CHILD_LIST_T = CHILD_LIST_T
 	def childObjects(self, params:PARAMS_T)->CHILD_LIST_T:
 		raise NotImplementedError("childObjects not implemented "
 		                          "for type adaptor: ", self)
@@ -220,3 +223,4 @@ class PathVisitAdaptor(VisitAdaptor):
 	@classmethod
 	def newObj(cls, baseObj: T.Any, childDatas:CHILD_LIST_T, params:PARAMS_T) ->T.Any:
 		return type(baseObj)(childDatas[0][1])
+

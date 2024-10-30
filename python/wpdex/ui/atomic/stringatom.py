@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pathlib
+import traceback
 import typing as T
 
 from PySide2 import QtCore, QtWidgets, QtGui
@@ -10,11 +11,14 @@ from PySide2 import QtCore, QtWidgets, QtGui
 import wplib.sequence
 from wplib import log
 from wplib.object import Signal
+from wptree import Tree
 
 from wpdex import *
+from wpdex import react
 #from wpdex.ui.react import ReactiveWidget
 from wpdex.ui.atomic.base import AtomicWidget
 from wpui.widget import FileBrowserButton, Lantern
+from wpui.treemenu import buildMenuFromTree
 
 """
 
@@ -125,11 +129,15 @@ class StringWidget(QtWidgets.QLineEdit, AtomicWidget):
 
 		self.setCompleter(QtWidgets.QCompleter(self))
 
-		self.options = rx(options)
+		self.menuTree = Tree("menu")
+
+		self.options = options if isinstance(options, rx) else rx(options)
 		self.options.rx.watch(
 			self._setOptions,
 			onlychanged=False)
+		#self.options.rx.value = self.options.rx.value
 		self.options.rx.value = self.options.rx.value
+		#react.PING(self.options)
 		self._placeHolderText = rx(placeHolderText)
 		self._placeHolderText.rx.watch(self.setPlaceholderText)
 		canBeSet = react.canBeSet(self.rxValue())
@@ -144,9 +152,21 @@ class StringWidget(QtWidgets.QLineEdit, AtomicWidget):
 
 		self.postInit()
 
+	def contextMenuEvent(self, arg__1:QtGui.QContextMenuEvent):
+		baseMenu = self.createStandardContextMenu()
+		if self.menuTree.branches:
+			treeMenu = buildMenuFromTree(self.menuTree, menu=baseMenu)
+		baseMenu.setParent(self)
+		baseMenu.move(arg__1.globalPos()) # interesting that even if you
+			# set the menu's parent to this widget,
+			# you still have to move the menu to the event globalPos(), not local pos()
+		baseMenu.show()
+
+
 	def _setOptions(self, *args):
-		#log("setOptions", args)
-		a = EVAL1(args[0])
+
+		a = EVAL(args[0])
+		log("setOptions", args, a)
 		if not isinstance(a, QtCore.QStringListModel):
 			a = QtCore.QStringListModel(a)
 		self.completer().setModel(a)
@@ -200,6 +220,10 @@ class FileStringWidget(StringWidget):
 	if parentDir is supplied, we only show a relative path?
 	value is always absolute, displayed may be relative
 
+	retrieved value may not be the same as that stored -
+		if parent dir is specified
+
+
 	"""
 
 	Mode = FileBrowserButton.Mode
@@ -209,7 +233,7 @@ class FileStringWidget(StringWidget):
 	             parentDir=None,
 	             fileSelectMode=FileBrowserButton.Mode.File,
 	             fileMask="",
-	             allowMultiple=True,
+	             allowMultiple=False,
 	             dialogCaption="",
 	             showRelativeFromParent=True,
 				pathCls=pathlib.Path,
@@ -276,38 +300,80 @@ class FileStringWidget(StringWidget):
 		TODO: consider how to handle / display multiple paths
 		 separate by semicolon? how do we push that through all the machinery
 		"""
-		if not EVAL1(self.allowMultiple):
+		log("_onPathSelected", paths)
+		if not EVAL(self.allowMultiple):
 			result = str(paths[0])
 		else:
 			result = " ; ".join(map(str, paths))
+
+		log("result", result)
+
+		# if relative, remove parentdir from path to display
+		if EVAL(self.showRelativeFromParent):
+
+			try:
+				result = str(pathlib.Path(result).relative_to(EVAL(self.parentDir)))
+			except Exception as e:
+				log("error getting relative path")
+				traceback.print_exc()
+				result = str(result)
+			# self.setValue(result)
+			# return
+		log("result", result)
 		self._setRawUiValue(result)
 		self._fireDisplayCommitted()
 
-	# def _setRawUiValue(self, value):
-	# 	self.line.setText(str(value))
-	# def _rawUiValue(self):
-	# 	return self.line.text()
 
-	def _processResultFromUi(self, value):
+	def _tryCommitValue(self, value):
+		if isinstance(value, (list, tuple)) and not EVAL(self.allowMultiple):
+			raise RuntimeError(f"Widget {self} does not allow multiple files")
+		super()._tryCommitValue(value)
+
+	def _processResultFromUi(self, value:str):
+		"""widget value is always directly what it says -
+		parent directory only used to truncate results from path window.
+		Matching relative widget paths up to parent dir has to be done
+		as a separate process, too confusing otherwise
+
+
+		"""
 		if not value.strip():
-			return self.pathCls()
+			return None
 		# check if there are semicolons for multiple files
 		strPaths = [i.strip() for i in str(value).split(";")]
-		if EVAL1(self.showRelativeFromParent):
-			paths = [EVAL1(self.parentDir) / i for i in strPaths]
-		else:
-			paths = [self.pathCls(i) for i in strPaths]
-		if self.allowMultiple:
+
+		# if EVAL(self.showRelativeFromParent): # don't extend value to global
+		# 	paths = [EVAL(self.parentDir) / i for i in strPaths]
+		# else:
+		# 	paths = [self.pathCls(i) for i in strPaths]
+		paths = [self.pathCls(i) for i in strPaths]
+
+		if EVAL(self.allowMultiple):
 			return paths
 		return paths[0]
-	def _processValueForUi(self, value):
-		value = wplib.sequence.toSeq(value)
-		if EVAL1(self.showRelativeFromParent):
-			return " ; ".join(
-				#str(self.pathCls(i).relative_to(EVAL1(self.parentDir)))
-				str(self.pathCls(i))
-				for i in value)
-		return " ; ".join(map(str, value))
+
+	def _processSinglePathForRelative(self, value):
+		if EVAL(self.showRelativeFromParent):
+			try:
+				return self.pathCls(value).relative_to(EVAL(self.parentDir))
+			except:
+				return self.pathCls(value)
+		return self.pathCls(value)
+
+	def _processValueForUi(self, value)->str:
+		if not value: return ""
+		if isinstance(value, (tuple, list)):
+			return " ; ".join(map(str, value))
+		return str(value)
+
+		# if isinstance(value, (tuple, list)):
+		# 	paths = map(self._processSinglePathForRelative,
+		# 	            value)
+		# 	return " ; ".join(map(str, paths))
+		# return str(self._processSinglePathForRelative(value))
+		# value = wplib.sequence.toSeq(value)
+
+		# return " ; ".join(map(str, value))
 
 
 

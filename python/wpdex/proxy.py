@@ -26,33 +26,33 @@ class Wreactive_ops(reactive_ops):
 	syntax, since otherwise you have to do some type checking to
 	tell when to use BIND(), etc
 	"""
-	@property
-	def value(self):
-		"""
-		Returns the current state of the reactive expression by
-		evaluating the pipeline.
-		"""
-		if isinstance(self._reactive, rx):
-			return self._reactive._resolve()
-		elif isinstance(self._reactive, Parameter):
-			return getattr(self._reactive.owner, self._reactive.name)
-		else:
-			return self._reactive()
+	# @property
+	# def value(self):
+	# 	"""
+	# 	Returns the current state of the reactive expression by
+	# 	evaluating the pipeline.
+	# 	"""
+	# 	if isinstance(self._reactive, rx):
+	# 		return self._reactive._resolve()
+	# 	elif isinstance(self._reactive, Parameter):
+	# 		return getattr(self._reactive.owner, self._reactive.name)
+	# 	else:
+	# 		return self._reactive()
 
-	@value.setter
-	def value(self, new):
-		"""
-		Allows overriding the original input to the pipeline.
-		"""
-
-		# log("set value", new,
-		#     self._reactive, self._reactive._wrapper)
-		root = self._reactive._compute_root()
-		#log("root", root)
-		if "_dexPath" in self._reactive._kwargs:
-			self._reactive.WRITE(resolve_value(new))
-			return
-		reactive_ops.value.fset(self, new)
+	# @value.setter
+	# def value(self, new):
+	# 	"""
+	# 	Allows overriding the original input to the pipeline.
+	# 	"""
+	#
+	# 	# log("set value", new,
+	# 	#     self._reactive, self._reactive._wrapper)
+	# 	root = self._reactive._compute_root()
+	# 	#log("root", root)
+	# 	if "_dexPath" in self._reactive._kwargs:
+	# 		self._reactive.WRITE(resolve_value(new))
+	# 		return
+	# 	reactive_ops.value.fset(self, new)
 
 		# try:
 		#
@@ -151,7 +151,6 @@ class WX(rx):
 
 	def WRITE(self, val):
 		"""emit (path, value)
-		what did man try say?
 		"""
 		self._kwargs["_writeSignal"].emit(self._kwargs["_dexPath"], val)
 
@@ -475,7 +474,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		# it would always return an rx() instance, not WX(),
 		# so for this case I use a dummy argument to the function itself
 		path = WpDex.toPath(path)
-		log("get ref", self, path)
+		#log("get ref", self, path)
 		if self._proxyData["wxRefs"].get(path) is None:
 			#ref = WX(self._proxyTarget, path=path)()
 			#if 1: self.dex().access()

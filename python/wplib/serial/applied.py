@@ -9,6 +9,7 @@ from wplib import CodeRef
 from wplib.constant import LITERAL_TYPES, IMMUTABLE_TYPES, SEQ_TYPES, MAP_TYPES
 from wplib.serial.adaptor import SerialAdaptor
 from wplib.object.namespace import TypeNamespace
+from wplib.object.visitor import Visitable, VisitAdaptor
 
 """
 implementations of serialisation for standard types
@@ -124,4 +125,23 @@ class DataclassSerialAdaptor(SerialAdaptor):
 	           decodeParams:dict=None) ->T.Any:
 		return serialType(**serialData)
 
+class AnySerialAdaptor(SerialAdaptor):
+	forTypes = (object, )
+	@classmethod
+	def encode(cls, obj, encodeParams:dict=None) ->dict:
+		visitAdaptor = VisitAdaptor.adaptorForObject(obj)
+		assert visitAdaptor, f"No backup Visit adaptor to serialise {type(obj)} obj {obj}"
+		childItems = {i[0] : i[1] for i in visitAdaptor.childObjects(obj, params=encodeParams)}
+		#childItems["@BASE"] = obj
+		return childItems
+	@classmethod
+	def decode(cls,
+	           serialData:dict,
+	           serialType:type,
+	           decodeParams:dict=None) ->T.Any:
+		visitAdaptor = VisitAdaptor.adaptorForType(serialType)
+		assert visitAdaptor, f"No backup Visit adaptor to load type {serialType}"
+		return visitAdaptor.newObj(serialType,
+		                           [VisitAdaptor.ChildData(k, v) for k, v in serialData.items()],
+		                           params=decodeParams)
 

@@ -3,10 +3,44 @@ from __future__ import annotations
 import typing as T
 
 import numpy as np
+import pathlib
 
 from PySide2 import QtWidgets, QtCore, QtGui
 
 from wplib.sequence import toSeq
+
+import subprocess
+
+def openExplorerOnPath(path:(pathlib.Path, str),
+                       lowestExisting=True):
+	"""opens a new process of windows explorer,
+	focused on given path
+	"""
+	p = pathlib.Path(path)
+	if not p.exists():
+		if lowestExisting:
+			while not p.exists():
+				try: p = p.parents[0]
+				except IndexError:
+					raise FileNotFoundError(f"No existing path to open explorer for any part of path {path}, {type(path)} ")
+		else:
+			raise FileNotFoundError(f"No existing path to open explorer for path {path}, {type(path)} ")
+	if p.is_file():
+		return subprocess.Popen(f'explorer /select,"{p}"')
+	elif p.is_dir():
+		return subprocess.Popen(f'explorer "{p}"')
+
+def widgetParents(w:QtWidgets.QWidget):
+	result = []
+	while w.parentWidget():
+		result.append(w.parentWidget())
+		w = w.parentWidget()
+	return result
+
+def rootWidget(w:QtWidgets.QWidget):
+	while w.parentWidget():
+		w = w.parentWidget()
+	return w
 
 def widgetChildMap(w:QtWidgets.QWidget, includeObjects=True, onlyNamed=True)->dict[str, (QtWidgets.QWidget, QtCore.QObject)]:
 	result = {}

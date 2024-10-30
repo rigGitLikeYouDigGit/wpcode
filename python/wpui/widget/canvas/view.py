@@ -21,7 +21,7 @@ from wpdex import WpDexProxy
 from wplib.serial import Serialisable
 
 from wpui.keystate import KeyState
-from wpui import lib as uilib
+from wpui import lib as uilib, constant as uiconstant
 
 if T.TYPE_CHECKING:
 	from .scene import WpCanvasScene
@@ -120,6 +120,32 @@ class WpCanvasMiniMap(QtWidgets.QWidget):
 		painter.drawRoundRect(toDrawRect, 2, 2)
 
 
+class ViewEventFilter(QtCore.QObject):
+
+	def __init__(self, parent=None):
+		super().__init__(parent)
+		self._processingTab = False
+
+	def eventFilter(self, watched:WpCanvasView, event):
+		#log("eventFilter", event)
+
+		if isinstance(event, QtGui.QKeyEvent):
+			if event.key() in (QtCore.Qt.Key_Tab, QtCore.Qt.Key_Backtab):
+				#log("no tab for you")
+				if self._processingTab: return True # prevent feedback
+				self._processingTab = True
+				newEvent = QtGui.QKeyEvent(event.type(), event.key(), event.modifiers(),
+					                event.nativeScanCode(), event.nativeVirtualKey(),
+					                event.nativeModifiers(), event.text(),
+					                event.isAutoRepeat(), event.count())
+				watched.keyPressEvent(newEvent)
+				self._processingTab = False
+				return True
+		if isinstance(event, QtGui.QHoverEvent):
+			"""update the ks mouse history """
+			watched.ks.mouseMoved(event)
+		return super().eventFilter(watched, event)
+
 class WpCanvasView(QtWidgets.QGraphicsView):
 	"""add some conveniences to serialise camera positions
 	surely selected items should be per-viewport? not per-scene?
@@ -140,6 +166,7 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 
 	@dataclass
 	class KeySlot:
+		"""easier declaration of hotkey-triggered events"""
 		fn : T.Callable[[WpCanvasView], (QtWidgets.QWidget, T.Any)]
 		keys : tuple[QtCore.Qt.Key] = ()
 		closeWidgetOnFocusOut : bool = True
@@ -151,8 +178,11 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 		super().__init__(parent)
 		self.setScene(scene)
 
-
 		self.ks = KeyState()
+		self.filter = ViewEventFilter(parent=self)
+		self.installEventFilter(self.filter)
+		#self.setMouseTracking(True)
+
 
 		self.setTransformationAnchor(self.NoAnchor) # ????
 		self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
@@ -185,6 +215,28 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 
 		# set init camera pos
 		self.moveCamera([0, 0], relative=False)
+		self.setFocusPolicy(QtCore.Qt.StrongFocus)
+
+	# region focus
+
+	# def focusNextPrevChild(self, next):
+	# 	"""this holds the focus on this widget, prevents Tab from moving it
+	# 	FOR NOW this is ok, inkeeping with Maya, Houdini node editor conventions
+	#
+	# 	HOWEVER, later allow separate mode for full Vim key master focus switching -
+	# 		maybe that needs some extra treatment
+	# 	"""
+	# 	return True
+	# def focusNextChild(self):
+	# 	return True
+	# def nextInFocusChain(self):
+	# 	return self
+	#
+	# def focusOutEvent(self, event:QtGui.QFocusEvent):
+	# 	log("focusOut event", event.reason() in (QtCore.Qt.FocusReason.TabFocusReason,
+	# 	                                         QtCore.Qt.FocusReason.BacktabFocusReason))
+
+	# endregion
 
 	def addKeyPressSlot(self,
 	                    slot: (T.Callable[[WpCanvasView], (QtWidgets.QWidget, T.Any)],
@@ -229,22 +281,30 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 				# unsure if we should enforce it being a parent of this widget
 				result.setEnabled(True)
 				result.show()
+				result.setFocus()
 				# move it to the last shown mouse position
-				pos = self.ks.lastMousePosMap[0]
+				pos = self.ks.mousePositions[0] if self.ks.mousePositions else self.rect().center()
 				pos = self.mapTo(result.parent(), pos)
 				result.move(pos)
 				result.setFocus()
 
 				# if we say to close after losing focus, set up that as a patch
 				if slot.closeWidgetOnFocusOut:
-					def _patchFocusEvent(w:QtWidgets.QWidget, focusEvent:QtGui.QFocusEvent):
+					def _patchFocusEvent(focusEvent:QtGui.QFocusEvent):
 						log("run slot focus out event")
-						type(w).focusOutEvent(w, focusEvent)
-						w.hide(); w.setEnabled(False)
+						type(result).focusOutEvent(result, focusEvent)
+						result.hide(); result.setEnabled(False)
+						self.setFocus()
 					result.focusOutEvent = _patchFocusEvent
 
 
 	def keyPressEvent(self, event):
+		"""
+		TODO: for some reason tab events trigger this 3 times at once -
+			fix this sometime, for now push through it
+		"""
+		#log("key press", event.key(), uiconstant.keyDict[event.key()])
+
 		self.ks.keyPressed(event)
 		self.checkFireKeySlots(event)
 		super().keyPressEvent(event)

@@ -9,11 +9,14 @@ from wplib import log
 from wpdex import *
 from wpdex import react
 
+from wp import constant
 from wp.pipe.ui import AssetSelectorWidget
 from wpdex.ui.atomic import *
 from chimaera.ui import ChimaeraWidget
 from wpui.widget import ScriptWidget, LogWidget
-from wp import constant
+
+from wpui import lib as uilib
+
 from idem.model import IdemSession, IdemGraph
 
 """overall window representing single instance of Idem - 
@@ -65,10 +68,10 @@ class IdemWidget(QtWidgets.QWidget):
 			name="asset",
 		                                  )
 		#return
-		assetRef = self.session.data.ref("asset", "@V")
-		log("asset ref", assetRef.rx.value)
-		pathRef = self.session.data.ref("filePath", "@V")
-		log("file path", pathRef.rx.value, react.canBeSet(pathRef))
+		#assetRef = self.session.data.ref("asset", "@V")
+		#log("asset ref", assetRef.rx.value)
+		#pathRef = self.session.data.ref("filePath", "@V")
+		#log("file path", pathRef.rx.value, react.canBeSet(pathRef))
 		self.filePathW = FileStringWidget(
 			value=self.session.data.ref("filePath", "@V"),
 
@@ -79,7 +82,8 @@ class IdemWidget(QtWidgets.QWidget):
 				constant.ASSET_ROOT
 			),
 			dialogCaption="Select .chi file in asset",
-			showRelativeFromParent=True
+			showRelativeFromParent=True,
+			allowMultiple=False,
 			)
 
 		self.dccPalette = QtWidgets.QLabel("liveDccs go here", parent=self)
@@ -100,6 +104,12 @@ class IdemWidget(QtWidgets.QWidget):
 
 		l.addWidget(self.graphW, 0, 1, 4, 3)
 		l.addWidget(self.logW, 4, 1, 1, 3)
+
+		# test
+		#log("get root")
+		#log(uilib.rootWidget(self.filePathW))
+		#log(uilib.widgetParents(self.filePathW))
+
 
 
 

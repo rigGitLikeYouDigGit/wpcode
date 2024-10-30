@@ -18,12 +18,19 @@ class IdemGraph(ChimaeraNode):
 		"""
 		return list(self.nodeTypeRegister.keys())
 
-
-class MayaSessionNode(ChimaeraNode):
+class DCCSessionNode(ChimaeraNode):
 	"""DCC session nodes should show their own status,
 	in the graph they can be dormant if their session isn't running
-
 	"""
+	@classmethod
+	def prefix(cls) ->tuple[str]:
+		return ("i", )
+	@classmethod
+	def canBeCreated(cls):
+		return cls.__name__ != "DCCSessionNode"
+
+class MayaSessionNode(DCCSessionNode):
+	pass
 	pass
 
 

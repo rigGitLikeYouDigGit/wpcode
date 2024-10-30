@@ -161,10 +161,16 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		self.parent.writeChildToKey(self.name, value)
 
 		# trigger delta / event on parent
-		self.parent.gatherDeltas()
+		#self.parent.gatherDeltas()
 
 		# self.parent._gatherRootData()
-		# self.parent.updateChildren(recursive=1)
+		self.parent.updateChildren(recursive=1)
+
+		self.parent.gatherDeltas()
+
+		# event = {"type":"deltas",
+		#          "paths" : [self.path]}
+		# self.sendEvent(event)
 		# self.parent._restoreChildDatasFromRoot()
 
 
@@ -183,13 +189,13 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		assert pathType, f"no wpdex type for {type(obj)}"
 		return pathType(obj, parent=self, name=name)
 
-	def _buildBranchMap(self)->dict[DexPathable.keyT, WpDex]:
+	def _buildBranchMap(self)->dict[Pathable.keyT, WpDex]:
 		"""build child objects, return keyDexMap
 		check for existing dex objects and add them if found
 
 		overriding might be illegal - maybe dex can add additional,
 		false children on top for pathing syntax"""
-		#log("BUILD branch map", self)
+		#log("BUILD branch map", self, self.obj)
 		#raise NotImplementedError(self, f"no _buildChildren")
 		children = {}
 		adaptor = VisitAdaptor.adaptorForObject(self.obj)
@@ -197,21 +203,22 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		#log("adaptor", adaptor, self.obj)
 		#raise RuntimeError
 		childObjects = list(adaptor.childObjects(self.obj, {}))
-		#log("child objects for ", self.obj, childObjects)
+		#log(     "child objects for ", self.obj, childObjects, adaptor)
 		# returns list of 3-tuples (index, value, childType)
 		for i, t in enumerate(childObjects):
 			if t[1] is None: continue # maybe
-			#key = (t[0], )
 			key = t[0]
 			foundDex = self.dexForObj(t[1])
 			#log("id dex map", self.objIdDexMap)
 			#log("found dex for", t[1], foundDex)
 			if foundDex:
-				self.addBranch(foundDex, key)
+				#self.addBranch(foundDex, key)
+				children[key] = foundDex
+				foundDex._setParent(self)
 			else:
 				children[key] = self._buildChildPathable(
 					obj=t[1],
-					#parent=self,
+
 				name=key)
 		return children
 
@@ -234,11 +241,9 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		#log("update children", self, self.obj, recursive)
 		#self._gatherRootData()
 
-		if self._branchMap is None: # jank
-			self._branchMap = {} # trash
-		self._branchMap.clear()
 
-		self.branchMap().update(self._buildBranchMap())
+		#self.branchMap().update(self._buildBranchMap())
+		self.updateBranchMap()
 		#self._buildBranchMap()
 		for v in self.branchMap().values():
 			if recursive:
@@ -350,7 +355,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		toIter = [baseState]
 		while toIter:
 			baseDex = toIter.pop(0)
-			basePath = tuple(baseDex.path)
+			basePath = tuple(baseDex.path)[1:]
 			#log(" base", baseDex, basePath, baseDex.branches)
 			try:
 				#liveDex : WpDex = self.access(self, basePath, values=False)

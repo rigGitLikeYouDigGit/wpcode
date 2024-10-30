@@ -38,7 +38,7 @@ from .dataclassdex import *
 
 from .proxy import WpDexProxy, WX#, Reference
 
-from .react import EVAL1, EVAL, BIND, WRAP_MEMBERS, rx
+from .react import EVAL, EVALAK, BIND, WRAP_MEMBERS, rx
 
 from .modeled import Modelled
 

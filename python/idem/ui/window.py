@@ -33,7 +33,7 @@ class Window(QtWidgets.QWidget):
 
 		l = QtWidgets.QVBoxLayout(self)
 		self.setLayout(l)
-		l.addWidget(IdemWidget(self.sessions[0], parent=None))
+		l.addWidget(IdemWidget(self.sessions[0], parent=self))
 		self.setContentsMargins(0, 0, 0, 0)
 
 
@@ -45,5 +45,10 @@ class Window(QtWidgets.QWidget):
 		applyStyle(app)
 		w = cls()
 		w.show()
+		#
+		# def _onFocusChanged(*args):
+		# 	log("onFocusChanged", args)
+		# app.focusChanged.connect(_onFocusChanged)
+
 		app.exec_()
 

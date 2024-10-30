@@ -30,6 +30,9 @@ A: yes, because user-exposed data has to be editable by hand,
 	that's more difficult if you have to express a custom object in strings
 """
 
+def getDefaultAsset():
+	return Asset.topAssets()[0]
+
 class IdemSession(Modelled):
 
 	@classmethod
@@ -39,7 +42,7 @@ class IdemSession(Modelled):
 	@classmethod
 	def newDataModel(cls, **kwargs) ->dataT():
 		root = Tree(kwargs.get("name", "idem"))
-		root["asset"] = None
+		root["asset"] = kwargs.get("asset", getDefaultAsset())
 		root["filePath"] = Path("plan.chi")
 		root["graph"] = IdemGraph.create(name="graph")
 		return root

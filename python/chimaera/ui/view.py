@@ -4,21 +4,17 @@ from __future__ import annotations
 import pprint
 import typing as T
 
-from wplib import log, Sentinel, TypeNamespace
-from wplib.constant import MAP_TYPES, SEQ_TYPES, STR_TYPES, LITERAL_TYPES, IMMUTABLE_TYPES
-from wplib.uid import getUid4
-from wplib.inheritance import clsSuper
-from wplib.object import UidElement, ClassMagicMethodMixin, CacheObj
-from wplib.serial import Serialisable
-
 from PySide2 import QtCore, QtWidgets, QtGui
+from wplib import log, Sentinel, TypeNamespace
 
-from wpui.widget.canvas import *
+
+from wpui.widget.canvas import WpCanvasView
+from wpdex import *
+from wpdex.ui import StringWidget
+#from .catalogue import\ NodeCatalogue
 
 if T.TYPE_CHECKING:
 	from .scene import ChimaeraScene
-
-from .catalogue import NodeCatalogue
 
 class ChimaeraView(WpCanvasView):
 
@@ -27,10 +23,26 @@ class ChimaeraView(WpCanvasView):
 
 	def __init__(self, scene:ChimaeraScene, parent=None, ):
 		super().__init__(parent=parent, scene=scene)
-		self.catalogue = NodeCatalogue()
 
-	def _onTabPressed(self):
-		"""connect up to the tab hotkey, to create new nodes"""
-		availNodes = self.scene().graph().availableNodeTypes()
+		# simple node creation search bar - in future consider visual panes
+		# might be useful to pull in different assets
+		self.nodePaletteLine = StringWidget(
+			value="",
+			parent=self,
+			options=self.scene().rxGraph().getAvailableNodeTypes().keys()
+		)
+		self.nodePaletteLine.setPlaceholderText("create node...")
+		self.nodePaletteLine.hide()
 
+		self.addKeyPressSlot(
+			#self.KeySlot(lambda view : self.nodePaletteLine, keys=(QtCore.Qt.Key_Tab, ))
+			self.KeySlot(self._onTabPressed, keys=(QtCore.Qt.Key_Tab, ))
+		)
+	def _onTabPressed(self, view):
+		log("node options", self.scene().graph(), self.scene().graph().getAvailableNodeTypes())
+		return self.nodePaletteLine
+	def _onNodePaletteReturnPressed(self, s):
+		if s in self.scene().graph().getAvailableNodeTypes():
+			self.scene().graph().createNode(
+				self.scene().graph().getAvailableNodeTypes()[s])
 
