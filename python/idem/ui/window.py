@@ -30,10 +30,11 @@ class Window(QtWidgets.QWidget):
 
 		# # list of active sessions
 		self.sessions = [IdemSession.create(name="idem")]
+		self.w = IdemWidget(self.sessions[0], parent=self)
 
 		l = QtWidgets.QVBoxLayout(self)
 		self.setLayout(l)
-		l.addWidget(IdemWidget(self.sessions[0], parent=self))
+		l.addWidget(self.w)
 		self.setContentsMargins(0, 0, 0, 0)
 
 
@@ -45,6 +46,8 @@ class Window(QtWidgets.QWidget):
 		applyStyle(app)
 		w = cls()
 		w.show()
+
+		#w.w.graphW.scene.graph().createNode("i:MayaSessionNode")
 		#
 		# def _onFocusChanged(*args):
 		# 	log("onFocusChanged", args)

@@ -22,7 +22,8 @@ from wplib.object.proxy import Proxy, FlattenProxyOp
 from wplib.pathable import Pathable, PathAdaptor
 from wplib.delta import DeltaAtom, DeltaAid, SetValueDelta
 
-
+if T.TYPE_CHECKING:
+	from .proxy import WpDexProxy
 
 class OverrideMap:
 	"""sketch for storing layered overrides that can
@@ -116,6 +117,10 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		                  parent=parent,
 		                  name=name)
 
+		if obj is self:
+			w = "a"
+			raise RuntimeError("dex object is self, do not do this")
+
 		# should these attributes be moved into pathable? probably
 		# self.parent = parent
 		# self.obj = obj
@@ -134,6 +139,12 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		# do we build on init?
 		self.updateChildren(recursive=0)
 
+	def getValueProxy(self)->WpDexProxy:
+		"""return a WpDexProxy initialised on the value of this dex
+		"""
+		from .proxy import WpDexProxy
+		return WpDexProxy(self.obj,
+		                  wpDex=self)
 
 	def writeChildToKey(self, key:Pathable.keyT, value):
 		"""OVERRIDE -
@@ -210,8 +221,10 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 			key = t[0]
 			foundDex = self.dexForObj(t[1])
 			#log("id dex map", self.objIdDexMap)
+
 			#log("found dex for", t[1], foundDex)
 			if foundDex:
+				foundDex._name = key  # repair dex name if it was previously an unparented root
 				#self.addBranch(foundDex, key)
 				children[key] = foundDex
 				foundDex._setParent(self)
@@ -251,6 +264,9 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		#self._restoreChildDatasFromRoot()
 
 	def __repr__(self):
+		if self.obj is self:
+			w = "SOMETHING IS VERY WRONG"
+			raise RuntimeError
 		try:
 			return f"<{self.__class__.__name__}({self.obj}, path={self.path})>"
 		except:

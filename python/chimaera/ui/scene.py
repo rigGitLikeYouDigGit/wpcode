@@ -38,7 +38,14 @@ class ChimaeraScene(WpCanvasScene):
 		return self._graph
 	def setGraph(self, val:ChimaeraNode):
 		self._graph.rx.value = val
-		self.sync() # build out delegates
+		self._graph.ref(()).rx.watch(self._onGraphChanged, onlychanged=False)
+		self.px = WpDexProxy(EVAL(val))
+		self.px.dex().getEventSignal("main").connect(self._onGraphChanged)
+		#self._graph.data.dex().getEventSignal("main").connect(self._onGraphChanged)
+		#self.sync() # build out delegates
+
+	def _onGraphChanged(self, *args, **kwargs):
+		log("scene on graph changed", args, kwargs)
 
 	def sync(self, elements=()):
 		if not elements:

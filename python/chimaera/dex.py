@@ -24,7 +24,7 @@ class ChiDex(WpDex):
 
 	# don't cover aux data for now
 	mutatingMethodNames = {
-		"eyyyy"
+		"createNode"
 	}
 
 	obj : Tree

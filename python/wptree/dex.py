@@ -64,6 +64,7 @@ class TreeDex(WpDex):
 		"""process a path token"""
 		#log("treedex consume", self, path, self.branchMap(), self.obj._getRawValue())
 		token, *path = path
+		if not token: return [self], ()
 		if token == "@V" and self.obj._getRawValue() is None:
 			return [None], path
 		try:

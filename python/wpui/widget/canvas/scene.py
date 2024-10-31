@@ -71,7 +71,7 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 		super().__init__(parent=parent)
 
 		self.objDelegateMap : dict[T.Any, T.Sequence[QtWidgets.QGraphicsItem]] = {}
-		self.delegateObjMap : dict[QtWidgets.QGraphicsItem, T.Any] = {}
+		self.delegateObjMap : dict[int, T.Any] = {}
 
 		self.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(0, 0, 0, 255)))
 		self.setSceneRect(0, 0, 1000, 1000)
@@ -116,15 +116,14 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 	def setDelegatesForItem(self, obj, delegates:T.Sequence[WpCanvasElement]):
 		delegates = sequence.toSeq(delegates)
 		for i in delegates:
-			self.delegateObjMap[id(i)] = obj
-		self.objDelegateMap[obj] = delegates
+			self.delegateObjMap[hash(i)] = obj
+		self.objDelegateMap[obj] = tuple(delegates)
 
-	def delegatesForItem(self, obj)->tuple[WpCanvasElement]:
-		return tuple(self.objDelegateMap[obj])
+	def delegatesForObj(self, obj)->tuple[WpCanvasElement]:
+		return tuple(self.objDelegateMap.get(obj, ()))
 
 	def itemFromDelegate(self, delegate):
 		return self.delegateObjMap.get(id(delegate))
-
 
 
 	def itemsDragged(self, items:list[QtWidgets.QGraphicsItem],

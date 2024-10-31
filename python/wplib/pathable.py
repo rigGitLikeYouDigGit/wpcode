@@ -127,12 +127,15 @@ class Pathable(#Adaptor
 			dex: roots are any object with a flag set-
 			pathable: _ root _ is _ root _
 		"""
+		#if name is None:
+		#	t = name
+		#assert name is not None
 		self._obj = None
 		self._parent = None
 		self._name = None
 		self.setObj(obj)
-		self._setParent(parent)
 		self.setName(name)
+		self._setParent(parent)
 
 		self._overrides = {} # we're doing it
 
@@ -344,7 +347,7 @@ class Pathable(#Adaptor
 	def path(self)->pathT:
 		"""return path to this object"""
 		if not self.parent: return []
-		if self.parent is self: raise RuntimeError("DEX PARENT IS SELF", self.obj)
+		if self.parent is self: raise RuntimeError("PATHABLE PARENT IS SELF", self.obj)
 		return self.parent.path + [self.name, ]
 
 	def strPath(self, root=False)->str:
@@ -362,6 +365,8 @@ class Pathable(#Adaptor
 		:param **kwargs:
 		"""
 		token, *path = path
+		if not token:
+			return [self], path
 		try:
 			return [self.branchMap()[token]], path
 		except KeyError:
@@ -412,8 +417,10 @@ class Pathable(#Adaptor
 		# toAccess = [cls.getPathAdaptorType()(i) if not isinstance(i, Pathable) else i for i in toAccess ]
 		#log("ACCESS", obj, toAccess)
 
+
 		foundPathables = [] # end results of path access - unstructured
 		paths = [deepcopy(path) for i in range(len(toAccess))]
+		#log("access paths", paths)
 		depthA = 0
 		while paths:
 			#newPaths = [None] * len(toAccess)
@@ -424,6 +431,10 @@ class Pathable(#Adaptor
 			depthB = 1
 			for pathId, (path, pathable) \
 					in enumerate(zip(paths, toAccess)):
+				#log("path", path)
+				if not path: # if you pass an empty tuple path
+					foundPathables.append(pathable)
+					continue
 
 				#log((" " * (depthA + depthB)), "path iter", path, pathable)
 				depthB += 1

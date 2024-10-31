@@ -251,6 +251,10 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 			slot = WpCanvasView.KeySlot(slot, keys=keys)
 		self.keySlotMap[tuple(slot.keys)] = slot
 
+	def _getMousePosForObjCreation(self)->QtCore.QPoint:
+		return self.ks.mousePositions[0] \
+			if self.ks.mousePositions else self.rect().center()
+
 	def checkFireKeySlots(self, event:QtGui.QKeyEvent):
 		"""check if any key functions should be fired -
 		if so, activate functions, then show the widget if returned
@@ -283,7 +287,7 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 				result.show()
 				result.setFocus()
 				# move it to the last shown mouse position
-				pos = self.ks.mousePositions[0] if self.ks.mousePositions else self.rect().center()
+				pos = self._getMousePosForObjCreation()
 				pos = self.mapTo(result.parent(), pos)
 				result.move(pos)
 				result.setFocus()

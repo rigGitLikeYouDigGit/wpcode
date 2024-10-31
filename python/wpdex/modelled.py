@@ -44,7 +44,7 @@ class Modelled(#Visitable,
 		                          f"for Modelled {cls}")
 
 	def __init__(self, data:dataT()):
-		log("new modelled", data)
+		#log("new modelled", data)
 		self.data : self.dataT() = WpDexProxy(data)
 
 	def __str__(self):
@@ -56,8 +56,11 @@ class Modelled(#Visitable,
 	def rawData(self)->dataT():
 		return self.data._proxyTarget()
 
-	def ref(self, path:Pathable.pathT)->WX:
-		return self.data.ref(path)
+	def ref(self, *path:Pathable.pathT)->WX:
+		return self.data.ref(*path)
+
+	# def dataChangedSignal(self, path:Pathable.pathT=()):
+	# 	return self.data.ref(path).
 
 	def encode(self, encodeParams:dict=None) ->dict:
 		return self.rawData()

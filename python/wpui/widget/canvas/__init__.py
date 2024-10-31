@@ -16,5 +16,5 @@ updating from it
 
 from .scene import WpCanvasScene
 from .view import WpCanvasView
-from .element import WpCanvasItem
+from .element import WpCanvasElement
 

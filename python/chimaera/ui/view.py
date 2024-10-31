@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import pprint
+import traceback
 import typing as T
 
 from PySide2 import QtCore, QtWidgets, QtGui
@@ -33,16 +34,55 @@ class ChimaeraView(WpCanvasView):
 		)
 		self.nodePaletteLine.setPlaceholderText("create node...")
 		self.nodePaletteLine.hide()
+		self.nodePaletteLine.returnPressed.connect(self._onNodePaletteReturnPressed)
+
 
 		self.addKeyPressSlot(
 			#self.KeySlot(lambda view : self.nodePaletteLine, keys=(QtCore.Qt.Key_Tab, ))
 			self.KeySlot(self._onTabPressed, keys=(QtCore.Qt.Key_Tab, ))
 		)
+
+		self.testFlag = False
+		self.scene().rxGraph().rx.watch(self._onGraphChanged,
+		                                      onlychanged=False)
+
+
+	def _onGraphChanged(self, *a):
+		log("VIEW GRAPH CHANGED", a)
+
 	def _onTabPressed(self, view):
-		log("node options", self.scene().graph(), self.scene().graph().getAvailableNodeTypes())
+		if self.nodePaletteLine.isVisible():
+			self.nodePaletteLine.hide()
+			return
+		log("node options", self.scene().graph(),
+		    self.scene().graph().getAvailableNodeTypes())
 		return self.nodePaletteLine
-	def _onNodePaletteReturnPressed(self, s):
-		if s in self.scene().graph().getAvailableNodeTypes():
-			self.scene().graph().createNode(
-				self.scene().graph().getAvailableNodeTypes()[s])
+
+	def _onNodePaletteReturnPressed(self):
+		s = self.nodePaletteLine.value()
+		self.nodePaletteLine.hide()
+		self.nodePaletteLine.clear()
+		self.setFocus()
+		if s not in self.scene().graph().getAvailableNodeTypes():
+			return
+		log("return pressed", s, self.scene().graph().getAvailableNodeTypes()[s])
+		try:
+			nodeType = self.scene().graph().getAvailableNodeTypes()[s]
+			scene = self.scene()
+			graph = scene.graph()
+			log("scene", scene, "graph", graph)
+			node = graph.createNode( nodeType
+				)
+		except Exception as e:
+			log(f"error creating node of type {s}")
+			traceback.print_exc()
+			return
+		# updating the scene data should automatically generate delegates
+		# for new objects
+		# move node to under cursor
+		delegates = self.scene().delegatesForObj(node)
+		delegates[0].setPos(self.mapToScene(self._getMousePosForObjCreation()))
+		# TODO: later implement Houdini behaviour if you already have a node selected -
+		#   connect that node's main output to the new node's input
+
 

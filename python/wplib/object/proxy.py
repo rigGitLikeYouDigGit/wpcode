@@ -102,7 +102,7 @@ class ProxyMeta(type):
 			testUid = cls._proxyObjUniqueId(testObj)
 			if shared and testUid in cls._objIdProxyCache:
 				if cls._objIdProxyCache[testUid]:
-					log("fetching shared proxy reference for", testUid)
+					#log("fetching shared proxy reference for", testUid)
 					return cls._objIdProxyCache[testUid]
 
 		# build instance proxyData
@@ -365,6 +365,7 @@ class Proxy(#ABC,
 					beforeData=beforeData,
 					exception=e
 				)
+				return result
 
 			# filter result based on call params, return filtered output
 			newResult = self._afterProxyCall(

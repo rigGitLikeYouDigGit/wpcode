@@ -53,7 +53,7 @@ class IdemWidget(QtWidgets.QWidget):
 		self.session = session
 
 
-		ref = self.session.data.ref("asset", "@V")
+		#ref = self.session.data.ref("asset", "@V")
 
 		# log("check root", ref,
 		#     react.canBeSet(ref)
@@ -93,7 +93,9 @@ class IdemWidget(QtWidgets.QWidget):
 		self.logW = LogWidget(parent=self)
 
 		# don't pass live reference, let graph widget do its own specialisation
-		self.graphW = ChimaeraWidget(session.data["graph"], parent=self)
+		self.graphW = ChimaeraWidget(#session.data["graph"],
+		                             value=session.ref("graph", "@V"),
+		                             parent=self)
 
 		#region layout
 		l = QtWidgets.QGridLayout(self)

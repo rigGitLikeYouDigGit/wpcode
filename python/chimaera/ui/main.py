@@ -19,7 +19,7 @@ class ChimaeraWidget(QtWidgets.QWidget, AtomicWidget
 		QtWidgets.QWidget.__init__(self, parent=parent)
 		AtomicWidget.__init__(self, value=value)
 		self.scene = ChimaeraScene(
-			graph=self.value(),
+			graph=self.rxValue(),
 			parent=self,
 		                           )
 		self.view = ChimaeraView(scene=self.scene, parent=self)

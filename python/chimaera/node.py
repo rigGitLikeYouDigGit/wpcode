@@ -31,6 +31,15 @@ from chimaera.lib import tree as treelib
 
 """
 simplest version works with node name and UI fully reactive :D
+
+
+QA:
+
+Why don't we just have each tree be a node directly, and store all attributes as its value?
+Why use the double layer ->tree->"nodes"->tree->"nodes" ?
+because then to get a node's value, you would do node.value.value, or similar
+node.value.resolved? node.value.incoming?
+I guess it's not terrible 
 """
 
 
@@ -44,13 +53,21 @@ class ChimaeraNode(Modelled,
 
 	@classmethod
 	def dataT(cls):
+		"""return type for modelled data
+		TODO: later, allow this to be a combination of types,
+			or a structural condition"""
 		return Tree
+
 	data : Tree | WpDexProxy
 
 	@classmethod
-	def newDataModel(cls, name="node", **kwargs) ->dataT():
-		t = Tree(name=name)
-		t.addBranch( Tree("nodes") ) #TODO: replace with the crazy incoming/defined etc
+	def newDataModel(cls, name="node",
+	                 value=None,
+	                 aux=None
+	                 ) ->dataT():
+		t = Tree(name=name, value=value,
+		         )
+		#t.addBranch( Tree("nodes") ) #TODO: replace with the crazy incoming/defined etc
 		return t
 
 	nodeTypeRegister : dict[str, type[ChimaeraNode]] = {}
@@ -98,8 +115,30 @@ class ChimaeraNode(Modelled,
 		return dict(self.nodeTypeRegister)
 
 	def __init__(self, data:Tree):
+		assert isinstance(data, Tree)
 		Modelled.__init__(self, data)
+		Pathable.__init__(self, self, parent=None, name=data.name)
 
+	def childObjects(self, params:PARAMS_T) ->CHILD_LIST_T:
+		"""maybe we should just bundle this in modelled
+		I think for the core visit stuff we shouldn't pass in the proxy,
+		might get proper crazy if we do
+
+		"""
+		results = VisitAdaptor.adaptorForObject(self.rawData()).childObjects(
+			self.rawData(), params)
+		return results
+
+	@classmethod
+	def newObj(cls, baseObj: Visitable, childDatas:CHILD_LIST_T, params:PARAMS_T) ->T.Any:
+		"""this should just be a new copy of the data given
+		TODO: here we constrain dataT() to be
+		"""
+		retrievedVisitor = VisitAdaptor.adaptorForType(cls.dataT())
+		newData = cls.newDataModel(name=childDatas[0][1],
+		                           value=childDatas[1][1])
+		a = 4
+		return cls(newData)
 
 
 	def colour(self)->tuple[float, float, float]:
@@ -126,29 +165,37 @@ class ChimaeraNode(Modelled,
 		"""
 		if not self.data.parent: return None
 
-		return ChimaeraNode(self.data.parent.parent)
+		return ChimaeraNode(self.data.parent)
 
 	def _setParent(self, parent: Pathable):
 		"""private as you should use addBranch to control hierarchy
 		from parent to child - addBranch will call this internally"""
 		return
 	def addBranch(self, branch:Pathable, name:keyT=None):
+		"""return the same object passed in"""
 		assert isinstance(branch, (ChimaeraNode, Tree))
 		if isinstance(branch, ChimaeraNode):
-			branch = branch.data
+			data = branch.rawData()
+		else:
+			data = branch
+		#log("node add branch", data)
 		# add tree branch to this node's data
-		self.data("nodes").addBranch(branch)
-		return ChimaeraNode(branch)
+		self.data.addBranch(data)
+		if isinstance(branch, ChimaeraNode): return branch
+		return ChimaeraNode(data)
 
 	def branchMap(self)->[keyT, ChimaeraNode]:
 		return {name : ChimaeraNode(branch)
-		        for name, branch in self.data("nodes").branchMap().items()}
+		        for name, branch in self.data.branchMap().items()}
 
 	def createNode(self, nodeType:type[ChimaeraNode]=None, name="")->ChimaeraNode:
+		log("createNode", nodeType, name)
+		if isinstance(nodeType, str):
+			nodeType = self.nodeTypeRegister.get(nodeType)
 		nodeType = nodeType or ChimaeraNode
 		name = name or nodeType.typeName()
 		newNode = nodeType.create(name=name)
-		self.addBranch(newNode)
+		self.addBranch(newNode, newNode.name)
 		return newNode
 
 	@classmethod
@@ -162,7 +209,18 @@ class ChimaeraNode(Modelled,
 
 
 if __name__ == '__main__':
-	pass
+
+
+	graph = ChimaeraNode.create("graph")
+	log(graph.path)
+	def t(*a):
+		log("GRAPH CHANGED", a)
+	graph.ref().rx.watch(t, onlychanged=False)
+	node = graph.createNode(name="childNode")
+	node = graph.createNode(name="childNodeB")
+	#log("child nodes", graph.branches)
+
+
 
 
 

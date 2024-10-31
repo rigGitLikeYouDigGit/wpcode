@@ -120,7 +120,10 @@ class WX(rx):
 	putting in caps so that it's obvious when we do stuff with it
 	"""
 	def __repr__(self):
-		return f"WX({repr(self.rx.value)})"
+		try:
+			return f"WX({repr(self.rx.value)})"
+		except Exception as e:
+			return f"WX(ERROR GETTING REPR)"
 	def __str__(self):
 		return f"WX({repr(self.rx.value)})"
 	def __init__(self, *args,# path:WpDex.pathT=(),
@@ -241,16 +244,18 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		self._proxyData["deltaCallDepth"] = 0
 		self._proxyData["wxRefs"] : dict[WpDex.pathT, WX] = {}
 
-		self._proxyData["parent"] = self._proxyData.get("parent", None)
+		#self._proxyData["parent"] = self._proxyData.get("parent", None)
 
 		# wpdex set up
 		if wpDex is not None: # pre-built dex passed in
 			self._proxyData["wpDex"] = wpDex
 		else:
+			dexCls = WpDex.adaptorForObject(obj)
+			log("dexCls", dexCls, obj)
 			self._proxyData["wpDex"] = WpDex(obj)
 			# link parent dex if given
 
-		self._proxyData["branches"] = {}
+		#self._proxyData["branches"] = {}
 
 
 	def dex(self)->WpDex:
@@ -278,6 +283,9 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		#log( " live dex", self.dex(), self.dex().branches)
 		self._proxyData["deltaCallDepth"] -= 1
 		if self._proxyData["deltaCallDepth"] == 0:
+			# event = {"type":"change",
+			#          "paths" : [()]}
+			# self.dex().sendEvent(event)
 
 			deltaMap = self.dex().gatherDeltas(
 				emit=True
@@ -480,13 +488,30 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 			#if 1: self.dex().access()
 			#dirtyRef = rx(path)
 			dirtyKwarg = rx(1)
-			ref = WX(self.dex().access, _dexPath=path)(
-				obj=self.dex(),
-				#path=dirtyRef,
-				path=path,
-				values=True,
-				dirtyKwarg=dirtyKwarg
-			)
+			# ref = WX(self.dex().access, _dexPath=path)(
+			# 	obj=self.dex(),
+			# 	#path=dirtyRef,
+			# 	path=path,
+			# 	values=True,
+			# 	dirtyKwarg=dirtyKwarg
+			# )
+			# ref = WX(self.dex().access, _dexPath=path)(
+			# 	obj=self.dex(),
+			# 	# path=dirtyRef,
+			# 	path=path,
+			# 	values=True,
+			# 	dirtyKwarg=dirtyKwarg
+			# #).rx.pipe(WpDexProxy)
+			# ).rx.pipe(WpDexProxy)
+
+			def _resolveRef():
+				rootDex = self.dex()
+				foundDex : WpDex = rootDex.access(rootDex, path, values=False, one=True)
+				return foundDex.getValueProxy()
+
+				pass
+
+			ref = WX(_resolveRef, _dexPath=path)()
 
 			assert isinstance(ref, WX)
 			#log("ref is", ref)

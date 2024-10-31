@@ -233,7 +233,8 @@ class DeepVisitor:
 		for childData in nextObjs:
 			# transform child objects
 			resultObjs.append(
-				(key, self._transformRecursiveTopDownDepthFirst(
+				#(key, self._transformRecursiveTopDownDepthFirst(
+				(childData.key, self._transformRecursiveTopDownDepthFirst(
 					childData,
 				 visitParams),
 				 childType)
