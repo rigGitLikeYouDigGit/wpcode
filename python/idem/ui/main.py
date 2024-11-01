@@ -9,6 +9,7 @@ if __name__ == '__main__':
 	WP_PY_ROOT = WP_ROOT_PATH / "code" / "python"
 	print("root", WP_PY_ROOT)
 	sys.path.insert(0, str(WP_PY_ROOT))
+	import idem
 	from idem.ui.window import Window
 
 	Window.launch()

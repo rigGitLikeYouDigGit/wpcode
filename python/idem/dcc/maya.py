@@ -8,7 +8,7 @@ import sys, os, subprocess, threading, importlib
 from pathlib import Path
 import orjson
 
-from wplib import log
+from wplib import log, WP_PY_RESOURCE_PATH
 
 """
 idem-specific DCC classes shouldn't do too much, just
@@ -43,7 +43,12 @@ log("p", p)
 idemConfig = orjson.loads((p / "config.json").read_bytes())
 log("config", idemConfig)
 class DCC:
+	dccName = ""
 	pass
+
+	@classmethod
+	def iconPath(cls)->Path:
+		return WP_PY_RESOURCE_PATH / "icon" / (cls.dccName + ".png")
 
 
 class Maya(DCC):

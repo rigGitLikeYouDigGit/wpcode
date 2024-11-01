@@ -41,6 +41,11 @@ class Status(TypeNamespace):
 	class Neutral(_Base): # grey
 		pass
 
+	class Incoming(_Base): # incoming usually more important than outgoing
+		colour = (1.0, 0.5, 0.3)  # orange
+	class Outgoing(_Base):
+		colour = (0.3, 0.7, 1.0) # light blue
+
 
 class Lantern(QtWidgets.QWidget):
 

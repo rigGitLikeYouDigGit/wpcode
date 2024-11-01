@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 import typing as T
-
+from collections import defaultdict
 import numpy as np
 
 from PySide2 import QtWidgets, QtCore, QtGui
@@ -70,8 +70,8 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 	def __init__(self, parent=None):
 		super().__init__(parent=parent)
 
-		self.objDelegateMap : dict[T.Any, T.Sequence[QtWidgets.QGraphicsItem]] = {}
-		self.delegateObjMap : dict[int, T.Any] = {}
+		self.objDelegateMap : dict[T.Any, set[QtWidgets.QGraphicsItem]] = defaultdict(set)
+		#self.delegateObjMap : dict[int, T.Any] = {} #delegates hold their own object reference
 
 		self.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(0, 0, 0, 255)))
 		self.setSceneRect(0, 0, 1000, 1000)
@@ -88,10 +88,25 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 		self.coarsePen.setStyle(QtCore.Qt.DashLine)
 
 	def addItem(self, item):
+		from .element import WpCanvasElement
 		super().addItem(item)
-		if not getattr(item, "elementChanged", None): return
-		item.itemChange.connect(self._onItemChanged)
+		log("scene addItem", item, type(item))
+		#if not getattr(item, "elementChanged", None): return # only process proper canvasElements
+		if not isinstance(item, WpCanvasElement): return # only process proper canvasElements
+		item : WpCanvasElement
+		item.elementChanged.connect(self._onItemChanged)
+		self.objDelegateMap[item.obj].add(item)
+		log("after addItem", item, item.obj)
 
+	def removeItem(self, item):
+		#if getattr(item, "elementChanged", None):
+		if isinstance(item, WpCanvasElement):
+			log("removeItem", item)
+			item: WpCanvasElement
+			#item.itemChange.connect(self._onItemChanged)
+			if item.obj in self.objDelegateMap:
+				self.objDelegateMap[item.obj].remove(item)
+		super().removeItem(item)
 
 	def _onItemChanged(self, item:WpCanvasElement,
 	                   change:QtWidgets.QGraphicsItem.GraphicsItemChange,
@@ -113,18 +128,25 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 
 	"""single real object may have multiple delegates, be drawn in multiple
 	places at once"""
-	def setDelegatesForItem(self, obj, delegates:T.Sequence[WpCanvasElement]):
-		delegates = sequence.toSeq(delegates)
-		for i in delegates:
-			self.delegateObjMap[hash(i)] = obj
-		self.objDelegateMap[obj] = tuple(delegates)
 
-	def delegatesForObj(self, obj)->tuple[WpCanvasElement]:
-		return tuple(self.objDelegateMap.get(obj, ()))
+	# def setDelegatesForItem(self, obj, delegates:T.Sequence[WpCanvasElement]):
+	# 	delegates = sequence.toSeq(delegates)
+	# 	for i in delegates:
+	# 		self.delegateObjMap[hash(i)] = obj
+	# 	self.objDelegateMap[obj] = tuple(delegates)
 
-	def itemFromDelegate(self, delegate):
-		return self.delegateObjMap.get(id(delegate))
+	def delegatesForObj(self, obj)->set[WpCanvasElement]:
+		return set(self.objDelegateMap.get(obj, ()))
 
+
+
+	def objFromDelegate(self, item:(QtWidgets.QGraphicsItem,
+	                                WpCanvasElement)):
+		"""OVERRIDE if for some reason we need to use extra logic,
+		but can't use the delegate set dict"""
+		if not isinstance(item, WpCanvasElement):
+			return None
+		return item.obj
 
 	def itemsDragged(self, items:list[QtWidgets.QGraphicsItem],
 	                 delta:tuple[int, int]):

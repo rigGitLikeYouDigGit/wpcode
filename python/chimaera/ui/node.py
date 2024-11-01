@@ -23,6 +23,7 @@ from wpdex.ui import StringWidget
 from chimaera import ChimaeraNode
 from wpdex import WpDexProxy, WX
 
+
 if T.TYPE_CHECKING:
 	from .scene import ChimaeraScene
 	from .view import ChimaeraView
@@ -36,49 +37,6 @@ TODO: consider maybe inverting the flow for painting widgets? if every one in a 
 
 refType = (WpDexProxy, WX)
 
-class ReactLineEdit(QtWidgets.QLineEdit):
-	"""test redoing the reactive stuff now we have an actual use case
-
-	TODO: validation? schema?
-
-	TODO: bring in the same structure as asset selector line here
-		for tracking previous value, checking valid new one
-	"""
-
-	valueCommitted = QtCore.Signal(dict)
-
-	def __init__(self, parent:QtWidgets.QWidget=None,
-	             text:refType="",
-	             #options=()
-	             ):
-		super().__init__(parent=parent)
-		#log("LINE init")
-		self.ref = text
-		ref = text
-		# if isinstance(ref, WpDexProxy):
-		# 	ref = ref.ref(path=())
-		self.setText(ref.rx.value)
-		ref.rx.watch(self.setText)
-		self.textEdited.connect(self._onTextEdited)
-		self.editingFinished.connect(self._tryCommitText)
-		self.valueCommitted.connect(lambda *args, **kwargs : ref.WRITE(*args, **kwargs))
-		#self.valueCommitted.connect(self._onValueCommitted)
-
-	def _onTextEdited(self, s:str):
-		"""runs anytime user modifies text by hand at all -
-		check validations here"""
-
-	def _onValueCommitted(self, t):
-		log("ON VALUE COMMITTED")
-
-	def _tryCommitText(self,):
-		"""can't muddy waters here by emitting before/after as a dict
-		 - WRITE gets the exact new value,
-		nothing more or less
-		(or we could emit a dict here, as long as we use yet another layer of
-		function to strip it away again - doesn't seem useful)
-		"""
-		self.valueCommitted.emit(self.text())
 
 
 def paintDropdownSquare(rect:QtCore.QRect, painter:QtGui.QPainter,
@@ -228,13 +186,19 @@ class LabelWidget(QtWidgets.QWidget):
 		self.setSizePolicy(expandPolicy)
 		self.layout().setContentsMargins(0, 0, 0, 0)
 
-class NodeDelegate(QtWidgets.QGraphicsItem, Adaptor):
+class NodeDelegate(QtWidgets.QGraphicsItem,
+                   WpCanvasElement,
+                   Adaptor):
 	"""node has:
 	- input tree of structures, widgets and plugs
 	- central widgets for name, type, settings etc
 	- output tree of structures, widgets and plugs
 
 	adaptor allows defining new delegates for specific node types?
+
+	after checking through years-old tesserae work, aside from a few
+	cool marking-menu things, most of it is straight trash
+	we have everything we need, start over for the rest
 
 	sizing :)
 	height:
@@ -249,6 +213,7 @@ class NodeDelegate(QtWidgets.QGraphicsItem, Adaptor):
 	"""
 	adaptorTypeMap = Adaptor.makeNewTypeMap()
 	forTypes = (ChimaeraNode, )
+	dispatchInit = True
 	if T.TYPE_CHECKING:
 		def scene(self)->ChimaeraScene: pass
 
@@ -256,8 +221,11 @@ class NodeDelegate(QtWidgets.QGraphicsItem, Adaptor):
 	def __init__(self, node:ChimaeraNode,
 	             parent=None,
 	             ):
-		super().__init__(parent)
-		self.node = node
+		QtWidgets.QGraphicsItem.__init__(self, parent)
+		WpCanvasElement.__init__(self,# scene=None,
+		                         obj=node)
+
+		#self.node = node
 
 		# not making a whole special subclass to make this call less annoying
 		self.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable)
@@ -290,6 +258,11 @@ class NodeDelegate(QtWidgets.QGraphicsItem, Adaptor):
 		#self.w.setSizePolicy(shrinkPolicy)
 		self.w.setSizePolicy(expandPolicy)
 
+		#TODO: later on, allow changing nodetype in-place by right-clicking
+		self.typeText = QtWidgets.QGraphicsSimpleTextItem(self.node.typeName(), parent=self)
+		self.typeText.setPen(QtGui.QPen(QtGui.QColor.fromRgbF(1.0, 1.0, 1.0, 0.5)))
+
+
 		self.nameLine = LabelWidget(
 			label="name",
 			w=StringWidget(self.node.ref("@N"), #TODO: conditions
@@ -299,15 +272,35 @@ class NodeDelegate(QtWidgets.QGraphicsItem, Adaptor):
             parent=self.w)
 
 
+
 		self.wLayout.addWidget(self.nameLine)
 		self.nameLine.setSizePolicy(shrinkPolicy)
 
+		log("setup icon", self.icon())
+		if self.icon() is not None:
+			item = QtWidgets.QGraphicsPixmapItem(self)
+			item.setPixmap(QtGui.QPixmap(self.icon().pixmap(30, 30)))
+
+
 		#self.syncSize()
+
+	def icon(self)->QtGui.QIcon:
+		"""return icon to show for node - by default nothing"""
+		return None
+
+	@property
+	def node(self)->ChimaeraNode:
+		return self.obj
+	@node.setter
+	def node(self, val:ChimaeraNode):
+		raise NotImplementedError
 
 	def syncSize(self):
 		baseRect = self.proxyW.rect()
 		expanded = baseRect.marginsAdded(QtCore.QMargins(10, 10, 10, 10))
 		self.setRect(expanded)
+
+		self.typeText.setPos(expanded.right() + 3, 3)
 
 	def boundingRect(self)->QtCore.QRectF:
 		#return QtCore.QRectF(0, 0, 50, 50)

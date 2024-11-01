@@ -122,16 +122,34 @@ class Adaptor:
 
 		dispatchInit allows shorthand to get the right adaptor type initialised on the
 		argument, eg Pathable([1, 2, 3]) returns a ListPathable wrapping that list
+
+		catch the braindead case where a base class init-dispatches to itself, as a default -
+		kwarg __isDispatched denotes the second run of this function
 		"""
 		#log(f"Adaptor.__new__({cls, args, kwargs})")
-		if cls.dispatchInit and not cls.forTypes:
+
+		# if this __new__ has dispatched to its own type, just return it
+		isDispatched = kwargs.pop("__isDispatched", False)
+		if isDispatched:
+			return object.__new__(cls)
+		#if cls.dispatchInit and not cls.forTypes:
+		if cls.__dict__.get("dispatchInit"): # dispatch only if dispatchInit is explicitly declared on this class
 			# type coercion if argument is already this adaptor, just returns it
-			if isinstance(args[0], cls): return args[0]
+			# excuse me _w_h_a_t_
+			# TODO: do not do this
+			if isinstance(args[0], cls): return args[0] #this shouldn't be put here at all
+			"""opening third eye and trying to have empathy with past ed (difficult),
+			I think this was to catch the case of explicitly giving the type to initialise,
+			so MySpecialisedAdaptor(args) is guaranteed to return MySpecialisedAdaptor, not
+			dynamically dispatch to a sibling type
+			but even to do that, it should be issubclass, not isinstance?
+			fool 
+			"""
 
 			adaptorType = cls.adaptorForType(type(args[0]))
 			assert adaptorType, f"No adaptor type {cls} for type {type(args[0])}"
 			#return adaptorType(*args, **kwargs)
-			return adaptorType.__new__(adaptorType, *args, **kwargs)
+			return adaptorType.__new__(adaptorType, *args, __isDispatched=True, **kwargs)
 		return object.__new__(cls)
 	# endregion
 

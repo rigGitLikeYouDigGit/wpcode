@@ -59,6 +59,7 @@ class ChimaeraView(WpCanvasView):
 		return self.nodePaletteLine
 
 	def _onNodePaletteReturnPressed(self):
+		from .node import NodeDelegate
 		s = self.nodePaletteLine.value()
 		self.nodePaletteLine.hide()
 		self.nodePaletteLine.clear()
@@ -81,7 +82,12 @@ class ChimaeraView(WpCanvasView):
 		# for new objects
 		# move node to under cursor
 		delegates = self.scene().delegatesForObj(node)
-		delegates[0].setPos(self.mapToScene(self._getMousePosForObjCreation()))
+		# get the delegate for the node (assume it's the first one)
+		log("DELEGATES", delegates)
+		nodeDelegate = next(i for i in delegates if isinstance(i, NodeDelegate))
+		log("delegate type", nodeDelegate, nodeDelegate.node)
+
+		nodeDelegate.setPos(self.mapToScene(self._getMousePosForObjCreation()))
 		# TODO: later implement Houdini behaviour if you already have a node selected -
 		#   connect that node's main output to the new node's input
 

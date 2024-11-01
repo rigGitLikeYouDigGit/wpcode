@@ -132,6 +132,49 @@ class _ReactPatchTracker:
 			}
 		}
 
+class QtWidget:
+
+	def setName(self, s):
+		"""a normal imperative object method, as god intended"""
+
+def wrapFn(fn:T.Callable):
+	"""sketch to watch rx values implicitly when passed
+	still to early to implement everywhere, but consider it for the future
+
+	if called with all
+	"""
+	rxFn = rx(fn)
+	fn.rx = rxFn
+	@functools.wraps(fn)
+	def _reactiveFn(*args, **kwargs):
+		liveArgs = False
+		for i in args:
+			if isinstance(i, liveT):
+				liveArgs = True
+				rx(i).rx.watch(lambda *_ : fn(*EVALA(*args), **EVALK(**kwargs)),
+				               onlychanged=False)
+		for k, v in kwargs:
+			if isinstance(v, liveT):
+				liveArgs = True
+				rx(v).rx.watch(lambda *_ : fn(*EVALA(*args), **EVALK(**kwargs)),
+				               onlychanged=False)
+		#### TODO:
+		###     check that the above doesn't work,
+		#       fires function for every live argument
+
+		if not liveArgs: # just a function call
+			return fn(*args, **kwargs) # just an innocent function call
+
+		rxFn(*args, **kwargs)
+	return _reactiveFn
+
+"""
+is there a world where we try and do some kind of static analysis on
+functions, to find if they rely on object attributes that could be
+reactive?
+
+"""
+
 def WRAP_MEMBERS(obj): # good idea
 	return _ReactPatchTracker.wrap(obj)
 

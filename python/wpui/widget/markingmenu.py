@@ -9,13 +9,18 @@ import typing as T
 from dataclasses import dataclass
 from collections import defaultdict
 from wplib.sequence import resolveSeqIndex, iterWindow, flatten
-from tree.lib import colour
 
-from tree.ui.graphics.segment import RingSegment, SegmentData
+from wpui.widget.canvas.segment import RingSegment, SegmentData
 
+"""honestly, past ed was cooking with this one
+
+TODO: some way to scale the segments to get Mass Effect-style squished circles, 
+always loved the look of those
+"""
 
 class MarkDirection(IntEnum):
 	"""enum constants for what angle different options should appear
+	TODO: replace with simple integers
 	"""
 	North = 0
 	NorthEast = 1
@@ -200,8 +205,9 @@ class MarkSegment(RingSegment):
 		change colour if mouse is over it"""
 		#print("paint")
 		random.seed()
-		fillCol = QtGui.QColor(*colour.normalisedToInt(self.markData.rgba))
-		mouseOverFillCol = QtGui.QColor(*colour.normalisedToInt(self.markData.rgbaMouseOver)) if self.markData.rgbaMouseOver else fillCol.lighter(40)
+		fillCol = QtGui.QColor.fromRgbF(*self.markData.rgba)
+		mouseOverFillCol = QtGui.QColor.fromRgbF(*(self.markData.rgbaMouseOver
+			if self.markData.rgbaMouseOver else fillCol.lighter(40)))
 
 		#print("under mouse", self.isUnderMouse())
 		if self.isUnderMouse(): # emit mouse enter / exit events

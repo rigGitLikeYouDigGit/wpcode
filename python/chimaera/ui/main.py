@@ -9,7 +9,7 @@ from wpdex.ui.atomic import AtomicWidget
 from chimaera.node import ChimaeraNode
 from chimaera.ui.scene import ChimaeraScene
 from chimaera.ui.view import ChimaeraView
-from chimaera.ui.node import NodeDelegate, ReactLineEdit
+from chimaera.ui.node import NodeDelegate
 
 
 class ChimaeraWidget(QtWidgets.QWidget, AtomicWidget
@@ -51,45 +51,6 @@ def showW():
 	#log(delegate.nameLine.text())
 	w.scene().addItem(delegate)
 	return w
-	from param import rx, bind
-
-	t = Tree("testTree")
-	p = WpDexProxy(t)
-	ref = p.ref("@N")
-	# log("ref", ref, ref.rx.value)
-	# p.name = "2ND NAME"
-	# log("after rename", ref, ref.rx.value)
-	w = ReactLineEdit(text=ref)
-
-	#printFn = lambda *a, **kwargs: log("WATCHED", a, kwargs)
-	#ref.rx.watch()
-	ref.rx.watch(fn=(printFn),
-	             onlychanged=True,
-	             #queued=True,
-	             #precedence=1
-	             )
-
-	"""onlychanged just isn't passed through to the watcher machinery in rx,
-	and there's some weird treatment of kwargs that stops me from adding it easily.
-	going with a hacky dirty argument in the ref for now
-	"""
-
-	# bind(printFn,
-	#      ref.rx._reactive,
-	#      #ref.rx,
-	#      watch=True)
-
-	#p.name = "3RD NAME"
-	# from param.display import _display_accessors, _reactive_display_objs
-	# print("final display accessors", _display_accessors)
-	# print("final display objs", _reactive_display_objs)
-
-	#ref.WRITE("eyyyyy")
-
-	#raise
-	w.show()
-	return w
-
 
 if __name__ == '__main__':
 	app = QtWidgets.QApplication()

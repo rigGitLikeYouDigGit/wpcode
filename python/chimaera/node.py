@@ -42,7 +42,8 @@ node.value.resolved? node.value.incoming?
 I guess it's not terrible 
 """
 
-
+#TODO: bring back the super-dynamic-dispatch init for these,
+# we're losing node types in the graphics without it
 
 class ChimaeraNode(Modelled,
                    Pathable,
@@ -195,6 +196,7 @@ class ChimaeraNode(Modelled,
 		nodeType = nodeType or ChimaeraNode
 		name = name or nodeType.typeName()
 		newNode = nodeType.create(name=name)
+		log("newNode", newNode)
 		self.addBranch(newNode, newNode.name)
 		return newNode
 

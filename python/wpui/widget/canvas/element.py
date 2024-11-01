@@ -10,6 +10,7 @@ from PySide2 import QtWidgets, QtCore, QtGui
 #from param import rx
 
 from wplib import log, sequence
+from wplib.object import Signal
 from wptree import Tree
 from wpdex import WpDexProxy
 from wplib.serial import Serialisable
@@ -34,7 +35,7 @@ if T.TYPE_CHECKING:
 class WpCanvasElement(base,
                    # Serialisable
                    ):
-	elementChanged = QtCore.Signal(QtWidgets.QGraphicsItem, int, object)
+	#elementChanged = QtCore.Signal(QtWidgets.QGraphicsItem, int, object)
 	"""
 	base class for moveable, selectable items in canvas
 	for ease, we don't disagree with the normal selection system
@@ -46,10 +47,17 @@ class WpCanvasElement(base,
 		for view, allow pinning to edges, etc, setting offset from edges, corners
 	"""
 
+	def __hash__(self):
+		return id(self)
 
 	def __init__(self,
-	             scene:WpCanvasScene):
-
+	             #scene:WpCanvasScene=None,
+	             obj=None):
+		"""use "obj" to denote a drawn delegate for a "real" python
+		object"""
+		self.obj = obj
+		# can't use proper QT signals since graphicsItems aren't QObjects
+		self.elementChanged = Signal("elementChanged")
 		pass
 
 	def itemChange(self, change, value):

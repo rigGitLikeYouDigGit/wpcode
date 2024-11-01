@@ -218,3 +218,19 @@ def classCallables(cls, dunders=True):
 			if any((dunders, not attrName.startswith("__"))):
 				methodNames.append(attrName)
 	return methodNames
+
+if __name__ == '__main__':
+
+	class Base:
+		at = 3
+		baseAt = "ey"
+
+	class Leaf(Base):
+		at = 5
+
+	log(Leaf.__dict__)
+	log(mroMergedDict(Leaf))
+	log(mroMergedDict(Leaf)["baseAt"])
+
+
+
