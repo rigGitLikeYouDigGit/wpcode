@@ -186,10 +186,17 @@ class LabelWidget(QtWidgets.QWidget):
 		self.setSizePolicy(expandPolicy)
 		self.layout().setContentsMargins(0, 0, 0, 0)
 
-class NodeDelegate(QtWidgets.QGraphicsItem,
-                   WpCanvasElement,
-                   Adaptor):
-	"""node has:
+class NodeDelegate(
+	QtWidgets.QGraphicsItem,
+    WpCanvasElement,
+	Adaptor,
+):
+	"""
+	TODO: QT does not like metaclasses at all -
+		for now we can't do init dispatch on delegate - oh well
+		in future, see if there's a sane way to resolve this
+
+	node has:
 	- input tree of structures, widgets and plugs
 	- central widgets for name, type, settings etc
 	- output tree of structures, widgets and plugs
@@ -213,7 +220,7 @@ class NodeDelegate(QtWidgets.QGraphicsItem,
 	"""
 	adaptorTypeMap = Adaptor.makeNewTypeMap()
 	forTypes = (ChimaeraNode, )
-	dispatchInit = True
+	dispatchInit = False # needs
 	if T.TYPE_CHECKING:
 		def scene(self)->ChimaeraScene: pass
 
@@ -261,6 +268,7 @@ class NodeDelegate(QtWidgets.QGraphicsItem,
 		#TODO: later on, allow changing nodetype in-place by right-clicking
 		self.typeText = QtWidgets.QGraphicsSimpleTextItem(self.node.typeName(), parent=self)
 		self.typeText.setPen(QtGui.QPen(QtGui.QColor.fromRgbF(1.0, 1.0, 1.0, 0.5)))
+		self.typeText.setBrush(QtGui.QBrush(QtGui.QColor.fromRgbF(1.0, 1.0, 1.0, 0.5)))
 
 
 		self.nameLine = LabelWidget(

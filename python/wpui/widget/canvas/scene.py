@@ -97,6 +97,7 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 		item.elementChanged.connect(self._onItemChanged)
 		self.objDelegateMap[item.obj].add(item)
 		log("after addItem", item, item.obj)
+		return item
 
 	def removeItem(self, item):
 		#if getattr(item, "elementChanged", None):

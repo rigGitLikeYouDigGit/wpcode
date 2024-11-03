@@ -2,6 +2,8 @@ from __future__ import annotations, print_function
 
 import types
 import typing as T
+import inspect
+from ordered_set import OrderedSet
 
 from wplib import log
 from wplib.sentinel import Sentinel
@@ -22,11 +24,20 @@ def clsSuper(cls:type)->type:
 
 class RichNotImplementedError(NotImplementedError):
 	"""subclass of NotImplementedError, giving more description
-	on exactly where it was raised, and from which type"""
-	pass
+	on exactly where it was raised, and from which type
+
+	... is there a reason to not just pass NotImplementedError( self )
+	and print that?
+
+	if it's not ridiculously overcomplicated,
+	how am I supposed to validate myself
+	"""
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.callFrame = inspect.currentframe().f_back
 
 
-def leafParentBases(*desiredBases:tuple[type])->list[type]:
+def leafParentBases(*desiredBases:tuple[type])->tuple[type, ...]:
 	"""given selection of superclasses to inherit from,
 	return the actual bases to pass, to generate working mro
 
@@ -34,12 +45,25 @@ def leafParentBases(*desiredBases:tuple[type])->list[type]:
 
 	super temp for now, come back and make this work properly if needed
 	"""
-	#mainSeq = set(desiredBases[0].__mro__)
-	resultBases = {desiredBases[0]}
+	#resultBases = {desiredBases[0]}
+	resultBases = OrderedSet((desiredBases[0], ))
 	for secondaryBase in desiredBases[1:]:
 		resultBases -= set(secondaryBase.__mro__)
 		resultBases.add(secondaryBase.__mro__[0])
-	return resultBases
+	return tuple(resultBases)
+
+def resolveInheritedMetaClass(*realBases:T.Sequence[type])->type[type]:
+	"""given a list of "real" parent classes to inherit
+	from, resolve a metaclass that inherits from any
+	metaclasses defined in those bases"""
+	# only get custom defined metaclasses
+	metaBases = [type(i) for i in realBases if i is not type]
+	if not metaBases: return type # no metaclass at all
+
+	metaLeaves = leafParentBases(*metaBases)
+	genName = f"GEN_META({metaLeaves})"
+	return type(genName, metaLeaves, {})
+
 
 
 def containsSuperClass(classSeq:T.Sequence[type], lookup:(type, object))->(type, None):

@@ -12,7 +12,7 @@ for now we only do top-level stuff and convenience inits
 SHOULD we do purely functional? muddies the water if we 
 can guarantee subclasses in some places, and some not
 """
-
+from . import arrT
 
 class _RealisticInfoArray(np.ndarray):
 	"""copied from np docs as reference"""
@@ -62,10 +62,10 @@ class Line(np.ndarray):
 		obj = np.asarray(np.array(vals, dtype=float)).view(cls)
 		return obj
 
-def v3(*args):
+def v3(*args)->arrT:
 	vals = args[0] if isinstance(args[0], (tuple, list, np.ndarray)) else args[:3]
 	return np.array(vals, dtype=float)
-def line(*args):
+def segmentFromPoints(*args)->arrT:
 	i = 0
 	vals = []
 	while i < len(args):
@@ -73,24 +73,57 @@ def line(*args):
 		vals.append(args[i])
 		i += 1
 	return np.array(vals, dtype=float)
-lineFromPoints = line
-def lineFromDir(dir:v3,
+#lineFromPoints = line
+def segmentFromDir(dir:v3,
 				origin:v3=(0, 0, 0),
                 t0:float=0,
                 t1:float=1,
                 *args
-                ):
+                )->arrT:
 	"""try to find the most fluid, ergonomic
 	order of arguments here"""
-	dir = np.array(dir)
-	origin = np.array(origin)
 	return np.array([origin + dir * t0,
 	             origin + dir * t1])
 
+def infLineFromDir(dir:v3,
+                   origin:v3=np.array(0, 0, 0)):
+	"""convert to form [a, b, c, d]
+	for aX + bY + cZ = d"""
+	return np.array([dir, origin])
 
-# lineFromDir((1, 1, 0),
-#             origin=())
+def distanceFromInfLine(segment,
+                        pos:v3=np.array(0, 0, 0)):
+	"""expect line as [pt1, pt2]
+	to a point p0 (from wolframAlpha)"""
+	return np.linalg.norm( np.cross(pos - segment[0], pos - segment[1])) / \
+			np.linalg.norm( segment[2] - segment[1] )
 
+
+def posOnSegment(segment:arrT,
+                   t:float=0.0):
+	return (1.0 - t) * segment[0] + t * segment[1]
+
+def closestPosOnSegment(segment:arrT,
+                        pos:v3=np.array((0, 0, 0))):
+	#nul = np.zeros(3)
+	v = segment[1] - segment[0]
+	u = segment[0] - pos
+	t = - np.dot(v, u) / np.dot(v, v)
+	if (0.0 <= t) and ( t <= 1.0):
+		return posOnSegment(segment, t)
+	return segment[int(np.linalg.norm(pos - segment[0]) >
+	                   np.linalg.norm(pos - segment[1]))]
+
+def closestParamOnSegment(segment:arrT,
+                        pos:v3=np.array((0, 0, 0))):
+	#nul = np.zeros(3)
+	v = segment[1] - segment[0]
+	u = segment[0] - pos
+	t = - np.dot(v, u) / np.dot(v, v)
+	if (0.0 <= t) and ( t <= 1.0):
+		return t
+	return int(np.linalg.norm(pos - segment[0]) >
+	                   np.linalg.norm(pos - segment[1]))
 
 
 if __name__ == '__main__':

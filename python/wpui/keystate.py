@@ -15,6 +15,10 @@ class KeyState(object):
 
 	 TODO: the bool refs as keys is quite readable in code but we're missing
 	    robust ways of associating the string name of a key, its value and its qt constant
+
+	TODO: should we have a method to clear the keystate, to stop old data
+		if you hover-leave a region and then hover-enter it again at a different
+		point?
 	 """
 
 	class _BoolRef(object):
@@ -87,10 +91,17 @@ class KeyState(object):
 		}
 
 		# test - register functions to be called when key is pressed
+		# TODO: REALLY don't think this should be here, set up signals on the object if needed
+		#   but this should not own functions
 		self.keyFunctionMap :dict[QtCore.Qt.Key, set[T.Callable]] = defaultdict(set)
 
 		self.lastPressed = set()
 		self.lastReleased = set()
+
+	def reset(self):
+		functionMap = self.keyFunctionMap
+		self.__init__() # i feel powerful
+		self.keyFunctionMap.update(functionMap)
 
 	def initialiseMouseTrackList(self, neutralPos=None)->list[QtCore.QPoint]:
 		pos = neutralPos or QtCore.QPoint()

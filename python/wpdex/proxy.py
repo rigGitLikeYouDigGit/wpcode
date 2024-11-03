@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import pprint, copy, weakref
+import types
 import typing as T
 from collections import defaultdict
 from dataclasses import dataclass
@@ -251,7 +252,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 			self._proxyData["wpDex"] = wpDex
 		else:
 			dexCls = WpDex.adaptorForObject(obj)
-			log("dexCls", dexCls, obj)
+			#log("dexCls", dexCls, obj)
 			self._proxyData["wpDex"] = WpDex(obj)
 			# link parent dex if given
 
@@ -410,7 +411,10 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		if foundDex:
 			if self._proxyData["externalCallDepth"] == 0:
 
-				toReturn = WpDexProxy(toReturn, wpDex=foundDex)
+				#NB: for now as a special case, we don't wrap returned types or functions
+				# it gets very messy, and there's not a use case yet
+				if not isinstance(toReturn, (type, types.FunctionType)):
+					toReturn = WpDexProxy(toReturn, wpDex=foundDex)
 				#log("returning proxy", toReturn)
 
 		return toReturn

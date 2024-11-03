@@ -106,6 +106,13 @@ def wrapEval(fn):
 	return _evalArgsKwargs
 
 
+# if we had some medium short-hand way to declare attributes on init?
+
+class LiveAttr:
+	"""like an instance descriptor? idk
+	need to avoid double-declaration
+	"""
+
 class _ReactPatchTracker:
 	"""
 	TODO: this is for later, get the more verbose stuff working for now

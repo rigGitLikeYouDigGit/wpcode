@@ -73,7 +73,9 @@ class ChimaeraScene(WpCanvasScene):
 
 
 		for node in nodesToMatch:
-			newDel = self.addItem(NodeDelegate(node))
+			#log("get delegate for", node, type(node))
+			delegateType = NodeDelegate.adaptorForObject(node)
+			newDel = self.addItem(delegateType(node))
 			#TODO: support node delegate creating its own secondary elements
 
 

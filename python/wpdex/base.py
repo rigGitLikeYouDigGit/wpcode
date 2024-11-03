@@ -106,7 +106,8 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 
 	def __init__(self, obj:T.Any,
 	             parent:WpDex=None,
-	             name:T.Iterable[DexPathable.keyT]=None,
+	             #name:T.Iterable[DexPathable.keyT]=None,
+	             name:Pathable.keyT=None,
 	             **kwargs):
 		"""initialise with object and parent"""
 		# superclass inits
@@ -376,8 +377,8 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 			try:
 				#liveDex : WpDex = self.access(self, basePath, values=False)
 				liveDex : WpDex = liveRoot.access(liveRoot, basePath, values=False)
-			except KeyError as e: # if a path is missing
-				log("keyError", )
+			except (KeyError, Pathable.PathKeyError) as e: # if a path is missing
+				#log("keyError", )
 				#raise e
 				deltas[basePath] = {"remove" : basePath}
 				continue

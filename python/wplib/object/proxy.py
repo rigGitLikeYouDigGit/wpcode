@@ -456,6 +456,7 @@ class Proxy(#ABC,
 
 		clsType = ProxyMeta
 
+
 		# proxying things like bools and ints is useful for persistence,
 		# but precludes the more complex proxy wrapping and typing -
 		# inherit directly from Proxy in these cases
@@ -466,12 +467,21 @@ class Proxy(#ABC,
 		# 	testType = clsType("test", bases, {})
 		# except TypeError:
 		# 	bases = (cls, )
+		clsType = inheritance.resolveInheritedMetaClass(*bases)
 
 		# generate new type inheriting from all relevant bases
+		newTypeName = "{}({})".format(cls.__name__, targetCls.__name__)
 		try:
-			newCls = clsType("{}({})".format(cls.__name__, targetCls.__name__),
+			newCls = clsType(newTypeName,
 			                 bases,
 			                 namespace)
+		except TypeError as e:
+			log("error creating type - check metaclasses")
+			for i in bases:
+				log("base", i)
+				log("   mro", i.__mro__)
+				log("   meta", [type(n) for n in i.__mro__])
+			raise e
 		except Exception as e:
 			log("error creating proxy class", cls, targetCls)
 			log("bases", bases)

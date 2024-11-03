@@ -95,6 +95,10 @@ class ClassMagicMethodMixin(object,
 	def __class_instancecheck__(cls, other)->bool:
 		#print("instance check", cls, other)
 		return type.__instancecheck__(cls, other)
+
+	@classmethod
+	def __class_bool__(cls)->bool:
+		return True
 	# #
 	# @classmethod
 	# def __class_add__(cls, other):

@@ -86,7 +86,7 @@ class IdemWidget(QtWidgets.QWidget):
 			allowMultiple=False,
 			)
 
-		self.dccPalette = QtWidgets.QLabel("liveDccs go here", parent=self)
+		self.dccPalette = QtWidgets.QLabel("live DCCs go here", parent=self)
 
 		self.scriptW = ScriptWidget(parent=self)
 
