@@ -406,6 +406,8 @@ class TreeInterface(Pathable,
 	def _consumeFirstPathTokens(self, path: pathT, **kwargs) ->tuple[list[Pathable], pathT]:
 		#log("tree consume tokens", path, kwargs)
 		token, *path = path
+		if not token:
+			return [self], path
 		# check if branch is directly found - return it if so
 		found = self._branchFromToken(token)
 		if found:
@@ -810,7 +812,7 @@ class TreeInterface(Pathable,
 		return self.copy(copyUid=False)
 	# 	return self.deserialise(copy.deepcopy(self.serialise()))
 
-	def copy(self, copyUid=False, toType=None, usePickle=False, useDeepcopy=False):
+	def copy(self, copyUid=False, toType=None, usePickle=False, useDeepcopy=False)->TreeInterface:
 		"""preserveUids is super dangerous as it leads to multiple elements having
 		the same uid - leave this false unless you know what you're doing"""
 		targetType = toType or type(self)

@@ -24,6 +24,7 @@ from wpdex import *
 
 
 from chimaera.lib import tree as treelib
+from chimaera.attr import newAttributeData, NodeAttrWrapper, NodeAttrRef
 
 
 
@@ -36,7 +37,7 @@ QA:
 Why don't we just have each tree be a node directly, and store all attributes as its value?
 Why use the double layer ->tree->"nodes"->tree->"nodes" ?
 because then to get a node's value, you would do node.value.value, or similar
-node.value.resolved? node.value.incoming?
+node.value.resolved? node.value.linking?
 I guess it's not terrible 
 
 node.data gives the core tree node - graph code shouldn't directly touch this
@@ -49,19 +50,93 @@ everything resolved and eval'd
 OR:
 we use attribute names to tell - 
 @S - settings
-@P - parent
 @M - memory
-@I - incoming
+@F - flow (main graph data)
 
 
+don't use the word "data", no one will know what it's referring to
 
-node initialisation again - 
-for now, only do dynamics on base chimaeraNode class
+graph               : root
+	subgraph        : root
+		leaf node   : root
+						|- @S
+						|- @M
+						|- @F
+
+but with THIS system, any nodes that generate other nodes need to reach back
+across the value divide to modify graph structure
+maybe that's ok 
+
+IN GENERAL, define OVERRIDES at point of USE,
+not point of CREATION
+a node in principle should not know how its data will be used, and 
+should not modify its own output to suit subsequent nodes in graph
+(this can be bent but it seems good to keep complexity manageable)
+
+-----
+each attribute stores 2 trees 
+2 STAGES of filtering data
+"INCOMING" - tree of lists of references to other nodes or expressions of nodes;
+			by default the first input of the root points to T, 
+			takes the node type's default input
+final INCOMING tree defines all real node connections (maybe also with refmap / blackboard) 
+
+"OVERRIDE" - tree of manually-defined overrides over the linking tree VALUES
+	Q: why not call it "defined" ? 
+	A: because linking entries are also defined manually, override tree
+		only affects resolved values in data
+final OVERRIDE tree defines linking VALUES passed to COMPUTE
+
+maybe later a "POST" stage, but that gets complicated if we want to change both structure
+and values of the output data
+the expected solution here is to just use a subsequent node to rearrange data in that
+node's linking and override steps
+
+
+RESOLVE INCOMING CONNECTIONS:
+tree starts out with simple string values - list expressions, uids, etc
+
+root : [ "T" ]
+	+ trunk : [ "uid", "n:ctl*nodes", "uid.S[branch, leaf]" ]
+		+ branch : [ "n:overrideNode"[trunk, branch, leaf] ]
+
+expand all node expressions
+resolve to tree[list[tuples]] of (node uid, attribute, path)
+
+root : [ ("T", "value", ()) ]
+	+ trunk : [ ("uid", "value", ()), 
+					(ctlA uid, "F", ()),
+					(ctlB uid, "F", ()),
+					(other uid, "S", ("branch", "leaf")),
+					 ]
+		+ branch : [ (overrideNode uid, "value", ("trunk", "branch", "leaf")) ]
+
+resolve THAT tree top-down, with lists resolving from left to right
+
+root : [ type default value tree ]
+	+ trunk : composite root value
+		+ (composite tree from ctlA, ctlB, other)
+		+ branch : overrideNode["trunk", "branch", "leaf"]
+			+ (composite tree from overrideNode["trunk", "branch", "leaf"])
+			
+overlay those trees into final linking,
+then apply OVERRIDE
+
+then apply COMPUTE to get output
+
+node initialisation dynamically gets node type for data
 ChimaeraNode(data) -> the best fitting node type for that data
+
+there is no good way to separate graph structure from param data, since evaluating params 
+may generate new nodes, and nodes are saved as overrides on parent data
 
 """
 
-
+def getEmptyNodeAttributeData(name: str, linking=("T", ), defined=())->Tree:
+	t = Tree(name)
+	t["linking"] = list(linking)
+	t["override"] = list(defined)
+	return t
 
 class ChimaeraNode(Modelled,
                    Pathable,
@@ -71,26 +146,6 @@ class ChimaeraNode(Modelled,
                    ):
 	keyT = Pathable.keyT
 	pathT = Pathable.pathT
-
-	@classmethod
-	def dataT(cls):
-		"""return type for modelled data
-		TODO: later, allow this to be a combination of types,
-			or a structural condition"""
-		return Tree
-
-	data : Tree | WpDexProxy
-
-	@classmethod
-	def newDataModel(cls, name="node",
-	                 value=None,
-	                 aux=None
-	                 ) ->dataT():
-		t = Tree(name=name, value=value,
-		         )
-		t["@S", "T"] = cls.typeName()
-		#t.addBranch( Tree("nodes") ) #TODO: replace with the crazy incoming/defined etc
-		return t
 
 	nodeTypeRegister : dict[str, type[ChimaeraNode]] = {}
 
@@ -129,26 +184,359 @@ class ChimaeraNode(Modelled,
 				return
 			cls.registerNodeType(cls)
 
+	@classmethod
+	def dataT(cls):
+		"""return type for modelled data
+		TODO: later, allow this to be a combination of types,
+			or a structural condition"""
+		return Tree
+
+	data : Tree | WpDexProxy
+
+	#region tree attributes
+	@classmethod
+	def newDataModel(cls, name="node",
+	                 value=None,
+	                 aux=None
+	                 ) ->dataT():
+		"""return the base data spine for a chimaera node
+		since the type might be dynamic, place that first in tree
+
+		"@T" defers to the default tree for that data, defined at
+		class level and passed in on node evaluation -
+		this way we only save deviations from the default
+		"@T" will always be eval'd by the logic in ChimaeraNode
+		"""
+		t = Tree(name=name, value=value,
+		         branches=(
+		#t["@S", "T"] = cls.typeName()
+		#t.value = Tree(name="V", value=Non
+			#newAttributeData(name="@T", linking=(), override=(cls.typeName(), )), # type
+			Tree("@T", value=None, branches=( # no hierarchy needed to resolve single type
+				Tree("linking", value=()),
+				Tree("override", value=(cls.typeName(), ))
+			)),
+			newAttributeData(name="@S", linking=("T", )), # settings
+			newAttributeData(name="@F", linking=("T", )), # flow
+			newAttributeData(name="@M", linking=("T", )), # memory
+			newAttributeData(name="@NODES", linking=("T", )), # child nodes
+		         ))
+		return t
+
+	@classmethod
+	def defaultIncomingDataForAttr(cls, attrName:str, forNode:ChimaeraNode)->Tree:
+		"""return the 'base state' to use for overlaying a node's overrides
+		during evaluation
+		OVERRIDE here"""
+		if attrName == "@S" : return cls.defaultSettings(forNode)
+		if attrName == "@M" : return cls.defaultMemory(forNode)
+		if attrName == "@F" : return cls.defaultFlow(forNode)
+		if attrName == "@NODES" : return None # special case
+		return Tree("root")
+	@classmethod
+	def defaultSettings(cls, forNode:ChimaeraNode)->Tree:
+		"""OVERRIDE to give the default parametre tree that this node will
+		draw from"""
+		return Tree("root")
+	@classmethod
+	def defaultMemory(cls, forNode:ChimaeraNode)->Tree:
+		"""OVERRIDE to give default format for any dense data this node
+		needs to store on file
+		TODO: do we give each node a separate storage file for this,
+			so we can copy data and structure independently between
+			assets?"""
+		return Tree("root")
+	@classmethod
+	def defaultFlow(cls, forNode:ChimaeraNode)->Tree:
+		"""OVERRIDE
+		this gives the default 'output' data that this node takes in to compute
+		compute"""
+		return Tree("root")
+
+
+	# move all the methods for computing stages of attributes here
+	# all of these work in place, so copy data at the start of your operation
+	"""we end up with a lot of class methods, but this seems better than coupling
+	each step straight to a library module.
+	Also possible we could break up the objects more into an "attribute resolver"
+	and the main node? 
+	overcomplicated for now
+	
+	absolutely no idea if these should be instance or class methods - 
+	going instance for now. sorry in advance to future ed
+	
+	"""
+	# @classmethod
+	# def resolveNodes(cls, expList:list[str], graph:ChimaeraNode):
+	# 	return wplib.sequence.flatten(cls)
+
+		# def resolveNodes(exp: str,
+		#                  graph: ChimaeraNode,
+		#                  fromNode: ChimaeraNode = None) -> list[ChimaeraNode]:
+		# 	"""resolve a list of node expressions to nodes
+		# 	for now just uids
+		#
+		# 	this doesn't add the node Type object for a "T" expression
+		# 	"""
+		# 	results = []
+		# 	for i in exp:
+		# 		# if i == "T":
+		# 		# 	results.append(fromNode)
+		# 		# 	continue
+		# 		results.extend(graph.getNodes(i))
+		# 	return graph.getNodes(exp)
+
+	def resolveNodeExp(self, expStr:str)->tuple[str, str, Pathable.pathT]:
+		"""return
+		(node.uid, attrName, path in attribute)
+		from expression"""
+
+	def _expandLinkingTree(self, linkingTree: Tree,
+	                       # #attrWrapper: NodeAttrWrapper,
+	                       # parentNode: ChimaeraNode,
+	                       # graph: ChimaeraNode=None
+	                       ) -> None:
+		"""expand the linking tree for this attribute -
+
+		filtering actual tree with path requires explicitly
+		defining tree to use - ".p[branch, leaf]" etc
+		if .p or .v is not defined, will slice nodes found by
+		uid matching
+
+		STILL need a general solution to evaluate normal python code
+		within these that RESOLVES to a node expression, path etc
+
+		path is always () for now, get back to it later
+
+		use THIS tree to determine node dependencies
+
+		left side always resolves to nodes, midpoint always to an attr name,
+		right side always to a tree path within that attribute
+
+		TODO: we list nodes here, only keep their uids, then list again in populateExpandedTree
+
+		return tree[list[tuple[
+			str node uid,
+			str attribute,
+			tuple[str] path
+			]]]"""
+		# assert graph
+		for branch in linkingTree.allBranches(includeSelf=True):
+			rawValue: list[NodeAttrRef] = branch.value
+			if rawValue is None:
+				branch.value = []
+				continue
+			if not isinstance(rawValue, list):
+				rawValue = [rawValue]
+			resultTuples: list[NodeAttrRef] = []
+			# log("raw value", rawValue)
+			for exp in rawValue:  # individual string expressions
+
+				# expand node lists to individual uids
+				# print("EXPAND", i, i == "T",  i[0] == "T" if isinstance(i, tuple) else False)
+				if exp == "T":
+					resultTuples.append(NodeAttrRef("T", linkingTree.name, ()))
+					continue
+				if isinstance(exp, tuple):
+					if not exp: continue
+					if (exp[0] == "T"):
+						resultTuples.append(NodeAttrRef("T", linkingTree.name, exp[2]))
+						continue
+
+				if isinstance(exp, str):
+					# get the node uid, don't worry about anything else
+					resultTuples.append(NodeAttrRef(exp, "@F", ()))
+				if not isinstance(exp, tuple):
+					raise NotImplementedError("can't do expressions yet")
+				resultTuples.append(NodeAttrRef(*exp))
+				# separate nodes / node terms from path if given
+				# refs = [NodeAttrRef(node.uid, node.attr, node.path)
+				#         for node in self.parent.access(
+				# 		self.parent, i, )]
+				#resultTuples.extend(refs)
+
+			branch.value = resultTuples
+
+	def _populateExpandedLinkingTree(self, expandedTree:Tree):
+		# def populateExpandedTree(expandedTree: Tree[list[NodeAttrRef]],
+		#                          attrWrapper: NodeAttrWrapper,
+		#                          parentNode: ChimaeraNode,
+		#                          graph: ChimaeraNode) -> Tree:
+		"""populate the expanded tree with rich trees -
+		expand each node attr ref into a rich tree"""
+
+		for branch in expandedTree.allBranches(includeSelf=True):
+			newValue = []
+			for ref in branch.value:  # type:NodeAttrRef
+				# log("populateExpandedTree", i, i.uid)
+
+				if ref.uid == "T":
+					newValue.append(self.defaultIncomingDataForAttr(
+						expandedTree.name, self))
+					continue
+				# look at this beautiful line
+				#newValue.append(self.parent.getNodes(i.uid)[0]._attrMap[i.attr].resolve()[i.path])
+				foundNode : ChimaeraNode = self.parent.access(
+					self.parent, ref.uid, one=True, values=False,
+					uid=True
+				)
+				if not foundNode: continue
+				newValue.append(
+					foundNode.resolveAttribute(ref.attr)(ref.path)
+				)
+
+			branch.value = newValue
+
+	def _collatePopulatedTree(
+			self,
+			populatedTree: Tree[list[Tree]])->Tree:
+		"""overlay the populated tree -
+		overlay each tree in populated branch value, left to right
+		then for any child branches in populated tree,
+		overlay the result branch at that path with the overlaid result
+		"""
+		resultTree = Tree(populatedTree.name)
+		for populatedBranch in populatedTree.allBranches(includeSelf=True,
+		                                                 depthFirst=True,
+		                                                 topDown=True):
+			address = populatedBranch.address(
+				includeSelf=True, includeRoot=False, uid=False)
+			# log(address)
+			resultBranch = resultTree(
+				address,
+				create=True)
+			for i in populatedBranch.value:
+				resultBranch = treelib.overlayTreeInPlace(resultBranch, i,
+				                                          mode="union")
+		return resultTree
+
+	# @classmethod
+	# def _resolveAttrTrees(cls, linkingTree:Tree, overrideTree:Tree=None)->Tree:
+	#
+	# 	self._expandLinkingTree(t)
+	# 	self._populateExpandedLinkingTree(t)
+	# 	self._collatePopulatedTree(t)
+	# 	treelib.overlayTreeInPlace(t, self.type.override().copy())
+	def resolveAttribute(self, attr:(Tree, NodeAttrWrapper, str))->Tree:
+		"""return the resolved tree for this attribute.
+
+		if defined is callable, call it with linking data
+		 and this node.
+		if defined is tree, compose it with linking and
+		eval any expressions
+
+		nodeType defines default behaviour in composition, which may
+		be overridden at any level of tree
+
+		TODO: cache result and maybe the intermediate stages here
+		"""
+
+		#log("RESOLVE")
+		if isinstance(attr, NodeAttrWrapper):
+			atName = attr.name()
+			attr = attr.tree
+		elif isinstance(attr, str):
+			atName = attr
+		elif isinstance(attr, Tree):
+			atName = attr.name
+		else:
+			raise RuntimeError("invalid input to resolve", attr, type(attr))
+
+		if atName == "@T":
+			# each step expanded for easier debugging
+			t = self.type.linking().copy()
+			self._expandLinkingTree(t)
+			self._populateExpandedLinkingTree(t)
+			self._collatePopulatedTree(t)
+			treelib.overlayTreeInPlace(t, self.type.override().copy())
+			return t # TODO: add in the proper stuff for multi-typing?
+				# just as soon as literally one thing makes use of it
+
+		if self.name() == "value":
+			# send to nodeType compute
+			return self.node.compute(
+				self.resolveIncomingTree(
+					self.linkingTreeExpanded()
+				)
+			)
+		if not self.node.parent(): # unparented nodes can't do complex behaviour
+			return self.override()
+		linking = self.resolveIncomingTree(
+			self.linkingTreeExpanded()
+		)
+
+		defined = self.override()
+
+		return treelib.overlayTrees([linking, defined])
+
+	def _consumeFirstPathTokens(self, path: pathT, **kwargs
+	                            ) -> tuple[list[Pathable], pathT]:
+		"""allow looking up by uids"""
+
+		if kwargs.get("uid"):
+			token, *path = path
+			found = ChimaeraNode.getByIndex(token)
+			if found:
+				return [found], path
+			found = Tree.getByIndex(token)
+			if found:
+				return [ChimaeraNode(found)], path
+			raise self.PathKeyError("No uid found for", token, path)
+		return super()._consumeFirstPathTokens(path, **kwargs)
+
+	def computeFlow(self, data: Tree) -> Tree:
+		"""main compute function of data - by default just overlay
+		anything passed in as settings over flow
+
+		linking
+		expanded
+		populated
+		composed
+		overridden
+		-> compute
+		output
+
+		"""
+		return treelib.overlayTrees(
+			[data,
+			 self.resolveAttribute("@S")]
+		)
+
+	def computeSettings(self, data: Tree) -> Tree:
+		return data
+
+	def computeMemory(self, data: Tree) -> Tree:
+		return data
+
+	#endregion
 
 	# region uid registering
 	indexInstanceMap = {} # global map of all initialised nodes
 	@classmethod
 	def getNodeType(cls, s:(ChimaeraNode, Tree, str))->type[ChimaeraNode]:
 		a = 2
+		origS = s
 		if isinstance(s, ChimaeraNode):
-			return cls.getNodeType(s.rawData()["@S", "T"])
+			s = s.resolveAttribute("@T").v
+			if isinstance(s, (tuple, list)):
+				s = s[0]
 		if isinstance(s, str):
 			return cls.nodeTypeRegister.get(s)
 		assert isinstance(s, Tree)
 		# check if tree is settings
-		if s.name == "@S":
-			typeStr = s["T"]
-			log("typeStr", typeStr, s)
-			return cls.nodeTypeRegister.get(s)
-		typeStr = s["@S", "T"]
-		log("typeStr", typeStr, s)
-		return cls.nodeTypeRegister.get(typeStr)
+		if s.name != "@T": # check branches to find a @T entry
+			for b in s.allBranches(includeSelf=False, depthFirst=False):
+				if b.name == "@T":
+					m = b.branchMap()
+					log(m, type(m), m.keys(), "override" in m.keys())
+					s = b.branchMap()["override"]
+					break
+			v = wplib.sequence.firstOrNone(s.value)
+			return cls.nodeTypeRegister.get(v)
 
+		if s.name == "@T":
+			return cls.nodeTypeRegister.get(s.value)
+		raise TypeError("Invalid input to get node type", s, origS)
 
 	@classmethod
 	def _nodeFromClsCall(cls,
@@ -255,12 +643,28 @@ class ChimaeraNode(Modelled,
 		return dict(self.nodeTypeRegister)
 
 	def __init__(self, data:Tree):
-		"""init isn't ever called directly"""
+		"""init isn't ever called directly by user,
+		filtered by __new__ down to simple data tree"""
 		log("Chimaera init", data)
 		assert isinstance(data, Tree)
 		Modelled.__init__(self, data)
-		Pathable.__init__(self, self, parent=None, name=data.name)
 		UidElement.__init__(self, uid=data.uid)
+		# attribute wrappers
+		self.type = NodeAttrWrapper(self.data("@T"), node=self)
+		self.T = self.type
+		self.settings = NodeAttrWrapper(self.data("@S"), node=self)
+		self.S = self.settings
+		self.memory = NodeAttrWrapper(self.data("@M"), node=self)
+		self.M = self.memory
+		self.flow = NodeAttrWrapper(self.data("@F"), node=self)
+		self.F = self.flow
+		self._nodes = NodeAttrWrapper(self.data("@NODES"), node=self)
+
+		Pathable.__init__(self, self, parent=None, name=data.name)
+
+
+
+
 
 	def childObjects(self, params:PARAMS_T) ->CHILD_LIST_T:
 		"""maybe we should just bundle this in modelled
@@ -298,7 +702,7 @@ class ChimaeraNode(Modelled,
 		self.data.setName(name)
 
 	@property
-	def parent(self) -> (Pathable, None):
+	def parent(self) -> ChimaeraNode:
 		"""parent data will be
 
 		parentName :
@@ -379,7 +783,9 @@ if __name__ == '__main__':
 
 	node = CustomType.create()
 	assert node.getNodeType(node) == CustomType
-	assert node.getNodeType(node.data) == CustomType
+	dataT = node.getNodeType(node.data)
+	log("dataT", dataT, type(dataT))
+	assert dataT == CustomType
 	log(node)
 	log(ChimaeraNode.getNodeType(node.data))
 	log(ChimaeraNode(node))

@@ -39,14 +39,6 @@ node uid : node name
 	"storage" : 
 		"root" 
 	
-	
-currently graph structure depth is represented literally in tree data -
-for now is ok
-
-
-need to weaken connection between node wrapper and data - 
-wrapper cannot be cached, since we need to dynamically
-change the node type by string attribute
 
 node.attr("type") -> attribute wrapper
 node(".type") -> attribute wrapper
