@@ -252,8 +252,9 @@ class ChimaeraNode(Modelled,
 		this gives the default 'output' data that this node takes in to compute
 		compute"""
 		return Tree("root")
+	#endregion
 
-
+	# region attribute internals
 	# move all the methods for computing stages of attributes here
 	# all of these work in place, so copy data at the start of your operation
 	"""we end up with a lot of class methods, but this seems better than coupling
@@ -394,6 +395,25 @@ class ChimaeraNode(Modelled,
 		overlay each tree in populated branch value, left to right
 		then for any child branches in populated tree,
 		overlay the result branch at that path with the overlaid result
+
+		TODO: ADDRESS here, and TREE ROOTS.
+			the address understandably takes account of its placement in
+			whole hierarchy of Chimaera - but we don't want that here
+			-
+			node.root should return top-level graph object, for sure
+			node.settings.override().root? surely should return the root of that attribute
+			-
+			pass root by KWARGS?
+			I prefer this for now, more flexible, BUT no good way to integrate it with things
+			like root property - apart from storing it on object, as context, etc - complicated
+			-
+			setting as flat property on object, eg _isRoot = True , is simpler, but risks hanging
+			state, risks distorting behaviour in other areas.
+			like how does this interact with dex deltas for example
+			-
+			try property first, see what catches fire
+
+
 		"""
 		resultTree = Tree(populatedTree.name)
 		for populatedBranch in populatedTree.allBranches(includeSelf=True,
@@ -406,6 +426,8 @@ class ChimaeraNode(Modelled,
 				address,
 				create=True)
 			for i in populatedBranch.value:
+				if not i: # if default returns an empty list or None
+					continue
 				resultBranch = treelib.overlayTreeInPlace(resultBranch, i,
 				                                          mode="union")
 		return resultTree
@@ -417,6 +439,20 @@ class ChimaeraNode(Modelled,
 	# 	self._populateExpandedLinkingTree(t)
 	# 	self._collatePopulatedTree(t)
 	# 	treelib.overlayTreeInPlace(t, self.type.override().copy())
+
+
+	def attrNameRawTreeMap(self)->dict[str, NodeAttrWrapper]:
+		"""TODO: we could easily have this be worked out dynamically
+		based on which object attributes are wrappers, consider it
+		once the graph system is working"""
+		return {
+			"@T": self.type, "type": self.type,
+			"@F" : self.flow, "flow" : self.flow,
+			"@S" : self.settings, "settings" : self.settings,
+			"@M" : self.memory, "memory" : self.memory,
+			"@NODES" : self._nodes, "nodes" : self._nodes
+		}
+	#endregion
 	def resolveAttribute(self, attr:(Tree, NodeAttrWrapper, str))->Tree:
 		"""return the resolved tree for this attribute.
 
@@ -442,6 +478,7 @@ class ChimaeraNode(Modelled,
 		else:
 			raise RuntimeError("invalid input to resolve", attr, type(attr))
 
+		# special case to resolve type quickly
 		if atName == "@T":
 			# each step expanded for easier debugging
 			t = self.type.linking().copy()
@@ -452,22 +489,16 @@ class ChimaeraNode(Modelled,
 			return t # TODO: add in the proper stuff for multi-typing?
 				# just as soon as literally one thing makes use of it
 
-		if self.name() == "value":
-			# send to nodeType compute
-			return self.node.compute(
-				self.resolveIncomingTree(
-					self.linkingTreeExpanded()
-				)
-			)
-		if not self.node.parent(): # unparented nodes can't do complex behaviour
-			return self.override()
-		linking = self.resolveIncomingTree(
-			self.linkingTreeExpanded()
-		)
-
-		defined = self.override()
-
-		return treelib.overlayTrees([linking, defined])
+		atMap = self.attrNameRawTreeMap()
+		assert atName in atMap, f"Unknown attribute {atName}, not in attr names {atMap.keys()}"
+		wrapper = atMap[atName]
+		t = wrapper.linking().copy() # copy tree to use for evaluations
+		t.name = atName
+		self._expandLinkingTree(t) # expand all links to NodeAttrRef tuples
+		self._populateExpandedLinkingTree(t) # convert ref tuples to actual trees
+		self._collatePopulatedTree(t) # overlay linked trees together
+		treelib.overlayTreeInPlace(t, wrapper.override().copy()) # overlay override tree on top
+		return t
 
 	def _consumeFirstPathTokens(self, path: pathT, **kwargs
 	                            ) -> tuple[list[Pathable], pathT]:
@@ -612,7 +643,7 @@ class ChimaeraNode(Modelled,
 		 if it's a tree, look up its node type and pass it to Modelled
 		"""
 		# don't do any fancy processing if nodetype explicitly given
-		log("cls call", cls, dataOrNodeOrName)
+		#log("cls call", cls, dataOrNodeOrName)
 		if cls is not ChimaeraNode:
 			return type.__call__(cls, dataOrNodeOrName# uid, parent
 			                              )
@@ -652,6 +683,7 @@ class ChimaeraNode(Modelled,
 		# attribute wrappers
 		self.type = NodeAttrWrapper(self.data("@T"), node=self)
 		self.T = self.type
+		# I would prefer to call this "parametres", but @P confuses with "parent"
 		self.settings = NodeAttrWrapper(self.data("@S"), node=self)
 		self.S = self.settings
 		self.memory = NodeAttrWrapper(self.data("@M"), node=self)
@@ -662,7 +694,8 @@ class ChimaeraNode(Modelled,
 
 		Pathable.__init__(self, self, parent=None, name=data.name)
 
-
+	if T.TYPE_CHECKING:
+		def __init__(self, dataOrNodeName:(ChimaeraNode, Tree, str)): ...
 
 
 
@@ -706,17 +739,15 @@ class ChimaeraNode(Modelled,
 		"""parent data will be
 
 		parentName :
-			nodes :
-				childName : etc
-					nodes : etc
-
-		intuitively, should the value of an attribute be
-		the fully resolved version of that attribute?
-
+			@NODES :
+				linking :
+				override :
+					childName : etc <- we are here
+						@NODES : etc
 		"""
 		if not self.data.parent: return None
 
-		return ChimaeraNode(self.data.parent)
+		return ChimaeraNode(self.data.parent.parent.parent)
 
 	def _setParent(self, parent: Pathable):
 		"""private as you should use addBranch to control hierarchy
@@ -731,14 +762,22 @@ class ChimaeraNode(Modelled,
 			data = branch
 		#log("node add branch", data)
 		# add tree branch to this node's data
-		self.data.addBranch(data)
+		self.data("@NODES", "override").addBranch(data)
 		if isinstance(branch, ChimaeraNode): return branch
 		return ChimaeraNode(data)
 
 	def branchMap(self)->[keyT, ChimaeraNode]:
 		return {name : ChimaeraNode(branch)
-		        for name, branch in self.data.branchMap().items()
-		        if not name.startswith("@")}
+		        for name, branch in self.resolveAttribute("@NODES").branchMap().items()}
+		#if not name.startswith("@")}
+		#return {i.name : i for i in self.branches}
+
+	# @property
+	# def branches(self)->list[ChimaeraNode]:
+	# 	"""draw branchMap from this - I think this is legal"""
+	# 	resolved = self.resolveAttribute("@NODES")
+	# 	return [ChimaeraNode(i) for i in resolved.branches]
+
 
 	if T.TYPE_CHECKING:
 		def branches(self)->list[ChimaeraNode]: pass
@@ -790,7 +829,17 @@ if __name__ == '__main__':
 	log(ChimaeraNode.getNodeType(node.data))
 	log(ChimaeraNode(node))
 
+	# add child nodes
+	log(node.branchMap())
 
+
+	class SecondCustomType(ChimaeraNode):
+		pass
+
+	child = node.createNode(SecondCustomType, name="secondChild")
+	log(child)
+	log(child.parent)
+	log(node.branchMap())
 
 
 

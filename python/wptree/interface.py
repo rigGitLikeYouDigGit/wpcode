@@ -29,6 +29,12 @@ to override them
 
 TODO: breakpoints are probably still useful for parent/root encapsulation in
 	nested tools; everything else should be done with wpdex and paths
+	
+	OH BOY now trying to work out breakpoints / virtual roots, everything I try feels
+	wrong
+	would it be deranged to check the tree's actual name? Like if it's called "root",
+		treat it like a root?
+	
 TODO: GENERATOR branches
 	and then ways to specify overrides on the generated data
 	maybe we should just leave this to chimaera
@@ -557,42 +563,43 @@ class TreeInterface(Pathable,
 			index += self.parent.flattenedIndex() + 1
 		return index
 
-	def trunk(self, includeSelf=True, includeRoot=True)->list[TreeType]:
-		"""return sequence of ancestor trees in descending order to this tree"""
+	if T.TYPE_CHECKING:
+		def trunk(self, includeSelf=True, includeRoot=True)->list[TreeType]: # no custom behaviour
+			"""return sequence of ancestor trees in descending order to this tree"""
+			#
+			#
+			# branches = []
+			# current = self
+			# while current.parent:
+			# 	branches.insert(0, current)
+			# 	current = current.parent
+			# if includeRoot:
+			# 	branches.insert(0, current)
+			# if branches and not includeSelf:
+			# 	branches.pop(-1)
+			# return branches
 
 
-		branches = []
-		current = self
-		while current.parent:
-			branches.insert(0, current)
-			current = current.parent
-		if includeRoot:
-			branches.insert(0, current)
-		if branches and not includeSelf:
-			branches.pop(-1)
-		return branches
+	# def depth(self) -> int:
+	# 	"""return int depth of this tree from root"""
+	# 	return len(self.trunk(includeSelf=True, includeRoot=False))
 
-
-	def depth(self) -> int:
-		"""return int depth of this tree from root"""
-		return len(self.trunk(includeSelf=True, includeRoot=False))
-
-	# addresses
-	def address(self, includeSelf=True, includeRoot=False, uid=False)->list[str]:
-		"""if uid, return path by uids
-		else return nice string paths
-		recursive since different levels of tree might format their addresses
-		differently"""
-		trunk = self.trunk(includeSelf=includeSelf,
-		                   includeRoot=includeRoot,
-		                   )
-		if uid:
-			tokens = [i.uid for i in trunk]
-		else:
-			tokens = [i.name for i in trunk]
-		return tokens
-
-
+	# # addresses
+	# def address(self, includeSelf=True, includeRoot=False, uid=False)->list[str]:
+	# 	"""if uid, return path by uids
+	# 	else return nice string paths
+	# 	recursive since different levels of tree might format their addresses
+	# 	differently"""
+	# 	trunk = self.trunk(includeSelf=includeSelf,
+	# 	                   includeRoot=includeRoot,
+	# 	                   )
+	# 	if uid:
+	# 		tokens = [i.uid for i in trunk]
+	# 	else:
+	# 		tokens = [i.name for i in trunk]
+	# 	return tokens
+	#
+	#
 	def stringAddress(self, includeSelf=True, includeRoot=False) -> str:
 		""" returns the address sequence joined by the tree separator """
 		trunk = self.trunk(includeSelf=includeSelf,

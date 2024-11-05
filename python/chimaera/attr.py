@@ -142,7 +142,9 @@ def overlayPopulatedTree(populatedTree:Tree[list[Tree]],
 	                                        depthFirst=True,
 	                                        topDown=True):
 		address = populatedBranch.address(
-			includeSelf=True, includeRoot=False, uid=False)
+			#includeSelf=True,
+			includeSelf=True,
+			includeRoot=False, uid=False)
 		#log(address)
 		resultBranch = resultTree(
 			address,
@@ -184,9 +186,11 @@ def getEmptyTree():
 
 
 def newAttributeData(name: str, linking=("T", ), override=())->Tree:
+	"""test not using a 'root' branch -
+	doesn't serve much purpose, ui will just be set on the top branch"""
 	t = Tree(name)
-	t["linking", "root"] = list(linking)
-	t["override", "root"] = list(override)
+	t["linking"] = list(linking)
+	t["override"] = list(override)
 	return t
 
 class NodeAttrWrapper:
@@ -196,6 +200,14 @@ class NodeAttrWrapper:
 		self.tree = attrData
 		self._cachedIncomingExpandedTree : Tree = None
 		self.node = node
+
+		# set isRoot = True on "root" branches -
+		# feels wrong to have this here, only other place I could think
+		# is in the Modeled newData() function?
+		# self.tree("linking", "root").isRoot = True
+		# self.tree("override", "root").isRoot = True
+		self.tree("linking").isRoot = True
+		self.tree("override").isRoot = True
 
 	def name(self)->str:
 		return self.tree.name
@@ -272,56 +284,56 @@ class NodeAttrWrapper:
 
 	# endregion
 
-	# region resolved value
-	def resolve(self)->Tree:
-		"""return the resolved tree for this attribute.
+	# # region resolved value
+	# def resolve(self)->Tree:
+	# 	"""return the resolved tree for this attribute.
+	#
+	# 	if defined is callable, call it with incoming data
+	# 	 and this node.
+	# 	if defined is tree, compose it with incoming and
+	# 	eval any expressions
+	#
+	# 	nodeType defines default behaviour in composition, which may
+	# 	be overridden at any level of tree
+	# 	"""
+	#
+	# 	#log("RESOLVE")
+	# 	#log("attr", self.name(), self.node)
+	#
+	# 	if self.name() == "value":
+	# 		# send to nodeType compute
+	# 		return self.node.compute(
+	# 			self.resolveIncomingTree(
+	# 				self.incomingTreeExpanded()
+	# 			)
+	# 		)
+	# 	if not self.node.parent(): # unparented nodes can't do complex behaviour
+	# 		return self.override()
+	# 	incoming = self.resolveIncomingTree(
+	# 		self.incomingTreeExpanded()
+	# 	)
+	#
+	# 	defined = self.override()
+	#
+	# 	return treelib.overlayTrees([incoming, defined])
+	#
+	# 	try:
+	# 		return treelib.overlayTrees([incoming, defined])
+	# 	except Exception as e:
+	# 		log("error overlaying incoming and defined")
+	# 		log("incoming")
+	# 		incoming.display()
+	# 		log("override")
+	# 		defined.display()
+	# 		raise e
 
-		if defined is callable, call it with incoming data
-		 and this node.
-		if defined is tree, compose it with incoming and
-		eval any expressions
-
-		nodeType defines default behaviour in composition, which may
-		be overridden at any level of tree
-		"""
-
-		#log("RESOLVE")
-		#log("attr", self.name(), self.node)
-
-		if self.name() == "value":
-			# send to nodeType compute
-			return self.node.compute(
-				self.resolveIncomingTree(
-					self.incomingTreeExpanded()
-				)
-			)
-		if not self.node.parent(): # unparented nodes can't do complex behaviour
-			return self.override()
-		incoming = self.resolveIncomingTree(
-			self.incomingTreeExpanded()
-		)
-
-		defined = self.override()
-
-		return treelib.overlayTrees([incoming, defined])
-
-		try:
-			return treelib.overlayTrees([incoming, defined])
-		except Exception as e:
-			log("error overlaying incoming and defined")
-			log("incoming")
-			incoming.display()
-			log("override")
-			defined.display()
-			raise e
-
-	def resolveToList(self)->list:
-		"""return the resolved value of the top branch for this attribute
-		"""
-		val = self.resolve().value
-		if isinstance(val, list):
-			return val
-		return [val]
+	# def resolveToList(self)->list:
+	# 	"""return the resolved value of the top branch for this attribute
+	# 	"""
+	# 	val = self.resolve().value
+	# 	if isinstance(val, list):
+	# 		return val
+	# 	return [val]
 
 	def __call__(self) -> Tree:
 		# specialcase type, messy but whatever

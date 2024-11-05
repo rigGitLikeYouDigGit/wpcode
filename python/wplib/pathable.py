@@ -141,6 +141,8 @@ class Pathable(#Adaptor
 
 		self._branchMap = None # built on request
 
+		self.isRoot = False #TEST for breakpoints without excessive tooling
+
 	def __hash__(self):
 		return hash((self.parent, self.keyT))
 
@@ -178,6 +180,15 @@ class Pathable(#Adaptor
 
 	#region treelike methods
 
+	def absoluteRoot(self)->Pathable:
+		"""same as self.root but without
+		the check for defined breakpoint"""
+
+	# @classmethod
+	# def checkIsRoot(cls, obj:Pathable):
+	# 	"""even if a function, how do we work with this?
+	# 	"""
+
 	@property
 	def root(self)->Pathable:
 		"""get the root
@@ -185,6 +196,8 @@ class Pathable(#Adaptor
 		test = self
 		while test.parent:
 			test = test.parent
+			if getattr(test, "isRoot", False):
+				break
 		return test
 
 	#@classmethod
@@ -272,6 +285,9 @@ class Pathable(#Adaptor
 		while current.parent:
 			branches.insert(0, current)
 			current = current.parent
+			# check if a custom "isRoot" breakpoint attribute has been defined on it
+			if getattr(current, "isRoot", False):
+				break
 		if includeRoot:
 			branches.insert(0, current)
 		if branches and not includeSelf:
@@ -325,6 +341,36 @@ class Pathable(#Adaptor
 		addr.extend(
 			self.path[commonDepth:])
 		return addr
+
+	# addresses
+	def address(self, includeSelf=True, includeRoot=False, uid=False)->list[str]:
+		"""if uid, return path by uids
+		else return nice string paths
+		recursive since different levels of tree might format their addresses
+		differently"""
+		trunk = self.trunk(includeSelf=includeSelf,
+		                   includeRoot=includeRoot,
+		                   )
+		if uid:
+			tokens = [i.uid for i in trunk]
+		else:
+			tokens = [i.name for i in trunk]
+		return tokens
+
+
+	# def stringAddress(self, includeSelf=True, includeRoot=False) -> str:
+	# 	""" returns the address sequence joined by the tree separator """
+	# 	trunk = self.trunk(includeSelf=includeSelf,
+	# 	                   includeRoot=includeRoot,
+	# 	                   )
+	# 	s = ""
+	# 	for i in range(len(trunk)):
+	# 		s += trunk[i].name
+	# 		if i != (len(trunk) - 1):
+	# 			s += trunk[i].separatorChars["child"]
+	#
+	# 	return s
+
 
 	def _ownIndex(self)->int:
 		if self.parent:
@@ -432,6 +478,10 @@ class Pathable(#Adaptor
 			for pathId, (path, pathable) \
 					in enumerate(zip(paths, toAccess)):
 				#log("path", path)
+
+				####### DEFEAT ######
+				path = sequence.flatten(path)
+
 				if not path: # if you pass an empty tuple path
 					foundPathables.append(pathable)
 					continue
