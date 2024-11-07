@@ -42,3 +42,13 @@ from .react import EVAL, EVALAK, BIND, WRAP_MEMBERS, rx
 
 from .modelled import Modelled
 
+def getWpDex(obj:(WpDexProxy, WpDex, WX, rx, T.Any))->WpDex:
+	"""maybe this isn't necessary -
+	type coercions to move between actual values,
+	proxies, WpDex and rx values
+	if no existing wpDex, return None, so caller can work out how to proceed
+	"""
+	if isinstance(obj, WpDex): return obj
+	if isinstance(obj, WpDexProxy): return obj.dex()
+	if isinstance(obj, WX): return obj._kwargs["_dex"]
+	return None

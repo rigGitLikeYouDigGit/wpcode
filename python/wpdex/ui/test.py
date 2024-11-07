@@ -8,7 +8,7 @@ from PySide2 import QtWidgets
 
 
 from wpui.layout import genAutoLayout
-from wpdex.ui import WpDexWidget, WpDexWindow
+from wpdex.ui import WpDexView, WpDexWindow
 
 class DemoWidget(QtWidgets.QWidget):
 

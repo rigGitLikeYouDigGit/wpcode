@@ -14,9 +14,8 @@ from wplib import log
 from wplib.object import Adaptor, VisitAdaptor
 from wplib.serial import SerialAdaptor, Serialisable, serialise, deserialise
 
-from wpdex import WpDex
-#from wpui.model import iterAllItems
-#from wpui.typelabel import TypeLabel
+from wpdex import WpDex, WpDexProxy, getWpDex, rx, WX
+from wpdex.ui.atomic import AtomicWidget
 
 """
 
@@ -51,7 +50,7 @@ class WpTypeLabel(QtWidgets.QLabel):
 	"""label for a wpdex item type, shows debug information on tooltip,
 	acts to open and collapse item on click"""
 
-	def __init__(self, parent:WpDexWidget=None,
+	def __init__(self, parent:WpDexView=None,
 	             closedText="[...]", openText="[",
 	             openState=True):
 		super(WpTypeLabel, self).__init__(parent=parent)
@@ -63,7 +62,7 @@ class WpTypeLabel(QtWidgets.QLabel):
 		self.setOpenState(openState)
 
 	if T.TYPE_CHECKING:
-		def parent(self)->WpDexWidget:
+		def parent(self)->WpDexView:
 			"""return parent widget"""
 			return self.parent()
 
@@ -74,150 +73,172 @@ class WpTypeLabel(QtWidgets.QLabel):
 		else:
 			self.setText(self.closedText)
 
-class WpDexWidget(QtWidgets.QFrame, Adaptor):
+class WpDexView(AtomicWidget):
 	"""ui view for a WpDex object
+	contains child widgets in a grid-like spreadsheet tree view
+	each view contains only single layer of widgets
 	many widgets for one WpDex
 	registered against WpDex type
 	"""
-	adaptorTypeMap = Adaptor.makeNewTypeMap()
+	# adaptorTypeMap = Adaptor.makeNewTypeMap()
+	#
+	# # UNSURE if we should make this explicitly match wpdex types,
+	# # rather than value types - we guarantee more this way
+	# forTypes = (WpDex, )
+	# dispatchInit = False # no automatic dispatching
 
-	# UNSURE if we should make this explicitly match wpdex types,
-	# rather than value types - we guarantee more this way
-	forTypes = (WpDex, )
-	dispatchInit = False # no automatic dispatching
-
-	def __init__(self, dex:WpDex, parent=None):
-		super(WpDexWidget, self).__init__(parent=parent)
-		self._dex = dex
-		self.childWidgets : dict[str, WpDexWidget] = {}
-		# unsure if it's worth enforcing this registration
-		# on random child helper widgets -
-		# if you need them in more than one function,
-		# add them to the map
-		self.extraWidgets : dict[str, QtWidgets.QWidget] = {}
-		self.buildChildWidgets()
-		self.buildExtraWidgets()
-		self.buildLayout()
-		# set border
-		#self.setStyleSheet("border: 1px solid black;")
-
-		self.setAppearance()
-
-
-
-	# def postInit(self):
-	# 	"""test as a manually-called post-init method to build widgets -
-	# 	this lets us override init, but that itself is kind of pointless
-	# 	until child widgets get built"""
+	# def __init__(self, value, parent=None):
+	# 	QtWidgets.QAbstractItemView.__init__(self, parent)
+	# 	AtomicWidget.__init__(self, value)
+	#
+	# 	self.childWidgets : dict[WpDex.pathT, WpDexView] = {}
+	# 	# unsure if it's worth enforcing this registration
+	# 	# on random child helper widgets -
+	# 	# if you need them in more than one function,
+	# 	# add them to the map
+	# 	self.extraWidgets : dict[str, QtWidgets.QWidget] = {}
 	# 	self.buildChildWidgets()
 	# 	self.buildExtraWidgets()
-
-	def dex(self)->WpDex:
-		return self._dex
-
-	def getOverride(self, match:dict,
-	                baseValue:T.Any)->T.Any:
-		"""PLACEHOLDER
-		for now just return base value -
-		connect to common override logic once ready
-		"""
-		return baseValue
-
-	def childWidgetType(self, child:WpDex)->T.Type[WpDexWidget]:
-		"""return widget type for given child -
-		check if any overrides are specified for this path, object type
-		etc"""
-		baseWidgetType = self.adaptorForObject(child)
-		# check for overrides
-		finalWidgetType = self.getOverride(
-			match={"purpose" : "widgetType",
-			       "path" : child.path,
-			       "obj": child},
-			baseValue=baseWidgetType
-		)
-		return finalWidgetType
-
-	# init and build methods
-	def buildChildWidgets(self):
-		"""populate childWidgets map with widgets
-		for all dex children"""
-		dex = self.dex()
-		log("buildChildWidgets")
-		for key, child in self.dex().children.items():
-			childWidgetType = self.childWidgetType(child)
-			childWidget = childWidgetType(child, parent=self)
-			self.childWidgets[key] = childWidget
-
-	def buildExtraWidgets(self):
-		#self.extraWidgets["typeLabel"] = WpTypeLabel(parent=self)
-		self.typeLabel = WpTypeLabel(parent=self)
-		pass
-	def buildLayout(self):
-		raise NotImplementedError
-		# if self.childWidgets:
-		# 	layout = QtWidgets.QVBoxLayout(self)
-		# 	for key, widget in self.childWidgets.items():
-		# 		layout.addWidget(widget)
-		# 	self.setLayout(layout)
-		# else:
-		# 	self.typeLabel.hide()
-
-	def setAppearance(self):
-		"""runs after all setup steps"""
-
-	# others
-	def uiPath(self)->list[str]:
-		"""return path to this widget in the ui
-		lol wouldn't it be mental if this could diverge from the
-		wpdex path
-		but like actually though"""
-		return self.dex().path
+	# 	self.buildLayout()
+	# 	# set border
+	# 	#self.setStyleSheet("border: 1px solid black;")
+	#
+	# 	self.setAppearance()
+	#
+	#
+	#
+	#
+	# # def getOverride(self, match:dict,
+	# #                 baseValue:T.Any)->T.Any:
+	# # 	"""PLACEHOLDER
+	# # 	for now just return base value -
+	# # 	connect to common override logic once ready
+	# # 	"""
+	# # 	return baseValue
+	# #
+	# # def childWidgetType(self, child:WpDex)->T.Type[WpDexView]:
+	# # 	"""return widget type for given child -
+	# # 	check if any overrides are specified for this path, object type
+	# # 	etc"""
+	# # 	baseWidgetType = self.adaptorForObject(child)
+	# # 	# check for overrides
+	# # 	finalWidgetType = self.getOverride(
+	# # 		match={"purpose" : "widgetType",
+	# # 		       "path" : child.path,
+	# # 		       "obj": child},
+	# # 		baseValue=baseWidgetType
+	# # 	)
+	# # 	return finalWidgetType
+	#
+	# # init and build methods
+	# def buildChildWidgets(self):
+	# 	"""populate childWidgets map with widgets
+	# 	for all dex children"""
+	# 	dex = self.dex()
+	# 	log("buildChildWidgets")
+	# 	for key, child in self.dex().children.items():
+	# 		childWidgetType = self.childWidgetType(child)
+	# 		childWidget = childWidgetType(child, parent=self)
+	# 		self.childWidgets[key] = childWidget
+	#
+	# def buildExtraWidgets(self):
+	# 	#self.extraWidgets["typeLabel"] = WpTypeLabel(parent=self)
+	# 	self.typeLabel = WpTypeLabel(parent=self)
+	# 	pass
+	# def buildLayout(self):
+	# 	raise NotImplementedError
+	# 	# if self.childWidgets:
+	# 	# 	layout = QtWidgets.QVBoxLayout(self)
+	# 	# 	for key, widget in self.childWidgets.items():
+	# 	# 		layout.addWidget(widget)
+	# 	# 	self.setLayout(layout)
+	# 	# else:
+	# 	# 	self.typeLabel.hide()
+	#
+	# def setAppearance(self):
+	# 	"""runs after all setup steps"""
+	#
+	# # others
+	# def uiPath(self)->list[str]:
+	# 	"""return path to this widget in the ui
+	# 	lol wouldn't it be mental if this could diverge from the
+	# 	wpdex path
+	# 	but like actually though"""
+	# 	return self.dex().path
 
 
 
 # main widget
-class WpDexWindow(QtWidgets.QWidget, Adaptor):
+class WpDexWindow(
+	#AtomicWidget,
+	QtWidgets.QWidget,
+	#Adaptor
+                  ):
 	"""top-level widget to display a superItem view -
-	single embed in a host ui"""
+	single embed in a host ui
 
-	def __init__(self, parent=None, rootObj:WpDex=None):
-		super(WpDexWindow, self).__init__(parent=parent)
-		self._dex = None
-		self.itemWidget : WpDexWidget = None
+	NECESSARY in case the type of the root data changes -
+	need to get a new type of WpDexView widget while maintaining
+	any external references to this one
+	doesn't hold any value itself
 
-		self.emptyLabel = QtWidgets.QLabel("NO WPDEX PROVIDED, WINDOW EMPTY",
-		                                   parent=self)
+	TODO: we still don't have a uniform way of getting a widget for
+		any possible value - this WpDexWindow assumes that we won't try and set
+		to a primitive value, always expects child dex items
+		for now live with it
+	"""
+
+	def __init__(self, parent=None, value:(WpDexProxy, WX)=None):
+		QtWidgets.QWidget.__init__(self, parent=parent)
+
+		#self._dex : WpDex = None
+		self.itemWidget : AtomicWidget = None
+
+		# self.emptyLabel = QtWidgets.QLabel("NO WPDEX PROVIDED, WINDOW EMPTY",
+		#                                    parent=self)
 		layout = QtWidgets.QVBoxLayout(self)
-		layout.addWidget(self.emptyLabel)
+		#layout.addWidget(self.emptyLabel)
 		self.setLayout(layout)
-		#self.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
-		#self.layout : QtWidgets.QLayout = None
-		if rootObj is not None:
-			self.setRootObj(rootObj)
 
+		self.setContentsMargins(0, 0, 0, 0)
+		self.layout().setContentsMargins(0, 0, 0, 0 )
+		#AtomicWidget.__init__(self, value=value)
+		self.setValue(value)
 
-	def dex(self)->WpDex:
-		return self._dex
+	def view(self)->WpDexView:
+		return self.itemWidget
 
-	def setRootObj(self, obj:WpDex):
-		"""set top level, sync everything below"""
-		if not isinstance(obj, WpDex):
-			obj = WpDex(obj)
-		self._dex = obj
-		self.sync()
+	# def _rawUiValue(self):
+	# 	"""return raw result from ui, without any processing
+	# 	so for a lineEdit, just text()"""
+	# 	raise NotImplementedError(self)
+	#
+	# def _setRawUiValue(self, value):
+	# 	"""set the final value of the ui to the exact value passed in,
+	# 	this runs after any pretty formatting"""
+	# 	raise NotImplementedError(self)
 
-	def sync(self):
-		"""rebuild all contained widgets"""
-		self.emptyLabel.hide()
+	# def dex(self)->WpDex:
+	# 	return self.view().dex()
+
+	def setValue(self, value):
+		""""""
+		#super()._commitValue(value)
+		dex = getWpDex(value) or WpDex(value)
+		#self._dex = dex
 		if self.itemWidget:
 			self.itemWidget.hide()
+			self.layout().removeWidget(self.itemWidget)
+			self.itemWidget.setParent(None)
 			self.itemWidget.deleteLater()
-			self.itemWidget = None
-		if not self.dex():
-			self.emptyLabel.show()
-			return
 
-		self.itemWidget = WpDexWidget.adaptorForObject(self.dex())(self.dex(), parent=self)
+		itemWidgetCls : type[AtomicWidget] = WpDexView.adaptorForObject(dex)
+		log("item cls", itemWidgetCls)
+		self.itemWidget = itemWidgetCls(
+			#parent=self,
+			parent=None,
+             value=value )
+		log("built item widget", self.itemWidget)
 		self.layout().addWidget(self.itemWidget)
 
 

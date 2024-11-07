@@ -16,13 +16,17 @@ line widget for showing path to item, and for listing / collapsing
 
 text option for editing full structure as json / serialised string
 
-
 atomic widget is more specialised still, literally just exists for consistent set/get value interface for stock qt widgets like text and checkbox
+
+set path-based overrides on top UI widget, not directly
+on dex objects? maybe
+
+
 """
 
-from .base import WpDexWidget, WpDexWindow
+from .base import WpDexView, WpDexWindow
 
-from .seqitem import SeqDexWidget
+from .seqitem import SeqDexView
 from .primitem import PrimDexWidget
 from .stritem import StrDexWidget
 

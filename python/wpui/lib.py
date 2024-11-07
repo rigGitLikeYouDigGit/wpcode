@@ -11,6 +11,20 @@ from wplib.sequence import toSeq
 
 import subprocess
 
+expandingPolicy = QtWidgets.QSizePolicy(
+	QtWidgets.QSizePolicy.Expanding,
+	QtWidgets.QSizePolicy.Expanding,
+)
+
+fixedPolicy = QtWidgets.QSizePolicy(
+	QtWidgets.QSizePolicy.Fixed,
+	QtWidgets.QSizePolicy.Fixed,
+)
+shrinkingPolicy = QtWidgets.QSizePolicy(
+	QtWidgets.QSizePolicy.Maximum,
+	QtWidgets.QSizePolicy.Fixed,
+)
+
 def openExplorerOnPath(path:(pathlib.Path, str),
                        lowestExisting=True):
 	"""opens a new process of windows explorer,

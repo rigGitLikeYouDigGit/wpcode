@@ -8,10 +8,10 @@ from wplib import log
 
 from wplib.constant import LITERAL_TYPES
 from wpdex.strexpdex import StrDex
-from wpdex.ui.base import WpDexWidget, WpDexWindow, WpTypeLabel
+from wpdex.ui.base import WpDexView, WpDexWindow, WpTypeLabel
 
 
-class StrDexWidget(WpDexWidget):
+class StrDexWidget(WpDexView):
 	"""widget for strings - might get super complex
 	"""
 	forTypes = (StrDex, )

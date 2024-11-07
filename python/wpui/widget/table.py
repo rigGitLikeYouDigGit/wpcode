@@ -135,7 +135,7 @@ class ResizableWidget(QtWidgets.QWidget):
 	def sizeHint(self):
 		"""return the size hint"""
 		#print("size hint")
-		return QtCore.QSize(100, int(getSinSize(time.time())))
+		return QtCore.QSize(int(getSinSize(time.time() + 30)), int(getSinSize(time.time())))
 
 
 _base = QtCore.QAbstractTableModel
@@ -154,7 +154,7 @@ class ResizableModel(QtGui.QStandardItemModel
 			size = 100.0 * abs(math.sin(time.time() * 0.5))
 			#print("size hint role", index.row(), index.column(), size)
 			size = max(size, 10)
-			return QtCore.QSize(100, size)
+			return QtCore.QSize(size * 2, size)
 		return super().data(index, role)
 
 
@@ -182,20 +182,6 @@ if __name__ == '__main__':
 	def _syncSize(*args, **kwargs):
 		#print("sync size", args, kwargs)
 		while True:
-			#print("resize rows to contents")
-			#widget.resizeRowsToContents()
-			#widget.resizeColumnToContents(0)
-			#widget.setDirtyRegion(widget.viewport().rect())
-			#widget.viewport().update()
-			#widget.updateGeometries()
-			#widget.header().updateGeometries()
-			#widget.updateGeometry()
-			#widget.update()
-			#widget.adjustSize()
-			#widget.viewport().update()
-			#widget.columnResized(0, 0, 0)
-			#widget.resizeColumnToContents(0)
-			#widget.update(model.index(0, 0))
 
 
 

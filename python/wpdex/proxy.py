@@ -158,6 +158,23 @@ class WX(rx):
 		"""
 		self._kwargs["_writeSignal"].emit(self._kwargs["_dexPath"], val)
 
+	# def _resolveRef():
+	# 	rootDex = self.dex()
+	# 	foundDex: WpDex = rootDex.access(rootDex, path, values=False, one=True)
+	# 	return foundDex.getValueProxy()
+
+	def RESOLVE(self, dex=False, proxy=False, value=False):
+		assert dex or proxy or value
+		rootDex = self._kwargs["_dex"]
+		path = self._kwargs["_dexPath"]
+		if dex:
+			return rootDex.access(rootDex, path, values=False, one=True)
+		if proxy:
+			return rootDex.access(rootDex, path, values=False, one=True).getValueProxy()
+		if value:
+			return self.rx.value
+
+
 
 class WpDexProxyData(ProxyData):
 	parent : weakref.ref
@@ -265,9 +282,12 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 	def __str__(self):
 		return "WPX(" + super().__str__() + ")"
 
-	# def __repr__(self):
-	# 	return "WPX(" + repr(self._proxyTarget()) +
 
+	def __repr__(self):
+		return repr(self._proxyTarget())
+
+	# def __format__(self, format_spec):
+	# 	pass
 
 	def _openDelta(self):
 		"""open a delta for this object -
@@ -515,7 +535,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 
 				pass
 
-			ref = WX(_resolveRef, _dexPath=path)()
+			ref = WX(_resolveRef, _dexPath=path, _dex=self.dex())()
 
 			assert isinstance(ref, WX)
 			#log("ref is", ref)

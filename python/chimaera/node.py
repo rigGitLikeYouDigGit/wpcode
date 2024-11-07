@@ -841,6 +841,8 @@ if __name__ == '__main__':
 	log(child.parent)
 	log(node.branchMap())
 
+	thirdChild = child.createNode(CustomType, name="leaf")
+	log(thirdChild, thirdChild.path)
 
 
 	# graph = ChimaeraNode.create("graph")

@@ -8,10 +8,10 @@ from wplib import log
 
 from wplib.constant import LITERAL_TYPES
 from wpdex.primdex import PrimDex
-from wpdex.ui.base import WpDexWidget, WpDexWindow, WpTypeLabel
+from wpdex.ui.base import WpDexView, WpDexWindow, WpTypeLabel
 
 
-class PrimDexWidget(WpDexWidget):
+class PrimDexWidget(WpDexView):
 	"""widget for a literal -
 	for now just a text box
 

@@ -140,6 +140,10 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		# do we build on init?
 		self.updateChildren(recursive=0)
 
+	if T.TYPE_CHECKING:
+		def branches(self)->list[WpDex]:...
+		def branchMap(self)->dict[Pathable.keyT, WpDex]:...
+
 	def getValueProxy(self)->WpDexProxy:
 		"""return a WpDexProxy initialised on the value of this dex
 		"""
@@ -192,7 +196,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		consider passing in a known parent object to narrow down?"""
 		return cls.objIdDexMap.get(id(obj))
 
-	def _buildChildPathable(self, obj:T.Any, name:keyT)->Pathable:
+	def _buildChildPathable(self, obj:T.Any, name:keyT)->WpDex:
 		"""redeclaring default method because otherwise tracking the inheritance
 		gets a bit scary"""
 		if isinstance(obj, WpDex):
@@ -427,6 +431,30 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 				self.sendEvent(event)
 
 		return deltas
+
+	if T.TYPE_CHECKING:
+		from .proxy import WX, WpDexProxy
+
+	def ref(self, *path:WpDex.pathT
+	        )->WX:
+		"""convenience - sanity to get a reference to this dex
+		value directly, without acrobatics through WpDexProxy
+		not on the calling end at least
+		"""
+		proxy = self.getValueProxy()
+		return proxy.ref(*path)
+
+	# type "summary" string systems
+	def getTypeSummary(self):
+		"""
+		return "tuple[list[(str, dict[str, int])]] = (["ey", {"a" : 2}])
+		for now just do top level and string rep of what's contained -
+		this is NOT suitable for eval-ing
+		"""
+		name = str(type(self.obj).__name__)
+		return f"{name} = {str(self.obj)}"
+
+
 
 	# serialisation
 	def asStr(self)->str:

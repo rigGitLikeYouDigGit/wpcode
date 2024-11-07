@@ -10,8 +10,10 @@ from wplib.constant import SEQ_TYPES
 
 from wpui import view as libview
 
-from wpdex import WpDex, SeqDex
-from wpdex.ui.base import WpDexWidget, WpTypeLabel
+from wpdex import WpDex, SeqDex, WX, WpDexProxy
+from wpdex.ui.atomic import AtomicWidget
+from wpdex.ui.base import WpDexView, WpTypeLabel
+from wpui.lib import fixedPolicy
 
 
 class DragItemWidget(QtWidgets.QWidget):
@@ -31,7 +33,68 @@ class DragItemWidget(QtWidgets.QWidget):
 		self.setContentsMargins(0, 0, 0, 0)
 		layout.setAlignment(self.dragHandle, QtCore.Qt.AlignTop)
 
-class SeqDexWidget(WpDexWidget):
+
+
+def sketch():
+
+	d = myObject.ref("baseData")
+	w = Widget(d, parent=None)
+	# THAT'S IT. that's all.
+	# maybe later add some path override stuff
+	# to say if file paths or strings should be taken, etc
+	#
+
+def childView(self, forDex):
+
+	childW = AtomicWidget.adaptorForObj(forDex)(value=forDex, parent=self)
+	childW.valueChanged.connect(self.sync)
+
+def onChildValueChanged(key:keyT):
+	"""regenerate only the widget at this path"""
+
+def onValueChanged():
+	"""remove / regenerate all child widgets"""
+
+
+class _SeqDexModel(QtGui.QStandardItemModel):
+	pass
+
+class DexViewExpandButton(QtWidgets.QPushButton):
+	"""button to show type of container when open,
+	and overview of contained types when closed"""
+	expanded = QtCore.Signal(bool)
+	def __init__(self, openText="[", dex:WpDex=None, parent=None):
+		self._isOpen = True
+		self._openText = openText
+		self._dex = dex
+		super().__init__(openText, parent=parent)
+
+		m = 0
+		self.setContentsMargins(m, m, m, m)
+		#self.setFixedSize(20, 20)
+		self.setStyleSheet("padding: 1px 1px 2px 2px; text-align: left")
+
+		self.clicked.connect(lambda : self.setExpanded(
+			state=(not self.isExpanded()), emit=True))
+
+	def getClosedText(self):
+		return self._dex.getTypeSummary()
+
+	def setExpanded(self, state=True, emit=False):
+		log("setExpanded", state, emit)
+		if state:
+			self.setText(self._openText)
+		else:
+			self.setText(self.getClosedText())
+		self._isOpen = state
+		if emit:
+			self.expanded.emit(state)
+	def isExpanded(self):
+		return self._isOpen
+
+
+#class SeqDexView(AtomicWidget, QtWidgets.QTreeView):
+class SeqDexView(QtWidgets.QTreeView, AtomicWidget):
 	"""view for a list
 
 	drag behaviour -
@@ -51,65 +114,130 @@ class SeqDexWidget(WpDexWidget):
 
 	"""
 	forTypes = (SeqDex,)
-	# init and build methods
+
+	def __init__(self, value, parent=None):
+		QtWidgets.QTreeView.__init__(self, parent)
+		AtomicWidget.__init__(self, value)
+		#log("seq init")
+		a = 1
+
+		self.header().setDefaultSectionSize(2)
+		#self.header().setMinimumSectionSize(-1) # sets to font metrics, still buffer around it
+		self.header().setMinimumSectionSize(15)
+		self.header().setSectionResizeMode(
+			self.header().ResizeToContents
+		)
+		self.setColumnWidth(0, 2)
+
+		self.setIndentation(0)
+
+		self.setSizeAdjustPolicy(
+			QtWidgets.QAbstractItemView.AdjustToContents)
+		self.setHeaderHidden(True)
+
+		self.setVerticalScrollMode(self.ScrollMode.ScrollPerPixel)
+		self.setHorizontalScrollMode(self.ScrollMode.ScrollPerPixel)
+
+		self.postInit()
+		self.setContentsMargins(0, 0, 0, 0)
+		self.setViewportMargins(0, 0, 0, 0)
+
+		self.setUniformRowHeights(False)
+
+		# self.setSizePolicy(
+		# 	QtWidgets.QSizePolicy.Minimum,
+		# 	QtWidgets.QSizePolicy.Minimum,
+		# )
+		# self.setSizePolicy(
+		# 	QtWidgets.QSizePolicy.MinimumExpanding,
+		# 	QtWidgets.QSizePolicy.MinimumExpanding,
+		# )
+
+		# self.setSizePolicy(
+		# 	QtWidgets.QSizePolicy.Maximum,
+		# 	QtWidgets.QSizePolicy.Fixed
+		# )
+
+		#### size policy tweaks send widget expanding off to infinity
+
+	# def sizeHint(self):
+	# 	x = super().sizeHint().width()
+	# 	y = self.contentsRect().size().height()
+	# 	return QtCore.QSize(x, y)
+
+
+
+	def modelCls(self):
+		return _SeqDexModel
+
+	def _modelIndexForKey(self, key:WpDex.keyT)->QtCore.QModelIndex:
+		return self.model().index(int(key), 1)
+
+	def _commitValue(self, value):
+		#log("seq commit value", value)
+		super()._commitValue(value)
+
+
+	def _setRawUiValue(self, value):
+		#raise
+		#log("_set raw ui")
+		self.buildChildWidgets()
+
+	def _rawUiValue(self):
+		return None
+
 	def buildChildWidgets(self):
 		"""populate childWidgets map with widgets
 		for all dex children"""
 		dex = self.dex()
 		#log("buildChildWidgets")
-		for key, child in self.dex().children.items():
-			childWidgetType = self.childWidgetType(child)
-
-			childWidget = childWidgetType(child,
-			                              parent=self
+		self.setModel(self.modelCls()(parent=self))
+		for key, child in self.dex().branchMap().items():
+			childWidgetType = AtomicWidget.adaptorForObject(child)
+			assert childWidgetType, f"no widget type found for dex {child}, parent {self.dex()}, self"
+			childWidget = childWidgetType(value=child,
+			                              parent=self,
+			                              #parent=None,
 			                              )
-			log("childWidget", childWidget, vars=0)
-			self.childWidgets[key] = childWidget
-	def buildExtraWidgets(self):
-		"""build and populate model and view"""
-		#super().buildExtraWidgets()
-		self.typeLabel = WpTypeLabel(parent=self, closedText="[...]",
-		                             openText="[")
-		self.model = QtGui.QStandardItemModel(parent=self)
-		self.view = QtWidgets.QTreeView(parent=self)
-		self.view.setModel(self.model)
-		self.view.setHeaderHidden(True)
-
-		self.view.setContentsMargins(0, 0, 0, 0)
-
-		for i, (key, w) in enumerate(self.childWidgets.items()):
-			# create an item, set its indexwidget
-			self.model.appendRow(QtGui.QStandardItem(str(key)))
-		for i, (key, w) in enumerate(self.childWidgets.items()):
-
-			dragWidget = DragItemWidget(w, parent=self)
-			self.view.setIndexWidget(
-				self.model.index(i, 0),
-				libview.IndexWidgetHolder(parent=self,
-				                          innerWidget=dragWidget)
+			#log("childWidget", childWidget, vars=0)
+			self.model().appendRow(
+				[QtGui.QStandardItem(), QtGui.QStandardItem(str(key))]
 			)
-
-		self.view.setSizeAdjustPolicy(
-			QtWidgets.QAbstractItemView.AdjustToContents
-		)
-		libview.syncViewLayout(self.view)
-		#self.view.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
-
-
-	def buildLayout(self):
-		layout = QtWidgets.QHBoxLayout()
-		#layout = QtWidgets.QVBoxLayout()
-		layout.addWidget(self.typeLabel)
-		layout.addWidget(self.view)
-		layout.setAlignment(self.typeLabel, QtCore.Qt.AlignTop)
-		layout.setContentsMargins(0, 0, 0, 0)
-		self.setLayout(layout)
+			newIndex = self._modelIndexForKey(key)
+			#log("newIndex", newIndex, child)
+			#self.model().setItemData(newIndex, )
+			#self._childAtomics[key] = childWidget
+			self.setIndexWidget(self._modelIndexForKey(key),
+			                    childWidget)
+			self._setChildAtomicWidget(key, childWidget)
 
 
-	# def sizeAdjustPolicy(self):
-	# 	"""return the size adjust policy"""
-	# 	print("size adjust policy")
-	# 	return QtWidgets.QAbstractItemView.AdjustToContents
+		# rootItem : QtGui.QStandardItem = self.model().itemFromIndex(self.model().index(0, 0))
+		# rootItem.setText("[")
+		topLeftIndex = self.model().index(0, 0)
+		label = DexViewExpandButton("[", dex=self.dex(), parent=self )
+		label.expanded.connect(self._setValuesVisible)
+		#label.clicked.connect(self._toggleValuesVisible)
+
+		self.setIndexWidget(topLeftIndex, label)
+		self.syncLayout()
+
+	def _setValuesVisible(self, state=True):
+		self.setColumnHidden(1,
+		                     not state
+		                     )
+		self.resizeColumnToContents(0)
+		self.resizeColumnToContents(1)
+		self.update()
+		self.updateGeometry()
+		self.syncLayout()
+		self.parent().updateGeometry()
+		if isinstance(self.parent(), WpDexView):
+			self.parent().syncLayout()
+			self.parent().updateGeometries()
+			self.parent().syncLayout()
+
+
 
 
 # class ListWpItemWidget(WpItemWidget):
@@ -226,5 +354,28 @@ class SeqDexWidget(WpDexWidget):
 # 	def toggleExpanded(self, *args, **kwargs):
 # 		"""toggle expanded state"""
 # 		self.setExpanded(not self.isExpanded())
+
+
+if __name__ == '__main__':
+
+	from wpdex.ui.base import WpDexWindow
+	data = [1, 2, 3,
+	            [4, 5],
+	        6,
+	        [ 4, 5,
+	          [ 6, 7, ],
+	          8 ]
+	        ]
+
+	p = WpDexProxy(data)
+	#ref = p.ref(3)
+	ref = p.ref()
+	log("ref", ref, "ref val", ref.rx.value)
+
+	app = QtWidgets.QApplication()
+	w = WpDexWindow(parent=None,
+	                value=ref)
+	w.show()
+	app.exec_()
 
 

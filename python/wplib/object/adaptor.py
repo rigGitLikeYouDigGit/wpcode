@@ -151,6 +151,10 @@ class Adaptor:
 			#return adaptorType(*args, **kwargs)
 			return adaptorType.__new__(adaptorType, *args, __isDispatched=True, **kwargs)
 		return object.__new__(cls)
+		#TODO: figure out how to properly do 'super' here - need to pass it up until it finds
+		# a parent class that works differently
+		# log("cls", cls, clsSuper(cls))
+		# return clsSuper(cls).__new__(cls, )
 	# endregion
 
 	# region copying
