@@ -17,6 +17,17 @@ from wpexp.parse import getExpParseFrames, getBracketContents
 if T.TYPE_CHECKING:
 	pass
 
+"""
+ok think of this old expression stuff like the principia mathematica.
+sure there's some good stuff there and it informs everything I know now,
+but you're not meant to actually read it
+
+I think this was before I had visitors or adaptors, so there's a lot
+of those same ideas all mashed together with the string parsing
+"""
+
+
+
 """functions checking expression syntax for user input
 
 a pass may split string into multiple parts, each to be parsed recursively
@@ -108,6 +119,12 @@ def _in_fn(element, container):
 	except AttributeError: # fall back if __contains__ has not been defined
 		return element in container
 
+def _is_fn(element, container):
+	"""substitute this on any instance of 'is' keyword"""
+	try:
+		return container.__is__(element)
+	except AttributeError: # fall back if __contains__ has not been defined
+		return element in container
 
 nullExpChar = "####"
 reMasterSplitStr = r"[ \s+ \+ \- \* \/ \% \( \)]"
@@ -194,7 +211,13 @@ class SyntaxPasses(TypeNamespace):
 		Passes also need to contribute their own separator characters
 		for the intermediate frame parsing stage - for now keep it simple
 
+		each pass is also an ast.NodeTransformer class, so should define
+			"visit_Call()" functions as normal
+
 		"""
+		# instance attributes set dynamically whenever pass is used
+		# may hang around afterwards, but won't mean anything
+		processor : ExpSyntaxProcessor
 
 		@classmethod
 		def expressionStringRef(cls)->str:
@@ -324,6 +347,9 @@ class SyntaxPasses(TypeNamespace):
 			eg:
 			@p + $p -> __evaluator__.resolveToken(_AtToken_("p")) + __evaluator__.resolveToken(_DollarToken_("p"))
 
+			TODO: this is cool but just pass the whole token to the resolve function,
+				the named classes for different markers is silly
+
 			"""
 
 			# build local token map
@@ -365,12 +391,16 @@ class SyntaxPasses(TypeNamespace):
 		use blacklist and globals diligently
 		"""
 
-		def __init__(self, fallbackOnly=True, blacklist:tuple[str]=()):
+		@classmethod
+		def defaultBlacklist(cls)->tuple[str]:
+			return (EXP_LAMBDA_NAME, )
+
+		def __init__(self, fallbackOnly=True, blacklist:tuple[str]=None):
 			"""if fallbackOnly, only replace names that are not already defined in globals
 			any names in blacklist will not be replaced"""
 			super().__init__()
 			self.fallbackOnly = fallbackOnly
-			self.blacklist = blacklist
+			self.blacklist = blacklist or self.defaultBlacklist()
 
 		def _getSyntaxLocalMap(self)->dict:
 			"""return dict of {name : value} to update expression globals"""
@@ -380,7 +410,7 @@ class SyntaxPasses(TypeNamespace):
 			"""would this also trip function calls?"""
 			if node.id in self.blacklist:
 				return node
-			if self.fallbackOnly and node.id in self.currentExpGlobals:
+			if self.fallbackOnly and node.id in self.processor.currentExpGlobals:
 				return node
 			return ast.Str(s=node.id)
 
@@ -497,7 +527,7 @@ class SyntaxPasses(TypeNamespace):
 			'lambda' keyword, and add if not"""
 			if s.startswith("lambda *args, **kwargs :"):
 				return s
-			return EXP_LAMBDA_NAME + "= lambda *args, **kwargs:" + s
+			return EXP_LAMBDA_NAME + " = lambda *args, **kwargs : " + s
 			#return "lambda :" + s
 
 
@@ -523,13 +553,22 @@ class ExpSyntaxProcessor:
 	stringIsExpressionFn:T.Callable[[str], bool] = lambda s: False
 	stringIsExpFunctionDefinitionFn:T.Callable[[str], bool] = lambda s: False
 
+	def __post_init__(self):
+		self.currentExpGlobals = {} # replaced during processing
 
-	def parseRawExpString(self, s:str) ->str:
+	def isFunction(self)->bool:
+		"""check (somehow) if the given result is expected to
+		be a live, callable function -
+		by default, no
+		"""
+
+	def _parseRawExpString(self, s:str) ->str:
 		"""process string expression -
 		first raw string, then parse to AST,
 		then visit AST
 		"""
 		for syntaxPass in self.syntaxStringPasses:
+			syntaxPass.processor = self
 			s = syntaxPass.preProcessRawString(s)
 		return s
 
@@ -537,7 +576,7 @@ class ExpSyntaxProcessor:
 
 
 	@classmethod
-	def parseStringToAST(cls, s:str) ->ast.Module:
+	def _parseStringToAST(cls, s:str) ->ast.Module:
 		"""parse string to AST-
 		run this after processing raw string,
 		and before AST transform passes"""
@@ -546,21 +585,23 @@ class ExpSyntaxProcessor:
 		#inputASTExt = astModuleToExpression(inputASTModule)
 		return inputASTModule
 
-	def processAST(self, expAst:ast.AST) ->ast.AST:
+	def _processAST(self, expAst:ast.AST) ->ast.AST:
 		"""Run AST transform passes"""
 
 		# process AST
 		for syntaxPass in self.syntaxAstPasses:
+			syntaxPass.processor = self
 			expAst = syntaxPass.visit(expAst)
 
 		# I think you only need to run this once
 		ast.fix_missing_locations(expAst)
 		return expAst
 
-	def compileFinalASTToFunction(
+	def _compileFinalASTToFunction(
 			self,
 			finalAst:ast.AST,
-			expGlobals:dict)->FunctionType:
+			expGlobals:dict,
+	)->FunctionType:
 		"""compile final ast to function
 		this should live somewhere else"""
 		#print("compile ast", ast.dump(finalAst))
@@ -575,6 +616,26 @@ class ExpSyntaxProcessor:
 		     )
 		#print("post exec", expDict.keys())
 		return expDict[EXP_LAMBDA_NAME]
+
+	def parse(self,
+	          s:str,
+	          expGlobals:dict):
+		from wplib import log
+
+		self.currentExpGlobals = expGlobals
+		#s = f"{EXP_LAMBDA_NAME} = {s}"
+
+		#log("parse", s, expGlobals)
+		parsedStr = self._parseRawExpString(s)
+		#log("parsedStr", parsedStr)
+		astTree = self._parseStringToAST(parsedStr)
+		#log("astTree", type(astTree), ast.dump(astTree))
+		finalAst = self._processAST(astTree)
+
+		finalResult = self._compileFinalASTToFunction(
+			finalAst=finalAst, expGlobals=expGlobals,
+		)
+		return finalResult
 
 
 

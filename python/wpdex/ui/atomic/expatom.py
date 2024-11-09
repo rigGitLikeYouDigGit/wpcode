@@ -7,6 +7,8 @@ from PySide2 import QtCore, QtGui, QtWidgets
 from wpdex.ui.atomic.base import AtomicWidget
 from wpdex import *
 
+# i summon ancient entities
+from wpexp.syntax import SyntaxPasses, ExpSyntaxProcessor
 
 def toStr(x):
 	"""TODO: obviously
@@ -27,7 +29,8 @@ class ExpWidget(QtWidgets.QLineEdit, AtomicWidget):
 	allow defining new values as whatever is eval'd
 	on commit
 	"""
-	forTypes = (IntDex, )
+	forTypes = (IntDex,
+	            StrDex)
 
 
 	def __init__(self, value=0, parent=None,
@@ -62,10 +65,25 @@ class ExpWidget(QtWidgets.QLineEdit, AtomicWidget):
 		"""TODO: add in syntax passes here for
 		    raw string values without quotes
 		"""
+
 		#log("eval-ing", rawResult, str(rawResult), f"{rawResult}")
-		if not rawResult:
+		if not rawResult: # empty string, return empty result
 			return type(self.value())()
-		return eval(rawResult)
+
+		# set syntax passes - for now only one to catch raw strings
+		#TODO: rework a decent bit of the syntax passes, but it's finally
+		#   WORKING IN SITU :D
+		rawStrPass = SyntaxPasses.NameToStrPass()
+		ensureLambdaPass = SyntaxPasses.EnsureLambdaPass()
+		processor = ExpSyntaxProcessor(
+			syntaxStringPasses=[rawStrPass, ensureLambdaPass],
+			syntaxAstPasses=[rawStrPass, ensureLambdaPass]
+		)
+		result = processor.parse(rawResult, {})
+		#log("parsed", result, type(result))
+		# always returns a lambda function - more consistent that way
+		return result()
+
 	def _processValueForUi(self, rawValue):
 		return toStr(rawValue)
 

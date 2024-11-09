@@ -12,11 +12,14 @@ holds a few features -
 in time it might make more sense to split these up and move them,
 still unsure of a lot of it
 
+RE-EVALUATE now that we make wide use of rx - some of this stuff
+	is still useful, some is not
+
 """
 
 from .syntax import SyntaxPasses, ExpTokens#, ExpSyntaxError, ExpSyntaxProcessor
-from .new import Expression, ExpPolicy#, EvaluationError, ExpEvaluator
-from .dirty import DirtyExp
+#from .new import Expression, ExpPolicy#, EvaluationError, ExpEvaluator
+#from .dirty import DirtyExp
 
-from .react import *
+#from .react import *
 

@@ -80,91 +80,26 @@ class WpDexView(AtomicWidget):
 	many widgets for one WpDex
 	registered against WpDex type
 	"""
-	# adaptorTypeMap = Adaptor.makeNewTypeMap()
-	#
-	# # UNSURE if we should make this explicitly match wpdex types,
-	# # rather than value types - we guarantee more this way
-	# forTypes = (WpDex, )
-	# dispatchInit = False # no automatic dispatching
 
-	# def __init__(self, value, parent=None):
-	# 	QtWidgets.QAbstractItemView.__init__(self, parent)
-	# 	AtomicWidget.__init__(self, value)
-	#
-	# 	self.childWidgets : dict[WpDex.pathT, WpDexView] = {}
-	# 	# unsure if it's worth enforcing this registration
-	# 	# on random child helper widgets -
-	# 	# if you need them in more than one function,
-	# 	# add them to the map
-	# 	self.extraWidgets : dict[str, QtWidgets.QWidget] = {}
-	# 	self.buildChildWidgets()
-	# 	self.buildExtraWidgets()
-	# 	self.buildLayout()
-	# 	# set border
-	# 	#self.setStyleSheet("border: 1px solid black;")
-	#
-	# 	self.setAppearance()
-	#
-	#
-	#
-	#
-	# # def getOverride(self, match:dict,
-	# #                 baseValue:T.Any)->T.Any:
-	# # 	"""PLACEHOLDER
-	# # 	for now just return base value -
-	# # 	connect to common override logic once ready
-	# # 	"""
-	# # 	return baseValue
-	# #
-	# # def childWidgetType(self, child:WpDex)->T.Type[WpDexView]:
-	# # 	"""return widget type for given child -
-	# # 	check if any overrides are specified for this path, object type
-	# # 	etc"""
-	# # 	baseWidgetType = self.adaptorForObject(child)
-	# # 	# check for overrides
-	# # 	finalWidgetType = self.getOverride(
-	# # 		match={"purpose" : "widgetType",
-	# # 		       "path" : child.path,
-	# # 		       "obj": child},
-	# # 		baseValue=baseWidgetType
-	# # 	)
-	# # 	return finalWidgetType
-	#
-	# # init and build methods
-	# def buildChildWidgets(self):
-	# 	"""populate childWidgets map with widgets
-	# 	for all dex children"""
-	# 	dex = self.dex()
-	# 	log("buildChildWidgets")
-	# 	for key, child in self.dex().children.items():
-	# 		childWidgetType = self.childWidgetType(child)
-	# 		childWidget = childWidgetType(child, parent=self)
-	# 		self.childWidgets[key] = childWidget
-	#
-	# def buildExtraWidgets(self):
-	# 	#self.extraWidgets["typeLabel"] = WpTypeLabel(parent=self)
-	# 	self.typeLabel = WpTypeLabel(parent=self)
-	# 	pass
-	# def buildLayout(self):
-	# 	raise NotImplementedError
-	# 	# if self.childWidgets:
-	# 	# 	layout = QtWidgets.QVBoxLayout(self)
-	# 	# 	for key, widget in self.childWidgets.items():
-	# 	# 		layout.addWidget(widget)
-	# 	# 	self.setLayout(layout)
-	# 	# else:
-	# 	# 	self.typeLabel.hide()
-	#
-	# def setAppearance(self):
-	# 	"""runs after all setup steps"""
-	#
-	# # others
-	# def uiPath(self)->list[str]:
-	# 	"""return path to this widget in the ui
-	# 	lol wouldn't it be mental if this could diverge from the
-	# 	wpdex path
-	# 	but like actually though"""
-	# 	return self.dex().path
+
+	def modelCls(self):
+		raise NotImplementedError(self)
+
+	def _modelIndexForKey(self, key:WpDex.keyT)->QtCore.QModelIndex:
+		return self.model().index(int(key), 1)
+
+	# def _commitValue(self, value):
+	# 	#log("seq commit value", value)
+	# 	super()._commitValue(value)
+
+
+	def _setRawUiValue(self, value):
+		#raise
+		#log("_set raw ui")
+		self.buildChildWidgets()
+
+	def _rawUiValue(self):
+		return None
 
 
 
@@ -242,3 +177,35 @@ class WpDexWindow(
 		self.layout().addWidget(self.itemWidget)
 
 
+class DexViewExpandButton(QtWidgets.QPushButton):
+	"""button to show type of container when open,
+	and overview of contained types when closed"""
+	expanded = QtCore.Signal(bool)
+	def __init__(self, openText="[", dex:WpDex=None, parent=None):
+		self._isOpen = True
+		self._openText = openText
+		self._dex = dex
+		super().__init__(openText, parent=parent)
+
+		m = 0
+		self.setContentsMargins(m, m, m, m)
+		#self.setFixedSize(20, 20)
+		self.setStyleSheet("padding: 1px 1px 2px 2px; text-align: left")
+
+		self.clicked.connect(lambda : self.setExpanded(
+			state=(not self.isExpanded()), emit=True))
+
+	def getClosedText(self):
+		return self._dex.getTypeSummary()
+
+	def setExpanded(self, state=True, emit=False):
+		log("setExpanded", state, emit)
+		if state:
+			self.setText(self._openText)
+		else:
+			self.setText(self.getClosedText())
+		self._isOpen = state
+		if emit:
+			self.expanded.emit(state)
+	def isExpanded(self):
+		return self._isOpen

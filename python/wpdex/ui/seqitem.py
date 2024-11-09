@@ -1,19 +1,13 @@
 
 from __future__ import annotations
-import typing as T
 
 from PySide2 import QtCore, QtWidgets, QtGui
 
 from wplib import log
 
-from wplib.constant import SEQ_TYPES
-
-from wpui import view as libview
-
-from wpdex import WpDex, SeqDex, WX, WpDexProxy
+from wpdex import WpDex, SeqDex, WpDexProxy
 from wpdex.ui.atomic import AtomicWidget
-from wpdex.ui.base import WpDexView, WpTypeLabel
-from wpui.lib import fixedPolicy
+from wpdex.ui.base import WpDexView, DexViewExpandButton
 
 
 class DragItemWidget(QtWidgets.QWidget):
@@ -59,42 +53,11 @@ def onValueChanged():
 class _SeqDexModel(QtGui.QStandardItemModel):
 	pass
 
-class DexViewExpandButton(QtWidgets.QPushButton):
-	"""button to show type of container when open,
-	and overview of contained types when closed"""
-	expanded = QtCore.Signal(bool)
-	def __init__(self, openText="[", dex:WpDex=None, parent=None):
-		self._isOpen = True
-		self._openText = openText
-		self._dex = dex
-		super().__init__(openText, parent=parent)
-
-		m = 0
-		self.setContentsMargins(m, m, m, m)
-		#self.setFixedSize(20, 20)
-		self.setStyleSheet("padding: 1px 1px 2px 2px; text-align: left")
-
-		self.clicked.connect(lambda : self.setExpanded(
-			state=(not self.isExpanded()), emit=True))
-
-	def getClosedText(self):
-		return self._dex.getTypeSummary()
-
-	def setExpanded(self, state=True, emit=False):
-		log("setExpanded", state, emit)
-		if state:
-			self.setText(self._openText)
-		else:
-			self.setText(self.getClosedText())
-		self._isOpen = state
-		if emit:
-			self.expanded.emit(state)
-	def isExpanded(self):
-		return self._isOpen
-
 
 #class SeqDexView(AtomicWidget, QtWidgets.QTreeView):
-class SeqDexView(QtWidgets.QTreeView, AtomicWidget):
+class SeqDexView(QtWidgets.QTreeView,# AtomicWidget
+                 WpDexView
+                 ):
 	"""view for a list
 
 	drag behaviour -
@@ -117,7 +80,7 @@ class SeqDexView(QtWidgets.QTreeView, AtomicWidget):
 
 	def __init__(self, value, parent=None):
 		QtWidgets.QTreeView.__init__(self, parent)
-		AtomicWidget.__init__(self, value)
+		WpDexView.__init__(self, value)
 		#log("seq init")
 		a = 1
 
@@ -144,54 +107,26 @@ class SeqDexView(QtWidgets.QTreeView, AtomicWidget):
 
 		self.setUniformRowHeights(False)
 
-		# self.setSizePolicy(
-		# 	QtWidgets.QSizePolicy.Minimum,
-		# 	QtWidgets.QSizePolicy.Minimum,
-		# )
-		# self.setSizePolicy(
-		# 	QtWidgets.QSizePolicy.MinimumExpanding,
-		# 	QtWidgets.QSizePolicy.MinimumExpanding,
-		# )
-
-		# self.setSizePolicy(
-		# 	QtWidgets.QSizePolicy.Maximum,
-		# 	QtWidgets.QSizePolicy.Fixed
-		# )
-
-		#### size policy tweaks send widget expanding off to infinity
-
-	# def sizeHint(self):
-	# 	x = super().sizeHint().width()
-	# 	y = self.contentsRect().size().height()
-	# 	return QtCore.QSize(x, y)
-
-
 
 	def modelCls(self):
 		return _SeqDexModel
-
-	def _modelIndexForKey(self, key:WpDex.keyT)->QtCore.QModelIndex:
-		return self.model().index(int(key), 1)
-
-	def _commitValue(self, value):
-		#log("seq commit value", value)
-		super()._commitValue(value)
-
-
-	def _setRawUiValue(self, value):
-		#raise
-		#log("_set raw ui")
-		self.buildChildWidgets()
-
-	def _rawUiValue(self):
-		return None
-
 	def buildChildWidgets(self):
 		"""populate childWidgets map with widgets
-		for all dex children"""
+		for all dex children
+		acts as general sync method """
 		dex = self.dex()
 		#log("buildChildWidgets")
 		self.setModel(self.modelCls()(parent=self))
+
+		# clear any child widgets
+		ties = tuple(self._childAtomics.items())
+		self._childAtomics.clear()
+		for k, w in ties:
+			w.setParent(None)
+			w.deleteLater()
+
+
+
 		for key, child in self.dex().branchMap().items():
 			childWidgetType = AtomicWidget.adaptorForObject(child)
 			assert childWidgetType, f"no widget type found for dex {child}, parent {self.dex()}, self"
@@ -215,7 +150,9 @@ class SeqDexView(QtWidgets.QTreeView, AtomicWidget):
 		# rootItem : QtGui.QStandardItem = self.model().itemFromIndex(self.model().index(0, 0))
 		# rootItem.setText("[")
 		topLeftIndex = self.model().index(0, 0)
-		label = DexViewExpandButton("[", dex=self.dex(), parent=self )
+		openChar = "[" if isinstance(self.dex().obj, list) else "("
+		label = DexViewExpandButton(openChar,
+		                            dex=self.dex(), parent=self)
 		label.expanded.connect(self._setValuesVisible)
 		#label.clicked.connect(self._toggleValuesVisible)
 

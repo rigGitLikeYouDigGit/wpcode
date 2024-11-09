@@ -581,11 +581,10 @@ class DictPathable(PathAdaptor):
 			#parent=self,
 			name=k)
 			for k, v in self.obj.items()}
-		# items["keys()"] = self._buildChildPathable(
-		# 	parent=self,
-		# 	obj=list(self.obj.keys()),
-		# 	name="keys()",
-		# )
+		items["keys()"] = self._buildChildPathable(
+			obj=list(self.obj.keys()),
+			name="keys()",
+		)
 		return items
 
 	def _consumeFirstPathTokens(self, path: pathT, **kwargs) ->tuple[list[Pathable], pathT]:

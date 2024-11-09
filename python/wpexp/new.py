@@ -126,14 +126,14 @@ def transformParseExpStructure(
 			return obj
 		processor = parentExp.policy.syntaxProcessor
 		# parse string to frozen lambda
-		parsedStr = processor.parseRawExpString(obj)
-		parsedAst = processor.parseStringToAST(parsedStr)
-		processedAst = processor.processAST(parsedAst)
+		parsedStr = processor._parseRawExpString(obj)
+		parsedAst = processor._parseStringToAST(parsedStr)
+		processedAst = processor._processAST(parsedAst)
 
 		parseGlobals = parentExp.getParseGlobals()
 
 		#print("compiling with globals", parentExp.getParseGlobals())
-		compiledFn = processor.compileFinalASTToFunction(
+		compiledFn = processor._compileFinalASTToFunction(
 			processedAst, parentExp.getParseGlobals())
 		# create expression object with function
 		return compiledFn
@@ -189,14 +189,14 @@ class ParseExpVisitOp(DeepVisitor.DeepVisitOp):
 			return obj
 		processor = parentExp.policy.syntaxProcessor
 		# parse string to frozen lambda
-		parsedStr = processor.parseRawExpString(obj)
-		parsedAst = processor.parseStringToAST(parsedStr)
-		processedAst = processor.processAST(parsedAst)
+		parsedStr = processor._parseRawExpString(obj)
+		parsedAst = processor._parseStringToAST(parsedStr)
+		processedAst = processor._processAST(parsedAst)
 
 		parseGlobals = parentExp.getParseGlobals()
 
 		#print("compiling with globals", parentExp.getParseGlobals())
-		compiledFn = processor.compileFinalASTToFunction(
+		compiledFn = processor._compileFinalASTToFunction(
 			processedAst, parentExp.getParseGlobals())
 		# create expression object with function
 		return compiledFn

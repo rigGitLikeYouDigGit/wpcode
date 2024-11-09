@@ -90,7 +90,7 @@ class AtomicWidget(
 
 	valueType = object
 
-
+	#TODO: context menu, action to pprint current value of dex
 
 	def __init__(self, value:valueType=None,
 	             conditions:T.Sequence[Condition]=(),
@@ -249,15 +249,31 @@ class AtomicWidget(
 		# extend in real class for adding to layout etc
 		return w
 
+	def buildChildWidgets(self):
+		raise NotImplementedError(self)
+
+
 	def _onChildAtomicValueChanged(self,
 	                               key:WpDex.keyT,
 	                               value:T.Any,
 	                               ):
-		"""check if new value needs new widget type -
+		"""
+		no fancy logic right now - if one of this widget's children change,
+		rebuild everything
+		check if new value needs new widget type -
 		if so, remove widget at key and generate a new one
 
 		cyclic link with _setAtomicChildWidget above, but I think it's ok"""
-		log("on child atomic widget changed", key, value, self)
+		#log("on child atomic widget changed", key, value, self)
+		try: # if equality has been implemented for values, compare
+			if value == self.dex().branchMap()[key].obj:
+				return
+		except TypeError: #otherwise just write all the time to be safe
+			pass
+		self.dex().branchMap()[key].write(value)
+		self.buildChildWidgets()
+		return
+
 		#assert key in self._childAtomics, "no "
 
 		oldDex = self._childAtomics[key].dex()
@@ -267,7 +283,12 @@ class AtomicWidget(
 		if isinstance(oldDex, newDexType):
 			return
 
-		newChildWidget = self._makeNewChildWidget(key, value, newDexType)
+		# make a new dex widget - pass in a reference to the branch of this dex
+		# at the given key
+		newChildWidget = self._makeNewChildWidget(
+			key,
+			self.dex().ref(key),
+			newDexType)
 		self._setChildAtomicWidget(key, newChildWidget)
 
 
@@ -282,7 +303,7 @@ class AtomicWidget(
 	                        value,
 	                        newDexType):
 		newWidgetType: type[AtomicWidget] = AtomicWidget.adaptorForType(newDexType)
-		raise NotImplementedError
+		return newWidgetType(value=value, parent=self)
 
 
 	def rxImmediateValue(self)->rx:
