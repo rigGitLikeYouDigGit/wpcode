@@ -81,31 +81,8 @@ class SeqDexView(QtWidgets.QTreeView,# AtomicWidget
 	def __init__(self, value, parent=None):
 		QtWidgets.QTreeView.__init__(self, parent)
 		WpDexView.__init__(self, value)
-		#log("seq init")
-		a = 1
-
-		self.header().setDefaultSectionSize(2)
-		#self.header().setMinimumSectionSize(-1) # sets to font metrics, still buffer around it
-		self.header().setMinimumSectionSize(15)
-		self.header().setSectionResizeMode(
-			self.header().ResizeToContents
-		)
-		self.setColumnWidth(0, 2)
-
-		self.setIndentation(0)
-
-		self.setSizeAdjustPolicy(
-			QtWidgets.QAbstractItemView.AdjustToContents)
-		self.setHeaderHidden(True)
-
-		self.setVerticalScrollMode(self.ScrollMode.ScrollPerPixel)
-		self.setHorizontalScrollMode(self.ScrollMode.ScrollPerPixel)
 
 		self.postInit()
-		self.setContentsMargins(0, 0, 0, 0)
-		self.setViewportMargins(0, 0, 0, 0)
-
-		self.setUniformRowHeights(False)
 
 
 	def modelCls(self):
@@ -114,18 +91,8 @@ class SeqDexView(QtWidgets.QTreeView,# AtomicWidget
 		"""populate childWidgets map with widgets
 		for all dex children
 		acts as general sync method """
-		dex = self.dex()
-		#log("buildChildWidgets")
-		self.setModel(self.modelCls()(parent=self))
 
-		# clear any child widgets
-		ties = tuple(self._childAtomics.items())
-		self._childAtomics.clear()
-		for k, w in ties:
-			w.setParent(None)
-			w.deleteLater()
-
-
+		self._clearChildWidgets()
 
 		for key, child in self.dex().branchMap().items():
 			childWidgetType = AtomicWidget.adaptorForObject(child)

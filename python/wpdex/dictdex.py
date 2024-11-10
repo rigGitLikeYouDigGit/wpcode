@@ -36,7 +36,7 @@ class DictDex(WpDex):
 		:param **kwargs:
 		"""
 		token, *path = path
-		#log("dict consume first", token, path)
+		log("dict consume first", token, path, self.branchMap())
 		#log(self.branchMap())
 		if token == "keys()":
 			return [self.branchMap()["keys()"]], path
@@ -55,7 +55,7 @@ class DictDex(WpDex):
 			log("items", items) # object items not getting updated on creation?
 			items[index] = (value, items[index][1]) # update single tie in list
 			self.obj.clear() # keep reference to original value object
-			self.obj.update({**items}) # update with tie list
+			self.obj.update({i[0] : i[1] for i in items}) # update with tie list
 			return
 		return super().writeChildToKey(key, value)
 

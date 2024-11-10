@@ -110,7 +110,7 @@ class AtomicWidget(
 		self._value : WX = rx(None)
 
 		# child widgets of container may not be direct children in Qt
-		self._childAtomics : dict[WpDex.keyT, AtomicWidget] = WeakValueDictionary()
+		self._childAtomics : dict[WpDex.pathT, AtomicWidget] = WeakValueDictionary()
 
 		#self._value = rx(value) if not isinstance(value, rx) else value
 		self._immediateValue = rx(None) # changes as ui updates
@@ -136,9 +136,20 @@ class AtomicWidget(
 
 		self.setAutoFillBackground(True)
 
+	def _setErrorState(self, state, exc=None):
+		"""NO IDEA how best to integrate this, but should have a flag
+		to warn through ui, without trying to commit fully"""
+
 	def _syncImmediateValue(self, *args, **kwargs):
 		#log("sync immediate")
-		val = self._processResultFromUi(self._rawUiValue())
+		try:
+			val = self._processResultFromUi(self._rawUiValue())
+		except Exception as e:
+			"""if an invalid input occurs as you type, 
+			warn user and don't try to commit it"""
+			self._setErrorState(True, e)
+			return
+
 		#log("processed", val)
 		self._immediateValue.rx.value = val
 
@@ -228,12 +239,13 @@ class AtomicWidget(
 			self._tryCommitValue(EVAL(value))
 
 	def _setChildAtomicWidget(self,
-	                   key:WpDex.keyT,
+	                   key:WpDex.pathT,
 	                   w:AtomicWidget
 	                   ):
 		"""update this widget's map of children, remove
 		the existing widget if found
 		also connects up signals"""
+		key = WpDex.toPath(key)
 		if self._childAtomics.get(key):
 			currentChild = self._childAtomics[key]
 			currentChild.setParent(None)
@@ -249,12 +261,24 @@ class AtomicWidget(
 		# extend in real class for adding to layout etc
 		return w
 
+	def _buildChildWidget(self, index:QtCore.QModelIndex,
+	                      dex:WpDex,
+	                      ):
+		"""reduce code duplication when making children"""
+		widgetType = AtomicWidget.adaptorForObject(dex)
+		assert widgetType
+		widget = widgetType(value=dex, parent=self)
+		self.setIndexWidget(index, widget)
+		self._setChildAtomicWidget(tuple(dex.relativePath(self.dex())),
+		                           widget)
+		return widget
+
 	def buildChildWidgets(self):
 		raise NotImplementedError(self)
 
 
 	def _onChildAtomicValueChanged(self,
-	                               key:WpDex.keyT,
+	                               key:WpDex.pathT,
 	                               value:T.Any,
 	                               ):
 		"""
@@ -263,14 +287,28 @@ class AtomicWidget(
 		check if new value needs new widget type -
 		if so, remove widget at key and generate a new one
 
-		cyclic link with _setAtomicChildWidget above, but I think it's ok"""
+		cyclic link with _setAtomicChildWidget above, but I think it's ok
+
+		TODO: resolve the case of modifying dict keys -
+			it happens because we trigger write() with both the direct
+			proxy reference, and this function.
+			Once everything else holds together, disable all the
+			try-excepts here and track it dowb
+
+		"""
 		#log("on child atomic widget changed", key, value, self)
 		try: # if equality has been implemented for values, compare
-			if value == self.dex().branchMap()[key].obj:
+			if value == self.dex().access(self.dex(), key, values=True):
 				return
 		except TypeError: #otherwise just write all the time to be safe
 			pass
-		self.dex().branchMap()[key].write(value)
+		except KeyError:
+			pass
+		try:
+			self.dex().access(self.dex(), key, values=False).write(value)
+		except (KeyError, Pathable.PathKeyError):
+			pass # beyond caring
+
 		self.buildChildWidgets()
 		return
 
@@ -287,7 +325,7 @@ class AtomicWidget(
 		# at the given key
 		newChildWidget = self._makeNewChildWidget(
 			key,
-			self.dex().ref(key),
+			self.dex().ref(*key),
 			newDexType)
 		self._setChildAtomicWidget(key, newChildWidget)
 

@@ -81,6 +81,33 @@ class WpDexView(AtomicWidget):
 	registered against WpDex type
 	"""
 
+	def __init__(self, value,):
+		AtomicWidget.__init__(self, value=value,
+		                      )
+
+		# set up header and general size behaviour for views -
+		# override this to fine-tune it
+
+		self.header().setDefaultSectionSize(2)
+		#self.header().setMinimumSectionSize(-1) # sets to font metrics, still buffer around it
+		self.header().setMinimumSectionSize(15)
+		self.header().setSectionResizeMode(
+			self.header().ResizeToContents
+		)
+		self.setColumnWidth(0, 2)
+		self.setIndentation(0)
+
+		self.setSizeAdjustPolicy(
+			QtWidgets.QAbstractItemView.AdjustToContents)
+		self.setHeaderHidden(True)
+
+		self.setVerticalScrollMode(self.ScrollMode.ScrollPerPixel)
+		self.setHorizontalScrollMode(self.ScrollMode.ScrollPerPixel)
+		self.setContentsMargins(0, 0, 0, 0)
+		self.setViewportMargins(0, 0, 0, 0)
+
+		self.setUniformRowHeights(False)
+
 
 	def modelCls(self):
 		raise NotImplementedError(self)
@@ -88,9 +115,18 @@ class WpDexView(AtomicWidget):
 	def _modelIndexForKey(self, key:WpDex.keyT)->QtCore.QModelIndex:
 		return self.model().index(int(key), 1)
 
-	# def _commitValue(self, value):
-	# 	#log("seq commit value", value)
-	# 	super()._commitValue(value)
+	def _clearChildWidgets(self):
+		"""TODO:
+		clear up where this sits between base Atomic and the View subclass
+		"""
+		self.setModel(self.modelCls()(parent=self))
+
+		# clear any child widgets
+		ties = tuple(self._childAtomics.items())
+		self._childAtomics.clear()
+		for k, w in ties:
+			w.setParent(None)
+			w.deleteLater()
 
 
 	def _setRawUiValue(self, value):

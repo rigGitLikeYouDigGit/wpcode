@@ -74,6 +74,16 @@ class TreeDex(WpDex):
 				return [None], path
 			raise Pathable.PathKeyError(f"Invalid token {token} for {self} branches:\n{self.branchMap()}")
 
+	def treeDexes(self, includeSelf=True)->T.Iterator[TreeDex]:
+		"""convenience special-case to only iter over contiguous
+		dexes of this tree -
+		trees as values won't be included"""
+		if includeSelf:
+			yield self
+		for k, dex in self.branchMap().items():
+			if str(k).startswith("@"): continue
+			# direct branches guaranteed to be child trees
+			yield from dex.treeDexes(includeSelf=True)
 
 
 

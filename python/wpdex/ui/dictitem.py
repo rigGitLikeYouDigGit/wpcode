@@ -26,30 +26,9 @@ class DictDexView(QtWidgets.QTreeView,# AtomicWidget
 	def __init__(self, value, parent=None):
 		QtWidgets.QTreeView.__init__(self, parent)
 		WpDexView.__init__(self, value)
-		#log("seq init")
-		a = 1
-
-		self.header().setDefaultSectionSize(2)
-		#self.header().setMinimumSectionSize(-1) # sets to font metrics, still buffer around it
-		self.header().setMinimumSectionSize(15)
-		self.header().setSectionResizeMode(
-			self.header().ResizeToContents
-		)
-		self.setColumnWidth(0, 2)
-		self.setIndentation(0)
-
-		self.setSizeAdjustPolicy(
-			QtWidgets.QAbstractItemView.AdjustToContents)
-		self.setHeaderHidden(True)
-
-		self.setVerticalScrollMode(self.ScrollMode.ScrollPerPixel)
-		self.setHorizontalScrollMode(self.ScrollMode.ScrollPerPixel)
 
 		self.postInit()
-		self.setContentsMargins(0, 0, 0, 0)
-		self.setViewportMargins(0, 0, 0, 0)
 
-		self.setUniformRowHeights(False)
 
 
 	def modelCls(self):
@@ -65,7 +44,8 @@ class DictDexView(QtWidgets.QTreeView,# AtomicWidget
 		"""populate childWidgets map with widgets
 		for all dex children"""
 		#log("buildChildWidgets")
-		self.setModel(self.modelCls()(parent=self))
+		self._clearChildWidgets()
+
 		items = tuple(self.dex().branchMap().items())
 		keyTies = [i for i in items if "key:" in str(i[0])]
 		valueTies = [i for i in items if "key:" not in str(i[0])]
