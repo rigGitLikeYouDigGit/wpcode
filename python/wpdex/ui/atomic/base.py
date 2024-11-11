@@ -11,9 +11,11 @@ from PySide2 import QtCore, QtWidgets, QtGui
 from param import rx
 
 from wplib import log
-from wplib.object import Signal, Adaptor
+from wplib.object import Signal, Adaptor, PostInitMeta
 
 from wpdex import *
+from wpexp.syntax import SyntaxPasses, ExpSyntaxProcessor
+import warp
 
 class Condition:
 	"""EXTREMELY verbose, but hopefully this lets us reuse
@@ -50,61 +52,25 @@ base = object
 if T.TYPE_CHECKING:
 	base = QtWidgets.QWidget
 
-class AtomicWidget(
-	Adaptor,
-	base
+class AtomicUiInterface(
+	#Adaptor,
+	base,
+	metaclass=PostInitMeta
+):
+	"""base class to pull out the common logic of validation
+	for both widgets and view items, since either one might be
+	more useful
 
-                   ):
+	standardItems aren't QObjects, so we need to route signals
+	through the model? and it gets REALLY messy
 	"""
-	base class to formalise some ways of working with widgets to set and display data -
-
-	CONSIDER - add events to hooks to re-check BIND connections, pull new
-	values from rx connections, etc
-
-	"""
-	# atomic widgets registered as adaptors against dex types
-	adaptorTypeMap = Adaptor.makeNewTypeMap()
-	forTypes : tuple[type[WpDex]] = ()
-
-	Condition = Condition
-
-
-	"""connect up signals and filter events in real widgets as
-	needed to fire these - once edited and committed signals fire,
-	logic should be uniform"""
-	# widget display changed live
-	displayEdited = QtCore.Signal(object)
-
-	# widget display committed, enter pressed, etc
-	# MAY NOT yet be legal, fires to start validation process
-	displayCommitted = QtCore.Signal(object)
-
-	# committed - FINAL value, no delta
-	valueCommitted = QtCore.Signal(object) # redeclare this with proper signature
-	# # checked - continuous as UI changes
-	# atomValueChecked = QtCore.Signal(object)
-	# # delta - emit before and after
-	# atomValueDelta = QtCore.Signal(dict)
-
-	#muteQtSignals = muteQtSignals
-
-	valueType = object
-
-	#TODO: context menu, action to pprint current value of dex
-
-	def __init__(self, value:valueType=None,
-	             conditions:T.Sequence[Condition]=(),
+	def __init__(self, value,
+	             conditions=(),
 	             warnLive=False,
 	             commitLive=False,
-	             enableInteractionOnLocked=False
-	             ):
-		"""
-		if commitLive, will attempt to commit as ui changes, still ignoring
-		any that fail the check -
-		use this for fancy sliders, etc
-		"""
+	             enableInteractionOnLocked=False,
+	             **kwargs):
 		# set up all reactive elements first -
-		# this is surely massive overkill but we live with it for now
 		self._proxy : WpDexProxy = None
 		self._dex : WpDex = None
 		self._value : WX = rx(None)
@@ -120,21 +86,6 @@ class AtomicWidget(
 		self.warnLive = warnLive
 
 		self.setValue(value)
-
-		self.displayEdited.connect(self._onDisplayEdited)
-		self.displayCommitted.connect(self._onDisplayCommitted)
-
-		self._value.rx.watch(self._syncUiFromValue, onlychanged=False)
-
-		"""check that the given value is a root, and can be set -
-		if not, disable the widget, since otherwise RX has a fit
-		"""
-		if not react.canBeSet(self._value):
-			if not enableInteractionOnLocked:
-				log(f"widget {self} passed value not at root, \n disabling for display only")
-				self.setEnabled(False)
-
-		self.setAutoFillBackground(True)
 
 	def _setErrorState(self, state, exc=None):
 		"""NO IDEA how best to integrate this, but should have a flag
@@ -152,19 +103,6 @@ class AtomicWidget(
 
 		#log("processed", val)
 		self._immediateValue.rx.value = val
-
-	def postInit(self):
-		"""yes I know post-inits are terrifying in qt,
-		for this one, just call it manually yourself,
-		i'm not your mother
-		"""
-		#log("postInit", self, self.value())
-		#log(self._processValueForUi(self.value()))
-		self._syncUiFromValue()
-		# try: self._syncUiFromValue()
-		# except: pass
-		self._syncImmediateValue()
-		self.syncLayout()
 
 
 	def _fireDisplayEdited(self, *args):
@@ -238,39 +176,33 @@ class AtomicWidget(
 			log("before commit wx", value, EVAL(value))
 			self._tryCommitValue(EVAL(value))
 
-	def _setChildAtomicWidget(self,
-	                   key:WpDex.pathT,
-	                   w:AtomicWidget
-	                   ):
-		"""update this widget's map of children, remove
-		the existing widget if found
-		also connects up signals"""
-		key = WpDex.toPath(key)
+
+	def _buildChildWidget(self, index:QtCore.QModelIndex,
+	                      dex:WpDex,
+	                      ):
+		"""reduce code duplication when making children
+		OVERRIDE in items"""
+		widgetType = AtomicWidget.adaptorForObject(dex)
+		assert widgetType
+		widget : AtomicWidget = widgetType(value=dex, parent=self)
+		self.setIndexWidget(index, widget)
+		# self._setChildAtomicWidget(tuple(dex.relativePath(self.dex())),
+		#                            widget)
+		relPath = dex.relativePath(self.dex())
+		key = WpDex.toPath(relPath)
 		if self._childAtomics.get(key):
 			currentChild = self._childAtomics[key]
 			currentChild.setParent(None)
 			currentChild.deleteLater()
 			self._childAtomics.pop(key)
-		self._childAtomics[key] = w
+		self._childAtomics[key] = widget
 
 		# connect signals
 		# not passing widget to the lambda, unsure if that'll count as a reference and keep it around
 		# for too long
-		w.valueCommitted.connect(lambda obj: self._onChildAtomicValueChanged(key, obj))
+		widget.valueCommitted.connect(lambda obj: self._onChildAtomicValueChanged(key, obj))
 
 		# extend in real class for adding to layout etc
-		return w
-
-	def _buildChildWidget(self, index:QtCore.QModelIndex,
-	                      dex:WpDex,
-	                      ):
-		"""reduce code duplication when making children"""
-		widgetType = AtomicWidget.adaptorForObject(dex)
-		assert widgetType
-		widget = widgetType(value=dex, parent=self)
-		self.setIndexWidget(index, widget)
-		self._setChildAtomicWidget(tuple(dex.relativePath(self.dex())),
-		                           widget)
 		return widget
 
 	def buildChildWidgets(self):
@@ -425,6 +357,87 @@ class AtomicWidget(
 		self.valueCommitted.emit(value)
 
 
+class AtomicWidget(
+	Adaptor,
+	AtomicUiInterface
+
+                   ):
+	"""
+	specialising reactive interface for full widgets and QObjects
+	"""
+	# atomic widgets registered as adaptors against dex types
+	adaptorTypeMap = Adaptor.makeNewTypeMap()
+	forTypes : tuple[type[WpDex]] = ()
+
+	Condition = Condition
+
+
+	"""connect up signals and filter events in real widgets as
+	needed to fire these - once edited and committed signals fire,
+	logic should be uniform"""
+	### COPY PASTE this block of signals to atomic classes that use it,
+	### inheritance is getting too tangled here
+	# widget display changed live
+	displayEdited = QtCore.Signal(object)
+
+	# widget display committed, enter pressed, etc
+	# MAY NOT yet be legal, fires to start validation process
+	displayCommitted = QtCore.Signal(object)
+
+	# committed - FINAL value, no delta
+	valueCommitted = QtCore.Signal(object) # redeclare this with proper signature
+
+	valueType = object
+
+	#TODO: context menu, action to pprint current value of dex
+
+	def __init__(self, value:valueType=None,
+	             conditions:T.Sequence[Condition]=(),
+	             warnLive=False,
+	             commitLive=False,
+	             enableInteractionOnLocked=False
+	             ):
+		"""
+		if commitLive, will attempt to commit as ui changes, still ignoring
+		any that fail the check -
+		use this for fancy sliders, etc
+		"""
+		AtomicUiInterface.__init__(self, value=value, conditions=conditions,
+		                           warnLive=warnLive, commitLive=commitLive,
+		                           enableInteractionOnLocked=enableInteractionOnLocked)
+
+
+		self.displayEdited.connect(self._onDisplayEdited)
+		self.displayCommitted.connect(self._onDisplayCommitted)
+
+		self._value.rx.watch(self._syncUiFromValue, onlychanged=False)
+
+		"""check that the given value is a root, and can be set -
+		if not, disable the widget, since otherwise RX has a fit
+		"""
+		if not react.canBeSet(self._value):
+			if not enableInteractionOnLocked:
+				log(f"widget {self} passed value not at root, \n disabling for display only")
+				self.setEnabled(False)
+
+		self.setAutoFillBackground(True)
+
+	def postInit(self):
+		"""yes I know post-inits are terrifying in qt,
+		for this one, just call it manually yourself
+		from the __init__ of the final class,
+		i'm not your mother
+		"""
+		#log("postInit", self, self.value())
+		#log(self._processValueForUi(self.value()))
+		self._syncUiFromValue()
+		# try: self._syncUiFromValue()
+		# except: pass
+		self._syncImmediateValue()
+		self.syncLayout()
+
+
+
 	def focusOutEvent(self, event):
 		"""ensure we don't get trailing half-finished input left
 		in the widget if the user clicks off halfway through editing -
@@ -451,5 +464,53 @@ class AtomicWidget(
 
 	# def sizeHint(self):
 	#
+
+class AtomicStandardItemModel(QtGui.QStandardItemModel,
+                              AtomicUiInterface):
+	"""link to qobjects when using standardItems"""
+	# widget display changed live
+	displayEdited = QtCore.Signal(object)
+
+	# widget display committed, enter pressed, etc
+	# MAY NOT yet be legal, fires to start validation process
+	displayCommitted = QtCore.Signal(object)
+
+	# committed - FINAL value, no delta
+	valueCommitted = QtCore.Signal(object)  # redeclare this with proper signature
+
+class AtomStyledItemDelegate(QtWidgets.QStyledItemDelegate,
+                             AtomicUiInterface):
+
+	def createEditor(self,
+	                 parent:QtWidgets.QTreeView,
+	                 option:QtWidgets.QStyleOptionViewItem,
+	                 index:QtCore.QModelIndex):
+		item : AtomStandardItem = index.model().itemFromIndex(index)
+
+		pass
+
+class AtomStandardItem(QtGui.QStandardItem, AtomicUiInterface):
+	"""when you think you've fought through every circle of hell
+	you just get another circle
+
+	couldn't work out a good way of multi-selecting entries
+	in a view when each one had its own widget, and also had
+	more difficulties with tree views.
+
+	so we try this way again - represent each leaf value by a
+	special standard item that runs the normal atomic validation
+	and links to the reactive references of its target value
+
+	and maybe this can be made general enough that it supercedes all the
+	other widget stuff I've done
+
+	I swear I just want to make films
+
+	we pass in a PARENT QOBJECT (usually the indexWidget that this
+	item is a child of), so that we don't have to
+	use signals from the model?
+
+	"""
+
 
 

@@ -20,6 +20,7 @@ from .hashable import HashableMixin, UnHashableDict, UnHashableSet, HashFunction
 from .metamagicdelegator import ClassMagicMethodMixin
 
 from .plugin import PluginBase, PluginRegister
+from .postinit import PostInitMeta
 from .proxy import Proxy, ProxyMeta, FlattenProxyOp, LinkProxy, ProxyLink, ProxyData
 
 from .reference import ObjectReference, TypeReference

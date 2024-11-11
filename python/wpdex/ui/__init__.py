@@ -28,6 +28,7 @@ from .base import WpDexView, WpDexWindow
 
 from .seqitem import SeqDexView
 from .dictitem import DictDexView
+from .treeitem import TreeDexView
 from .primitem import PrimDexWidget
 #from .stritem import StrDexWidget
 

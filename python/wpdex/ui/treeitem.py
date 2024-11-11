@@ -10,11 +10,12 @@ from wplib import log
 from wptree import TreeInterface, TreeDex, Tree
 from wpdex import WpDex, DictDex, WpDexProxy
 from wpdex.ui.atomic import AtomicWidget
+from wpdex.ui.atomic.base import AtomicStandardItemModel, AtomStandardItem, AtomStyledItemDelegate
 from wpdex.ui.base import WpDexView, DexViewExpandButton
 
 
 
-class _TreeDexModel(QtGui.QStandardItemModel):
+class _TreeDexModel(AtomicStandardItemModel):
 	"""will probably need this for drag/drop
 	at some point"""
 	pass
@@ -53,6 +54,7 @@ class TreeDexView(QtWidgets.QTreeView,# AtomicWidget
 
 		self.uidBranchItemMap : dict[str, _TreeBranchItem] = weakref.WeakValueDictionary()
 		self.postInit()
+		self.setItemsExpandable(True)
 
 
 
@@ -83,16 +85,19 @@ class TreeDexView(QtWidgets.QTreeView,# AtomicWidget
 			dex=self.dex(),
 			text=self.dex().obj.name
 		)
-		self.uidBranchItemMap[self.dex().obj.uid] = parentItem
+		leftItem = QtGui.QStandardItem()
+		#self.uidBranchItemMap[self.dex().obj.uid] = parentItem
+		self.uidBranchItemMap[self.dex().obj.uid] = leftItem
 		self.model().appendRow([
-			QtGui.QStandardItem(),
+			#QtGui.QStandardItem(),
+			leftItem,
 			parentItem,
 			QtGui.QStandardItem(#str(self.dex().obj.value)
 				"tree_value"
 			                    )
 		])
 		nameIndex = self.model().index(0, 1)
-		w = self._buildChildWidget(nameIndex, self.dex().branchMap()["@N"])
+		#w = self._buildChildWidget(nameIndex, self.dex().branchMap()["@N"])
 		valueIndex = self.model().index(0, 2)
 		w = self._buildChildWidget(valueIndex, self.dex().branchMap()["@V"])
 		#self.setExpanded(nameIndex)
@@ -102,22 +107,23 @@ class TreeDexView(QtWidgets.QTreeView,# AtomicWidget
 				treeDex.parent.obj.uid
 			]
 			branchItem = _TreeBranchItem(dex=treeDex)
+			leftItem = QtGui.QStandardItem()
 			parentItem.appendRow([
+				leftItem,
 				branchItem, QtGui.QStandardItem("tree_value")
 			])
-			nameIndex = self.model().index(parentItem.rowCount()-1, 0, parentItem.index())
-			self.uidBranchItemMap[treeDex.obj.uid] = branchItem
-			valueIndex = self.model().index(parentItem.rowCount()-1, 1, parentItem.index())
-			# w = self._buildChildWidget(nameIndex, treeDex.branchMap()["@N"])
-			# w = self._buildChildWidget(valueIndex, treeDex.branchMap()["@V"])
+			nameIndex = self.model().index(parentItem.rowCount()-1, 1, parentItem.index())
+			#self.uidBranchItemMap[treeDex.obj.uid] = branchItem
+			self.uidBranchItemMap[treeDex.obj.uid] = leftItem
+			valueIndex = self.model().index(parentItem.rowCount()-1, 2, parentItem.index())
+			#w = self._buildChildWidget(nameIndex, treeDex.branchMap()["@N"])
+			w = self._buildChildWidget(valueIndex, treeDex.branchMap()["@V"])
 			self.setExpanded(parentItem.index(), True)
 
 
 		topLeftIndex = self.model().index(0, 0)
 		label = DexViewExpandButton("t", dex=self.dex(), parent=self)
 		label.expanded.connect(self._setValuesVisible)
-		#label.clicked.connect(self._toggleValuesVisible)
-
 		self.setIndexWidget(topLeftIndex, label)
 		self.syncLayout()
 
@@ -149,6 +155,11 @@ if __name__ == '__main__':
 	# d["branchB"] = [3, 4, 5]
 	p = WpDexProxy(d)
 	dex = p.dex()
+
+	assert d("branchA", "leaf").root is d
+	assert dex.root is dex
+	for i in dex.treeDexes():
+		assert i.root is dex
 	#log(dex, dex.branchMap())
 	#pprint.pp(dex.branchMap())
 	#
