@@ -1,7 +1,7 @@
 
 from __future__ import annotations
 import typing as T
-
+from wplib import log
 from dataclasses import dataclass
 
 from wplib import inheritance
@@ -28,8 +28,32 @@ class PostInitBase:
 
 class PostInitMeta(type):
 
+	# @classmethod
+	# def __prepare__(metacls, name, bases):
+	# 	from wplib import log
+	# 	#log("postinit prepare", metacls, name, bases)
+	# 	return {}
+
 	def __call__(cls, *args, **kwargs):
-		obj = inheritance.clsSuper(cls).__call__(*args, **kwargs)
+		# log("postInit", cls, args, kwargs)
+		# log("cls mro", cls.__mro__)
+		# log("type mro", type(cls).__mro__)
+		# t, method = inheritance.superLookup(type(cls), "__call__")
+		# log("t method", t, method)
+		# if t is None: # no other __call__ found, revert to type
+		# 	obj = type.__call__(cls)
+		# else:
+		# 	#obj = inheritance.clsSuper(type(cls)).__call__(*args, **kwargs)
+		# 	obj = method.__call__(type(cls), *args, **kwargs)
+		# # try: #TODO: work out how to pack in arguments here
+		# # 	obj = method.__call__(*args, **kwargs)
+		# # except TypeError:
+		# # 	obj = method.__call__()
+		try:
+			obj = super(PostInitMeta, cls).__call__( *args, **kwargs)
+		except TypeError:
+			obj = inheritance.clsSuper(type(cls)).__call__(cls)
+
 		if hasattr(obj, "__post_init__"):
 			obj.__post_init__(*args, **kwargs)
 		return obj

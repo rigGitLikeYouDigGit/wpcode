@@ -4,59 +4,30 @@ from __future__ import annotations
 from PySide2 import QtCore, QtWidgets, QtGui
 
 from wplib import log
-
+from wplib.inheritance import MetaResolver
 from wpdex import WpDex, SeqDex, WpDexProxy
-from wpdex.ui.atomic import AtomicWidget
+from wpdex.ui.atomic import AtomicWidget, AtomicView, AtomicStandardItemModel, AtomStandardItem
+
 from wpdex.ui.base import WpDexView, DexViewExpandButton
 
 
-class DragItemWidget(QtWidgets.QWidget):
-	"""small holder widget to allow dragging model items
-	up and down"""
-	def __init__(self, innerWidget:QtWidgets.QWidget, parent=None):
-		super().__init__(parent)
-		self.dragHandle = QtWidgets.QLabel("☰", parent=self)
-		self.dragHandle.setFont(QtGui.QFont("monospace", 8))
-		self.innerWidget = innerWidget
-		#self.innerWidget.setParent(self)
-		layout = QtWidgets.QHBoxLayout()
-		layout.addWidget(self.dragHandle)
-		layout.addWidget(innerWidget)
-		self.setLayout(layout)
-		layout.setContentsMargins(0, 0, 0, 0)
-		self.setContentsMargins(0, 0, 0, 0)
-		layout.setAlignment(self.dragHandle, QtCore.Qt.AlignTop)
 
 
+class SeqDexItem(AtomStandardItem):
+	forTypes = (SeqDex, )
 
-def sketch():
+class SeqDexModel(AtomicStandardItemModel):
+	forTypes = (SeqDex, )
 
-	d = myObject.ref("baseData")
-	w = Widget(d, parent=None)
-	# THAT'S IT. that's all.
-	# maybe later add some path override stuff
-	# to say if file paths or strings should be taken, etc
-	#
-
-def childView(self, forDex):
-
-	childW = AtomicWidget.adaptorForObj(forDex)(value=forDex, parent=self)
-	childW.valueChanged.connect(self.sync)
-
-def onChildValueChanged(key:keyT):
-	"""regenerate only the widget at this path"""
-
-def onValueChanged():
-	"""remove / regenerate all child widgets"""
-
-
-class _SeqDexModel(QtGui.QStandardItemModel):
-	pass
-
+	def _buildItems(self):
+		self.clear()
+		for k, dex in self.dex().branchMap().items():
+			itemType = AtomStandardItem.adaptorForObject(dex)
+			item = itemType(value=dex)
+			self.appendRow([item])
 
 #class SeqDexView(AtomicWidget, QtWidgets.QTreeView):
-class SeqDexView(QtWidgets.QTreeView,# AtomicWidget
-                 WpDexView
+class SeqDexView(AtomicView
                  ):
 	"""view for a list
 
@@ -78,53 +49,6 @@ class SeqDexView(QtWidgets.QTreeView,# AtomicWidget
 	"""
 	forTypes = (SeqDex,)
 
-	def __init__(self, value, parent=None):
-		QtWidgets.QTreeView.__init__(self, parent)
-		WpDexView.__init__(self, value)
-
-		self.postInit()
-
-
-	def modelCls(self):
-		return _SeqDexModel
-	def buildChildWidgets(self):
-		"""populate childWidgets map with widgets
-		for all dex children
-		acts as general sync method """
-
-		self._clearChildWidgets()
-
-		for key, child in self.dex().branchMap().items():
-			childWidgetType = AtomicWidget.adaptorForObject(child)
-			assert childWidgetType, f"no widget type found for dex {child}, parent {self.dex()}, self"
-			childWidget = childWidgetType(value=child,
-			                              parent=self,
-			                              #parent=None,
-			                              )
-			#log("childWidget", childWidget, vars=0)
-			self.model().appendRow(
-				[QtGui.QStandardItem(), QtGui.QStandardItem(str(key))]
-			)
-			newIndex = self._modelIndexForKey(key)
-			#log("newIndex", newIndex, child)
-			#self.model().setItemData(newIndex, )
-			#self._childAtomics[key] = childWidget
-			self.setIndexWidget(self._modelIndexForKey(key),
-			                    childWidget)
-			self._setChildAtomicWidget(key, childWidget)
-
-
-		# rootItem : QtGui.QStandardItem = self.model().itemFromIndex(self.model().index(0, 0))
-		# rootItem.setText("[")
-		topLeftIndex = self.model().index(0, 0)
-		openChar = "[" if isinstance(self.dex().obj, list) else "("
-		label = DexViewExpandButton(openChar,
-		                            dex=self.dex(), parent=self)
-		label.expanded.connect(self._setValuesVisible)
-		#label.clicked.connect(self._toggleValuesVisible)
-
-		self.setIndexWidget(topLeftIndex, label)
-		self.syncLayout()
 
 	def _setValuesVisible(self, state=True):
 		self.setColumnHidden(1,

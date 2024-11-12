@@ -46,7 +46,7 @@ class Tree(TreeInterface,
 	             lookupCreate=None,
 	             default=Sentinel.Empty,
 	             desc="",
-	             branches=()
+	             branches:T.Sequence[TreeInterface]=()
 	             ):
 		"""initialise real internal values for interface to affect.
 

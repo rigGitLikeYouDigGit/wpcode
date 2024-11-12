@@ -49,6 +49,6 @@ def getWpDex(obj:(WpDexProxy, WpDex, WX, rx, T.Any))->WpDex:
 	if no existing wpDex, return None, so caller can work out how to proceed
 	"""
 	if isinstance(obj, WpDex): return obj
-	if isinstance(obj, WpDexProxy): return obj.dex()
+	if isinstance(obj, WpDexProxy): return EVAL(obj.dex())
 	if isinstance(obj, WX): return obj._kwargs["_dex"]
 	return None

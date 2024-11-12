@@ -9,7 +9,7 @@ import typing as T
 from PySide2 import QtCore, QtWidgets, QtGui
 
 import wplib.sequence
-from wplib import log
+from wplib import log, inheritance
 from wplib.object import Signal
 from wptree import Tree
 
@@ -110,7 +110,12 @@ class _MenuLineEdit(QtWidgets.QLineEdit):
 			#self._lastHighlighted = ""
 
 
-class StringWidget(QtWidgets.QLineEdit, AtomicWidget):
+class StringWidget(
+	QtWidgets.QLineEdit, AtomicWidget,
+	metaclass=inheritance.resolveInheritedMetaClass(
+	QtWidgets.QLineEdit, AtomicWidget
+	)
+):
 
 	def __init__(self, value="", parent=None,
 	             options:T.Sequence[str]=(),

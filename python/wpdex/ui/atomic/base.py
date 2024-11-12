@@ -10,12 +10,26 @@ from PySide2 import QtCore, QtWidgets, QtGui
 
 from param import rx
 
-from wplib import log
+from wplib import log, inheritance
 from wplib.object import Signal, Adaptor, PostInitMeta
+
+from wpui import model as libmodel, lib as libui
 
 from wpdex import *
 from wpexp.syntax import SyntaxPasses, ExpSyntaxProcessor
 import warp
+
+def toStr(x):
+	"""TODO: move this to somewhere
+	consider the full send - to be robust to different ways
+	of representing objects, could define a new hierarchy of
+	string-adaptor for each kind of expression syntax, and
+	implement each object type bespoke
+
+	"""
+	if isinstance(x, WpDexProxy):
+		return toStr(x._proxyTarget())
+	return str(x)
 
 class Condition:
 	"""EXTREMELY verbose, but hopefully this lets us reuse
@@ -55,6 +69,7 @@ if T.TYPE_CHECKING:
 class AtomicUiInterface(
 	#Adaptor,
 	base,
+	#inheritance.MetaResolver,
 	metaclass=PostInitMeta
 ):
 	"""base class to pull out the common logic of validation
@@ -64,6 +79,10 @@ class AtomicUiInterface(
 	standardItems aren't QObjects, so we need to route signals
 	through the model? and it gets REALLY messy
 	"""
+
+	# def __init_subclass__(cls, **kwargs):
+	# 	log("atomic base init subclass", cls, kwargs)
+
 	def __init__(self, value,
 	             conditions=(),
 	             warnLive=False,
@@ -353,8 +372,9 @@ class AtomicUiInterface(
 			self._value.rx.value = EVAL(value) # rx fires ui sync function
 		#log("after value set")
 		self._syncImmediateValue()
-		self.syncLayout()
-		self.valueCommitted.emit(value)
+		# self.syncLayout()
+		if hasattr(self, "valueCommitted"):
+			self.valueCommitted.emit(value)
 
 
 class AtomicWidget(
@@ -465,9 +485,39 @@ class AtomicWidget(
 	# def sizeHint(self):
 	#
 
-class AtomicStandardItemModel(QtGui.QStandardItemModel,
-                              AtomicUiInterface):
-	"""link to qobjects when using standardItems"""
+class AtomicStandardItemModel(
+	#inheritance.MetaResolver,
+	AtomicUiInterface,
+	QtGui.QStandardItemModel,
+	Adaptor,
+	metaclass=inheritance.resolveInheritedMetaClass(
+		AtomicUiInterface, QtGui.QStandardItemModel, Adaptor
+	)
+):
+	"""link to qobjects when using standardItems
+	seems we're fully reverting to the old way,
+	chaining item->view widget->model->item for each
+	dex layer
+	no idea how this fits together with all the single-widget
+	fields for strings and assets (which is already working) -
+	MAYBE we shift all our custom drawing to fancy delegates? to
+	add extra buttons? and we still use a separate exp widget
+	for editing.
+	seems EXTREMELY complicated :(
+
+	it's the contiguous selection within the model that scares
+	me, I don't know where you would start emulating it if you had multiple
+	layers of separate widgets
+
+	it turns out splitting things up this much leads to
+	unnervingly clean code.
+	I guess if the complexity isn't in the logic, it's in the
+	object structure itself
+	"""
+	def __prepare__(self, *args, **kwargs):
+		log("real class prepare", args, kwargs)
+	adaptorTypeMap = Adaptor.makeNewTypeMap()
+	forTypes = ()
 	# widget display changed live
 	displayEdited = QtCore.Signal(object)
 
@@ -478,18 +528,130 @@ class AtomicStandardItemModel(QtGui.QStandardItemModel,
 	# committed - FINAL value, no delta
 	valueCommitted = QtCore.Signal(object)  # redeclare this with proper signature
 
+	def __init__(self, value, parent=None):
+		QtGui.QStandardItemModel.__init__(self, parent)
+		AtomicUiInterface.__init__(
+			self, value=value)
+
+	def __post_init__(self, *args, **kwargs):
+		"""immediateValue kept here on the absolute extreme
+		chance that we ever implement immediate structure changing
+		to visualise as you drag items around in model views"""
+		self.build()
+		#self._syncUiFromValue()
+		self._syncImmediateValue()
+
+	def pathItemMap(self)->dict[WpDex.pathT, AtomStandardItem]:
+		pathMap = {}
+		for item in libmodel.iterAllItems(model=self):
+			#item = self.itemFromIndex(index)
+			if not isinstance(item, AtomStandardItem):
+				continue
+			pathMap[tuple(item.dex().relativePath(self.dex()  ))] = item
+		return pathMap
+
+	def childModels(self)->list[AtomicStandardItemModel]:
+		return [i for i in self.children() if isinstance(i, AtomicStandardItemModel)]
+
+	def pathModelMap(self)->dict[WpDex.pathT, AtomicStandardItemModel]:
+		return {tuple(i.dex().relativePath(self.dex())) : i for i in self.childModels()}
+
+	def build(self):
+		self._buildItems()
+		self._buildChildModels()
+	def _buildItems(self):
+		""" OVERRIDE
+		create standardItems for each branch of
+		this atom's dex
+		for each one, check if it's a container - if so, make
+		its own child view widget
+
+		models built out in this function - VIEW has to INDEPENDENTLY
+		construct and match up child view widgets for
+		each entry that needs them?
+		that might actually be the least complicated
+		"""
+		self.clear()
+		for k, dex in self.dex().branchMap().items():
+			itemType = AtomStandardItem.adaptorForObject(dex)
+			item = itemType(value=dex)
+			self.appendRow([item])
+
+
+	def _buildChildModels(self):
+		for i in self.children():
+			if isinstance(i, AtomicStandardItemModel):
+				i.deleteLater()
+				i.setParent(None)
+		for item in libmodel.iterAllItems(model=self):
+			if not isinstance(item, AtomStandardItem):
+				continue
+			modelType = AtomicStandardItemModel.adaptorForObject(item.dex())
+			if modelType: # add a child model and build it (maybe build should be done in init)
+				newModel = modelType(value=item.dex(),
+				                     parent=self)
+
+	def _modelIndexForKey(self, key:WpDex.pathT)->QtCore.QModelIndex:
+		key = WpDex.toPath(key)
+		return self.model().index(int(key[0]), 1)
+
 class AtomStyledItemDelegate(QtWidgets.QStyledItemDelegate,
-                             AtomicUiInterface):
+                             #AtomicUiInterface,
+                             Adaptor):
+	"""base delegate only used to control which widget is
+	displayed for editing -
+	override for custom painting
+	"""
+	adaptorTypeMap = Adaptor.makeNewTypeMap()
+	forTypes = (WpDex,)
+
+	def paint(self, painter, option, index):
+		"""sketch on how to specialise painting even if we have
+		to use abstract type for delegate in general
+		"""
+		item = index.model().itemFromIndex(index)
+		if not isinstance(item, AtomStandardItem):
+			return QtWidgets.QStyledItemDelegate.paint(
+				self, painter, option, index)
+		delegateType = AtomStyledItemDelegate.adaptorForObject(item.dex())
+		# avoid infinite loops - just paint normally
+		if delegateType == AtomStyledItemDelegate:
+			return QtWidgets.QStyledItemDelegate.paint(
+				self, painter, option, index)
+		return delegateType().paint(
+			painter, option, index)
 
 	def createEditor(self,
 	                 parent:QtWidgets.QTreeView,
 	                 option:QtWidgets.QStyleOptionViewItem,
 	                 index:QtCore.QModelIndex):
+		from wpdex.ui.atomic.expatom import ExpWidget
+
 		item : AtomStandardItem = index.model().itemFromIndex(index)
+		# until there's a case where we need multiple items per dex?
+		assert isinstance(item, AtomStandardItem)
+		assert not item.dex().branches, f"Item {item} is a container, can't directly edit it"
+		return ExpWidget(value=item.dex(), # exp widget on the dex should be enough
+		                 parent=parent)
 
-		pass
+	def trailWidgetsForItem(self,
+	                        parent: QtWidgets.QTreeView,
+	                        option: QtWidgets.QStyleOptionViewItem,
+	                        index: QtCore.QModelIndex)->list[QtWidgets.QWidget]:
+		"""sketch for how we could define other small widgets after this item;
+		could do exactly the same thing for leading widgets.
+		This would be used for file system navigation, for example - maybe
+		version display for assets, etc
+		"""
 
-class AtomStandardItem(QtGui.QStandardItem, AtomicUiInterface):
+class AtomStandardItem(
+AtomicUiInterface,
+QtGui.QStandardItem,
+Adaptor,
+metaclass=inheritance.resolveInheritedMetaClass(
+	AtomicUiInterface, QtGui.QStandardItem, Adaptor
+                       )
+    ):
 	"""when you think you've fought through every circle of hell
 	you just get another circle
 
@@ -506,11 +668,119 @@ class AtomStandardItem(QtGui.QStandardItem, AtomicUiInterface):
 
 	I swear I just want to make films
 
-	we pass in a PARENT QOBJECT (usually the indexWidget that this
-	item is a child of), so that we don't have to
-	use signals from the model?
+	I'd rather go fully one direction or another, but we can't even do that;
+	seems like QTreeView doesn't properly display child item hierarchies from
+	anything other than column 0, so we can't only use souped-up standardItems -
+	we still need the separate widgets for separate containers.
 
 	"""
+	adaptorTypeMap = Adaptor.makeNewTypeMap()
+	forTypes = (WpDex, )
+	def __init__(self, value):
+		QtGui.QStandardItem.__init__(self)
+		AtomicUiInterface.__init__(
+			self, value=value)
+	def __post_init__(self, *args, **kwargs):
+		self._syncUiFromValue()
+		self._syncImmediateValue()
+
+	def _syncUiFromValue(self, *args, **kwargs):
+		self.setText(toStr(self.value()))
+
+class AtomicView(QtWidgets.QTreeView,
+                 Adaptor):
+	"""customise view to control cursor motion,
+	but logic of building shouldn't need to change.
+
+	Views and models don't naturally include each other in
+	parent chains - models directly parent models,
+	and views directly parent their child widgets.
+	Really hope this doesn't cause problems.
+
+	"""
+	adaptorTypeMap = Adaptor.makeNewTypeMap()
+	forTypes = (WpDex, )
+
+	if T.TYPE_CHECKING:
+		def model(self)->AtomicStandardItemModel: ...
+	def __init__(self, value:WpDex, parent=None,
+	             model:AtomicStandardItemModel=None):
+		QtWidgets.QTreeView.__init__(self, parent)
+		# child widgets of container may not be direct children in Qt
+		self._childAtomics : dict[WpDex.pathT, AtomicMain] = WeakValueDictionary()
+		if not model:
+			modelType = AtomicStandardItemModel.adaptorForType(value)
+			assert modelType, f"No atomic model type found for {value}, {type(value)}"
+			model = modelType(value=value, parent=self)
+		self.setModel(model)
+		self.setAutoFillBackground(False)
+		self.buildChildWidgets()
+
+
+
+	def buildChildWidgets(self):
+
+		for i in self.children():
+			if isinstance(i, (AtomicView, AtomicMain)):
+				i.deleteLater()
+				i.setParent(None)
+
+
+		# set up index widgets on container dex items
+		pathItemMap = self.model().pathItemMap()
+		pathModelMap = self.model().pathModelMap()
+		log("path item map", pathItemMap)
+		log("pathModelMap", pathModelMap)
+		for path, model in pathModelMap.items():
+			item = pathItemMap[path]
+			widget = AtomicMain.adaptorForObject(item.dex())(
+				value=item.dex(), parent=self,
+				model=model)
+			self.setIndexWidget(item.index(), widget)
+			self._childAtomics[path] = widget
+
+		self.setItemDelegate(  # use single type, manage dispatching from inside it
+			AtomStyledItemDelegate(parent=self))
+
+		for item in libmodel.iterAllItems(model=self.model()):
+			self.setExpanded(item.index(), True)
+
+	def itemDelegateForIndex(self, index:QtCore.QModelIndex):
+		"""this might only be for a later version of qt :(
+		delegates are a pain anyway - if we can only use one
+		type, set that as a shell and do some kind of internal
+		adaptor for the different types
+
+		yep, doesn't fire ._.
+		"""
+		item = self.model().itemFromIndex(index)
+		if not isinstance(item, AtomStyledItemDelegate):
+			return QtWidgets.QStyledItemDelegate(parent=self)
+		dex = item.dex()
+		return AtomStyledItemDelegate.adaptorForObject(dex)(parent=self)
+
+
+class AtomicMain(QtWidgets.QWidget,
+                 Adaptor,
+                 ):
+	"""it wasn't complex enough
+	overall holder widget to contain separate widgets alongside each view -
+	specifically the expand/contract button,
+
+	"""
+	adaptorTypeMap = Adaptor.makeNewTypeMap()
+	forTypes = (WpDex, )
+
+	def __init__(self, value:WpDex, parent=None,
+	             model:AtomicStandardItemModel=None):
+		QtWidgets.QWidget.__init__(self, parent)
+		self.setLayout(QtWidgets.QHBoxLayout(self))
+		self.layout().setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
+		value = getWpDex(value)
+		self.view = AtomicView.adaptorForObject(value)(
+			value=value, parent=self, model=model)
+		self.layout().addWidget(self.view)
+
 
 
 

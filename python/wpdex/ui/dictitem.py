@@ -4,19 +4,33 @@ from __future__ import annotations
 from PySide2 import QtCore, QtWidgets, QtGui
 
 from wplib import log
+from wplib.inheritance import MetaResolver
+from wpdex import WpDex, SeqDex, WpDexProxy, DictDex
+from wpdex.ui.atomic import AtomicWidget, AtomicView, AtomicStandardItemModel, AtomStandardItem
 
-from wpdex import WpDex, DictDex, WpDexProxy
-from wpdex.ui.atomic import AtomicWidget
 from wpdex.ui.base import WpDexView, DexViewExpandButton
 
 
 
-class _DictDexModel(QtGui.QStandardItemModel):
-	pass
+class DictDexModel(AtomicStandardItemModel):
+	forTypes = (DictDex, )
+	def _buildItems(self):
+		self.clear()
+		items = tuple(self.dex().branchMap().items())
+		keyTies = [i for i in items if "key:" in str(i[0])]
+		valueTies = [i for i in items if "key:" not in str(i[0])]
+		for i, ((keyKey, keyDex),
+		     (valueKey, valueDex)) in enumerate(zip(keyTies, valueTies)):
+			keyItemType = AtomStandardItem.adaptorForObject(keyDex)
+			assert keyItemType
+			valueItemType = AtomStandardItem.adaptorForObject(valueDex)
+			assert valueItemType
+			keyItem = keyItemType(value=keyDex)
+			valueItem = valueItemType(value=valueDex)
+			self.appendRow([keyItem, valueItem])
 
 
-#class SeqDexView(AtomicWidget, QtWidgets.QTreeView):
-class DictDexView(QtWidgets.QTreeView,# AtomicWidget
+class DictDexView(MetaResolver, QtWidgets.QTreeView,# AtomicWidget
                  WpDexView
                  ):
 	"""view for dict
@@ -30,56 +44,13 @@ class DictDexView(QtWidgets.QTreeView,# AtomicWidget
 		self.postInit()
 
 
-
-	def modelCls(self):
-		return _DictDexModel
-
 	def _modelIndexForKey(self, key:WpDex.keyT)->QtCore.QModelIndex:
 		if "key:" in str(key):
 			index = tuple(self.dex().branchMap().keys()).index(key) // 2
 			return self.model().index(index, 1)
 		index = tuple(self.dex().branchMap().keys()).index(key)
 		return self.model().index(index, 2)
-	def buildChildWidgets(self):
-		"""populate childWidgets map with widgets
-		for all dex children"""
-		#log("buildChildWidgets")
-		self._clearChildWidgets()
 
-		items = tuple(self.dex().branchMap().items())
-		keyTies = [i for i in items if "key:" in str(i[0])]
-		valueTies = [i for i in items if "key:" not in str(i[0])]
-		for i, ((keyKey, keyDex),
-		     (valueKey, valueDex)) in enumerate(zip(keyTies, valueTies)):
-			keyWidgetType = AtomicWidget.adaptorForObject(keyDex)
-			assert keyWidgetType
-			valueWidgetType = AtomicWidget.adaptorForObject(valueDex)
-			assert valueWidgetType
-			keyWidget = keyWidgetType(value=keyDex, parent=self)
-			valueWidget = valueWidgetType(value=valueDex, parent=self)
-
-			self.model().appendRow(
-				[QtGui.QStandardItem(),
-				 QtGui.QStandardItem(str(keyDex.obj)),
-				 QtGui.QStandardItem(str(valueDex.obj))]
-			)
-			keyIndex = self._modelIndexForKey(keyKey)
-			self.setIndexWidget(keyIndex, keyWidget)
-			self._setChildAtomicWidget(keyKey, keyWidget)
-
-			valueIndex = self._modelIndexForKey(valueKey)
-			self.setIndexWidget(valueIndex, valueWidget)
-			self._setChildAtomicWidget(valueKey, valueWidget)
-
-		# rootItem : QtGui.QStandardItem = self.model().itemFromIndex(self.model().index(0, 0))
-		# rootItem.setText("[")
-		topLeftIndex = self.model().index(0, 0)
-		label = DexViewExpandButton("{", dex=self.dex(), parent=self)
-		label.expanded.connect(self._setValuesVisible)
-		#label.clicked.connect(self._toggleValuesVisible)
-
-		self.setIndexWidget(topLeftIndex, label)
-		self.syncLayout()
 
 	def _setValuesVisible(self, state=True):
 		self.setColumnHidden(1,

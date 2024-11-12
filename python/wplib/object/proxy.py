@@ -93,6 +93,7 @@ class ProxyMeta(type):
 		# proxyData = fnlib.trimKwarg(kwargs, "proxyData", None)
 		if obj is None: # for now we just don't deal with None
 			return None
+		# we now have to deal with None
 
 
 		uniqueId = cls._proxyObjUniqueId(obj)
@@ -785,6 +786,9 @@ if __name__ == '__main__':
 	baseVal = 2
 	proxVal = Proxy(2)
 	print("prox val", proxVal)
+
+	# class Test(None):
+	# 	pass
 
 
 

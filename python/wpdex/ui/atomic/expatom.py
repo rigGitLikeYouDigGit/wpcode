@@ -4,27 +4,15 @@ import pprint
 from wplib import log
 
 from PySide2 import QtCore, QtGui, QtWidgets
-from wpdex.ui.atomic.base import AtomicWidget
+from wplib.inheritance import MetaResolver
+from wpdex.ui.atomic.base import AtomicWidget, toStr
 from wpdex import *
 
 # i summon ancient entities
 from wpexp.syntax import SyntaxPasses, ExpSyntaxProcessor
 
-def toStr(x):
-	"""TODO: obviously
-	consider the full send - to be robust to different ways
-	of representing objects, could define a new hierarchy of
-	string-adaptor for each kind of expression syntax, and
-	implement each object type bespoke
 
-	"""
-	if isinstance(x, WpDexProxy):
-		return toStr(x._proxyTarget())
-	return str(x)
-
-
-
-class ExpWidget(QtWidgets.QLineEdit, AtomicWidget):
+class ExpWidget(MetaResolver, QtWidgets.QLineEdit, AtomicWidget):
 	"""general-purpose text edit to
 	allow defining new values as whatever is eval'd
 	on commit

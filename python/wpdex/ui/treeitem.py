@@ -10,59 +10,54 @@ from wplib import log
 from wptree import TreeInterface, TreeDex, Tree
 from wpdex import WpDex, DictDex, WpDexProxy
 from wpdex.ui.atomic import AtomicWidget
-from wpdex.ui.atomic.base import AtomicStandardItemModel, AtomStandardItem, AtomStyledItemDelegate
+from wpdex.ui.atomic.base import AtomicStandardItemModel, AtomStandardItem, AtomStyledItemDelegate, AtomicUiInterface, AtomicMain, AtomicView
 from wpdex.ui.base import WpDexView, DexViewExpandButton
 
 
-
-class _TreeDexModel(AtomicStandardItemModel):
-	"""will probably need this for drag/drop
-	at some point"""
-	pass
-
-class _TreeBranchItem(QtGui.QStandardItem):
-
-	def __init__(self, dex:TreeDex, text:str=""):
-		#self.branch = branch
-		self.dex = dex
-		QtGui.QStandardItem.__init__(self, text)
-	def branch(self)->Tree:
-		return self.dex.obj
-
-	pass
-
-class TreeDexView(QtWidgets.QTreeView,# AtomicWidget
-                 WpDexView
-                 ):
-	"""view for tree -
-	I believe this will be my 5th attempt at making a ui for this thing
-
-	difficulty here is to have only one view for a whole tree, but
-	a separate dex object for each branch
-	separate items for values? could also try drawing them nested in with
-	their branch
+class TreeBranchItem(AtomStandardItem):
+	forTypes = (TreeDex, )
+	"""branch item is editable for the name 
+	string of a tree, but affects tree structure
+	if you drag or duplicate it
+	
 	"""
+
+	def __init__(self, value=None,
+	             dex:TreeDex=None):
+		self.treeDex = dex
+		AtomStandardItem.__init__(self, value)
+		self.__post_init__()
+
+	def valueItem(self)->AtomStandardItem:
+		if self.parent():
+			return self.model().itemFromIndex(
+				self.model().index(
+					self.row(), 1, self.parent().index()
+				)
+			)
+		return self.model().itemFromIndex(
+			self.model().index(
+				self.row(), 1,
+			)
+		)
+
+
+class TreeDexModel(AtomicStandardItemModel):
+	"""will probably need this for drag/drop
+	at some point
+	"""
+	forTypes = (TreeDex, )
+
 	if T.TYPE_CHECKING:
-		def dex(self)->TreeDex:...
-	forTypes = (TreeDex,)
+		def dex(self) -> TreeDex:...
 
 	def __init__(self, value, parent=None):
-		QtWidgets.QTreeView.__init__(self, parent)
-		WpDexView.__init__(self, value)
-		#log("seq init")
-		a = 1
+		AtomicStandardItemModel.__init__(self, value=value, parent=parent)
+		self.uidBranchItemMap : dict[str, TreeBranchItem] = weakref.WeakValueDictionary()
 
-		self.uidBranchItemMap : dict[str, _TreeBranchItem] = weakref.WeakValueDictionary()
-		self.postInit()
-		self.setItemsExpandable(True)
-
-
-
-	def modelCls(self):
-		return _TreeDexModel
-
-	def _modelIndexForKey(self, key:WpDex.keyT)->QtCore.QModelIndex:
-		if "key:" in str(key):
+	def _modelIndexForKey(self, key:WpDex.pathT)->QtCore.QModelIndex:
+		key = WpDex.toPath(key)
+		if "key:" in str(key[0]):
 			index = tuple(self.dex().branchMap().keys()).index(key) // 2
 			return self.model().index(index, 1)
 		index = tuple(self.dex().branchMap().keys()).index(key)
@@ -73,77 +68,68 @@ class TreeDexView(QtWidgets.QTreeView,# AtomicWidget
 	#
 	# 	]
 
-	def buildChildWidgets(self):
-		"""populate childWidgets map with widgets
-		for all dex children
-		lots of duplication here, logic is not elegant"""
+	def _buildItems(self):
+		""" OVERRIDE
+		create standardItems for each branch of
+		this atom's dex
+		for each one, check if it's a container - if so, make
+		its own child view widget
+
+		models built out in this function - VIEW has to INDEPENDENTLY
+		construct and match up child view widgets for
+		each entry that needs them?
+		that might actually be the least complicated
+		"""
 		self.uidBranchItemMap.clear()
-		self._clearChildWidgets()
+		self.clear()
+		#self._clearChildWidgets()
 
-		parentItem = _TreeBranchItem(
-			#branch=self.dex().obj,
-			dex=self.dex(),
-			text=self.dex().obj.name
-		)
-		leftItem = QtGui.QStandardItem()
-		#self.uidBranchItemMap[self.dex().obj.uid] = parentItem
-		self.uidBranchItemMap[self.dex().obj.uid] = leftItem
-		self.model().appendRow([
-			#QtGui.QStandardItem(),
-			leftItem,
-			parentItem,
-			QtGui.QStandardItem(#str(self.dex().obj.value)
-				"tree_value"
-			                    )
-		])
-		nameIndex = self.model().index(0, 1)
-		#w = self._buildChildWidget(nameIndex, self.dex().branchMap()["@N"])
-		valueIndex = self.model().index(0, 2)
-		w = self._buildChildWidget(valueIndex, self.dex().branchMap()["@V"])
-		#self.setExpanded(nameIndex)
 		#TODO: possible we should give each WpDex a uid too
-		for treeDex in self.dex().treeDexes(includeSelf=False):
-			parentItem = self.uidBranchItemMap[
-				treeDex.parent.obj.uid
-			]
-			branchItem = _TreeBranchItem(dex=treeDex)
-			leftItem = QtGui.QStandardItem()
+		for treeDex in self.dex().treeDexes(includeSelf=True):
+			parentItem = self.invisibleRootItem()
+			if treeDex.parent:
+				if isinstance(treeDex.parent, TreeDex):
+					parentItem = self.uidBranchItemMap.get(
+						treeDex.parent.obj.uid
+					)
+
+			branchItem = TreeBranchItem(value=treeDex.branchMap()["@N"],
+			                            dex=treeDex)
+
+			valueItemType = AtomStandardItem.adaptorForObject(treeDex.branchMap()["@V"])
+			valueItem = valueItemType(value=treeDex.branchMap()["@V"])
+			self.uidBranchItemMap[treeDex.obj.uid] = branchItem
 			parentItem.appendRow([
-				leftItem,
-				branchItem, QtGui.QStandardItem("tree_value")
+				branchItem, valueItem
 			])
-			nameIndex = self.model().index(parentItem.rowCount()-1, 1, parentItem.index())
-			#self.uidBranchItemMap[treeDex.obj.uid] = branchItem
-			self.uidBranchItemMap[treeDex.obj.uid] = leftItem
-			valueIndex = self.model().index(parentItem.rowCount()-1, 2, parentItem.index())
-			#w = self._buildChildWidget(nameIndex, treeDex.branchMap()["@N"])
-			w = self._buildChildWidget(valueIndex, treeDex.branchMap()["@V"])
-			self.setExpanded(parentItem.index(), True)
 
+	# def _buildChildModels(self):
+	# 	for i in self.children():
+	# 		if isinstance(i, AtomicStandardItemModel):
+	# 			i.deleteLater()
+	# 			i.setParent(None)
+	# 	for uid, branchItem in self.uidBranchItemMap.items():
+	# 		# check if this container has a model associated with it
+	# 		valueDex = branchItem.valueItem().dex()
+	# 		if valueDex is None: continue
+	# 		modelType = AtomicStandardItemModel.adaptorForObject(valueDex)
+	# 		if modelType: # add a child model and build it (maybe build should be done in init)
+	# 			newModel = modelType(value=valueDex,
+	# 			                     parent=self)
 
-		topLeftIndex = self.model().index(0, 0)
-		label = DexViewExpandButton("t", dex=self.dex(), parent=self)
-		label.expanded.connect(self._setValuesVisible)
-		self.setIndexWidget(topLeftIndex, label)
-		self.syncLayout()
+class TreeDexView(#QtWidgets.QTreeView,# AtomicWidget
+                 AtomicView
+                 ):
+	"""view for tree -
+	I believe this will be my 5th attempt at making a ui for this thing
 
-	def _setValuesVisible(self, state=True):
-		self.setColumnHidden(1,
-		                     not state
-		                     )
-		self.setColumnHidden(2,
-		                     not state
-		                     )
-		self.resizeColumnToContents(0)
-		self.resizeColumnToContents(1)
-		self.update()
-		self.updateGeometry()
-		self.syncLayout()
-		self.parent().updateGeometry()
-		if isinstance(self.parent(), WpDexView):
-			self.parent().syncLayout()
-			self.parent().updateGeometries()
-			self.parent().syncLayout()
+	not much interaction with wpdex left for view, manage that mainly in
+	model and item
+	"""
+	if T.TYPE_CHECKING:
+		def dex(self)->TreeDex:...
+	forTypes = (TreeDex,)
+
 
 if __name__ == '__main__':
 
@@ -152,7 +138,10 @@ if __name__ == '__main__':
 	d = Tree("root", value=3)
 	d["branchA"] = "branchAValue"
 	d["branchA", "leaf"] = 33
-	# d["branchB"] = [3, 4, 5]
+	d["branchB", "leaf"] = ["a", Tree("valueTreeName", value=44,
+	                                  branches=([Tree("valueBranch",
+	                                                  branches=[Tree("value leaf", value=":)")])]))]
+	d["branchB"] = {"dict key" : 22}
 	p = WpDexProxy(d)
 	dex = p.dex()
 
@@ -168,7 +157,7 @@ if __name__ == '__main__':
 	# log("ref", ref, "ref val", ref.rx.value)
 	#
 	app = QtWidgets.QApplication()
-	w = WpDexWindow(parent=None,
+	w = AtomicMain(parent=None,
 	                value=ref)
 	w.show()
 	app.exec_()

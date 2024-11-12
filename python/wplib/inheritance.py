@@ -4,6 +4,7 @@ import types
 import typing as T
 import inspect
 from ordered_set import OrderedSet
+from six import with_metaclass
 
 from wplib import log
 from wplib.sentinel import Sentinel
@@ -21,6 +22,20 @@ def isNamedTupleClass(cls:T.Any)->bool:
 def clsSuper(cls:type)->type:
 	"""return the superclass of cls"""
 	return cls.__mro__[1]
+
+def superLookup(o:type, key:str)->(type, T.Any):
+	"""look through mro of type,
+	return the type and attribute of the first type
+	to define the given key"""
+	for i in o.__mro__[1:]:
+		if key in i.__dict__:
+			return i, getattr(i, key)
+		# try:
+		# 	return (i, getattr(i, key))
+		# except AttributeError:
+		# 	continue
+	return None, None
+
 
 class RichNotImplementedError(NotImplementedError):
 	"""subclass of NotImplementedError, giving more description
@@ -52,7 +67,7 @@ def leafParentBases(*desiredBases:tuple[type])->tuple[type, ...]:
 		resultBases.add(secondaryBase.__mro__[0])
 	return tuple(resultBases)
 
-def resolveInheritedMetaClass(*realBases:T.Sequence[type])->type[type]:
+def resolveInheritedMetaClass(*realBases:type)->type[type]:
 	"""given a list of "real" parent classes to inherit
 	from, resolve a metaclass that inherits from any
 	metaclasses defined in those bases"""
@@ -64,7 +79,42 @@ def resolveInheritedMetaClass(*realBases:T.Sequence[type])->type[type]:
 	genName = f"GEN_META({metaLeaves})"
 	return type(genName, metaLeaves, {})
 
+class _MetaResolver:
+	"""this is QUITE JUICY -
+	per the python docs, class definition goes in stages:
+		- determine method resolution order for the new type, from the given bases
+			- if something appears in base list that is NOT an instance of type (eg not a normally defined class), __mro_entries__(self, bases) is called on that object, and the result is collated with the MRO of the other bases.
+		- once MRO is known, appropriate metaclass is taken
+			- if nothing in the MRO messes with metaclasses, type is used
+			- if meta explicitly defined on that definition, use that
+			- if metaclasses appear in bases, use the "most derived metaclass" -
+				and if there is no single most-derived metaclass , eg 2 derived metaclasses without a 3rd to inherit from both parents, throw a TypeError and cause suffering
 
+	This object intercepts the first step -
+		- call __mro_entries__
+		- generate a resolved metaclass inheriting from all metas among bases
+		- generate a new base class, as an instance of that type
+
+	Some limitations:
+		- HAS to be specified FIRST in list of bases to definition
+		- inserts new type first in MRO - this shouldn't be an issue since the generated
+			class literally does nothing, but watch for it
+		- by definition we can't just pack a MetaResolver in a base class and have
+			every class that inherits it magically resolve all metaclasses,
+			you have to explicitly put the resolver first in each definition.
+			Defining it multiply in the same chain should be ok though.
+	"""
+	def __mro_entries__(self, bases):
+		#log("metaResolver mro_entries", self, bases)
+		# return a new dynamic base, with a METACLASS generated from given bases
+		genMeta = resolveInheritedMetaClass(*bases)
+		newType = genMeta("ResolvedMetaBase",
+		                  (),
+		                  {}
+		                  )
+		return (newType, )
+
+MetaResolver = _MetaResolver() # have to use an instance in the base list to trigger __mro_entries__
 
 def containsSuperClass(classSeq:T.Sequence[type], lookup:(type, object))->(type, None):
 	"""returns first item in sequence that is a superclass of lookup,
@@ -245,16 +295,118 @@ def classCallables(cls, dunders=True):
 
 if __name__ == '__main__':
 
-	class Base:
-		at = 3
-		baseAt = "ey"
+	class MetaA(type):
+		pass
 
-	class Leaf(Base):
-		at = 5
+		@classmethod
+		def __prepare__(metacls, name, bases):
+			log("metaA prepare", metacls, name, bases)
+			return {}
 
-	log(Leaf.__dict__)
-	log(mroMergedDict(Leaf))
-	log(mroMergedDict(Leaf)["baseAt"])
+		def __call__(cls, *args, **kwargs):
+			log("metaA call", cls, args, kwargs)
+			return type.__call__(cls, *args, **kwargs)
+
+		def __new__(cls, *args, **kwargs):
+			log("metaA new", cls, args, kwargs)
+			return type.__new__(cls, *args, **kwargs)
+
+		def __init_subclass__(cls, **kwargs):
+			log("metaA init subclass", cls, kwargs)
+
+		def __mro_entries__(self, bases):
+			log("metaA mro_entries", self, bases)
+			return ()
+
+	class MetaB(type):
+		pass
+
+	class RealA(metaclass=MetaA):
+		"""
+		trips __prepare__ of metaA,
+			with __module__, __qualname__ and __doc__ keys in dict
+		trips __new__ of metaA, as expected
+
+		does not trip metaA.__call__
+		"""
+
+
+
+	class RealB(metaclass=MetaB):
+		pass
+
+	class ExtraBase:
+		def __init_subclass__(cls, **kwargs):
+			log("extra base init subclass", cls, kwargs)
+
+	class MetaResolver:
+		def __mro_entries__(self, bases):
+			log("metaResolver mro_entries", self, bases)
+			# return a new dynamic base, with a METACLASS generated from given bases
+			genMeta = resolveInheritedMetaClass(*bases)
+			newType = genMeta("ResolvedMetaBase",
+			                  (object, ),
+			                  {}
+			                  )
+			return (newType, )
+
+	def deco(*args, **kwargs):
+		log("deco", args, kwargs)
+
+	# oldType = type # nope stop right there
+	# import __builtin__ # we've gone too far
+	# def type(*args, **kwargs):
+	# 	log("type call", *args, **kwargs)
+	# 	return oldType(*args, **kwargs)
+	#
+	# __builtin__["type"] = type
+
+	#@deco
+	class RealC(
+		MetaResolver(),
+		RealA, RealB,# ExtraBase, #resolveBases=True
+	            #metaclass=resolveInheritedMetaClass(RealA, RealB)
+		#MetaResolver(),
+	            ):
+		#__metaclass__ = resolveInheritedMetaClass(RealA, RealB) # still errors
+		# conflict in base metas detected before evaluating class body
+		log("begin class definition of realC")
+		pass
+
+	log(RealC.__mro__)
+
+	# class Base:
+	# 	pass
+	# 	@classmethod
+	# 	def __init_subclass__(cls, **kwargs):
+	# 		log("init subclass", cls, kwargs)
+	#
+	# class ArgTest(
+	# 	#clsKwarg=4
+	# 	Base, clsKwarg=4
+	#                ):
+	# 	"""without defining it, passing
+	# 	random kwargs gives
+	# 	TypeError: ArgTest.__init_subclass__() takes no keyword arguments
+	# 	even without OTHER BASES, just ArgTest( clsKwarg=4 )
+	# 	it dispatches to __init_subclass_() and errors
+	# 	that errors even if you do define the function too -
+	# 	weird
+	# 	"""
+	#
+	#
+	# a = ArgTest()
+
+	# class Base:
+	# 	at = 3
+	# 	baseAt = "ey"
+	#
+	# class Leaf(Base):
+	# 	at = 5
+	#
+	# log(Leaf.__dict__)
+	# log(mroMergedDict(Leaf))
+	# log(mroMergedDict(Leaf)["baseAt"])
 
 
 

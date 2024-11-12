@@ -52,6 +52,9 @@ class Adaptor:
 
 	"""
 
+	# def __prepare__(self, *args, **kwargs):
+	# 	log("adaptor class prepare", args, kwargs)
+
 	adaptorTypeMap : SuperClassLookupMap = None
 
 	@classmethod

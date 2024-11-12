@@ -501,6 +501,8 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		by retrieving the live value of the structure at this path.
 		wew lad
 		"""
+		#TODO: factor this out properly, MAYBE as a classmethod on WX?
+
 
 		#TODO: couldn't get rx.when() to work for gating eval,
 		# it would always return an rx() instance, not WX(),
@@ -531,6 +533,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 			def _resolveRef():
 				rootDex = self.dex()
 				foundDex : WpDex = rootDex.access(rootDex, path, values=False, one=True)
+
 				return foundDex.getValueProxy()
 
 				pass

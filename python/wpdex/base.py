@@ -222,7 +222,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		#log(     "child objects for ", self.obj, childObjects, adaptor)
 		# returns list of 3-tuples (index, value, childType)
 		for i, t in enumerate(childObjects):
-			if t[1] is None: continue # maybe
+			#if t[1] is None: continue # maybe
 			key = t[0]
 			foundDex = self.dexForObj(t[1])
 			#log("id dex map", self.objIdDexMap)

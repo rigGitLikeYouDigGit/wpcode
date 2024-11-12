@@ -8,7 +8,7 @@ import reactivex as rx
 
 from wplib import log
 from wplib.object import Signal
-
+from wplib.inheritance import MetaResolver
 from wpdex import WpDexProxy#, Reference
 #from wpdex.ui.react import ReactiveWidget
 from wpdex.ui.atomic.base import AtomicWidget
@@ -43,7 +43,7 @@ class BoolAtomicWidget(AtomicWidget):
 		self.setChecked(value)
 
 
-class AtomCheckBox(QtWidgets.QCheckBox, BoolAtomicWidget):
+class AtomCheckBox(MetaResolver, QtWidgets.QCheckBox, BoolAtomicWidget):
 	"""pressed fires when the button is held down, regardless of whether 
 	committed - consider later highlighting the effects of the button on 
 	press, before activating them when the state changes.
@@ -54,14 +54,14 @@ class AtomCheckBox(QtWidgets.QCheckBox, BoolAtomicWidget):
 		BoolAtomicWidget.__init__(self, **kwargs)
 
 
-class AtomRadioToggle(QtWidgets.QRadioButton, BoolAtomicWidget):
+class AtomRadioToggle(MetaResolver, QtWidgets.QRadioButton, BoolAtomicWidget):
 	def __init__(self, parent=None, **kwargs,
 	             ):
 		"""single slot of value"""
 		super().__init__(parent)
 		BoolAtomicWidget.__init__(self, **kwargs)
 
-class AtomStickyButton(QtWidgets.QPushButton, BoolAtomicWidget):
+class AtomStickyButton(MetaResolver, QtWidgets.QPushButton, BoolAtomicWidget):
 	"""button like this should also be able to receive live text"""
 	def __init__(self, parent=None, **kwargs,
 	             ):
