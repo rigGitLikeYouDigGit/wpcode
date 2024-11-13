@@ -61,7 +61,7 @@ class Wreactive_ops(reactive_ops):
 			log("EMITTING")
 			wx.WRITE(resolve_value(new))
 			return
-		reactive_ops.value.fset(self, new)
+		reactive_ops.value.fset(self, new) 
 
 		# try:
 		#
