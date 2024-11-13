@@ -13,7 +13,7 @@ is used here"""
 class PrimDex(WpDex):
 	#forTypes = (int, float, bool, type(None))
 
-	def _buildBranchMap(self) ->dict[DexPathable.keyT, WpDex]:
+	def _buildBranchMap(self, **kwargs) ->dict[DexPathable.keyT, WpDex]:
 		return {}
 
 class IntDex(PrimDex):

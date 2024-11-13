@@ -10,7 +10,7 @@ from .base import WpDex
 class SeqDex(WpDex):
 	"""dict dex"""
 	forTypes = (list, tuple)
-	def _buildBranchMap(self) ->dict[DexPathable.keyT, WpDex]:
+	def _buildBranchMap(self, **kwargs) ->dict[DexPathable.keyT, WpDex]:
 		#return [self.makeChildPathable((i,), v) for i, v in enumerate(self.obj)]
 		#log("seqdex build children", vars=0)
 		return {i : self._buildChildPathable(

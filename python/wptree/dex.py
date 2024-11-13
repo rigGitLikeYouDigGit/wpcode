@@ -54,10 +54,10 @@ class TreeDex(WpDex):
 			self.obj.addBranch(newBranch=value)
 		log("after write to tree", self, self.obj, self.obj.value)
 
-	def _buildBranchMap(self) ->dict[DexPathable.keyT, WpDex]:
-		result = super()._buildBranchMap()
-		#log("treedex branch map", self.obj, result)
-		return result
+	# def _buildBranchMap(self, **kwargs) ->dict[DexPathable.keyT, WpDex]:
+	# 	result = super()._buildBranchMap()
+	# 	#log("treedex branch map", self.obj, result)
+	# 	return result
 
 
 	def _consumeFirstPathTokens(self, path:pathT) ->tuple[list[WpDex], pathT]:
@@ -100,6 +100,11 @@ if __name__ == '__main__':
 	log("p", p)
 
 	log("access name", p.dex().access(p, "@N"))
+
+	nameDex = p.dex().branchMap()["@N"]
+	log(nameDex)
+	nameDex.write("eyyy")
+
 	#
 	# # connect a function on the root to listen to its events
 	# eventFn = lambda *args: (print("EVENT"), pprint.pprint(args[0]))

@@ -51,9 +51,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
             # interfaces that must be implemented
             Visitable,  # compatible with visitor pattern
             EventDispatcher, # can send events
-            #DexPathable,
 
-            #DexValidator,
             ):
 	"""base for wrapping arb structure in a
 	WPDex graph, allowing pathing, metadata, UI generation,
@@ -98,7 +96,13 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 
 	def _newPersistData(self)->dict:
 		"""return a new dict to store data"""
-		return {"deltaBase" : None}
+		return {"deltaBase" : None,
+
+		        # set this to false to prevent dex from parenting existing
+		        # objects in branch map -
+		        # False forces a new dex object for every branch
+		        "reentrantInit" : True
+		        }
 
 	@classmethod
 	def getPathAdaptorType(cls) ->type[PathAdaptor]:
@@ -108,6 +112,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 	             parent:WpDex=None,
 	             #name:T.Iterable[DexPathable.keyT]=None,
 	             name:Pathable.keyT=None,
+	             reentrantInit=True,
 	             **kwargs):
 		"""initialise with object and parent"""
 		# superclass inits
@@ -126,7 +131,8 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		# self.parent = parent
 		# self.obj = obj
 		# self.key = tuple(key or [])
-		self.objIdDexMap[id(obj)] = self
+		if reentrantInit:
+			self.objIdDexMap[id(obj)] = self
 
 		#self.keyDexMap : dict[DexPathable.keyT, WpDex] = {}
 
@@ -138,7 +144,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		self.isPreppedForDeltas = False
 
 		# do we build on init?
-		self.updateChildren(recursive=0)
+		self.updateChildren(recursive=0, reentrantInit=reentrantInit )
 
 	if T.TYPE_CHECKING:
 		def branches(self)->list[WpDex]:...
@@ -155,6 +161,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		"""OVERRIDE -
 		manage the process of writing a value to child more closely
 		"""
+		log("base writeChildToKey", self, key, value)
 		setAttr = False # by default
 		if setAttr:
 			setattr(self.obj, key, value)
@@ -169,10 +176,16 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		if no parent, we can't really write
 		"""
 		log("WRITE", self, value)
+
 		if not self.parent:
 			self.setObj(value)
 			return
-		self.parent.prepForDeltas()
+		beforePrepParent = self.parent
+		beforePrepData = beforePrepParent._persistData
+		self.parent.prepForDeltas() # static copy changes the parent of this actual dex >:(
+		assert beforePrepParent is self.parent
+		assert beforePrepData is self.parent._persistData
+		assert self.parent._persistData["deltaBase"] is not None
 
 		self.parent.writeChildToKey(self.name, value)
 
@@ -196,21 +209,22 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		consider passing in a known parent object to narrow down?"""
 		return cls.objIdDexMap.get(id(obj))
 
-	def _buildChildPathable(self, obj:T.Any, name:keyT)->WpDex:
+	def _buildChildPathable(self, obj:T.Any, name:keyT, **kwargs)->WpDex:
 		"""redeclaring default method because otherwise tracking the inheritance
 		gets a bit scary"""
 		if isinstance(obj, WpDex):
 			return obj
 		pathType : type[WpDex] = WpDex.adaptorForType(type(obj))
 		assert pathType, f"no wpdex type for {type(obj)}"
-		return pathType(obj, parent=self, name=name)
+		return pathType(obj, parent=self, name=name, **kwargs)
 
-	def _buildBranchMap(self)->dict[Pathable.keyT, WpDex]:
+	def _buildBranchMap(self, reentrantInit=True, **kwargs ) ->dict[Pathable.keyT, WpDex]:
 		"""build child objects, return keyDexMap
 		check for existing dex objects and add them if found
 
 		overriding might be illegal - maybe dex can add additional,
-		false children on top for pathing syntax"""
+		false children on top for pathing syntax
+		:param **kwargs: """
 		#log("BUILD branch map", self, self.obj)
 		#raise NotImplementedError(self, f"no _buildChildren")
 		children = {}
@@ -224,20 +238,28 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		for i, t in enumerate(childObjects):
 			#if t[1] is None: continue # maybe
 			key = t[0]
-			foundDex = self.dexForObj(t[1])
-			#log("id dex map", self.objIdDexMap)
+			#reentrantInit = False # setting blanket to false fixes staticCopy() error
+			if reentrantInit:
+				foundDex = self.dexForObj(t[1])
+				#log("id dex map", self.objIdDexMap)
 
-			#log("found dex for", t[1], foundDex)
-			if foundDex:
-				foundDex._name = key  # repair dex name if it was previously an unparented root
-				#self.addBranch(foundDex, key)
-				children[key] = foundDex
-				foundDex._setParent(self)
-			else:
+				#log("found dex for", t[1], foundDex)
+				if foundDex:
+					foundDex._name = key  # repair dex name if it was previously an unparented root
+					#self.addBranch(foundDex, key)
+					children[key] = foundDex
+					foundDex._setParent(self)
+				else:
+					children[key] = self._buildChildPathable(
+						obj=t[1],
+					name=key,
+					reentrantInit=reentrantInit)
+			else: # ensure separate object hierarchy created
 				children[key] = self._buildChildPathable(
 					obj=t[1],
-
-				name=key)
+					name=key,
+					reentrantInit=reentrantInit
+				)
 		return children
 
 	def _gatherRootData(self):
@@ -252,7 +274,8 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 			i._persistData.update(self._rootData.get(tuple(i.path), {}))
 
 
-	def updateChildren(self, recursive=False):
+	def updateChildren(self, recursive=False,
+	                   reentrantInit=True):
 		"""todo: this could be moved to pathable
 		    but for now it's not needed
 		    """
@@ -261,11 +284,12 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 
 
 		#self.branchMap().update(self._buildBranchMap())
-		self.updateBranchMap()
+		self.updateBranchMap(reentrantInit=False)
 		#self._buildBranchMap()
 		for v in self.branchMap().values():
 			if recursive:
-				v.updateChildren(recursive=recursive)
+				v.updateChildren(recursive=recursive,
+				                 reentrantInit=reentrantInit)
 		#self._restoreChildDatasFromRoot()
 
 	def __repr__(self):
@@ -311,12 +335,14 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		"""return a fully separate hierarchy, wrapped in a separate
 		network of WpDex objects"""
 		serialParams = {"PreserveUid" : True}
+
 		dex = WpDex(deserialise(serialise(Proxy.flatten(
 			self.obj, serialParams=serialParams,
 		), serialParams=serialParams),
 			serialParams=serialParams
-		))
-		dex.updateChildren(recursive=1)
+		),
+			reentrantInit=False)
+		dex.updateChildren(recursive=1, reentrantInit=False)
 		return dex
 
 	def prepForDeltas(self):
@@ -324,7 +350,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		if called by outside process, be aware that internal
 		effects may also change the state of the other structure,
 		so it may be best to always call this on the root"""
-
+		log("prep for deltas", self)
 		# for i in self.allBranches(includeSelf=True):
 		# 	log("prep deltas ", i)
 		# 	i._persistData["deltaBase"] = i.getStateForDelta()

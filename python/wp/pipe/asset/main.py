@@ -92,10 +92,11 @@ class Show(DirPathable):
 		except KeyError:
 			raise KeyError(f"no show found for path {path}\n in show map\n{cls.showsDict()}")
 
-	def _buildBranchMap(self) ->dict[keyT, Pathable]:
+	def _buildBranchMap(self, **kwargs) ->dict[keyT, Pathable]:
 		"""look at top-level folders under this show,
 		allowing pathing into rich assets or the medial
 		AssetFolder objects
+		:param **kwargs:
 		"""
 		children = {}
 		for childDir in self.diskPath().glob("*"):
@@ -215,10 +216,11 @@ class Asset(Pathable, Visitable):
 		return cls.fromPath(childDatas[0][1], default=None)
 
 
-	def _buildBranchMap(self) ->dict[keyT, Pathable]:
+	def _buildBranchMap(self, **kwargs) ->dict[keyT, Pathable]:
 		"""look at top-level folders under this show,
 		allowing pathing into rich assets or the medial
 		AssetFolder objects
+		:param **kwargs:
 		"""
 		children = {}
 		for childDir in self.diskPath().glob("*"):

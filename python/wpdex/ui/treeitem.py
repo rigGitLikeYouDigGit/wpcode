@@ -26,7 +26,7 @@ class TreeBranchItem(AtomStandardItem):
 	             dex:TreeDex=None):
 		self.treeDex = dex
 		AtomStandardItem.__init__(self, value)
-		self.__post_init__()
+		#self.__post_init__()
 
 	def valueItem(self)->AtomStandardItem:
 		if self.parent():
@@ -52,8 +52,8 @@ class TreeDexModel(AtomicStandardItemModel):
 		def dex(self) -> TreeDex:...
 
 	def __init__(self, value, parent=None):
-		AtomicStandardItemModel.__init__(self, value=value, parent=parent)
 		self.uidBranchItemMap : dict[str, TreeBranchItem] = weakref.WeakValueDictionary()
+		AtomicStandardItemModel.__init__(self, value=value, parent=parent)
 
 	def _modelIndexForKey(self, key:WpDex.pathT)->QtCore.QModelIndex:
 		key = WpDex.toPath(key)
@@ -145,7 +145,7 @@ if __name__ == '__main__':
 	p = WpDexProxy(d)
 	dex = p.dex()
 
-	assert d("branchA", "leaf").root is d
+	#assert d("branchA", "leaf").root is d
 	assert dex.root is dex
 	for i in dex.treeDexes():
 		assert i.root is dex

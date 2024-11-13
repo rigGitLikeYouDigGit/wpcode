@@ -12,7 +12,7 @@ from wptree import Tree
 from wpdex import *
 from wp import Asset, constant
 
-from idem.node import IdemGraph, MayaSessionNode
+from idem.node import IdemGraph#, MayaSessionNode
 
 """
 a single idem instance targets a single chi file, and for now a single asset
@@ -44,7 +44,7 @@ class IdemSession(Modelled):
 		root = Tree(kwargs.get("name", "idem"))
 		root["asset"] = kwargs.get("asset", getDefaultAsset())
 		root["filePath"] = Path("plan.chi")
-		root["graph"] = IdemGraph.create(name="graph")
+		#root["graph"] = IdemGraph.create(name="graph")
 		return root
 
 if __name__ == '__main__':

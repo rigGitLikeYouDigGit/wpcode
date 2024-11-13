@@ -13,7 +13,7 @@ class PathDex(WpDex):
 
 	forTypes = (pathlib.PurePath, )
 
-	def _buildBranchMap(self) ->dict[DexPathable.keyT, WpDex]:
+	def _buildBranchMap(self, **kwargs) ->dict[DexPathable.keyT, WpDex]:
 		return {}
 		return {i: self._buildChildPathable(
 			part, i
@@ -23,7 +23,7 @@ class PathableDex(WpDex):
 
 	forTypes = (Pathable, )
 
-	def _buildBranchMap(self) ->dict[DexPathable.keyT, WpDex]:
+	def _buildBranchMap(self, **kwargs) ->dict[DexPathable.keyT, WpDex]:
 		return {k: self._buildChildPathable(v, k)
 		        for k, v in self.obj._buildBranchMap().items()}
 

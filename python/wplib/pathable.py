@@ -208,12 +208,13 @@ class Pathable(#Adaptor
 		assert pathType, f"no path type for {type(obj)}"
 		return pathType(obj, parent=self, name=name)
 
-	def _buildBranchMap(self)->dict[keyT, Pathable]:
+	def _buildBranchMap(self, **kwargs) ->dict[keyT, Pathable]:
 		"""return a dict of the immediate branches of this pathable, and
 		their keys
 		OVERRIDE if desired
 		by DEFAULT we reuse logic in Visitor, but be aware the keys
-		may not be the nicest"""
+		may not be the nicest
+		:param **kwargs: """
 		log("_buildBranchMap", self)
 		adaptor = VisitAdaptor.adaptorForObject(self.obj)
 		if adaptor is None:
@@ -228,8 +229,8 @@ class Pathable(#Adaptor
 			)
 		return branches
 
-	def updateBranchMap(self):
-		self._branchMap = self._buildBranchMap()
+	def updateBranchMap(self, **kwargs):
+		self._branchMap = self._buildBranchMap(**kwargs)
 	def branchMap(self)->dict[keyT, Pathable]:
 		"""get dict of immediate branches below this pathable"""
 		#log("branchMap")
@@ -570,10 +571,11 @@ class DictPathable(PathAdaptor):
 	"""
 	forTypes = (dict,)
 
-	def _buildBranchMap(self)->dict[keyT, Pathable]:
+	def _buildBranchMap(self, **kwargs) ->dict[keyT, Pathable]:
 		"""visitAdaptor creates a list of ties for dict items -
 		we skip that for paths and use dict keys as normal keys,
 		more intuitive that way
+		:param **kwargs:
 		"""
 
 		items = { k : self._buildChildPathable(
@@ -626,7 +628,7 @@ class PathPathable(PathAdaptor):
 	with the separate type hierarchy below
 	"""
 	forTypes = (PurePath, Path)
-	def _buildBranchMap(self) ->dict[keyT, Pathable]:
+	def _buildBranchMap(self, **kwargs) ->dict[keyT, Pathable]:
 		return {i : self._buildChildPathable(
 			part, i
 		) for i, part in enumerate(self.obj.parts)}
@@ -676,8 +678,9 @@ class DirPathable(Pathable):
 	# 	"""unsure how to do individual files"""
 	#
 
-	def _buildBranchMap(self) ->dict[keyT, Pathable]:
+	def _buildBranchMap(self, **kwargs) ->dict[keyT, Pathable]:
 		"""look at top-level folders under this folder,
+		:param **kwargs:
 		"""
 		children = {}
 		for childDir in self.diskPath().glob("*"):

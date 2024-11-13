@@ -35,6 +35,48 @@ def buildMenuFromTree(
 					action.setEnabled(False)
 	return menu
 
+base = object
+if T.TYPE_CHECKING:
+	base = QtWidgets.QWidget
+class ContextMenuProvider(base):
+	"""mixin to add a tree for sorting
+	context menu actions
+
+	TODO: consider logic for delegating to parents? adding
+		options to the context menu of parents?
+	"""
+
+	def __init__(self, *args, **kwargs):
+		self._contextMenuWidget : QtWidgets.QMenu = None # keeps live reference to menu when shown
+		self._contextMenuTree : Tree = self._getBaseContextTree(*args, **kwargs)
+
+	def _getBaseContextTree(self, *args, **kwargs)->Tree[str, callable]:
+		"""passed args and kwargs from init"""
+		return Tree("contextMenuTree")
+
+	def _getContextTreeForEvent(self, event:QtGui.QContextMenuEvent):
+		"""called on each event - if you need to query the wider state
+		to show context menu actions, do it here -
+		return a copy of the base tree if you modify it"""
+		return self._contextMenuTree
+
+	def _getBaseQtContextMenu(self)->QtWidgets.QMenu:
+		""" OVERRIDE
+		return a default qt context menu, if it exists"""
+		try: return self.createStandardContextMenu()
+		except AttributeError: return None
+
+	def contextMenuEvent(self, event:QtGui.QContextMenuEvent):
+		baseMenu = self._getBaseQtContextMenu()
+		menuTree = self._getContextTreeForEvent(event)
+		treeMenu = buildMenuFromTree(menuTree, menu=baseMenu)
+		self._contextMenuWidget = treeMenu
+		#treeMenu.aboutToHide.connect(lambda *a, **k : setattr(self, "_contextMenuWidget", None))
+		treeMenu.move(event.globalPos())
+		treeMenu.show()
+
+
+
 
 
 

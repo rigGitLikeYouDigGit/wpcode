@@ -93,9 +93,9 @@ class IdemWidget(QtWidgets.QWidget):
 		self.logW = LogWidget(parent=self)
 
 		# don't pass live reference, let graph widget do its own specialisation
-		self.graphW = ChimaeraWidget(#session.data["graph"],
-		                             value=session.ref("graph", "@V"),
-		                             parent=self)
+		# self.graphW = ChimaeraWidget(#session.data["graph"],
+		#                              value=session.ref("graph", "@V"),
+		#                              parent=self)
 
 		#region layout
 		l = QtWidgets.QGridLayout(self)
@@ -104,7 +104,7 @@ class IdemWidget(QtWidgets.QWidget):
 		l.addWidget(self.dccPalette, 2, 0, 2, 1)
 		l.addWidget(self.scriptW, 4, 0, 3, 1)
 
-		l.addWidget(self.graphW, 0, 1, 4, 3)
+		#l.addWidget(self.graphW, 0, 1, 4, 3)
 		l.addWidget(self.logW, 4, 1, 1, 3)
 
 		# test

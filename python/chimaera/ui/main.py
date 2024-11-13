@@ -2,7 +2,7 @@
 
 from PySide2 import QtCore, QtWidgets, QtGui
 
-from wplib import log
+from wplib import log, inheritance
 from wptree import Tree
 from wpdex import WpDexProxy
 from wpdex.ui.atomic import AtomicWidget
@@ -12,7 +12,9 @@ from chimaera.ui.view import ChimaeraView
 from chimaera.ui.node import NodeDelegate
 
 
-class ChimaeraWidget(QtWidgets.QWidget, AtomicWidget
+class ChimaeraWidget(
+	QtWidgets.QWidget, AtomicWidget,
+	metaclass=inheritance.resolveInheritedMetaClass(QtWidgets.QWidget, AtomicWidget)
                      ):
 
 	def __init__(self, value:ChimaeraNode=None, parent=None):

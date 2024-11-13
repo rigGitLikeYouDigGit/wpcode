@@ -8,7 +8,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 
 import whoosh
 
-from wplib import log
+from wplib import log, inheritance
 from wptree import Tree
 from wpui import lib
 from wpui.widget.lantern import Status, Lantern
@@ -42,7 +42,10 @@ class AssetCompleter(QtWidgets.QCompleter):
 
 
 
-class AssetSelectorWidget(QtWidgets.QWidget, AtomicWidget):
+class AssetSelectorWidget(
+	QtWidgets.QWidget, AtomicWidget,
+	metaclass=inheritance.resolveInheritedMetaClass(QtWidgets.QWidget, AtomicWidget)
+):
 	"""widget representing an asset reference -
 	asset path or expression, version options, vcs status.
 	rich data not represented

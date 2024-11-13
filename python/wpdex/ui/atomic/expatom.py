@@ -4,6 +4,7 @@ import pprint
 from wplib import log
 
 from PySide2 import QtCore, QtGui, QtWidgets
+from wplib.serial import serialise, deserialise
 from wplib.inheritance import MetaResolver
 from wpdex.ui.atomic.base import AtomicWidget, toStr
 from wpdex import *
@@ -44,6 +45,8 @@ class ExpWidget(MetaResolver, QtWidgets.QLineEdit, AtomicWidget):
 		self.returnPressed.connect(self._fireDisplayCommitted)
 		self.postInit()
 
+
+
 	def _rawUiValue(self):
 		return self.text()
 	def _setRawUiValue(self, value):
@@ -81,3 +84,23 @@ class ExpWidget(MetaResolver, QtWidgets.QLineEdit, AtomicWidget):
 		#log("sizeHint for", self.text(), " : ", size)
 		size = self.fontMetrics().tightBoundingRect(self.text()).size()
 		return size
+
+if __name__ == '__main__':
+
+
+	d = ["a", "b", "c"]
+	p = WpDexProxy(d)
+	app = QtWidgets.QApplication()
+	w = QtWidgets.QWidget()
+	expW = ExpWidget(parent=w,
+	                 value=p.ref(1))
+	btn = QtWidgets.QPushButton("display", parent=w)
+	btn.clicked.connect(lambda :pprint.pprint(serialise(p)))
+	w.setLayout(QtWidgets.QVBoxLayout())
+	w.layout().addWidget(expW)
+	w.layout().addWidget(btn)
+	w.show()
+	app.exec_()
+
+
+

@@ -27,33 +27,41 @@ class Wreactive_ops(reactive_ops):
 	syntax, since otherwise you have to do some type checking to
 	tell when to use BIND(), etc
 	"""
-	# @property
-	# def value(self):
-	# 	"""
-	# 	Returns the current state of the reactive expression by
-	# 	evaluating the pipeline.
-	# 	"""
-	# 	if isinstance(self._reactive, rx):
-	# 		return self._reactive._resolve()
-	# 	elif isinstance(self._reactive, Parameter):
-	# 		return getattr(self._reactive.owner, self._reactive.name)
-	# 	else:
-	# 		return self._reactive()
+	@property
+	def value(self):
+		"""
+		Returns the current state of the reactive expression by
+		evaluating the pipeline.
+		"""
+		if isinstance(self._reactive, rx):
+			return self._reactive._resolve()
+		elif isinstance(self._reactive, Parameter):
+			return getattr(self._reactive.owner, self._reactive.name)
+		else:
+			return self._reactive()
 
-	# @value.setter
-	# def value(self, new):
-	# 	"""
-	# 	Allows overriding the original input to the pipeline.
-	# 	"""
-	#
-	# 	# log("set value", new,
-	# 	#     self._reactive, self._reactive._wrapper)
-	# 	root = self._reactive._compute_root()
-	# 	#log("root", root)
-	# 	if "_dexPath" in self._reactive._kwargs:
-	# 		self._reactive.WRITE(resolve_value(new))
-	# 		return
-	# 	reactive_ops.value.fset(self, new)
+	@value.setter
+	def value(self, new):
+		"""
+		Allows overriding the original input to the pipeline.
+		"""
+		# log("set value", new,
+		#     self._reactive, self._reactive._wrapper)
+		#root = self._reactive._compute_root()
+		#log("root", root)
+
+		print("")
+		log("set value")
+		wx = WX.getWXRoot(self._reactive)
+		if wx is not None:
+			#assert wx
+			#if "_dexPath" in wx._kwargs:
+			#if "_dexPath" in root._kwargs:
+			#root.WRITE(resolve_value(new))
+			log("EMITTING")
+			wx.WRITE(resolve_value(new))
+			return
+		reactive_ops.value.fset(self, new)
 
 		# try:
 		#
@@ -152,6 +160,17 @@ class WX(rx):
 	# 		new = self._resolve_accessor()
 	# 		new._method = name
 	# 		return new
+
+	@classmethod
+	def getWXRoot(cls, rxInstance:rx):
+		while not isinstance(rxInstance, WX):
+			try:
+				log("discount rx", rxInstance)
+			except:
+				log("discount rx", type(rxInstance))
+			rxInstance = rxInstance._prev
+			if rxInstance is None: return None
+		return rxInstance if isinstance(rxInstance, WX) else None
 
 	def WRITE(self, val):
 		"""emit (path, value)
@@ -541,6 +560,8 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 			ref = WX(_resolveRef, _dexPath=path, _dex=self.dex())()
 
 			assert isinstance(ref, WX)
+			assert isinstance(ref.rx._reactive, WX)
+
 			#log("ref is", ref)
 			#log("ref call", type(ref), ref._obj, ref._operation)
 
@@ -570,67 +591,16 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 				#log("targetDex", targetDex, targetDex.parent)
 				#log(targetDex.branchMap())
 				assert isinstance(targetDex, WpDex)
-				assert isinstance(targetDex.parent, WpDex)
+				if targetDex.parent is not None:
+					assert isinstance(targetDex.parent, WpDex)
 				targetDex.write(value)
 				log("after write", self.dex(), self.dex().branchMap())
 			ref._kwargs["_writeSignal"].connect(_onRefWrite)
 
-			#_onRefWrite("@N", "test_val")
-
-			# self.uiChangedSignal.connect(
-			# 	lambda *args: ref.dex().write(self.getFn())
-			# )
-
 		return self._proxyData["wxRefs"][path]
 
-		# ref = Reference(root=self, path=path)
-		# self.dex().getEventSignal("main").connect(ref._onRootEvent)
-		# return ref
 
 	#endregion
-
-# class Reference:
-# 	"""consistent pathed reference a part of a structure
-# 	also try some way to let this be reactive,
-# 	with custom rxpy methods and any other like a mock chain"""
-# 	def __init__(self, root:WpDexProxy, path:WpDex.pathT):
-# 		self.root = root
-# 		self.path = sequence.toSeq(path)
-# 		self.changed = Signal(name="changed(" + str(self.path) + ")")
-#
-# 	def __str__(self):
-# 		return f"REF({self.root} - {self.path})"
-#
-#
-# 	def _onRootEvent(self, event):
-# 		"""filter any event sent through the root dex - check if this
-# 		reference's path is found in that of the event.
-# 		if yes, fire self.changed( self() )"""
-# 		log("on root event", self)
-# 		pprint.pp(event)
-# 		self.changed( self() )
-#
-# 	def drive(self, fn:callable):
-# 		"""drive the given callable with the result of this reference,
-# 		whenever the source changes"""
-# 		self.changed.connect(fn)
-#
-# 	def dex(self)->WpDex:
-# 		return self.root.dex().access(self.root.dex(), self.path, values=0)
-#
-# 	def __call__(self, *args, **kwargs):
-# 		"""evaluate this ref and return the result -
-# 		if any methods are chained, evaluate those too.
-# 		unsure if we want to allow args to this call"""
-# 		#log("call")
-# 		return self.root.dex().access(
-# 			self.root.dex(), self.path, values=1)
-#
-# 	def setValue(self, value):
-# 		"""TODO: we don't have a way to do this yet -
-# 		    allow setting values back to the source path
-# 			 """
-# 		raise NotImplementedError
 
 
 

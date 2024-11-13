@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pprint
 import traceback
 import typing as T
 
@@ -9,15 +10,17 @@ from weakref import WeakValueDictionary, WeakSet
 from PySide2 import QtCore, QtWidgets, QtGui
 
 from param import rx
-
+from wptree import Tree
 from wplib import log, inheritance
+from wplib.serial import serialise, deserialise
 from wplib.object import Signal, Adaptor, PostInitMeta
 
-from wpui import model as libmodel, lib as libui
+from wpui import model as libmodel, lib as libui, treemenu
+from wpui.treemenu import ContextMenuProvider
 
 from wpdex import *
 from wpexp.syntax import SyntaxPasses, ExpSyntaxProcessor
-import warp
+
 
 def toStr(x):
 	"""TODO: move this to somewhere
@@ -92,7 +95,8 @@ class AtomicUiInterface(
 		# set up all reactive elements first -
 		self._proxy : WpDexProxy = None
 		self._dex : WpDex = None
-		self._value : WX = rx(None)
+		#self._value : WX = rx(None)
+		self._value : WX = WX(None)
 
 		# child widgets of container may not be direct children in Qt
 		self._childAtomics : dict[WpDex.pathT, AtomicWidget] = WeakValueDictionary()
@@ -151,11 +155,6 @@ class AtomicUiInterface(
 		"""return widget's value as python object"""
 		return self._value.rx.value
 
-	def setSourceObject(self, obj: (WpDex, WpDexProxy, WX, T.Any)):
-		"""test working from a proxy as the source of everything"""
-		if isinstance(obj, WpDex):
-			proxy = WpDexProxy(obj.obj, wpDex=obj)
-
 	def valueProxy(self) -> WpDexProxy:
 		return self._proxy
 
@@ -172,7 +171,8 @@ class AtomicUiInterface(
 			need an onChildValueChanged() function
 
 		"""
-		#log("set value", value, type(value), self)
+		a = 1
+		log("set value", value, type(value), self)
 		if not isinstance(value, (WpDex, WpDexProxy, WX)): # simple set value op
 			if value == self.value():
 				return
@@ -189,6 +189,7 @@ class AtomicUiInterface(
 		if isinstance(value, WX): # directly from a reference
 			self._dex = lambda : value.RESOLVE(dex=True)
 			self._proxy = lambda : value.RESOLVE(proxy=True)
+			self._value = value
 			# since it's an rx component, directly supplant the reactive value reference
 			# self._value = value
 			# self._value.rx.watch(self._syncUiFromValue, onlychanged=False)
@@ -367,13 +368,17 @@ class AtomicUiInterface(
 		canBeSet = react.canBeSet(self._value)
 
 		#log("root", self._value._root is self._value, self._value._compute_root() is self._value)
-		#log("can be set", canBeSet, self)
+		log("can be set", canBeSet, self)
 		if canBeSet:
-			self._value.rx.value = EVAL(value) # rx fires ui sync function
-		#log("after value set")
+			value = EVAL(value)
+			log("setting", value)
+			self._value.rx.value = value # rx fires ui sync function
+		log("after value set", self.value())
 		self._syncImmediateValue()
 		# self.syncLayout()
+		#log("has valueCommitted", self, hasattr(self, "valueCommitted"))
 		if hasattr(self, "valueCommitted"):
+
 			self.valueCommitted.emit(value)
 
 
@@ -626,6 +631,7 @@ class AtomStyledItemDelegate(QtWidgets.QStyledItemDelegate,
 	                 option:QtWidgets.QStyleOptionViewItem,
 	                 index:QtCore.QModelIndex):
 		from wpdex.ui.atomic.expatom import ExpWidget
+		log("delegate createEditor")
 
 		item : AtomStandardItem = index.model().itemFromIndex(index)
 		# until there's a case where we need multiple items per dex?
@@ -712,11 +718,17 @@ class AtomicView(QtWidgets.QTreeView,
 			modelType = AtomicStandardItemModel.adaptorForType(value)
 			assert modelType, f"No atomic model type found for {value}, {type(value)}"
 			model = modelType(value=value, parent=self)
+
+		self.setItemDelegate(
+			AtomStyledItemDelegate(parent=self))
+
 		self.setModel(model)
 		self.setAutoFillBackground(False)
 		self.buildChildWidgets()
 
 
+	def dex(self):
+		return self.model().dex()
 
 	def buildChildWidgets(self):
 
@@ -729,8 +741,8 @@ class AtomicView(QtWidgets.QTreeView,
 		# set up index widgets on container dex items
 		pathItemMap = self.model().pathItemMap()
 		pathModelMap = self.model().pathModelMap()
-		log("path item map", pathItemMap)
-		log("pathModelMap", pathModelMap)
+		#log("path item map", pathItemMap)
+		#log("pathModelMap", pathModelMap)
 		for path, model in pathModelMap.items():
 			item = pathItemMap[path]
 			widget = AtomicMain.adaptorForObject(item.dex())(
@@ -760,8 +772,9 @@ class AtomicView(QtWidgets.QTreeView,
 		return AtomStyledItemDelegate.adaptorForObject(dex)(parent=self)
 
 
-class AtomicMain(QtWidgets.QWidget,
+class AtomicMain(ContextMenuProvider, QtWidgets.QWidget,
                  Adaptor,
+
                  ):
 	"""it wasn't complex enough
 	overall holder widget to contain separate widgets alongside each view -
@@ -770,6 +783,9 @@ class AtomicMain(QtWidgets.QWidget,
 	"""
 	adaptorTypeMap = Adaptor.makeNewTypeMap()
 	forTypes = (WpDex, )
+
+	def dex(self)->WpDex:
+		return self.view.dex()
 
 	def __init__(self, value:WpDex, parent=None,
 	             model:AtomicStandardItemModel=None):
@@ -780,6 +796,22 @@ class AtomicMain(QtWidgets.QWidget,
 		self.view = AtomicView.adaptorForObject(value)(
 			value=value, parent=self, model=model)
 		self.layout().addWidget(self.view)
+
+		ContextMenuProvider.__init__(self, value=value, parent=parent)
+
+	def _getBaseContextTree(self, *args, **kwargs) ->Tree[str, callable]:
+		tree = Tree("contextMenuTree")
+		tree["display"] = lambda : pprint.pprint(serialise(self.dex().obj))
+		return tree
+
+	# def contextMenuEvent(self, event:QtGui.QContextMenuEvent):
+	# 	menu = treemenu.buildMenuFromTree(self.menuTree)
+	# 	self._menu = menu # setting menu's parent gave weird behaviour -
+	# 	# this way we still hold a reference to it so it doesn't vanish
+	# 	menu.move(event.globalPos())
+	# 	menu.show()
+
+
 
 
 

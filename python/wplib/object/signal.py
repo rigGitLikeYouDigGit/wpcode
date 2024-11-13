@@ -90,9 +90,10 @@ class Signal(object):
 		""" set signal to use given queue """
 		self._queue = queueName
 
-	def emit(self, *args, **kwargs):
-		""" brings this object up to rough parity with qt signals """
-		self(*args, **kwargs)
+	# def emit(self, *args, **kwargs):
+	# 	""" brings this object up to rough parity with qt signals """
+	# 	self(*args, **kwargs)
+	emit = __call__
 
 	def connect(self, slot):
 		"""add given callable to function or method register

@@ -14,7 +14,7 @@ class DictDex(WpDex):
 		"""validate this object"""
 		pass
 
-	def _buildBranchMap(self):
+	def _buildBranchMap(self, **kwargs):
 		# return [(self.makeChildPathable(("keys()", ), k),
 		#          self.makeChildPathable((k,), v) )
 		#         for i, (k, v) in enumerate(self.obj.items())]
