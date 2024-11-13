@@ -50,18 +50,18 @@ class Wreactive_ops(reactive_ops):
 		#root = self._reactive._compute_root()
 		#log("root", root)
 
-		print("")
-		log("set value")
+		#print("")
+		#log("set value")
 		wx = WX.getWXRoot(self._reactive)
 		if wx is not None:
 			#assert wx
 			#if "_dexPath" in wx._kwargs:
 			#if "_dexPath" in root._kwargs:
 			#root.WRITE(resolve_value(new))
-			log("EMITTING")
+			#log("EMITTING")
 			wx.WRITE(resolve_value(new))
 			return
-		reactive_ops.value.fset(self, new) 
+		reactive_ops.value.fset(self, new)
 
 		# try:
 		#
@@ -164,10 +164,10 @@ class WX(rx):
 	@classmethod
 	def getWXRoot(cls, rxInstance:rx):
 		while not isinstance(rxInstance, WX):
-			try:
-				log("discount rx", rxInstance)
-			except:
-				log("discount rx", type(rxInstance))
+			# try:
+			# 	log("discount rx", rxInstance)
+			# except:
+			# 	log("discount rx", type(rxInstance))
 			rxInstance = rxInstance._prev
 			if rxInstance is None: return None
 		return rxInstance if isinstance(rxInstance, WX) else None
@@ -594,7 +594,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 				if targetDex.parent is not None:
 					assert isinstance(targetDex.parent, WpDex)
 				targetDex.write(value)
-				log("after write", self.dex(), self.dex().branchMap())
+				log("after write", self.dex(), value, type(value), self.dex().branchMap())
 			ref._kwargs["_writeSignal"].connect(_onRefWrite)
 
 		return self._proxyData["wxRefs"][path]

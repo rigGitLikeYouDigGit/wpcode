@@ -368,12 +368,12 @@ class AtomicUiInterface(
 		canBeSet = react.canBeSet(self._value)
 
 		#log("root", self._value._root is self._value, self._value._compute_root() is self._value)
-		log("can be set", canBeSet, self)
+		#log("can be set", canBeSet, self)
 		if canBeSet:
 			value = EVAL(value)
-			log("setting", value)
+			#log("setting", value)
 			self._value.rx.value = value # rx fires ui sync function
-		log("after value set", self.value())
+		#log("after value set", self.value())
 		self._syncImmediateValue()
 		# self.syncLayout()
 		#log("has valueCommitted", self, hasattr(self, "valueCommitted"))
@@ -519,8 +519,7 @@ class AtomicStandardItemModel(
 	I guess if the complexity isn't in the logic, it's in the
 	object structure itself
 	"""
-	def __prepare__(self, *args, **kwargs):
-		log("real class prepare", args, kwargs)
+
 	adaptorTypeMap = Adaptor.makeNewTypeMap()
 	forTypes = ()
 	# widget display changed live
@@ -533,10 +532,14 @@ class AtomicStandardItemModel(
 	# committed - FINAL value, no delta
 	valueCommitted = QtCore.Signal(object)  # redeclare this with proper signature
 
+	modelsChanged = QtCore.Signal(object)
+
 	def __init__(self, value, parent=None):
 		QtGui.QStandardItemModel.__init__(self, parent)
 		AtomicUiInterface.__init__(
 			self, value=value)
+
+		self.dataChanged.connect(self._onDataChanged)
 
 	def __post_init__(self, *args, **kwargs):
 		"""immediateValue kept here on the absolute extreme
@@ -545,6 +548,21 @@ class AtomicStandardItemModel(
 		self.build()
 		#self._syncUiFromValue()
 		self._syncImmediateValue()
+
+	def _onDataChanged(self, *args, **kwargs):
+		"""
+		- block signals before and after to stop infinites
+		- clear out items and models
+		- rebuild
+		- signal view SOMEHOW to redraw widgets - either custom signal or something like
+			rowsReset, rowsAboutToBeReset etc
+
+		TODO: if we edit multiple items, only fire this once somehow
+		"""
+
+		self.build()
+		#self.modelsChanged.emit(self)
+
 
 	def pathItemMap(self)->dict[WpDex.pathT, AtomStandardItem]:
 		pathMap = {}
@@ -562,8 +580,11 @@ class AtomicStandardItemModel(
 		return {tuple(i.dex().relativePath(self.dex())) : i for i in self.childModels()}
 
 	def build(self):
+		self.blockSignals(True)
 		self._buildItems()
 		self._buildChildModels()
+		self.blockSignals(False)
+		self.modelsChanged.emit(self)
 	def _buildItems(self):
 		""" OVERRIDE
 		create standardItems for each branch of
@@ -726,6 +747,13 @@ class AtomicView(QtWidgets.QTreeView,
 		self.setAutoFillBackground(False)
 		self.buildChildWidgets()
 
+		self.model().modelsChanged.connect(self._onModelsChanged)
+
+	def _onModelsChanged(self, *args, **kwargs):
+		"""easiest solution here is to just rip out all
+		the models under item, rebuild them
+		and rebuild child widgets afterwards"""
+		self.buildChildWidgets()
 
 	def dex(self):
 		return self.model().dex()
@@ -734,8 +762,9 @@ class AtomicView(QtWidgets.QTreeView,
 
 		for i in self.children():
 			if isinstance(i, (AtomicView, AtomicMain)):
+				i.close()
 				i.deleteLater()
-				i.setParent(None)
+				#i.setParent(None)
 
 
 		# set up index widgets on container dex items

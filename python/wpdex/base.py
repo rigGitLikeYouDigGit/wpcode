@@ -161,7 +161,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		"""OVERRIDE -
 		manage the process of writing a value to child more closely
 		"""
-		log("base writeChildToKey", self, key, value)
+		#log("base writeChildToKey", self, key, value)
 		setAttr = False # by default
 		if setAttr:
 			setattr(self.obj, key, value)
@@ -175,7 +175,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 
 		if no parent, we can't really write
 		"""
-		log("WRITE", self, value)
+		#log("WRITE", self, value)
 
 		if not self.parent:
 			self.setObj(value)
@@ -350,7 +350,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		if called by outside process, be aware that internal
 		effects may also change the state of the other structure,
 		so it may be best to always call this on the root"""
-		log("prep for deltas", self)
+		#log("prep for deltas", self)
 		# for i in self.allBranches(includeSelf=True):
 		# 	log("prep deltas ", i)
 		# 	i._persistData["deltaBase"] = i.getStateForDelta()
