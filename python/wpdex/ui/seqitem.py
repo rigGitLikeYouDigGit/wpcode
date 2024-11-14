@@ -8,7 +8,7 @@ from wplib.inheritance import MetaResolver
 from wpdex import WpDex, SeqDex, WpDexProxy
 from wpdex.ui.atomic import AtomicWidget, AtomicView, AtomicStandardItemModel, AtomStandardItem
 
-from wpdex.ui.base import WpDexView, DexViewExpandButton
+from wpdex.ui.base import WpDexView#, DexViewExpandButton
 
 
 

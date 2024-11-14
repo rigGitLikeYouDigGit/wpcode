@@ -213,35 +213,3 @@ class WpDexWindow(
 		self.layout().addWidget(self.itemWidget)
 
 
-class DexViewExpandButton(QtWidgets.QPushButton):
-	"""button to show type of container when open,
-	and overview of contained types when closed"""
-	expanded = QtCore.Signal(bool)
-	def __init__(self, openText="[", dex:WpDex=None, parent=None):
-		self._isOpen = True
-		self._openText = openText
-		self._dex = dex
-		super().__init__(openText, parent=parent)
-
-		m = 0
-		self.setContentsMargins(m, m, m, m)
-		#self.setFixedSize(20, 20)
-		self.setStyleSheet("padding: 1px 1px 2px 2px; text-align: left")
-
-		self.clicked.connect(lambda : self.setExpanded(
-			state=(not self.isExpanded()), emit=True))
-
-	def getClosedText(self):
-		return self._dex.getTypeSummary()
-
-	def setExpanded(self, state=True, emit=False):
-		log("setExpanded", state, emit)
-		if state:
-			self.setText(self._openText)
-		else:
-			self.setText(self.getClosedText())
-		self._isOpen = state
-		if emit:
-			self.expanded.emit(state)
-	def isExpanded(self):
-		return self._isOpen

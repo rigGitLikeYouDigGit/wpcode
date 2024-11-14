@@ -42,17 +42,17 @@ class TreeDex(WpDex):
 		"""set value back to tree attributes
 		TODO: surely we can reuse the branchmap of the wpdex itself for this somehow
 		"""
-		log("write to tree", key, value)
+		#log("write to tree", key, value)
 		if key == "@N" :
 			self.obj.setName(value)
 			#log("after write name", self.obj)
 		elif key == "@V" : self.obj.setValue(value)
 		elif key == "@AUX" : self.obj._setRawAuxProperties(value)
 		else:
-			log("writing new key to tree", key, value)
+			#log("writing new key to tree", key, value)
 			assert isinstance(value, TreeInterface)
 			self.obj.addBranch(newBranch=value)
-		log("after write to tree", self, self.obj, self.obj.value)
+		#log("after write to tree", self, self.obj, self.obj.value)
 
 	# def _buildBranchMap(self, **kwargs) ->dict[DexPathable.keyT, WpDex]:
 	# 	result = super()._buildBranchMap()
@@ -85,7 +85,8 @@ class TreeDex(WpDex):
 			# direct branches guaranteed to be child trees
 			yield from dex.treeDexes(includeSelf=True)
 
-
+	def bookendChars(self) ->tuple[str, str]:
+		return "t", "t"
 
 if __name__ == '__main__':
 

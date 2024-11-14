@@ -16,6 +16,9 @@ class PrimDex(WpDex):
 	def _buildBranchMap(self, **kwargs) ->dict[DexPathable.keyT, WpDex]:
 		return {}
 
+	def bookendChars(self) ->tuple[str, str]:
+		return "", ""
+
 class IntDex(PrimDex):
 	forTypes = (int, )
 class BoolDex(PrimDex):

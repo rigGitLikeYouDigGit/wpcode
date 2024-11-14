@@ -594,7 +594,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 				if targetDex.parent is not None:
 					assert isinstance(targetDex.parent, WpDex)
 				targetDex.write(value)
-				log("after write", self.dex(), value, type(value), self.dex().branchMap())
+				#log("after write", self.dex(), value, type(value), self.dex().branchMap())
 			ref._kwargs["_writeSignal"].connect(_onRefWrite)
 
 		return self._proxyData["wxRefs"][path]

@@ -59,5 +59,9 @@ class DictDex(WpDex):
 			return
 		return super().writeChildToKey(key, value)
 
+	def bookendChars(self)->tuple[str, str]:
+		"""return 'bookends' that can be used to enclose a
+		displayed version of this type"""
+		return "{", "}"
 
 

@@ -6,7 +6,8 @@ from wplib import log
 from PySide2 import QtCore, QtGui, QtWidgets
 from wplib.serial import serialise, deserialise
 from wplib.inheritance import MetaResolver
-from wpdex.ui.atomic.base import AtomicWidget, toStr
+from wpdex.ui.atomic.base import AtomicWidget
+from wpexp.tostr import toStr
 from wpdex import *
 
 # i summon ancient entities
@@ -17,6 +18,13 @@ class ExpWidget(MetaResolver, QtWidgets.QLineEdit, AtomicWidget):
 	"""general-purpose text edit to
 	allow defining new values as whatever is eval'd
 	on commit
+
+	TODO: to use this more generally, maybe we go with textEdit instead?
+		that way we can allow multi-line literals for nested lists/dicts, in
+		situations where the full item view is overkill
+
+	my approach to writing this ui code is similar to my approach to drawing.
+	if you just draw every possible line, the picture will be in there somewhere.
 	"""
 	forTypes = (IntDex,
 	            StrDex)

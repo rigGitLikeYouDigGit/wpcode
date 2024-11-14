@@ -471,6 +471,13 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		return proxy.ref(*path)
 
 	# type "summary" string systems
+	def bookendChars(self)->tuple[str, str]:
+		"""return 'bookends' that can be used to enclose a
+		displayed version of this type
+		"""
+		selfStr = str(self.obj)
+		return selfStr[0], selfStr[-1]
+
 	def getTypeSummary(self):
 		"""
 		return "tuple[list[(str, dict[str, int])]] = (["ey", {"a" : 2}])

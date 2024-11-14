@@ -1,38 +1,22 @@
 from __future__ import annotations
 
-import pprint
 import traceback
-import typing as T
 
-from dataclasses import dataclass
-from weakref import WeakValueDictionary, WeakSet
+from weakref import WeakValueDictionary
 
 from PySide2 import QtCore, QtWidgets, QtGui
 
-from param import rx
+from wpexp.tostr import toStr
 from wptree import Tree
-from wplib import log, inheritance
-from wplib.serial import serialise, deserialise
-from wplib.object import Signal, Adaptor, PostInitMeta
+from wplib import inheritance
+from wplib.serial import serialise
+from wplib.object import Adaptor, PostInitMeta
 
-from wpui import model as libmodel, lib as libui, treemenu
+from wpui import model as libmodel
 from wpui.treemenu import ContextMenuProvider
 
 from wpdex import *
-from wpexp.syntax import SyntaxPasses, ExpSyntaxProcessor
 
-
-def toStr(x):
-	"""TODO: move this to somewhere
-	consider the full send - to be robust to different ways
-	of representing objects, could define a new hierarchy of
-	string-adaptor for each kind of expression syntax, and
-	implement each object type bespoke
-
-	"""
-	if isinstance(x, WpDexProxy):
-		return toStr(x._proxyTarget())
-	return str(x)
 
 class Condition:
 	"""EXTREMELY verbose, but hopefully this lets us reuse
@@ -151,7 +135,7 @@ class AtomicUiInterface(
 
 	def rxValue(self)->rx:
 		return self._value
-	def value(self)->valueType:
+	def value(self)->T.Any:
 		"""return widget's value as python object"""
 		return self._value.rx.value
 
@@ -161,7 +145,7 @@ class AtomicUiInterface(
 	def dex(self) -> WpDex:
 		return EVAL(self._dex)
 
-	def setValue(self, value:(WpDex, WpDexProxy, WX, valueType)):
+	def setValue(self, value:(WpDex, WpDexProxy, WX, T.Any)):
 		"""
 		set value on widget - can be called internally and externally
 		if passed a reactive element, set up all children and local
@@ -172,7 +156,7 @@ class AtomicUiInterface(
 
 		"""
 		a = 1
-		log("set value", value, type(value), self)
+		#log("set value", value, type(value), self)
 		if not isinstance(value, (WpDex, WpDexProxy, WX)): # simple set value op
 			if value == self.value():
 				return
@@ -549,6 +533,14 @@ class AtomicStandardItemModel(
 		#self._syncUiFromValue()
 		self._syncImmediateValue()
 
+	def data(self, index, role:QtCore.Qt.ItemDataRole=...):
+		"""Why do they query the model for front-end things like
+		the visual alignment of text in the widget?
+		Why do they do this???"""
+		if role == QtCore.Qt.TextAlignmentRole:
+			return QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop
+		return super().data(index, role)
+
 	def _onDataChanged(self, *args, **kwargs):
 		"""
 		- block signals before and after to stop infinites
@@ -749,6 +741,28 @@ class AtomicView(QtWidgets.QTreeView,
 
 		self.model().modelsChanged.connect(self._onModelsChanged)
 
+		# appearance and layout
+		self.header().setDefaultSectionSize(2)
+		#self.header().setMinimumSectionSize(-1) # sets to font metrics, still buffer around it
+		self.header().setMinimumSectionSize(15)
+		self.header().setSectionResizeMode(
+			self.header().ResizeToContents
+		)
+		#self.setColumnWidth(0, 2)
+		self.setIndentation(12)
+
+		self.setAlternatingRowColors(True)
+		self.setSizeAdjustPolicy(
+			QtWidgets.QAbstractItemView.AdjustToContents)
+		self.setHeaderHidden(True)
+
+		self.setVerticalScrollMode(self.ScrollMode.ScrollPerPixel)
+		self.setHorizontalScrollMode(self.ScrollMode.ScrollPerPixel)
+		self.setContentsMargins(0, 0, 0, 0)
+		self.setViewportMargins(0, 0, 0, 0)
+
+		self.setUniformRowHeights(False)
+
 	def _onModelsChanged(self, *args, **kwargs):
 		"""easiest solution here is to just rip out all
 		the models under item, rebuild them
@@ -786,22 +800,51 @@ class AtomicView(QtWidgets.QTreeView,
 		for item in libmodel.iterAllItems(model=self.model()):
 			self.setExpanded(item.index(), True)
 
-	def itemDelegateForIndex(self, index:QtCore.QModelIndex):
-		"""this might only be for a later version of qt :(
-		delegates are a pain anyway - if we can only use one
-		type, set that as a shell and do some kind of internal
-		adaptor for the different types
+	def syncLayout(self):
+		log("sync layou")
+		self.updateGeometries()
+		self.scheduleDelayedItemsLayout()
+		self.executeDelayedItemsLayout()
+		self.updateGeometries()
 
-		yep, doesn't fire ._.
-		"""
-		item = self.model().itemFromIndex(index)
-		if not isinstance(item, AtomStyledItemDelegate):
-			return QtWidgets.QStyledItemDelegate(parent=self)
-		dex = item.dex()
-		return AtomStyledItemDelegate.adaptorForObject(dex)(parent=self)
+class ViewExpandButton(QtWidgets.QPushButton):
+	"""button to show type of container when open,
+	and overview of contained types when closed"""
+	expanded = QtCore.Signal(bool)
+	def __init__(self, openText="[", dex:WpDex=None, parent=None):
+		self._isOpen = True
+		self._openText = openText
+		self._dex = dex
+		super().__init__(openText, parent=parent)
 
+		m = 0
+		self.setContentsMargins(m, m, m, m)
+		self.setFixedSize(13, 20,  )
+		self.setStyleSheet("padding: 1px 1px 2px 2px; text-align: left")
 
-class AtomicMain(ContextMenuProvider, QtWidgets.QWidget,
+		self.clicked.connect(lambda : self.setExpanded(
+			state=(not self.isExpanded()), emit=True))
+
+	def getClosedText(self):
+		return self._dex.getTypeSummary()
+
+	def setExpanded(self, state=True, emit=False):
+		log("setExpanded", state, emit)
+		if state:
+			self.setText(self._openText)
+			self.setFixedSize(13, 20, )
+		else:
+			self.setText(self.getClosedText())
+			self.setMaximumWidth(100)
+		self._isOpen = state
+		if emit:
+			self.expanded.emit(state)
+	def isExpanded(self):
+		return self._isOpen
+
+class AtomicMain(ContextMenuProvider,
+                 #QtWidgets.QWidget,
+                 QtWidgets.QFrame,
                  Adaptor,
 
                  ):
@@ -816,17 +859,59 @@ class AtomicMain(ContextMenuProvider, QtWidgets.QWidget,
 	def dex(self)->WpDex:
 		return self.view.dex()
 
+	def atomicViewParent(self)->AtomicView:
+		return self._origParent
+	def atomicMainParent(self)->AtomicMain:
+		return self._origParent.parent()
+
+
 	def __init__(self, value:WpDex, parent=None,
 	             model:AtomicStandardItemModel=None):
-		QtWidgets.QWidget.__init__(self, parent)
+		#QtWidgets.QWidget.__init__(self, parent)
+		QtWidgets.QFrame.__init__(self, parent)
+		self._origParent = parent # VERY BAD but necessary to survive through setIndexWidget()
 		self.setLayout(QtWidgets.QHBoxLayout(self))
-		self.layout().setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
 		value = getWpDex(value)
 		self.view = AtomicView.adaptorForObject(value)(
 			value=value, parent=self, model=model)
+
+		self.expandBtn = ViewExpandButton(
+			openText=self.dex().bookendChars()[0],
+			dex=self.dex(),
+			parent=self
+		)
+		self.expandBtn.expanded.connect(self._onExpandBtnClicked)
+		self.layout().addWidget(self.expandBtn)
 		self.layout().addWidget(self.view)
 
+		self.setContentsMargins(0, 0, 0, 0)
+		self.layout().setContentsMargins(0, 0, 0, 0)
+		#self.layout().setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
+		#self.layout().setAlignment(self.expandBtn, QtCore.Qt.AlignTop)
+		self.layout().setAlignment(self.expandBtn, QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
+		self.setAutoFillBackground(True)
+
+
 		ContextMenuProvider.__init__(self, value=value, parent=parent)
+
+	def _isExpanded(self)->bool:
+		return self.view.isVisible()
+
+	def _onExpandBtnClicked(self):
+		"""consider replacing view with raw Exp widget showing
+		string representation of value, and ALLOWING EDITING?
+		"""
+		if self.expandBtn.isExpanded():
+			self.view.show()
+			#self.layout().addWidget(self.view)
+		else:
+			self.view.hide()
+			#self.layout().removeWidget(self.view)
+		if self.parent():
+
+			self.atomicViewParent().syncLayout()
+			#self.parent().updateGeometry()
+
 
 	def _getBaseContextTree(self, *args, **kwargs) ->Tree[str, callable]:
 		tree = Tree("contextMenuTree")

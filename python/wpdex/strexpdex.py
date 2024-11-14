@@ -10,35 +10,17 @@ class StrDex(WpDex):
 	"""
 	forTypes = (str,)
 
-	# def __init__(self, obj, parent, name):
-	# 	super().__init__(obj, parent, name)
-	# 	p = self.path
-	# 	if None in self.path:
-	# 		p = self.path
-	# 	if "None" in self.path:
-	# 		p = self.path
-
-	# root dex has name of none
-	# when is set as parent, child then has a parent,
-
-	def _setParent(self, parent:Pathable):
-		super()._setParent(parent)
-		p = self.path
-		if None in self.path:
-			p = self.path
-		if "None" in self.path:
-			p = self.path
-		pass
-
-
 	def _buildChildPathable(self) ->dict[DexPathable.keyT, WpDex]:
 		"""build children"""
 		return {}
-	pass
+
+	def bookendChars(self) ->tuple[str, str]:
+		return "\"", "\""
 
 
 class ExpDex(WpDex):
-	"""holds final parsed expression"""
+	"""holds final parsed expression
+	this looms in a menacing fashion"""
 	def _buildChildPathable(self) ->dict[DexPathable.keyT, WpDex]:
 		"""build children"""
 		return {}

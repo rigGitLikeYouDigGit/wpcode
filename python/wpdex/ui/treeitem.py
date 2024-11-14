@@ -11,7 +11,6 @@ from wptree import TreeInterface, TreeDex, Tree
 from wpdex import WpDex, DictDex, WpDexProxy
 from wpdex.ui.atomic import AtomicWidget
 from wpdex.ui.atomic.base import AtomicStandardItemModel, AtomStandardItem, AtomStyledItemDelegate, AtomicUiInterface, AtomicMain, AtomicView
-from wpdex.ui.base import WpDexView, DexViewExpandButton
 
 
 class TreeBranchItem(AtomStandardItem):
