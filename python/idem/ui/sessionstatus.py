@@ -7,7 +7,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 
 from wpui.widget import Status
 from wpdex import *
-from wpdex.ui import AtomicWidget
+from wpdex.ui import AtomicWidgetOld
 
 class CustomProperty(QtCore.QObject):
 
@@ -80,7 +80,7 @@ class Blinker(QtCore.QObject):
 		self.anim.setCurrentTime(0)
 		self.anim.start(policy=QtCore.QAbstractAnimation.DeletionPolicy.KeepWhenStopped)
 
-class BlinkLight(AtomicWidget, QtWidgets.QWidget):
+class BlinkLight(AtomicWidgetOld, QtWidgets.QWidget):
 	"""return a round widget that blinks a solid colour -
 
 	TODO:
@@ -91,7 +91,7 @@ class BlinkLight(AtomicWidget, QtWidgets.QWidget):
 	def __init__(self, parent=None,
 	             value:Status.T()=Status.Neutral):
 		QtWidgets.QWidget.__init__(self, parent)
-		AtomicWidget.__init__(self, value=value)
+		AtomicWidgetOld.__init__(self, value=value)
 		self.blinker = Blinker(propertyName="brightness",
 		                       )
 		self.brightness = 0.0

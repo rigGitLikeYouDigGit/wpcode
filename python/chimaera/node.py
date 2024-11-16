@@ -762,7 +762,19 @@ class ChimaeraNode(Modelled,
 			data = branch
 		#log("node add branch", data)
 		# add tree branch to this node's data
-		self.data("@NODES", "override").addBranch(data)
+		selfData = self.data("@NODES", "override")
+		# assert self.data._proxyData["externalCallDepth"] == 0
+		# assert self.data._proxyData["deltaCallDepth"] == 0
+		# assert isinstance(selfData, WpDexProxy)
+		#print("")
+		# log("SELFDATA", selfData)
+		# def leafLog(*a): log("LEAF data changed")
+		# selfData.ref().rx.watch(leafLog, onlychanged=False)
+		# def rootLog(*a): log("ROOT data changed")
+		# self.data.ref().rx.watch(rootLog, onlychanged=False)
+		# log("leafRx", selfData.ref(), selfData.ref()._kwargs)
+		# selfData must be a proxy of the data tree
+		selfData.addBranch(data)
 		if isinstance(branch, ChimaeraNode): return branch
 		return ChimaeraNode(data)
 
@@ -815,44 +827,53 @@ ChimaeraNode.registerNodeType(ChimaeraNode)
 
 if __name__ == '__main__':
 
-	class CustomType(ChimaeraNode):
-		pass
+	# class CustomType(ChimaeraNode):
+	# 	pass
+	#
+	# log(ChimaeraNode.nodeTypeRegister)
+	#
+	# node = CustomType.create()
+	# assert node.getNodeType(node) == CustomType
+	# dataT = node.getNodeType(node.data)
+	# log("dataT", dataT, type(dataT))
+	# assert dataT == CustomType
+	# log(node)
+	# log(ChimaeraNode.getNodeType(node.data))
+	# log(ChimaeraNode(node))
+	#
+	# # add child nodes
+	# log(node.branchMap())
+	#
+	#
+	# class SecondCustomType(ChimaeraNode):
+	# 	pass
+	#
+	# child = node.createNode(SecondCustomType, name="secondChild")
+	# log(child)
+	# log(child.parent)
+	# log(node.branchMap())
+	#
+	# thirdChild = child.createNode(CustomType, name="leaf")
+	# log(thirdChild, thirdChild.path)
 
-	log(ChimaeraNode.nodeTypeRegister)
 
-	node = CustomType.create()
-	assert node.getNodeType(node) == CustomType
-	dataT = node.getNodeType(node.data)
-	log("dataT", dataT, type(dataT))
-	assert dataT == CustomType
-	log(node)
-	log(ChimaeraNode.getNodeType(node.data))
-	log(ChimaeraNode(node))
+	graph = ChimaeraNode.create("graph")
+	assert graph.data._proxyData["externalCallDepth"] == 0
+	assert graph.data._proxyData["deltaCallDepth"] == 0
+	log(graph.path)
+	def t(*a):
+		log("GRAPH CHANGED", a)
+	graph.ref().rx.watch(t, onlychanged=False)
+	assert graph.data._proxyData["externalCallDepth"] == 0
+	assert graph.data._proxyData["deltaCallDepth"] == 0
+	node = graph.createNode(name="childNode")
+	assert graph.data._proxyData["externalCallDepth"] == 0
+	assert graph.data._proxyData["deltaCallDepth"] == 0
+	#node = graph.createNode(name="childNodeB")
+	log("child nodes", graph.branches)
 
-	# add child nodes
-	log(node.branchMap())
-
-
-	class SecondCustomType(ChimaeraNode):
-		pass
-
-	child = node.createNode(SecondCustomType, name="secondChild")
-	log(child)
-	log(child.parent)
-	log(node.branchMap())
-
-	thirdChild = child.createNode(CustomType, name="leaf")
-	log(thirdChild, thirdChild.path)
-
-
-	# graph = ChimaeraNode.create("graph")
-	# log(graph.path)
-	# def t(*a):
-	# 	log("GRAPH CHANGED", a)
-	# graph.ref().rx.watch(t, onlychanged=False)
-	# node = graph.createNode(name="childNode")
-	# node = graph.createNode(name="childNodeB")
-	#log("child nodes", graph.branches)
+	co = graph.data.dex().staticCopy()
+	log("co", co)
 
 
 

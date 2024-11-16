@@ -40,3 +40,5 @@ TODO: a better name
 """
 
 from . import adaptor, model, node
+
+from .maya import *

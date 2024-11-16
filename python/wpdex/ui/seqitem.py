@@ -6,7 +6,7 @@ from PySide2 import QtCore, QtWidgets, QtGui
 from wplib import log
 from wplib.inheritance import MetaResolver
 from wpdex import WpDex, SeqDex, WpDexProxy
-from wpdex.ui.atomic import AtomicWidget, AtomicView, AtomicStandardItemModel, AtomStandardItem
+from wpdex.ui.atomic import AtomicWidgetOld, AtomicView, AtomicStandardItemModel, AtomStandardItem
 
 from wpdex.ui.base import WpDexView#, DexViewExpandButton
 

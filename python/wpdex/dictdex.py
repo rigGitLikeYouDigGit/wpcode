@@ -64,4 +64,40 @@ class DictDex(WpDex):
 		displayed version of this type"""
 		return "{", "}"
 
+class DictKeysDex(WpDex):
+	"""jank"""
+	forTypes = (type({}.keys()), )
+
+	def _buildBranchMap(self, **kwargs):
+		return [
+		         self.makeChildPathable((i,), v)
+		        for i, v in enumerate(self.obj)]
+
+	def writeChildToKey(self, key:Pathable.keyT, value):
+		raise RuntimeError("can't write to dict keys")
+		key = int(key)
+		d = self.obj.mapping
+		items = list(d.items())
+		items[key] = (value, items[key][1])
+		d.clear()
+		d.update({k : v} for k, v in items)
+
+class DictValuesDex(WpDex):
+	"""jank"""
+	forTypes = (type({}.values()), )
+
+	def _buildBranchMap(self, **kwargs):
+		return [
+		         self.makeChildPathable((i,), v)
+		        for i, v in enumerate(self.obj)]
+
+	def writeChildToKey(self, key:Pathable.keyT, value):
+		raise RuntimeError("can't write to dict values")
+		key = int(key)
+		d = self.obj.mapping
+		items = list(d.items())
+		items[key] = (items[key][0], value )
+		d.clear()
+		d.update({k : v} for k, v in items)
+
 

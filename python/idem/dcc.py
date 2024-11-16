@@ -32,6 +32,11 @@ then individual assets, shots, etc -
 there's a lot of stuff we could want to stack on certain events for dccs
 absolutely NO idea how to do any of that, for now we hardcode a single file
 
+DCCProcess - lightweight class representing bare bones of program, accessed
+	from without and within session - not inherited.
+
+DCCSession - inherited DCC specific class, only accessible from within domain
+
 """
 
 

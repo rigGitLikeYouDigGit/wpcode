@@ -11,7 +11,7 @@ from wplib.object import Signal
 from wplib.inheritance import MetaResolver
 from wpdex import WpDexProxy#, Reference
 #from wpdex.ui.react import ReactiveWidget
-from wpdex.ui.atomic.base import AtomicWidget
+from wpdex.ui.atomic.base import AtomicWidgetOld
 """a widget might have multiple 'slots' to link - 
 think of option box, not just the value
 some of this could be bidirectional through refs
@@ -33,7 +33,7 @@ connect them all to a uiEdited method to dispatch to slots?
 	uniform interface
 """
 
-class BoolAtomicWidget(AtomicWidget):
+class BoolAtomicWidget(AtomicWidgetOld):
 	"""expect to inherit from qCheckBox or similar"""
 	def _uiChangeQtSignals(self) ->list[QtCore.Signal]:
 		return [self.stateChanged]

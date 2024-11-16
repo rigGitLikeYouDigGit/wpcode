@@ -167,7 +167,8 @@ class Pathable(#Adaptor
 	#region comparing
 	def __eq__(self, other):
 		if not isinstance(other, Pathable):
-			raise NotImplementedError
+			#raise NotImplementedError(self, other)
+			return False
 		return tuple(self.path) == tuple(other.path)
 	#endregion
 

@@ -15,7 +15,7 @@ from wplib.object import Adaptor, VisitAdaptor
 from wplib.serial import SerialAdaptor, Serialisable, serialise, deserialise
 
 from wpdex import WpDex, WpDexProxy, getWpDex, rx, WX
-from wpdex.ui.atomic import AtomicWidget
+from wpdex.ui.atomic import AtomicWidgetOld
 
 """
 
@@ -73,7 +73,7 @@ class WpTypeLabel(QtWidgets.QLabel):
 		else:
 			self.setText(self.closedText)
 
-class WpDexView(AtomicWidget):
+class WpDexView(AtomicWidgetOld):
 	"""ui view for a WpDex object
 	contains child widgets in a grid-like spreadsheet tree view
 	each view contains only single layer of widgets
@@ -82,8 +82,8 @@ class WpDexView(AtomicWidget):
 	"""
 
 	def __init__(self, value,):
-		AtomicWidget.__init__(self, value=value,
-		                      )
+		AtomicWidgetOld.__init__(self, value=value,
+		                         )
 
 		# set up header and general size behaviour for views -
 		# override this to fine-tune it
@@ -163,7 +163,7 @@ class WpDexWindow(
 		QtWidgets.QWidget.__init__(self, parent=parent)
 
 		#self._dex : WpDex = None
-		self.itemWidget : AtomicWidget = None
+		self.itemWidget : AtomicWidgetOld = None
 
 		# self.emptyLabel = QtWidgets.QLabel("NO WPDEX PROVIDED, WINDOW EMPTY",
 		#                                    parent=self)
@@ -203,7 +203,7 @@ class WpDexWindow(
 			self.itemWidget.setParent(None)
 			self.itemWidget.deleteLater()
 
-		itemWidgetCls : type[AtomicWidget] = WpDexView.adaptorForObject(dex)
+		itemWidgetCls : type[AtomicWidgetOld] = WpDexView.adaptorForObject(dex)
 		log("item cls", itemWidgetCls)
 		self.itemWidget = itemWidgetCls(
 			#parent=self,

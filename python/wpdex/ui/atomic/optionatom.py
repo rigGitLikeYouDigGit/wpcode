@@ -10,14 +10,14 @@ from wplib.object import Signal
 
 from wpdex import WpDexProxy, Reference
 # from wpdex.ui.react import ReactiveWidget
-from wpdex.ui.atomic.base import AtomicWidget
+from wpdex.ui.atomic.base import AtomicWidgetOld
 
 """
 
 """
 
 
-class OptionAtomicWidget(AtomicWidget):
+class OptionAtomicWidget(AtomicWidgetOld):
 	"""use this for enums, modes, etc -
 	for searches, use a text widget and supply it options"""
 
@@ -58,11 +58,11 @@ class OptionWidgetMode(Enum):
 	Combo = "combo"
 	Radio = "radio"
 
-class OptionWidgetBase(AtomicWidget):
+class OptionWidgetBase(AtomicWidgetOld):
 	"""Any common abstract processing of enum widgets"""
 	valueType = Enum
 	def __init__(self, value=None, params:AtomicWidgetParams=None, parent=None):
-		AtomicWidget.__init__(self, value, params)
+		AtomicWidgetOld.__init__(self, value, params)
 		self.optionMap = optionMapFromOptions(self._params.options)
 
 

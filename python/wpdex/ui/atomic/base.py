@@ -15,6 +15,7 @@ from wplib.object import Adaptor, PostInitMeta
 from wpui import model as libmodel
 from wpui.treemenu import ContextMenuProvider
 
+from wpdex import react
 from wpdex import *
 
 
@@ -83,7 +84,7 @@ class AtomicUiInterface(
 		self._value : WX = WX(None)
 
 		# child widgets of container may not be direct children in Qt
-		self._childAtomics : dict[WpDex.pathT, AtomicWidget] = WeakValueDictionary()
+		self._childAtomics : dict[WpDex.pathT, AtomicWidgetOld] = WeakValueDictionary()
 
 		#self._value = rx(value) if not isinstance(value, rx) else value
 		self._immediateValue = rx(None) # changes as ui updates
@@ -140,7 +141,8 @@ class AtomicUiInterface(
 		return self._value.rx.value
 
 	def valueProxy(self) -> WpDexProxy:
-		return self._proxy
+		#return self._proxy
+		return EVAL(self._proxy)
 
 	def dex(self) -> WpDex:
 		return EVAL(self._dex)
@@ -156,10 +158,18 @@ class AtomicUiInterface(
 
 		"""
 		a = 1
-		#log("set value", value, type(value), self)
-		if not isinstance(value, (WpDex, WpDexProxy, WX)): # simple set value op
-			if value == self.value():
-				return
+		log("set value", value, type(value), self)
+
+		# the wrapped functions don't count as instances of rx
+
+		if not (isinstance(value, (WpDex, WpDexProxy, WX, rx))
+		        or react.getRx(value)) : # simple set value op
+			try:
+				check = (value == self.value())
+				if check:
+					return
+			except: # if error raised, assume new value is not equal
+				pass
 			self._tryCommitValue(value)
 		if isinstance(value, WpDex):
 			self._dex = value
@@ -170,13 +180,13 @@ class AtomicUiInterface(
 			self._dex = value.dex()
 			self._proxy = value
 			self._tryCommitValue(value)
-		if isinstance(value, WX): # directly from a reference
+		if isinstance(value, (WX, rx)) or react.getRx(value): # directly from a reference
 			self._dex = lambda : value.RESOLVE(dex=True)
 			self._proxy = lambda : value.RESOLVE(proxy=True)
 			self._value = value
 			# since it's an rx component, directly supplant the reactive value reference
 			# self._value = value
-			# self._value.rx.watch(self._syncUiFromValue, onlychanged=False)
+			self._value.rx.watch(self._syncUiFromValue, onlychanged=False)
 			log("before commit wx", value, EVAL(value))
 			self._tryCommitValue(EVAL(value))
 
@@ -186,9 +196,9 @@ class AtomicUiInterface(
 	                      ):
 		"""reduce code duplication when making children
 		OVERRIDE in items"""
-		widgetType = AtomicWidget.adaptorForObject(dex)
+		widgetType = AtomicWidgetOld.adaptorForObject(dex)
 		assert widgetType
-		widget : AtomicWidget = widgetType(value=dex, parent=self)
+		widget : AtomicWidgetOld = widgetType(value=dex, parent=self)
 		self.setIndexWidget(index, widget)
 		# self._setChildAtomicWidget(tuple(dex.relativePath(self.dex())),
 		#                            widget)
@@ -276,7 +286,7 @@ class AtomicUiInterface(
 	                        key,
 	                        value,
 	                        newDexType):
-		newWidgetType: type[AtomicWidget] = AtomicWidget.adaptorForType(newDexType)
+		newWidgetType: type[AtomicWidgetOld] = AtomicWidgetOld.adaptorForType(newDexType)
 		return newWidgetType(value=value, parent=self)
 
 
@@ -366,7 +376,7 @@ class AtomicUiInterface(
 			self.valueCommitted.emit(value)
 
 
-class AtomicWidget(
+class AtomicWidgetOld(
 	Adaptor,
 	AtomicUiInterface
 
@@ -431,13 +441,13 @@ class AtomicWidget(
 
 		self.setAutoFillBackground(True)
 
-	def postInit(self):
+	def __post_init__(self, *args, **kwargs):
 		"""yes I know post-inits are terrifying in qt,
 		for this one, just call it manually yourself
 		from the __init__ of the final class,
 		i'm not your mother
 		"""
-		#log("postInit", self, self.value())
+		log("postInit", self, self.value())
 		#log(self._processValueForUi(self.value()))
 		self._syncUiFromValue()
 		# try: self._syncUiFromValue()
@@ -467,7 +477,7 @@ class AtomicWidget(
 				self.executeDelayedItemsLayout()
 		self.update()
 		self.updateGeometry()
-		if isinstance(self.parent(), AtomicWidget):
+		if isinstance(self.parent(), AtomicWidgetOld):
 			self.parent().syncLayout(execute)
 
 

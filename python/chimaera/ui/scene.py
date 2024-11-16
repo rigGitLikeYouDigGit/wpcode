@@ -11,6 +11,7 @@ from chimaera import ChimaeraNode
 
 from wpui.widget.canvas import *
 from wpdex import *
+from wpdex import react
 
 from .node import NodeDelegate
 
@@ -28,19 +29,24 @@ class ChimaeraScene(WpCanvasScene):
 	             parent=None):
 		super().__init__(parent=parent)
 
-		self._graph : ChimaeraNode = rx(None)
+		self._graph : ChimaeraNode = WX(None)
 		if graph:
 			self.setGraph(graph)
 
 	def graph(self)->ChimaeraNode:
 		return self._graph.rx.value
-	def rxGraph(self)->rx:
+	def rxGraph(self)->WX:
 		return self._graph
 	def setGraph(self, val:ChimaeraNode):
-		self._graph.rx.value = val
-		self._graph.ref(()).rx.watch(self._onGraphChanged, onlychanged=False)
-		self.px = WpDexProxy(EVAL(val))
+		if react.getRx(val):
+			self._graph = val
+			self._graph.ref().rx.watch(self._onGraphChanged, onlychanged=False)
+		else:
+			self._graph.rx.value = val
+
+		self.px = WpDexProxy(EVAL(self._graph))
 		self.px.dex().getEventSignal("main").connect(self._onGraphChanged)
+		#self._graph.rx.value = self._graph.rx.value
 		#self._graph.data.dex().getEventSignal("main").connect(self._onGraphChanged)
 		#self.sync() # build out delegates
 
@@ -51,12 +57,15 @@ class ChimaeraScene(WpCanvasScene):
 		TODO: obviously filter to only elements affected by delta
 			conform once we have a reasonable syntax for delta events overall
 
+		within event slots like this, we obviously need to go querying
+		the rest of the system - changing any data in here may lead to
+		infinite loops, be vigilant.
 
+		Also need to work out proper delta comparison, as otherwise it DEFINITELY
+		leads to infinite loops
 		"""
-		#TODO: there was some complicated thing I came up against years ago, for
-		# delegates like this
-		# what was it
-		log("scene on graph changed", args, kwargs)
+
+		log("SCENE on graph changed", args, kwargs)
 		currentDelegates = set(i for i in self.items() if isinstance(i, WpCanvasElement))
 
 		# TODO: later a single node may create multiple delegates - group boxes, ports etc

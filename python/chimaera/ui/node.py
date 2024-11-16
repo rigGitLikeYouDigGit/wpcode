@@ -22,6 +22,7 @@ from wpdex.ui import StringWidget
 
 from chimaera import ChimaeraNode
 from wpdex import WpDexProxy, WX
+from wpdex.ui import AtomicMain
 
 
 if T.TYPE_CHECKING:
@@ -49,8 +50,6 @@ def paintDropdownSquare(rect:QtCore.QRect, painter:QtGui.QPainter,
 		rect.moveCenter(QtCore.QPoint(rect.center().x(), rect.bottom()))
 	if canExpand:
 		painter.drawRect(innerRect)
-
-
 
 
 class TreePlugSpine(QtWidgets.QGraphicsItem):
@@ -232,8 +231,6 @@ class NodeDelegate(
 		WpCanvasElement.__init__(self,# scene=None,
 		                         obj=node)
 
-		#self.node = node
-
 		# not making a whole special subclass to make this call less annoying
 		self.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable)
 		self.setFlag(QtWidgets.QGraphicsItem.ItemIsMovable)
@@ -270,7 +267,6 @@ class NodeDelegate(
 		self.typeText.setPen(QtGui.QPen(QtGui.QColor.fromRgbF(1.0, 1.0, 1.0, 0.5)))
 		self.typeText.setBrush(QtGui.QBrush(QtGui.QColor.fromRgbF(1.0, 1.0, 1.0, 0.5)))
 
-
 		self.nameLine = LabelWidget(
 			label="name",
 			w=StringWidget(self.node.ref("@N"), #TODO: conditions
@@ -278,8 +274,6 @@ class NodeDelegate(
 			               placeHolderText="",
 			               ),
             parent=self.w)
-
-
 
 		self.wLayout.addWidget(self.nameLine)
 		self.nameLine.setSizePolicy(shrinkPolicy)

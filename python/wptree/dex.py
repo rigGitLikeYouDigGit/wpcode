@@ -72,7 +72,7 @@ class TreeDex(WpDex):
 		except KeyError:
 			if token == "@V" and self.obj._getRawValue() is None:
 				return [None], path
-			raise Pathable.PathKeyError(f"Invalid token {token} for {self} branches:\n{self.branchMap()}")
+			raise Pathable.PathKeyError(f"Invalid token {token} for {self} branches:\n{pprint.pformat(self.branchMap())}")
 
 	def treeDexes(self, includeSelf=True)->T.Iterator[TreeDex]:
 		"""convenience special-case to only iter over contiguous

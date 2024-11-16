@@ -4,7 +4,7 @@ import pprint
 from wplib import log
 
 from PySide2 import QtCore, QtGui, QtWidgets
-from wpdex.ui.atomic.base import AtomicWidget
+from wpdex.ui.atomic.base import AtomicWidgetOld
 from wpdex import *
 
 
@@ -12,24 +12,24 @@ from wpdex import *
 get rid of all this, unify the primitive widgets with
 line edit
 """
-class IntWidget(AtomicWidget, QtWidgets.QSpinBox ):
+class IntWidget(AtomicWidgetOld, QtWidgets.QSpinBox):
 	forTypes = ()
 
 
 	def __init__(self, value=0, parent=None,
 	             #options:T.Sequence[str]=(),
-	             conditions:T.Sequence[AtomicWidget.Condition]=(),
+	             conditions:T.Sequence[AtomicWidgetOld.Condition]=(),
 	             warnLive=False,
 	             light=False,
 	             enableInteractionOnLocked=False,
 	             placeHolderText=""
 	             ):
 		QtWidgets.QSpinBox.__init__(self, parent=parent)
-		AtomicWidget.__init__(self, value=value,
-		                      conditions=conditions,
-		                      warnLive=warnLive,
-		                      enableInteractionOnLocked=enableInteractionOnLocked
-		                      )
+		AtomicWidgetOld.__init__(self, value=value,
+		                         conditions=conditions,
+		                         warnLive=warnLive,
+		                         enableInteractionOnLocked=enableInteractionOnLocked
+		                         )
 
 
 		# connect signals

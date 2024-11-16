@@ -52,26 +52,12 @@ class IdemWidget(QtWidgets.QWidget):
 		QtWidgets.QWidget.__init__(self, parent=parent)
 		self.session = session
 
-
-		#ref = self.session.data.ref("asset", "@V")
-
-		# log("check root", ref,
-		#     react.canBeSet(ref)
-		#     )
-		# #ref.rx.value = "asdasd"
-		# assert react.canBeSet(ref)
-
-
 		self.assetW = AssetSelectorWidget(
 			value=self.session.data.ref("asset", "@V"),
 			parent=self,
 			name="asset",
 		                                  )
-		#return
-		#assetRef = self.session.data.ref("asset", "@V")
-		#log("asset ref", assetRef.rx.value)
-		#pathRef = self.session.data.ref("filePath", "@V")
-		#log("file path", pathRef.rx.value, react.canBeSet(pathRef))
+
 		self.filePathW = FileStringWidget(
 			value=self.session.data.ref("filePath", "@V"),
 
@@ -93,9 +79,9 @@ class IdemWidget(QtWidgets.QWidget):
 		self.logW = LogWidget(parent=self)
 
 		# don't pass live reference, let graph widget do its own specialisation
-		# self.graphW = ChimaeraWidget(#session.data["graph"],
-		#                              value=session.ref("graph", "@V"),
-		#                              parent=self)
+		self.graphW = ChimaeraWidget(#session.data["graph"],
+		                             value=session.ref("graph", "@V"),
+		                             parent=self)
 
 		#region layout
 		l = QtWidgets.QGridLayout(self)
@@ -104,7 +90,7 @@ class IdemWidget(QtWidgets.QWidget):
 		l.addWidget(self.dccPalette, 2, 0, 2, 1)
 		l.addWidget(self.scriptW, 4, 0, 3, 1)
 
-		#l.addWidget(self.graphW, 0, 1, 4, 3)
+		l.addWidget(self.graphW, 0, 1, 4, 3)
 		l.addWidget(self.logW, 4, 1, 1, 3)
 
 		# test

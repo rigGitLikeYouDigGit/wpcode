@@ -44,7 +44,7 @@ class IdemSession(Modelled):
 		root = Tree(kwargs.get("name", "idem"))
 		root["asset"] = kwargs.get("asset", getDefaultAsset())
 		root["filePath"] = Path("plan.chi")
-		#root["graph"] = IdemGraph.create(name="graph")
+		root["graph"] = IdemGraph.create(name="graph")
 		return root
 
 if __name__ == '__main__':

@@ -9,7 +9,7 @@ from PySide2 import QtCore, QtWidgets, QtGui
 from wplib import log
 from wptree import TreeInterface, TreeDex, Tree
 from wpdex import WpDex, DictDex, WpDexProxy
-from wpdex.ui.atomic import AtomicWidget
+from wpdex.ui.atomic import AtomicWidgetOld
 from wpdex.ui.atomic.base import AtomicStandardItemModel, AtomStandardItem, AtomStyledItemDelegate, AtomicUiInterface, AtomicMain, AtomicView
 
 

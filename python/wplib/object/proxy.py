@@ -354,6 +354,8 @@ class Proxy(#ABC,
 				targetInstance=self._proxyTarget()
 			)
 
+			# result = newMethod(*newArgs, **newKw)
+			# return result
 			try: # set up exception catch
 				# actually call method on target instance, get raw result
 				result = newMethod(*newArgs, **newKw)

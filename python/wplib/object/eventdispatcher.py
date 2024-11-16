@@ -28,6 +28,11 @@ class EventDispatcher:
 	def __hash__(self):
 		return id(self)
 
+	@classmethod
+	def _newEventDict(cls, sender, **kwargs):
+		"""just return the literal kwargs here?"""
+		return {"sender" : sender, **kwargs}
+
 
 	def getEventSignal(self, key:str="main", create=True)->Signal:
 		"""get the signal that will emit an event, for a given key"""

@@ -13,7 +13,7 @@ from wptree import Tree
 from wpui import lib
 from wpui.widget.lantern import Status, Lantern
 from wpui.treemenu import buildMenuFromTree
-from wpdex.ui import AtomicWidget, StringWidget, FileStringWidget, FileBrowserButton
+from wpdex.ui import AtomicWidgetOld, StringWidget, FileStringWidget, FileBrowserButton
 from wpdex import react
 
 from wp.pipe.asset import Asset, Show, StepDir, search
@@ -43,8 +43,8 @@ class AssetCompleter(QtWidgets.QCompleter):
 
 
 class AssetSelectorWidget(
-	QtWidgets.QWidget, AtomicWidget,
-	metaclass=inheritance.resolveInheritedMetaClass(QtWidgets.QWidget, AtomicWidget)
+	QtWidgets.QWidget, AtomicWidgetOld,
+	metaclass=inheritance.resolveInheritedMetaClass(QtWidgets.QWidget, AtomicWidgetOld)
 ):
 	"""widget representing an asset reference -
 	asset path or expression, version options, vcs status.
@@ -88,7 +88,7 @@ class AssetSelectorWidget(
 	             value:Asset=None
 	             ):
 		QtWidgets.QWidget.__init__(self, parent)
-		AtomicWidget.__init__(self, value=value or Asset.topAssets()[0])
+		AtomicWidgetOld.__init__(self, value=value or Asset.topAssets()[0])
 		#self.line = QtWidgets.QLineEdit(self)
 
 		log("assetSelector init", react.canBeSet(self.rxValue), self.rxValue().rx.value)
@@ -97,16 +97,25 @@ class AssetSelectorWidget(
 		#testResult = self.rxValue().rx.where(self.rxValue().upper(), "b")
 		#log("test r", testResult.rx.value)
 
+		lineValueRx = self.rxValue().rx.where(
+				self.rxValue().strPath(),
+				"")
+		# log("selfVal", self.rxValue().rx.value)
+		# log("lineVal", lineValueRx.rx.value)
+		#raise
+		assert hasattr(lineValueRx, "rx")
+		assert react.getRx(lineValueRx)
+		#assert isinstance(lineValueRx, react.rx)
 		self.line = StringWidget(
 			# value=self.rxValue().rx.where(
 			# 	self.rxValue().strPath(),
 			# 	"<None>"),
-			value=self.rxValue().rx.where(
-				self.rxValue().strPath(),
-				""),
+			value=lineValueRx,
 			options=lambda : search.allPaths(),
 			enableInteractionOnLocked=True
 		                         )
+		log("afterSet", self.line.value())
+		#raise
 		self.line.setPlaceholderText("path/uid/exp...")
 
 		openAction = Tree("open folder...", value=lambda : lib.openExplorerOnPath(self.value().diskPath()))
@@ -138,7 +147,7 @@ class AssetSelectorWidget(
 		layout.addWidget(self.lantern)
 		self.setLayout(layout)
 
-		self.postInit()
+		#self.postInit()
 
 	def _resultForString(self, s)->(None, False, Asset):
 		"""if not result : catches both fail states"""
@@ -149,7 +158,7 @@ class AssetSelectorWidget(
 	def setValue(self, value:(str, Asset)):
 		if isinstance(value, str):
 			value = self._resultForString(value)
-		AtomicWidget.setValue(self, value)
+		AtomicWidgetOld.setValue(self, value)
 
 	def _rawUiValue(self):
 		return self.line.text()

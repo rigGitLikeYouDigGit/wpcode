@@ -19,6 +19,12 @@ reference and rx proxies with other systems (namely UI)
 
 liveT = (types.FunctionType, rx)
 
+def hasRx(obj):
+	return hasattr(obj, "rx")
+
+def getRx(obj):
+	return getattr(obj, "rx", None)
+
 
 def rxAllowsSet(obj):
 	"""copy the logic from the original .rx.value =
@@ -56,7 +62,8 @@ def EVAL(i, *args, **kwargs):
 	"""this will have to be integrated with expressions later, somehow
 	evaluate a single input and return a single result
 	"""
-	if isinstance(i, rx):
+	#if isinstance(i, rx):
+	if hasRx(i):
 		return i.rx.value
 	if isinstance(i, (functools.partial, functools.partialmethod)):
 		# evaluate all arguments, then function itself

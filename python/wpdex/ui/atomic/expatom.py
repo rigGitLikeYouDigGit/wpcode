@@ -6,7 +6,7 @@ from wplib import log
 from PySide2 import QtCore, QtGui, QtWidgets
 from wplib.serial import serialise, deserialise
 from wplib.inheritance import MetaResolver
-from wpdex.ui.atomic.base import AtomicWidget
+from wpdex.ui.atomic.base import AtomicWidgetOld
 from wpexp.tostr import toStr
 from wpdex import *
 
@@ -14,7 +14,7 @@ from wpdex import *
 from wpexp.syntax import SyntaxPasses, ExpSyntaxProcessor
 
 
-class ExpWidget(MetaResolver, QtWidgets.QLineEdit, AtomicWidget):
+class ExpWidget(MetaResolver, QtWidgets.QLineEdit, AtomicWidgetOld):
 	"""general-purpose text edit to
 	allow defining new values as whatever is eval'd
 	on commit
@@ -32,18 +32,18 @@ class ExpWidget(MetaResolver, QtWidgets.QLineEdit, AtomicWidget):
 
 	def __init__(self, value=0, parent=None,
 	             #options:T.Sequence[str]=(),
-	             conditions:T.Sequence[AtomicWidget.Condition]=(),
+	             conditions:T.Sequence[AtomicWidgetOld.Condition]=(),
 	             warnLive=False,
 	             light=False,
 	             enableInteractionOnLocked=False,
 	             placeHolderText=""
 	             ):
 		QtWidgets.QLineEdit.__init__(self, parent=parent)
-		AtomicWidget.__init__(self, value=value,
-		                      conditions=conditions,
-		                      warnLive=warnLive,
-		                      enableInteractionOnLocked=enableInteractionOnLocked
-		                      )
+		AtomicWidgetOld.__init__(self, value=value,
+		                         conditions=conditions,
+		                         warnLive=warnLive,
+		                         enableInteractionOnLocked=enableInteractionOnLocked
+		                         )
 
 
 		# connect signals
@@ -51,8 +51,6 @@ class ExpWidget(MetaResolver, QtWidgets.QLineEdit, AtomicWidget):
 		self.textEdited.connect(self._fireDisplayEdited)
 		self.editingFinished.connect(self._fireDisplayCommitted)
 		self.returnPressed.connect(self._fireDisplayCommitted)
-		self.postInit()
-
 
 
 	def _rawUiValue(self):

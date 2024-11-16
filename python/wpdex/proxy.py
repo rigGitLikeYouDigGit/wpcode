@@ -59,6 +59,7 @@ class Wreactive_ops(reactive_ops):
 			#if "_dexPath" in root._kwargs:
 			#root.WRITE(resolve_value(new))
 			#log("EMITTING")
+			reactive_ops.value.fset(self, new)
 			wx.WRITE(resolve_value(new))
 			return
 		reactive_ops.value.fset(self, new)
@@ -175,7 +176,9 @@ class WX(rx):
 	def WRITE(self, val):
 		"""emit (path, value)
 		"""
-		self._kwargs["_writeSignal"].emit(self._kwargs["_dexPath"], val)
+		if "_dexPath" in self._kwargs:
+			self._kwargs["_writeSignal"].emit(self._kwargs["_dexPath"], val)
+		self._kwargs["_writeSignal"].emit((), val)
 
 	# def _resolveRef():
 	# 	rootDex = self.dex()
@@ -378,39 +381,26 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		TODO: should we check validation here, or should there be a separate
 		 signal / event before the call to check arguments
 		"""
+		self._proxyData["externalCallDepth"] -= 1
 
 		callResult = super()._afterProxyCall(
 			methodName, method, methodArgs, methodKwargs, targetInstance, callResult,
 			beforeData, exception
 		)
 
-		self._proxyData["externalCallDepth"] -= 1
 		#log("after call", methodName, methodArgs, callResult, self._proxyData["externalCallDepth"], methodName in self.dex().mutatingMethodNames)
 		#log("dex", self.dex())
 
 		toReturn = callResult
 
 		if methodName in self.dex().mutatingMethodNames:
-			"""TO UPDATE CHILDREN -
-			need to keep THIS object intact - 
-			run op on root's TARGET, 
-			DO NOT wrap that object,
-			REBASE root (this proxy) on to the result
-			
-			but then we invalidate all references to any branch, regardless of it changing
-			i am in deep pain
-			i just want to make films man
-			"""
-
-			# ensure every bit of the structure is still wrapped in a proxy
-			#self.updateProxy()
-			#log(" send dex update children")
+			# ensure every bit of the structure is still wrapped in a prox
 			self.dex().updateChildren(recursive=1)
 
 
-		# if mutating method called, finally emit delta
-		if methodName in self.dex().mutatingMethodNames:
-			self._emitDelta()
+		# # if mutating method called, finally emit delta
+		# if methodName in self.dex().mutatingMethodNames:
+		# 	self._emitDelta()
 
 		# consider instance methods that "return self"
 		# check if a proxy already exists for that object and return it
@@ -445,16 +435,25 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		 
 		within a proxy environment, who knows 
 		"""
+		# NB: for now as a special case, we don't wrap returned types or functions
+		# it gets very messy, and there's not a use case yet
+		if isinstance(toReturn, (type, types.FunctionType)):
+			return toReturn
+		if self._proxyData["externalCallDepth"] != 0:
+			return toReturn
 		foundDex = WpDex.dexForObj(toReturn)
 		#log("found dex", foundDex, toReturn,  self._proxyData["externalCallDepth"])
 		if foundDex:
 			if self._proxyData["externalCallDepth"] == 0:
-
-				#NB: for now as a special case, we don't wrap returned types or functions
-				# it gets very messy, and there's not a use case yet
-				if not isinstance(toReturn, (type, types.FunctionType)):
-					toReturn = WpDexProxy(toReturn, wpDex=foundDex)
+				toReturn = WpDexProxy(toReturn, wpDex=foundDex)
 				#log("returning proxy", toReturn)
+		# else:
+		# 	log("found no dex", toReturn)
+
+		# if mutating method called, finally emit delta
+		if self._proxyData["externalCallDepth"] == 0:
+			if methodName in self.dex().mutatingMethodNames:
+				self._emitDelta()
 
 		return toReturn
 
@@ -549,15 +548,16 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 			# #).rx.pipe(WpDexProxy)
 			# ).rx.pipe(WpDexProxy)
 
-			def _resolveRef():
+			def _resolveRef(**kwargs):
 				rootDex = self.dex()
-				foundDex : WpDex = rootDex.access(rootDex, path, values=False, one=True)
+				foundDex : WpDex = rootDex.access(rootDex, path, values=False, one=True,
+				                                  )
 
 				return foundDex.getValueProxy()
 
 				pass
 
-			ref = WX(_resolveRef, _dexPath=path, _dex=self.dex())()
+			ref = WX(_resolveRef, _dexPath=path, _dex=self.dex())(dirtyKwarg=dirtyKwarg)
 
 			assert isinstance(ref, WX)
 			assert isinstance(ref.rx._reactive, WX)
@@ -574,8 +574,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 				"""need to make a temp closure because we can't
 				easily set values as a function call"""
 				#log("set dirty value")
-
-				dirtyKwarg.rx.value += 1
+				#dirtyKwarg.rx.value += 1
 
 			self.dex().getEventSignal("main").connect(_setDirtyRxValue)
 

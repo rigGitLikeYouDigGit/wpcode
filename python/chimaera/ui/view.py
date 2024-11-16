@@ -56,6 +56,10 @@ class ChimaeraView(WpCanvasView):
 			return
 		log("node options", self.scene().graph(),
 		    self.scene().graph().getAvailableNodeTypes())
+		#self.nodePaletteLine.setValue("")
+		self.nodePaletteLine.selectAll()
+		print("")
+		log("tab pressed", self.nodePaletteLine.value(), self.nodePaletteLine._processValueForUi(self.nodePaletteLine.value()))
 		return self.nodePaletteLine
 
 	def _onNodePaletteReturnPressed(self):

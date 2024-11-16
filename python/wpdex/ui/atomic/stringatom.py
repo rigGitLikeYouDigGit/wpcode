@@ -13,10 +13,11 @@ from wplib import log, inheritance
 from wplib.object import Signal
 from wptree import Tree
 
+from wpexp.tostr import toStr
 from wpdex import *
 from wpdex import react
 #from wpdex.ui.react import ReactiveWidget
-from wpdex.ui.atomic.base import AtomicWidget
+from wpdex.ui.atomic.base import AtomicWidgetOld
 from wpui.widget import FileBrowserButton, Lantern
 from wpui.treemenu import buildMenuFromTree
 
@@ -111,26 +112,26 @@ class _MenuLineEdit(QtWidgets.QLineEdit):
 
 
 class StringWidget(
-	QtWidgets.QLineEdit, AtomicWidget,
+	QtWidgets.QLineEdit, AtomicWidgetOld,
 	metaclass=inheritance.resolveInheritedMetaClass(
-	QtWidgets.QLineEdit, AtomicWidget
+	QtWidgets.QLineEdit, AtomicWidgetOld
 	)
 ):
 
 	def __init__(self, value="", parent=None,
 	             options:T.Sequence[str]=(),
-	             conditions:T.Sequence[AtomicWidget.Condition]=(),
+	             conditions:T.Sequence[AtomicWidgetOld.Condition]=(),
 	             warnLive=False,
 	             light=False,
 	             enableInteractionOnLocked=False,
 	             placeHolderText=""
 	             ):
 		QtWidgets.QLineEdit.__init__(self, parent=parent)
-		AtomicWidget.__init__(self, value=value,
-		                      conditions=conditions,
-		                      warnLive=warnLive,
-		                      enableInteractionOnLocked=enableInteractionOnLocked
-		                      )
+		AtomicWidgetOld.__init__(self, value=value,
+		                         conditions=conditions,
+		                         warnLive=warnLive,
+		                         enableInteractionOnLocked=enableInteractionOnLocked
+		                         )
 
 		self.setCompleter(QtWidgets.QCompleter(self))
 
@@ -141,7 +142,7 @@ class StringWidget(
 			self._setOptions,
 			onlychanged=False)
 		#self.options.rx.value = self.options.rx.value
-		self.options.rx.value = self.options.rx.value
+		#self.options.rx.value = self.options.rx.value
 		#react.PING(self.options)
 		self._placeHolderText = rx(placeHolderText)
 		self._placeHolderText.rx.watch(self.setPlaceholderText)
@@ -155,7 +156,7 @@ class StringWidget(
 		self.editingFinished.connect(self._fireDisplayCommitted)
 		self.returnPressed.connect(self._fireDisplayCommitted)
 
-		self.postInit()
+		#self.postInit()
 
 	def contextMenuEvent(self, arg__1:QtGui.QContextMenuEvent):
 		baseMenu = self.createStandardContextMenu()
@@ -181,6 +182,9 @@ class StringWidget(
 
 	def _rawUiValue(self):
 		return self.text()
+
+	def _processValueForUi(self, rawValue):
+		return toStr(rawValue)
 
 	#### TODO #####
 	#       come back and tangle with the highlighting on option selection
@@ -277,7 +281,7 @@ class FileStringWidget(StringWidget):
 		                                )
 
 		self.button.pathSelected.connect(self._onPathSelected)
-		self.postInit()
+		#self.postInit()
 		# # connect signals
 		# self.line.displayEdited.connect(self._fireDisplayEdited)
 		# self.line.displayCommitted.connect(self._fireDisplayCommitted)
@@ -368,8 +372,8 @@ class FileStringWidget(StringWidget):
 	def _processValueForUi(self, value)->str:
 		if not value: return ""
 		if isinstance(value, (tuple, list)):
-			return " ; ".join(map(str, value))
-		return str(value)
+			return " ; ".join(map(toStr, value))
+		return toStr(value)
 
 		# if isinstance(value, (tuple, list)):
 		# 	paths = map(self._processSinglePathForRelative,

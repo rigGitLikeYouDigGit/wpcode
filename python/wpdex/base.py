@@ -238,8 +238,8 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		for i, t in enumerate(childObjects):
 			#if t[1] is None: continue # maybe
 			key = t[0]
-			#reentrantInit = False # setting blanket to false fixes staticCopy() error
-			if reentrantInit:
+
+			if reentrantInit: # reuse existing dex objects
 				foundDex = self.dexForObj(t[1])
 				#log("id dex map", self.objIdDexMap)
 
@@ -284,7 +284,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 
 
 		#self.branchMap().update(self._buildBranchMap())
-		self.updateBranchMap(reentrantInit=False)
+		self.updateBranchMap(reentrantInit=reentrantInit)
 		#self._buildBranchMap()
 		for v in self.branchMap().values():
 			if recursive:
@@ -342,7 +342,8 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 			serialParams=serialParams
 		),
 			reentrantInit=False)
-		dex.updateChildren(recursive=1, reentrantInit=False)
+		# don't need to update children since we build on init
+		#dex.updateChildren(recursive=1, reentrantInit=False)
 		return dex
 
 	def prepForDeltas(self):
@@ -373,7 +374,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 
 		if deltaAid:
 			return deltaAid.gatherDeltas(baseObj, newObj)
-		log("no aid for ", newObj, DeltaAid.adaptorTypeMap)
+		#log("no aid for ", newObj, DeltaAid.adaptorTypeMap)
 		raise NotImplementedError()
 
 
