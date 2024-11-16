@@ -675,22 +675,26 @@ class ChimaeraNode(Modelled,
 
 	def __init__(self, data:Tree):
 		"""init isn't ever called directly by user,
-		filtered by __new__ down to simple data tree"""
+		filtered by __new__ down to simple data tree
+		work with raw data of model in init, since nothing should be
+		connected up yet - node still needs to be added to graph
+		as a branch
+		"""
 		log("Chimaera init", data)
 		assert isinstance(data, Tree)
 		Modelled.__init__(self, data)
 		UidElement.__init__(self, uid=data.uid)
 		# attribute wrappers
-		self.type = NodeAttrWrapper(self.data("@T"), node=self)
+		self.type = NodeAttrWrapper(self.rawData()("@T"), node=self)
 		self.T = self.type
 		# I would prefer to call this "parametres", but @P confuses with "parent"
-		self.settings = NodeAttrWrapper(self.data("@S"), node=self)
+		self.settings = NodeAttrWrapper(self.rawData()("@S"), node=self)
 		self.S = self.settings
-		self.memory = NodeAttrWrapper(self.data("@M"), node=self)
+		self.memory = NodeAttrWrapper(self.rawData()("@M"), node=self)
 		self.M = self.memory
-		self.flow = NodeAttrWrapper(self.data("@F"), node=self)
+		self.flow = NodeAttrWrapper(self.rawData()("@F"), node=self)
 		self.F = self.flow
-		self._nodes = NodeAttrWrapper(self.data("@NODES"), node=self)
+		self._nodes = NodeAttrWrapper(self.rawData()("@NODES"), node=self)
 
 		Pathable.__init__(self, self, parent=None, name=data.name)
 
@@ -795,15 +799,16 @@ class ChimaeraNode(Modelled,
 		def branches(self)->list[ChimaeraNode]: pass
 
 	def createNode(self, nodeType:type[ChimaeraNode]=None, name="")->ChimaeraNode:
-		log("createNode", nodeType, name)
-		if isinstance(nodeType, str):
-			nodeType = self.nodeTypeRegister.get(nodeType)
-		nodeType = nodeType or ChimaeraNode
-		name = name or nodeType.typeName()
-		newNode = nodeType.create(name=name)
-		log("newNode", newNode)
-		self.addBranch(newNode, newNode.name)
-		return newNode
+		with self.data.deltaContext():
+			log("createNode", nodeType, name)
+			if isinstance(nodeType, str):
+				nodeType = self.nodeTypeRegister.get(nodeType)
+			nodeType = nodeType or ChimaeraNode
+			name = name or nodeType.typeName()
+			newNode = nodeType.create(name=name)
+			log("newNode", newNode)
+			self.addBranch(newNode, newNode.name)
+			return newNode
 
 	def onCreated(self, parent=None):
 		"""called when node is newly created, and added
@@ -863,10 +868,13 @@ if __name__ == '__main__':
 	log(graph.path)
 	def t(*a):
 		log("GRAPH CHANGED", a)
+		log("branches", graph.branches)
 	graph.ref().rx.watch(t, onlychanged=False)
 	assert graph.data._proxyData["externalCallDepth"] == 0
 	assert graph.data._proxyData["deltaCallDepth"] == 0
+	log("BEFORE NODE")
 	node = graph.createNode(name="childNode")
+	#raise
 	assert graph.data._proxyData["externalCallDepth"] == 0
 	assert graph.data._proxyData["deltaCallDepth"] == 0
 	#node = graph.createNode(name="childNodeB")

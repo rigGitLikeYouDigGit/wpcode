@@ -67,17 +67,15 @@ def showW():
 	p = WpDexProxy(graph)
 	s = ChimaeraScene(p.ref())
 	node = p.createNode(ChimaeraNode, name="childNode")
-	# log(s)
-	# log(s.graph())
-	# log(s.rxGraph())
-	#w = ChimaeraView(scene=s)
-	#w.show()
+
+	w = ChimaeraView(scene=s)
+	w.show()
 	#node = ChimaeraNode.create(name="testNode")
-	#delegate = NodeDelegate(node)
-	#log("del", delegate)
-	#log(delegate.nameLine.text())
-	#w.scene().addItem(delegate)
-	print("")
+	# delegate = NodeDelegate(node)
+	# log("del", delegate)
+	# log(delegate.nameLine.text())
+	# w.scene().addItem(delegate)
+	# print("")
 	return w
 
 if __name__ == '__main__':

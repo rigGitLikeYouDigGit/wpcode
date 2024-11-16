@@ -4,8 +4,7 @@ import typing as T
 from wplib.log import log
 
 from .base import WpDex
-from .proxy import WX
-
+from wpdex.wx import WX
 # dexes for primitives
 """while we could easily have one dex type to take care of all
 of these, it makes it easier in UI if we can specify which kind of primitive

@@ -113,6 +113,7 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 	             #name:T.Iterable[DexPathable.keyT]=None,
 	             name:Pathable.keyT=None,
 	             reentrantInit=True,
+	             _branchMap=None,
 	             **kwargs):
 		"""initialise with object and parent"""
 		# superclass inits
@@ -144,7 +145,12 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		self.isPreppedForDeltas = False
 
 		# do we build on init?
-		self.updateChildren(recursive=0, reentrantInit=reentrantInit )
+		# if branches explicitly given (for some reason), use those -
+		# else build recursively down
+		if _branchMap is not None:
+			self._branchMap = _branchMap
+		else:
+			self.updateChildren(recursive=0, reentrantInit=reentrantInit )
 
 	if T.TYPE_CHECKING:
 		def branches(self)->list[WpDex]:...
@@ -287,10 +293,13 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		self.updateBranchMap(reentrantInit=reentrantInit)
 		#self._buildBranchMap()
 		for v in self.branchMap().values():
-			if recursive:
+			if recursive: # this shouldn't be necessary ._.
 				v.updateChildren(recursive=recursive,
 				                 reentrantInit=reentrantInit)
 		#self._restoreChildDatasFromRoot()
+
+	def updateBranchMap(self, **kwargs):
+		self._branchMap = self._buildBranchMap(**kwargs)
 
 	def __repr__(self):
 		if self.obj is self:
@@ -345,6 +354,16 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		# don't need to update children since we build on init
 		#dex.updateChildren(recursive=1, reentrantInit=False)
 		return dex
+
+	def shallowCopy(self)->WpDex:
+		"""less intensive than serial round-trip above -
+		used for gathering deltas on only a single layer of dex,
+		since that alone is enough
+		"""
+		# object doesn't actually matter here
+		newDex = type(self)(self.obj, parent=self.parent,
+		                    _branchMap=dict(self._branchMap))
+		return newDex
 
 	def prepForDeltas(self):
 		"""check for deltas below this dex -
@@ -451,16 +470,17 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 			toIter.extend(baseDex.branches)
 
 		#log("deltas"); pprint.pp(deltas)
-		if emit:
-			if deltas:
-				event = {"type":"deltas",
-				         "paths" : deltas}
-				self.sendEvent(event)
+		# if emit:
+		# 	if deltas:
+		# 		event = {"type":"deltas",
+		# 		         "paths" : deltas}
+		# 		self.sendEvent(event)
 
 		return deltas
 
 	if T.TYPE_CHECKING:
-		from .proxy import WX, WpDexProxy
+		from .proxy import WpDexProxy
+		from . import WX
 
 	def ref(self, *path:WpDex.pathT
 	        )->WX:

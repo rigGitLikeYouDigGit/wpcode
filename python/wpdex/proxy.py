@@ -1,201 +1,23 @@
 
 from __future__ import annotations
 
-import pprint, copy, weakref
+import pprint
+import weakref
 import types
 import typing as T
 from collections import defaultdict
-from dataclasses import dataclass
 
-from wplib import inheritance, dictlib, log, sequence
-from wplib.object import Signal
-from wplib.serial import serialise, deserialise, Serialisable, SerialAdaptor
-from wplib.object import DeepVisitor, Adaptor, Proxy, ProxyData, ProxyMeta, VisitObjectData, DeepVisitOp, Visitable, VisitAdaptor
-from wplib.constant import SEQ_TYPES, MAP_TYPES, STR_TYPES, LITERAL_TYPES, IMMUTABLE_TYPES
-from wplib.sentinel import Sentinel
+from wpdex.wx import WX, Wreactive_ops
+from wpdex.context import ReentrantContext
+
+from wplib import log
+from wplib.object import Adaptor, Proxy, ProxyData, ProxyMeta
 from wpdex.base import WpDex
 
 from param import rx
-from param.reactive import reactive_ops, Parameter, resolve_value, resolve_ref
 import param
 
-class Wreactive_ops(reactive_ops):
-	"""test overriding reactive_ops,
-	more specific support for writing back to refs
-	using
-	.rx.value =
-	syntax, since otherwise you have to do some type checking to
-	tell when to use BIND(), etc
-	"""
-	@property
-	def value(self):
-		"""
-		Returns the current state of the reactive expression by
-		evaluating the pipeline.
-		"""
-		if isinstance(self._reactive, rx):
-			return self._reactive._resolve()
-		elif isinstance(self._reactive, Parameter):
-			return getattr(self._reactive.owner, self._reactive.name)
-		else:
-			return self._reactive()
-
-	@value.setter
-	def value(self, new):
-		"""
-		Allows overriding the original input to the pipeline.
-		"""
-		# log("set value", new,
-		#     self._reactive, self._reactive._wrapper)
-		#root = self._reactive._compute_root()
-		#log("root", root)
-
-		#print("")
-		#log("set value")
-		wx = WX.getWXRoot(self._reactive)
-		if wx is not None:
-			#assert wx
-			#if "_dexPath" in wx._kwargs:
-			#if "_dexPath" in root._kwargs:
-			#root.WRITE(resolve_value(new))
-			#log("EMITTING")
-			reactive_ops.value.fset(self, new)
-			wx.WRITE(resolve_value(new))
-			return
-		reactive_ops.value.fset(self, new)
-
-		# try:
-		#
-		# except AttributeError as e:
-		# 	#return
-		#
-		#
-		# 	hasPath = "_dexPath" in root._kwargs
-		# 	log("root", root, hasPath)
-		# 	if hasPath: return
-		# 	raise e
-
-
-
-	# @value.setter
-	# def value(self, new):
-	# 	"""
-	# 	Allows overriding the original input to the pipeline.
-	# 	"""
-	#
-	# 	log("set value", new,
-	# 	    type(self._reactive), self._reactive._wrapper)
-	# 	if "_dexPath" in self._reactive._kwargs:
-	# 		self._reactive.WRITE(resolve_value(new))
-	# 		return
-	# 	rootHasPath = "_dexPath" in self._reactive._compute_root()._kwargs
-	# 	if isinstance(self._reactive, Parameter):
-	# 		raise AttributeError(
-	# 			"`Parameter.rx.value = value` is not supported. Cannot override "
-	# 			"parameter value."
-	# 		)
-	# 	elif not isinstance(self._reactive, rx):
-	# 		raise AttributeError(
-	# 			"`bind(...).rx.value = value` is not supported. Cannot override "
-	# 			"the output of a function."
-	# 		)
-	# 	# elif "_dexPath" in self._reactive._kwargs:
-	# 	# 	self._reactive.WRITE(resolve_value(new))
-	# 	# 	return
-	# 	elif self._reactive._root is not self._reactive:
-	# 		if rootHasPath: return
-	# 		raise AttributeError(
-	# 			"The value of a derived expression cannot be set. Ensure you "
-	# 			"set the value on the root node wrapping a concrete value, e.g.:"
-	# 			"\n\n    a = rx(1)\n    b = a + 1\n    a.rx.value = 2\n\n "
-	# 			"is valid but you may not set `b.rx.value = 2`."
-	# 		)
-	# 	if self._reactive._wrapper is None:
-	# 		if rootHasPath: return
-	# 		raise AttributeError(
-	# 			"Setting the value of a reactive expression is only "
-	# 			"supported if it wraps a concrete value. A reactive "
-	# 			"expression wrapping a Parameter or another dynamic "
-	# 			"reference cannot be updated."
-	# 		)
-	# 	self._reactive._wrapper.object = resolve_value(new)
-
-
 setattr(param.reactive, "reactive_ops", Wreactive_ops)
-
-class WX(rx):
-	"""By default, printing an rx object freaks out because it returns
-	an implicit __str__() call, not an actual string that can be printed
-
-	putting in caps so that it's obvious when we do stuff with it
-	"""
-	def __repr__(self):
-		try:
-			return f"WX({repr(self.rx.value)})"
-		except Exception as e:
-			return f"WX(ERROR GETTING REPR)"
-	def __str__(self):
-		return f"WX({repr(self.rx.value)})"
-	def __init__(self, *args,# path:WpDex.pathT=(),
-	             **kwargs):
-		if kwargs.get("_writeSignal", None) is None:
-			kwargs["_writeSignal"] = Signal("WX-write")
-		super().__init__(*args,# _dexPath=path,
-		                 **kwargs
-		                 )
-		# pack path in _kwargs to ensure it gets copied on _clone()
-		# also signal, they're expensive to build
-
-	# TODO###: patch this in properly
-	#  currently we have a filthy untracked patch in rx, to paste this block on the end of
-	#   rx.__getattribute__
-	#   instead of erroring straight out - waits to error until a reference actually computes
-
-	# def __getattribute__(self, name):
-	# 	try:
-	# 		return super().__getattribute__(name)
-	# 	except AttributeError:
-	# 		#selfName = str(self).rx.value
-	# 		# selfName = str(self)
-	# 		# log("attribute error getting", name, "from", selfName)
-	# 		new = self._resolve_accessor()
-	# 		new._method = name
-	# 		return new
-
-	@classmethod
-	def getWXRoot(cls, rxInstance:rx):
-		while not isinstance(rxInstance, WX):
-			# try:
-			# 	log("discount rx", rxInstance)
-			# except:
-			# 	log("discount rx", type(rxInstance))
-			rxInstance = rxInstance._prev
-			if rxInstance is None: return None
-		return rxInstance if isinstance(rxInstance, WX) else None
-
-	def WRITE(self, val):
-		"""emit (path, value)
-		"""
-		if "_dexPath" in self._kwargs:
-			self._kwargs["_writeSignal"].emit(self._kwargs["_dexPath"], val)
-		self._kwargs["_writeSignal"].emit((), val)
-
-	# def _resolveRef():
-	# 	rootDex = self.dex()
-	# 	foundDex: WpDex = rootDex.access(rootDex, path, values=False, one=True)
-	# 	return foundDex.getValueProxy()
-
-	def RESOLVE(self, dex=False, proxy=False, value=False):
-		assert dex or proxy or value
-		rootDex = self._kwargs["_dex"]
-		path = self._kwargs["_dexPath"]
-		if dex:
-			return rootDex.access(rootDex, path, values=False, one=True)
-		if proxy:
-			return rootDex.access(rootDex, path, values=False, one=True).getValueProxy()
-		if value:
-			return self.rx.value
-
 
 
 class WpDexProxyData(ProxyData):
@@ -203,13 +25,6 @@ class WpDexProxyData(ProxyData):
 	wpDex : WpDex
 	deltaStartState : T.Any
 	deltaCallDepth : int
-
-class ReactLogic(Adaptor):
-	"""silo off the active parts of react to avoid jamming in
-	even more base classes, it's getting mental"""
-	adaptorTypeMap = Adaptor.makeNewTypeMap()
-	forTypes = (object, )
-
 
 class WpDexProxyMeta(ProxyMeta):
 	"""manage top-level call logic -
@@ -272,7 +87,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 	_objIdProxyCache : dict[int, WpDexProxy] = {}
 
 
-	def __init__(self, obj:VT, proxyData: WpDexProxyData=None,
+	def __init__(self, obj:VT, proxyData: dict=None,
 	             wpDex:WpDex=None,# parentDex:WpDex=None,
 	             **kwargs)->VT:
 		"""create a WpDex object for this proxy, add
@@ -283,6 +98,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		self._proxyData["externalCallDepth"] = 0
 		self._proxyData["deltaCallDepth"] = 0
 		self._proxyData["wxRefs"] : dict[WpDex.pathT, WX] = {}
+		self._proxyData["deltaContext"] : ReentrantContext = kwargs.pop("deltaContext", None)
 
 		#self._proxyData["parent"] = self._proxyData.get("parent", None)
 
@@ -297,6 +113,18 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 
 		#self._proxyData["branches"] = {}
 
+	def deltaContext(self)->ReentrantContext:
+		"""return a context object to use directly -
+		with proxy.deltaContext() :
+			etc
+			"""
+		if self._proxyData["deltaContext"] is None:
+			self._proxyData["deltaContext"] = ReentrantContext(
+				proxy=self,
+				onTopEnterFn=self.dex().prepForDeltas,
+				onTopExitFn=self._gatherEmitDeltas,
+			)
+		return self._proxyData["deltaContext"]
 
 	def dex(self)->WpDex:
 		return self._proxyData["wpDex"]
@@ -320,6 +148,13 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 				self.dex().prepForDeltas()
 		self._proxyData["deltaCallDepth"] += 1
 
+	def _gatherEmitDeltas(self, *args, **kwargs):
+		deltaMap = self.dex().gatherDeltas()
+		if deltaMap:
+			event = {"type": "deltas",
+			         "paths": deltaMap}
+			self.dex().sendEvent(event)
+
 	def _emitDelta(self):
 		"""emit a delta for this object"""
 		#log("emitDelta", self._proxyTarget(), self._proxyTarget().childObjects({}))
@@ -333,7 +168,6 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 			deltaMap = self.dex().gatherDeltas(
 				emit=True
 			)
-			#log("WPX", self, "result deltaMap", deltaMap)
 
 			# if deltaMap:
 			# 	event = {"type":"deltas",
@@ -360,6 +194,11 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 			filterKwargs[k] = v._proxyTarget() if isinstance(v, Proxy) else v
 
 		# check if method will mutate data - need to open a delta
+		# unless context is already open
+		if self._proxyData["deltaContext"] is not None:
+			if self.deltaContext().depth != 0:
+				return fn, tuple(filterArgs), filterKwargs, targetInstance, beforeData
+
 		if methodName in self.dex().mutatingMethodNames:
 			self._openDelta()
 
@@ -397,43 +236,12 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 			# ensure every bit of the structure is still wrapped in a prox
 			self.dex().updateChildren(recursive=1)
 
-
-		# # if mutating method called, finally emit delta
-		# if methodName in self.dex().mutatingMethodNames:
-		# 	self._emitDelta()
-
-		# consider instance methods that "return self"
-		# check if a proxy already exists for that object and return it
-		# checkExisting = self._existingProxy(toReturn)
-		# if checkExisting is not None:
-		# 	toReturn = checkExisting
-
-		# get existing dex for this proxy if found
 		"""
 		delta gathering on wpdex side works super well - all we need from the proxy is:
 		- way to detect changes
 		- way to associate objects with a WpDex (with one spot in hierarchy)
 		- wrapper to set up rx expressions
-		
-		if it weren't for immutable numbers and interning this would LITERALLY
-		just work - but of course, there is no way to tell one True apart from another. Anywhere we can use id(), we cruise.
-		SO we do some more digging
-		
-		
-		ok for now we just can't do it.
-		if you want to set up an expression from an integer, you start by referencing that
-		point in hierarchy with a path, and go from there.
-		for any immutable object, we just can't do it.
-		
-		BECAUSE the alternative (as we have right now) is inserting proxy objects directly
-		between the existing objects, regenerating new objects all the time, 
-		all that crazy stuff. 
-		The example of Tree.commonParent() checks if "self.root is otherBranch.root" -
-		totally sane and readable way of coding, and with proxies it's 50/50.
-		for immutable values, the way to associate them consistently would be to wrap literally every attribute of every object throughout the structure, even the internal ones.
-		(I think this is actually what rx does, but shockingly a commercial software company have done a better job)
-		 
-		within a proxy environment, who knows 
+
 		"""
 		# NB: for now as a special case, we don't wrap returned types or functions
 		# it gets very messy, and there's not a use case yet
@@ -446,14 +254,28 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		if foundDex:
 			if self._proxyData["externalCallDepth"] == 0:
 				toReturn = WpDexProxy(toReturn, wpDex=foundDex)
-				#log("returning proxy", toReturn)
-		# else:
-		# 	log("found no dex", toReturn)
 
-		# if mutating method called, finally emit delta
+		# check if a higher effect has a delta context open
+		# if so, skip
+		if self._proxyData["deltaContext"] is not None:
+			if self.deltaContext().depth != 0:
+				return toReturn
+
+		# if mutating method called, finally gather and emit delta
 		if self._proxyData["externalCallDepth"] == 0:
 			if methodName in self.dex().mutatingMethodNames:
-				self._emitDelta()
+				# self._emitDelta()
+				self._proxyData["deltaCallDepth"] -= 1
+				if self._proxyData["deltaCallDepth"] == 0:
+
+					deltaMap = self.dex().gatherDeltas()
+
+					if deltaMap:
+						log("deltaMap")
+						pprint.pprint(deltaMap)
+						event = {"type":"deltas",
+						         "paths" : deltaMap}
+						self.dex().sendEvent(event)
 
 		return toReturn
 
@@ -509,7 +331,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		#proxy._linkDexProxyChildren()
 
 	#region reactive referencing
-	def ref(self, *path:WpDex.pathT)->WX:
+	def ref(self, *path:WpDex.pathT)-> WX:
 		"""unsure if this should return a wx on the TARGET object,
 		or on the FUNCTION to GET the target object
 		hmmmmmmm
@@ -528,25 +350,8 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		path = WpDex.toPath(path)
 		#log("get ref", self, path)
 		if self._proxyData["wxRefs"].get(path) is None:
-			#ref = WX(self._proxyTarget, path=path)()
-			#if 1: self.dex().access()
-			#dirtyRef = rx(path)
+
 			dirtyKwarg = rx(1)
-			# ref = WX(self.dex().access, _dexPath=path)(
-			# 	obj=self.dex(),
-			# 	#path=dirtyRef,
-			# 	path=path,
-			# 	values=True,
-			# 	dirtyKwarg=dirtyKwarg
-			# )
-			# ref = WX(self.dex().access, _dexPath=path)(
-			# 	obj=self.dex(),
-			# 	# path=dirtyRef,
-			# 	path=path,
-			# 	values=True,
-			# 	dirtyKwarg=dirtyKwarg
-			# #).rx.pipe(WpDexProxy)
-			# ).rx.pipe(WpDexProxy)
 
 			def _resolveRef(**kwargs):
 				rootDex = self.dex()
@@ -562,11 +367,6 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 			assert isinstance(ref, WX)
 			assert isinstance(ref.rx._reactive, WX)
 
-			#log("ref is", ref)
-			#log("ref call", type(ref), ref._obj, ref._operation)
-
-			#ref.rx.when(dirtyKwarg)
-
 			self._proxyData["wxRefs"][path] = ref
 			# flag that it should dirty whenever this proxy's
 			# value changes (on delta)
@@ -574,7 +374,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 				"""need to make a temp closure because we can't
 				easily set values as a function call"""
 				#log("set dirty value")
-				#dirtyKwarg.rx.value += 1
+				dirtyKwarg.rx.value += 1
 
 			self.dex().getEventSignal("main").connect(_setDirtyRxValue)
 

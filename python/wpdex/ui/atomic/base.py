@@ -15,7 +15,6 @@ from wplib.object import Adaptor, PostInitMeta
 from wpui import model as libmodel
 from wpui.treemenu import ContextMenuProvider
 
-from wpdex import react
 from wpdex import *
 
 

@@ -3,6 +3,11 @@ import types, typing as T
 import pprint
 from wplib import log
 
+if T.TYPE_CHECKING:
+	from .wx import WX
+	from .base import WpDex
+	from .proxy import WpDexProxy
+
 """simple objects to track a re-entrant proxy frame,
 only triggering an effect when a call stack is entered and exited
 
@@ -13,15 +18,20 @@ simple since it's used in conjunction with the proxy wrapper
 
 class ReentrantContext:
 	def __init__(self,
+	             proxy:WpDexProxy,
 	             onTopEnterFn=None,
 	             onTopExitFn=None,
 	             onAnyEnterFn=None,
-	             onAnyExitFn=None):
+	             onAnyExitFn=None,
+	             data=None):
 		self.depth = 0
+		self.proxy = proxy
 		self.onTopEnterFn = onTopEnterFn
 		self.onTopExitFn = onTopExitFn
 		self.onAnyEnterFn = onAnyEnterFn
 		self.onAnyExitFn = onAnyExitFn
+		self.data = data or {}
+		self.dirtyObjects = {}
 
 	def __enter__(self, *args, **kwargs):
 		if self.depth == 0:
@@ -36,13 +46,13 @@ class ReentrantContext:
 			if self.onTopExitFn is not None:
 				self.onTopExitFn(exc_type, exc_val, exc_tb)
 
-	def onTopEnter(self):
-		pass
-
-	def onTopExit(self, exc_type=None, exc_val=None, exc_tb=None):
-		if exc_type:
-			raise exc_val
-		pass
+	# def onTopEnter(self):
+	# 	pass
+	#
+	# def onTopExit(self, exc_type=None, exc_val=None, exc_tb=None):
+	# 	if exc_type:
+	# 		raise exc_val
+	# 	pass
 
 
 

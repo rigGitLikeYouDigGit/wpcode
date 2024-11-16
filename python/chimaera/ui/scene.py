@@ -1,22 +1,16 @@
 
 from __future__ import annotations
 
-import pprint
-import typing as T
-
-
-from PySide2 import QtCore, QtWidgets, QtGui
-
 from chimaera import ChimaeraNode
 
 from wpui.widget.canvas import *
 from wpdex import *
-from wpdex import react
+from wpdex import react, WX
 
 from .node import NodeDelegate
 
 if T.TYPE_CHECKING:
-	from .view import ChimaeraView
+	pass
 
 class ChimaeraScene(WpCanvasScene):
 	"""either ref() into graph data,

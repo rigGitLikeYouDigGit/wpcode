@@ -48,7 +48,7 @@ def isRxRoot(obj):
 	return rxAllowsSet(obj)
 
 def canBeSet(obj):
-	from wpdex.proxy import WX
+	from wpdex import WX
 	#log("canbeset", isinstance(obj, liveT))
 	if not isinstance(obj, liveT):
 		return True
