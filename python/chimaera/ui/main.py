@@ -66,10 +66,14 @@ def showW():
 	graph = ChimaeraNode.create("graphNode")
 	p = WpDexProxy(graph)
 	s = ChimaeraScene(p.ref())
-	node = p.createNode(ChimaeraNode, name="childNode")
+	#node = p.createNode(ChimaeraNode, name="childNode")
 
 	w = ChimaeraView(scene=s)
 	w.show()
+	#node = p.createNode(ChimaeraNode, name="childNodeB") # directly creating nodes works
+	w.nodePaletteLine.setValue("base")
+	w._onNodePaletteReturnPressed()
+
 	#node = ChimaeraNode.create(name="testNode")
 	# delegate = NodeDelegate(node)
 	# log("del", delegate)

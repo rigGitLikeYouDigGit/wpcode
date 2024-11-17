@@ -4,15 +4,22 @@ from __future__ import annotations
 from chimaera import ChimaeraNode
 
 from wpui.widget.canvas import *
+from wplib.inheritance import resolveInheritedMetaClass
 from wpdex import *
 from wpdex import react, WX
-
+from wpdex.ui import AtomicUiInterface
 from .node import NodeDelegate
 
 if T.TYPE_CHECKING:
 	pass
 
-class ChimaeraScene(WpCanvasScene):
+class ChimaeraScene(
+	WpCanvasScene,
+	AtomicUiInterface,
+	metaclass=resolveInheritedMetaClass(
+		WpCanvasScene, AtomicUiInterface
+	)
+                    ):
 	"""either ref() into graph data,
 	or explicit function to add specific
 	node -> get a delegate for it, add to scene, return
@@ -21,31 +28,26 @@ class ChimaeraScene(WpCanvasScene):
 
 	def __init__(self, graph:ChimaeraNode=None,
 	             parent=None):
-		super().__init__(parent=parent)
+		AtomicUiInterface.__init__(self,
+		                           value=graph)
+		WpCanvasScene.__init__(self, parent=parent)
 
-		self._graph : ChimaeraNode = WX(None)
-		if graph:
-			self.setGraph(graph)
 
-	def graph(self)->ChimaeraNode:
-		return self._graph.rx.value
+	def graph(self)->ChimaeraNode | WpDexProxy:
+		return self.valueProxy()
+
+	def rawGraph(self)->ChimaeraNode:
+		return self.value()
+
 	def rxGraph(self)->WX:
-		return self._graph
-	def setGraph(self, val:ChimaeraNode):
-		if react.getRx(val):
-			self._graph = val
-			self._graph.ref().rx.watch(self._onGraphChanged, onlychanged=False)
-		else:
-			self._graph.rx.value = val
+		return self.rxValue()
 
-		self.px = WpDexProxy(EVAL(self._graph))
-		self.px.dex().getEventSignal("main").connect(self._onGraphChanged)
-		#self._graph.rx.value = self._graph.rx.value
-		#self._graph.data.dex().getEventSignal("main").connect(self._onGraphChanged)
-		#self.sync() # build out delegates
+	def _tryCommitValue(self, value):
+		"""everything managed by internal node signals,
+		graph view itself is straight display"""
+		pass
 
-
-	def _onGraphChanged(self, *args, **kwargs):
+	def _syncUiFromValue(self, *args, **kwargs):
 		"""do inefficient check over all nodes in graph,
 
 		TODO: obviously filter to only elements affected by delta
@@ -67,10 +69,10 @@ class ChimaeraScene(WpCanvasScene):
 
 		# remove
 		nodesToMatch = set(self.graph().branches)
-		for i in currentDelegates:
+		for i in tuple(currentDelegates):
 			if i.obj in nodesToMatch:
 				nodesToMatch.remove(i.obj)
-			if not i.obj in nodesToMatch:
+			else: # dangling delegate, remove
 				self.removeItem(i)
 				currentDelegates.remove(i)
 
@@ -81,14 +83,11 @@ class ChimaeraScene(WpCanvasScene):
 			newDel = self.addItem(delegateType(node))
 			#TODO: support node delegate creating its own secondary elements
 
+		endDelegates = set(i for i in self.items() if isinstance(i, WpCanvasElement))
+		log("endDelegates", endDelegates)
 
 
 
-
-	def sync(self, elements=()):
-		if not elements:
-			self.clear()
-		for name, node in self.graph().branchMap(): pass
 
 
 	pass

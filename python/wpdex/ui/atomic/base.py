@@ -152,9 +152,27 @@ class AtomicUiInterface(
 		if passed a reactive element, set up all children and local
 		attributes
 
-		TODO: we can't make a new type of widget from within this one -
-			need an onChildValueChanged() function
+		control flow goes :
 
+		setvalue
+			tryCommitValue
+				commitValue
+					rx.value set
+						_syncUiFromValue()
+							blockSignals()
+								self.value()
+									->processValueForUi()
+										->setRawUiValue()
+					syncImmediateValue
+					valueCommitted qt signal
+						-> connected to parent widgets, if any
+
+		onDisplayCommitted
+			rawResultFromUi()
+				-> processResultFromUi()
+					-> tryCommitValue()
+
+		i guess when you put it like that it seems a bit complicated
 		"""
 		a = 1
 		log("set value", value, type(value), self)
@@ -189,34 +207,6 @@ class AtomicUiInterface(
 			log("before commit wx", value, EVAL(value))
 			self._tryCommitValue(EVAL(value))
 
-
-	def _buildChildWidget(self, index:QtCore.QModelIndex,
-	                      dex:WpDex,
-	                      ):
-		"""reduce code duplication when making children
-		OVERRIDE in items"""
-		widgetType = AtomicWidgetOld.adaptorForObject(dex)
-		assert widgetType
-		widget : AtomicWidgetOld = widgetType(value=dex, parent=self)
-		self.setIndexWidget(index, widget)
-		# self._setChildAtomicWidget(tuple(dex.relativePath(self.dex())),
-		#                            widget)
-		relPath = dex.relativePath(self.dex())
-		key = WpDex.toPath(relPath)
-		if self._childAtomics.get(key):
-			currentChild = self._childAtomics[key]
-			currentChild.setParent(None)
-			currentChild.deleteLater()
-			self._childAtomics.pop(key)
-		self._childAtomics[key] = widget
-
-		# connect signals
-		# not passing widget to the lambda, unsure if that'll count as a reference and keep it around
-		# for too long
-		widget.valueCommitted.connect(lambda obj: self._onChildAtomicValueChanged(key, obj))
-
-		# extend in real class for adding to layout etc
-		return widget
 
 	def buildChildWidgets(self):
 		raise NotImplementedError(self)
@@ -371,7 +361,6 @@ class AtomicUiInterface(
 		# self.syncLayout()
 		#log("has valueCommitted", self, hasattr(self, "valueCommitted"))
 		if hasattr(self, "valueCommitted"):
-
 			self.valueCommitted.emit(value)
 
 

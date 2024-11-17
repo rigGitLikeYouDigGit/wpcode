@@ -43,17 +43,21 @@ class Wreactive_ops(reactive_ops):
 
 		#print("")
 		#log("set value")
-		wx = WX.getWXRoot(self._reactive)
-		if wx is not None:
-			#assert wx
-			#if "_dexPath" in wx._kwargs:
-			#if "_dexPath" in root._kwargs:
-			#root.WRITE(resolve_value(new))
-			#log("EMITTING")
-			reactive_ops.value.fset(self, new)
-			wx.WRITE(resolve_value(new))
-			return
+
+		# wx = WX.getWXRoot(self._reactive)
+		# if wx is not None:
+		# 	#assert wx
+		# 	#if "_dexPath" in wx._kwargs:
+		# 	#if "_dexPath" in root._kwargs:
+		# 	#root.WRITE(resolve_value(new))
+		# 	#log("EMITTING")
+		# 	reactive_ops.value.fset(self, new)
+		# 	wx.WRITE(resolve_value(new))
+		# 	return
 		reactive_ops.value.fset(self, new)
+		if isinstance(self._reactive, WX):
+			resolved = resolve_value(value=new)
+			self._reactive.WRITE(resolved)
 
 		# try:
 		#
@@ -167,7 +171,8 @@ class WX(rx):
 		"""
 		if "_dexPath" in self._kwargs:
 			self._kwargs["_writeSignal"].emit(self._kwargs["_dexPath"], val)
-		self._kwargs["_writeSignal"].emit((), val)
+		else: # WOOPS
+			self._kwargs["_writeSignal"].emit((), val)
 
 	# def _resolveRef():
 	# 	rootDex = self.dex()

@@ -271,6 +271,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 					deltaMap = self.dex().gatherDeltas()
 
 					if deltaMap:
+						#todo: an easy way in dex to just compare all child dex objects for combined deltas
 						log("deltaMap")
 						pprint.pprint(deltaMap)
 						event = {"type":"deltas",

@@ -18,6 +18,8 @@ from wplib.serial import Serialisable
 from wpui.keystate import KeyState
 from wpui import lib as uilib
 
+from .element import WpCanvasElement
+
 if T.TYPE_CHECKING:
 	from .element import WpCanvasElement
 
@@ -88,7 +90,7 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 		self.coarsePen.setStyle(QtCore.Qt.DashLine)
 
 	def addItem(self, item):
-		from .element import WpCanvasElement
+		#from .element import WpCanvasElement
 		super().addItem(item)
 		log("scene addItem", item, type(item))
 		#if not getattr(item, "elementChanged", None): return # only process proper canvasElements
@@ -100,6 +102,7 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 		return item
 
 	def removeItem(self, item):
+		#from .element import WpCanvasElement
 		#if getattr(item, "elementChanged", None):
 		if isinstance(item, WpCanvasElement):
 			log("removeItem", item)

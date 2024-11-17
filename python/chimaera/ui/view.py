@@ -69,6 +69,7 @@ class ChimaeraView(WpCanvasView):
 		self.nodePaletteLine.clear()
 		self.setFocus()
 		if s not in self.scene().graph().getAvailableNodeTypes():
+			log(f"unrecognised node type: {s}")
 			return
 		log("return pressed", s, self.scene().graph().getAvailableNodeTypes()[s])
 		try:
