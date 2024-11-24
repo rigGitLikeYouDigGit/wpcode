@@ -19,6 +19,8 @@ from .hashable import HashableMixin, UnHashableDict, UnHashableSet, HashFunction
 
 from .metamagicdelegator import ClassMagicMethodMixin
 
+from .override import OverrideProvider
+
 from .plugin import PluginBase, PluginRegister
 from .postinit import PostInitMeta
 from .proxy import Proxy, ProxyMeta, FlattenProxyOp, LinkProxy, ProxyLink, ProxyData

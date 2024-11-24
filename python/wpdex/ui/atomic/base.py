@@ -193,11 +193,11 @@ class AtomicUiInterface(
 			self._proxy = value.getValueProxy()
 			self._value = self.dex().ref()
 			self._tryCommitValue(value.obj)
-		if isinstance(value, WpDexProxy):
+		elif isinstance(value, WpDexProxy):
 			self._dex = value.dex()
 			self._proxy = value
 			self._tryCommitValue(value)
-		if isinstance(value, (WX, rx)) or react.getRx(value): # directly from a reference
+		elif isinstance(value, (WX, rx)) or react.getRx(value): # directly from a reference
 			self._dex = lambda : value.RESOLVE(dex=True)
 			self._proxy = lambda : value.RESOLVE(proxy=True)
 			self._value = value
@@ -724,7 +724,7 @@ class AtomicView(QtWidgets.QTreeView,
 	             model:AtomicStandardItemModel=None):
 		QtWidgets.QTreeView.__init__(self, parent)
 		# child widgets of container may not be direct children in Qt
-		self._childAtomics : dict[WpDex.pathT, AtomicMain] = WeakValueDictionary()
+		self._childAtomics : dict[WpDex.pathT, AtomicWindow] = WeakValueDictionary()
 		if not model:
 			modelType = AtomicStandardItemModel.adaptorForType(value)
 			assert modelType, f"No atomic model type found for {value}, {type(value)}"
@@ -773,7 +773,7 @@ class AtomicView(QtWidgets.QTreeView,
 	def buildChildWidgets(self):
 
 		for i in self.children():
-			if isinstance(i, (AtomicView, AtomicMain)):
+			if isinstance(i, (AtomicView, AtomicWindow)):
 				i.close()
 				i.deleteLater()
 				#i.setParent(None)
@@ -786,7 +786,7 @@ class AtomicView(QtWidgets.QTreeView,
 		#log("pathModelMap", pathModelMap)
 		for path, model in pathModelMap.items():
 			item = pathItemMap[path]
-			widget = AtomicMain.adaptorForObject(item.dex())(
+			widget = AtomicWindow.adaptorForObject(item.dex())(
 				value=item.dex(), parent=self,
 				model=model)
 			self.setIndexWidget(item.index(), widget)
@@ -840,12 +840,12 @@ class ViewExpandButton(QtWidgets.QPushButton):
 	def isExpanded(self):
 		return self._isOpen
 
-class AtomicMain(ContextMenuProvider,
-                 #QtWidgets.QWidget,
-                 QtWidgets.QFrame,
-                 Adaptor,
+class AtomicWindow(ContextMenuProvider,
+                   #QtWidgets.QWidget,
+                   QtWidgets.QFrame,
+                   Adaptor,
 
-                 ):
+                   ):
 	"""it wasn't complex enough
 	overall holder widget to contain separate widgets alongside each view -
 	specifically the expand/contract button,
@@ -858,8 +858,10 @@ class AtomicMain(ContextMenuProvider,
 		return self.view.dex()
 
 	def atomicViewParent(self)->AtomicView:
+		if self.parent() is None: return None
 		return self._origParent
-	def atomicMainParent(self)->AtomicMain:
+	def atomicMainParent(self)->AtomicWindow:
+		if self.parent() is None: return None
 		return self._origParent.parent()
 
 
@@ -888,7 +890,6 @@ class AtomicMain(ContextMenuProvider,
 		#self.layout().setAlignment(self.expandBtn, QtCore.Qt.AlignTop)
 		self.layout().setAlignment(self.expandBtn, QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
 		self.setAutoFillBackground(True)
-
 
 		ContextMenuProvider.__init__(self, value=value, parent=parent)
 

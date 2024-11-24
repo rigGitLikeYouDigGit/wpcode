@@ -9,7 +9,7 @@ import fnmatch
 from collections import namedtuple
 
 import wplib.sequence
-from wplib import log, Sentinel, TypeNamespace, Pathable
+from wplib import log, Sentinel, TypeNamespace, Pathable, wpstring
 from wplib.constant import MAP_TYPES, SEQ_TYPES, STR_TYPES, LITERAL_TYPES, IMMUTABLE_TYPES
 from wplib.object.visitor import PARAMS_T, CHILD_LIST_T
 from wplib.uid import getUid4
@@ -767,22 +767,13 @@ class ChimaeraNode(Modelled,
 		#log("node add branch", data)
 		# add tree branch to this node's data
 		selfData = self.data("@NODES", "override")
-		# assert self.data._proxyData["externalCallDepth"] == 0
-		# assert self.data._proxyData["deltaCallDepth"] == 0
-		# assert isinstance(selfData, WpDexProxy)
-		#print("")
-		# log("SELFDATA", selfData)
-		# def leafLog(*a): log("LEAF data changed")
-		# selfData.ref().rx.watch(leafLog, onlychanged=False)
-		# def rootLog(*a): log("ROOT data changed")
-		# self.data.ref().rx.watch(rootLog, onlychanged=False)
-		# log("leafRx", selfData.ref(), selfData.ref()._kwargs)
+
 		# selfData must be a proxy of the data tree
 		selfData.addBranch(data)
 		if isinstance(branch, ChimaeraNode): return branch
 		return ChimaeraNode(data)
 
-	def branchMap(self)->[keyT, ChimaeraNode]:
+	def branchMap(self)->dict[keyT, ChimaeraNode]:
 		return {name : ChimaeraNode(branch)
 		        for name, branch in self.resolveAttribute("@NODES").branchMap().items()}
 		#if not name.startswith("@")}
@@ -804,7 +795,7 @@ class ChimaeraNode(Modelled,
 			if isinstance(nodeType, str):
 				nodeType = self.nodeTypeRegister.get(nodeType)
 			nodeType = nodeType or ChimaeraNode
-			name = name or nodeType.typeName()
+			name = wpstring.incrementName(name or nodeType.typeName(), self.branchMap().keys())
 			newNode = nodeType.create(name=name)
 			log("newNode", newNode)
 			self.addBranch(newNode, newNode.name)

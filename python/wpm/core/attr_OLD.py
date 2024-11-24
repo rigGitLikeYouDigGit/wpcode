@@ -13,7 +13,7 @@ import copy, fnmatch, re
 from dataclasses import dataclass
 
 from wplib import log
-from wplib.string import sliceFromString
+from wplib.wpstring import sliceFromString
 from wplib.sequence import flatten, isSeq
 from wplib.object import TypeNamespace
 from wptree import Tree

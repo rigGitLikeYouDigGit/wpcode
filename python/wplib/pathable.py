@@ -82,6 +82,9 @@ class Pathable(#Adaptor
 
 	@classmethod
 	def getPathAdaptorType(cls)->type[PathAdaptor]:
+		"""TODO: should we pass in the value for this here?
+			unsure what the point of this method is
+		"""
 		return PathAdaptor
 
 	class PathKeyError(Exception):

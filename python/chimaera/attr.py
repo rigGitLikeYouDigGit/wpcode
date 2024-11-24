@@ -285,47 +285,9 @@ class NodeAttrWrapper:
 	# endregion
 
 	# # region resolved value
-	# def resolve(self)->Tree:
-	# 	"""return the resolved tree for this attribute.
-	#
-	# 	if defined is callable, call it with incoming data
-	# 	 and this node.
-	# 	if defined is tree, compose it with incoming and
-	# 	eval any expressions
-	#
-	# 	nodeType defines default behaviour in composition, which may
-	# 	be overridden at any level of tree
-	# 	"""
-	#
-	# 	#log("RESOLVE")
-	# 	#log("attr", self.name(), self.node)
-	#
-	# 	if self.name() == "value":
-	# 		# send to nodeType compute
-	# 		return self.node.compute(
-	# 			self.resolveIncomingTree(
-	# 				self.incomingTreeExpanded()
-	# 			)
-	# 		)
-	# 	if not self.node.parent(): # unparented nodes can't do complex behaviour
-	# 		return self.override()
-	# 	incoming = self.resolveIncomingTree(
-	# 		self.incomingTreeExpanded()
-	# 	)
-	#
-	# 	defined = self.override()
-	#
-	# 	return treelib.overlayTrees([incoming, defined])
-	#
-	# 	try:
-	# 		return treelib.overlayTrees([incoming, defined])
-	# 	except Exception as e:
-	# 		log("error overlaying incoming and defined")
-	# 		log("incoming")
-	# 		incoming.display()
-	# 		log("override")
-	# 		defined.display()
-	# 		raise e
+	def resolve(self)->Tree:
+		"""convenience, delegates to node for all logic"""
+		return self.node.resolveAttribute(self)
 
 	# def resolveToList(self)->list:
 	# 	"""return the resolved value of the top branch for this attribute

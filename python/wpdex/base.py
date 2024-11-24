@@ -15,7 +15,7 @@ import weakref
 import deepdiff
 
 from wplib import log, Sentinel, sequence
-from wplib.object import Adaptor, TypeNamespace, HashIdElement, ObjectReference, EventDispatcher
+from wplib.object import Adaptor, TypeNamespace, HashIdElement, ObjectReference, EventDispatcher, OverrideProvider
 from wplib.serial import serialise, deserialise
 from wplib.object.visitor import VisitAdaptor, Visitable, CHILD_LIST_T, DeepVisitor
 from wplib.object.proxy import Proxy, FlattenProxyOp
@@ -25,32 +25,88 @@ from wplib.delta import DeltaAtom, DeltaAid, SetValueDelta
 if T.TYPE_CHECKING:
 	from .proxy import WpDexProxy
 
-class OverrideMap:
-	"""sketch for storing layered overrides that can
-	apply to one or more paths"""
-	def __init__(self):
-		self.overrides : dict[str, T.Any] = {}
 
-	def __setitem__(self, key, value):
-		self.overrides[key] = value
+class WpDexController:
+	"""no idea if this is right
+	testing a way to take all the active/intelligent logic out
+	of wpdex hierarchy, so that they can be more easily regenerated
 
-	def getMatches(self, seq:T.Iterable[str])->list:
-		"""return all overrides that match this path"""
-		return [v for k, v in self.overrides.items() if k in seq]
 
-	def applyOverrides(self, matches, baseData:dict):
-		"""no idea where this should go or how it should work -
-		given base data, apply overrides to it in sequence"""
+	VALIDATION: don't tackle here, had some decent ideas previously
+	on evaluating each rule and suggesting solutions -
+	here we just need to aggregate each matching rule from root
+
+	FLOW: this doesn't need to know any specific dexes,
+	but each dex needs to know about it
+	"""
+
+	class Purpose:
+		"""TODO LATER: don't know the best way to structure
+			this yet, so not trying
+		"""
+		default = "default"
+		showTrailEmptyValue = "showTrailValue"
+
+
+	def __init__(self,
+	             #dex:(WpDex, T.Callable[[], WpDex])
+	             ):
+		#self._dex = dex
+		self.overrides = {
+			"default" : defaultdict(list), # pointless having more than 1 on single object
+			"validation" : defaultdict(list), # reasonble to have more than 1, and add with any others
+			"allowTrailing" : defaultdict(list),
+		}
+
+	# def dex(self):
+	# 	from react import EVAL
+	# 	return EVAL(self._dex)
+
+	def sketch(self):
+		c = WpDexController(dex)
+
+		# SURELY for overrides we should index first by type, or by an enum for use
+		c.setDefaultValue(forPath="*/linking/*/@V",
+		                  value=lambda dex : ["", "", ""]
+		                  )
+		c.addValidationRule(forPath="*/linking/*/@V",
+		                    rule=lambda path, value : isinstance(value, list))
+
+		# class OverrideSetting:
+		#
+		# 	def __init__(self,
+		# 	             purpose="default"):
+
+def getOverride(self,
+                purpose="default",
+                ):
+	"""don't cache stuff yet, could get nasty
+	assume that a single override suffices,
+	unless flagged as additive? overlays?
+	super complicated"""
+	for i in self.trunk(includeSelf=True):
+		if i.controllers:
+			for c in i.controllers:
+				for pattern, overrides in c.overrides[purpose].items():
+					if pathMatchesPattern(path=self.path,
+					                      pattern=pattern):
+						if purpose == "default":
+							return overrides[0](self)
+							# as functions go, this one is quite beautiful
+
+
+
 
 
 
 class WpDex(Adaptor,  # integrate with type adaptor system
 			Pathable,
-            #HashIdElement,  # each wrapper has a transient hash for caching
+            HashIdElement,  # each wrapper has a transient hash for caching
 
             # interfaces that must be implemented
             Visitable,  # compatible with visitor pattern
             EventDispatcher, # can send events
+            OverrideProvider,
 
             ):
 	"""base for wrapping arb structure in a
@@ -117,12 +173,13 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 	             **kwargs):
 		"""initialise with object and parent"""
 		# superclass inits
-		#HashIdElement.__init__(self)
+		HashIdElement.__init__(self)
 		EventDispatcher.__init__(self)
 		Pathable.__init__(self,
 		                  obj,
 		                  parent=parent,
 		                  name=name)
+		OverrideProvider.__init__(self)
 
 		if obj is self:
 			w = "a"
@@ -508,7 +565,9 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		name = str(type(self.obj).__name__)
 		return f"{name} = {str(self.obj)}"
 
-
+	# overrides
+	def _getOverrideAncestors(self, forKey="") ->T.Iterable[OverrideProvider]:
+		return (self.parent, )
 
 	# serialisation
 	def asStr(self)->str:

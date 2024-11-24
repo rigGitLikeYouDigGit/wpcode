@@ -10,7 +10,7 @@ from wplib import log
 from wptree import TreeInterface, TreeDex, Tree
 from wpdex import WpDex, DictDex, WpDexProxy
 from wpdex.ui.atomic import AtomicWidgetOld
-from wpdex.ui.atomic.base import AtomicStandardItemModel, AtomStandardItem, AtomStyledItemDelegate, AtomicUiInterface, AtomicMain, AtomicView
+from wpdex.ui.atomic.base import AtomicStandardItemModel, AtomStandardItem, AtomStyledItemDelegate, AtomicUiInterface, AtomicWindow, AtomicView
 
 
 class TreeBranchItem(AtomStandardItem):
@@ -102,19 +102,6 @@ class TreeDexModel(AtomicStandardItemModel):
 				branchItem, valueItem
 			])
 
-	# def _buildChildModels(self):
-	# 	for i in self.children():
-	# 		if isinstance(i, AtomicStandardItemModel):
-	# 			i.deleteLater()
-	# 			i.setParent(None)
-	# 	for uid, branchItem in self.uidBranchItemMap.items():
-	# 		# check if this container has a model associated with it
-	# 		valueDex = branchItem.valueItem().dex()
-	# 		if valueDex is None: continue
-	# 		modelType = AtomicStandardItemModel.adaptorForObject(valueDex)
-	# 		if modelType: # add a child model and build it (maybe build should be done in init)
-	# 			newModel = modelType(value=valueDex,
-	# 			                     parent=self)
 
 class TreeDexView(#QtWidgets.QTreeView,# AtomicWidget
                  AtomicView
@@ -156,8 +143,8 @@ if __name__ == '__main__':
 	# log("ref", ref, "ref val", ref.rx.value)
 	#
 	app = QtWidgets.QApplication()
-	w = AtomicMain(parent=None,
-	                value=ref)
+	w = AtomicWindow(parent=None,
+	                 value=ref)
 	w.show()
 	app.exec_()
 

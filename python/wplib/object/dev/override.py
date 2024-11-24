@@ -32,6 +32,10 @@ with hierarchy or dependency
 does not interact with deltas or dirty nodes yet
 complexity really is a drug
 
+there's so much stuff here and none of it actually helps
+
+keeping as reference now that we're starting to include override principles in WpDex,
+but likely will rewrite all this from scratch
 """
 addressT = T.Union[str, T.Sequence[str]]
 
@@ -191,6 +195,8 @@ class NodeOverrider(DepNode):
 
 	Tree is used as base override structure, allowing arbitrarily
 	nested overrides
+
+	"we have chimaera at home"
 	"""
 
 	OverrideProperty = OverrideProperty

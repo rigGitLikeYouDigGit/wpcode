@@ -8,8 +8,15 @@ from wplib.inheritance import MetaResolver
 from wpdex import WpDex, SeqDex, WpDexProxy, DictDex
 from wpdex.ui.atomic import AtomicWidgetOld, AtomicView, AtomicStandardItemModel, AtomStandardItem
 
-from wpdex.ui.base import WpDexView#, DexViewExpandButton
-
+# class DictKeyStandardModel(AtomicStandardItemModel):
+#
+# 	def _processValueForUi(self, rawValue):
+# 		assert isinstance(rawValue, str) # internal key of the dex (for the value that holds the actual dict key) should always be a string
+# 		if rawValue.startswith("key:"):
+# 			rawValue = rawValue.split("key:", 1)[0]
+# 		return rawValue
+#
+# 	def
 
 
 class DictDexModel(AtomicStandardItemModel):
@@ -30,50 +37,17 @@ class DictDexModel(AtomicStandardItemModel):
 			self.appendRow([keyItem, valueItem])
 
 
-class DictDexView(MetaResolver, QtWidgets.QTreeView,# AtomicWidget
-                 WpDexView
+class DictDexView(AtomicView
                  ):
 	"""view for dict
 	"""
 	forTypes = (DictDex,)
 
-	def __init__(self, value, parent=None):
-		QtWidgets.QTreeView.__init__(self, parent)
-		WpDexView.__init__(self, value)
-
-		self.postInit()
-
-
-	def _modelIndexForKey(self, key:WpDex.keyT)->QtCore.QModelIndex:
-		if "key:" in str(key):
-			index = tuple(self.dex().branchMap().keys()).index(key) // 2
-			return self.model().index(index, 1)
-		index = tuple(self.dex().branchMap().keys()).index(key)
-		return self.model().index(index, 2)
-
-
-	def _setValuesVisible(self, state=True):
-		self.setColumnHidden(1,
-		                     not state
-		                     )
-		self.setColumnHidden(2,
-		                     not state
-		                     )
-		self.resizeColumnToContents(0)
-		self.resizeColumnToContents(1)
-		self.update()
-		self.updateGeometry()
-		self.syncLayout()
-		self.parent().updateGeometry()
-		if isinstance(self.parent(), WpDexView):
-			self.parent().syncLayout()
-			self.parent().updateGeometries()
-			self.parent().syncLayout()
 
 if __name__ == '__main__':
 
 
-	from wpdex.ui.base import WpDexWindow
+	from wpdex.ui import AtomicWindow
 	d = {"strkey" : "value",
 	     4 : 5}
 	p = WpDexProxy(d)
@@ -85,8 +59,8 @@ if __name__ == '__main__':
 	log("ref", ref, "ref val", ref.rx.value)
 
 	app = QtWidgets.QApplication()
-	w = WpDexWindow(parent=None,
-	                value=ref)
+	w = AtomicWindow(parent=None,
+	                 value=ref)
 	w.show()
 	app.exec_()
 

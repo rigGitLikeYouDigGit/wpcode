@@ -24,12 +24,10 @@ on dex objects? maybe
 
 """
 
-from .base import WpDexView, WpDexWindow
-
 from .seqitem import SeqDexView
 from .dictitem import DictDexView
 from .treeitem import TreeDexView
-from .primitem import PrimDexWidget
+#from .primitem import PrimDexWidget
 #from .stritem import StrDexWidget
 
 #from .react import ReactiveWidget, WidgetHook

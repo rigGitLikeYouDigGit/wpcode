@@ -24,6 +24,17 @@ could be a good base to build that
 
 similar ideas became wpDex, still working on that
 
+I'll delete this soon, I had the ideas here but they were too compressed - 
+the more I've split out, the easier it's become to breathe
+
+- before - method - after wrappers
+	implemented in proxy for any method on a given object
+- mutating methods
+	on dex
+- event emission
+	gathered by proxy, emitted by dex
+- watchObject( object )
+	now equivalent to WpDexProxy( object ) 
 """
 
 class WatcherAdaptor(Adaptor):

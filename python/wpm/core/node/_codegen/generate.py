@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 import orjson
 
-from wplib import string
+from wplib import wpstring
 
 from wptree import Tree
 

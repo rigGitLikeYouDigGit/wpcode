@@ -11,7 +11,7 @@ import numpy as np
 #from wptree import Tree
 from wplib.object import Signal, Adaptor
 from wplib.inheritance import iterSubClasses
-from wplib.string import camelJoin
+from wplib.wpstring import camelJoin
 from wplib.object import UnHashableDict, StringLike, SparseList
 #from tree.lib.treecomponent import TreeBranchLookupComponent
 from wplib.sequence import toSeq, firstOrNone

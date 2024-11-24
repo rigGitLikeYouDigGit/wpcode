@@ -7,7 +7,7 @@ import typing as T
 from pathlib import Path, PurePath
 import orjson
 
-from wplib import log, string as libstr, Sentinel
+from wplib import log, wpstring as libstr, Sentinel
 from wplib.object import UidElement, SmartFolder, DiskDescriptor, VisitAdaptor, Visitable
 from wplib.object.visitor import PARAMS_T, CHILD_LIST_T
 from wplib.pathable import Pathable, DirPathable, RootDirPathable

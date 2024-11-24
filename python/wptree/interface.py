@@ -10,7 +10,7 @@ from wplib.sequence import flatten, resolveSeqIndex
 from wplib.object import Signal, EventDispatcher#, EventBase, DeepVisitor
 from wplib import TypeNamespace, log
 from wplib.sentinel import Sentinel
-from wplib.string import incrementName
+from wplib.wpstring import incrementName
 from wplib import CodeRef
 
 from wplib.object import VisitAdaptor, Visitable
@@ -1125,7 +1125,7 @@ class TreeInterface(Pathable,
 
 	# region general utils
 	def getUniqueBranchName(self, baseName):
-		return incrementName(baseName, self.keys())
+		return incrementName(baseName, set(self.keys()) - {baseName})
 
 	def displayStr(self, nested=True):
 		seq = pprint.pformat( self.serialise(#nested=nested

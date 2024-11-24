@@ -49,11 +49,12 @@ class DictDex(WpDex):
 		if "key:" in str(key): # change one of the keys in the dict
 			#strKeys = [f"key:{i}" for i in self.obj.keys()]
 			strKeys = tuple(self.branchMap().keys())
+
 			index = strKeys.index(key) // 2# + 1 # index of tie to modify
 			log("key change", key, strKeys, index, value)
 			items = [tuple(i) for i in self.obj.items()] # list of ties
 			log("items", items) # object items not getting updated on creation?
-			items[index] = (value, items[index][1]) # update single tie in list
+			#items[index] = (f"key:{value}", items[index][1]) # update single tie in list
 			self.obj.clear() # keep reference to original value object
 			self.obj.update({i[0] : i[1] for i in items}) # update with tie list
 			return

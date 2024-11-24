@@ -8,7 +8,7 @@ import uuid
 
 import typing as T
 #from tree.lib.python import seedUid, bitwiseXor
-from wplib.string import incrementName
+from wplib.wpstring import incrementName
 #from tree.lib import uid as libuid
 class HashIdElement:
 	"""element that has a hashable id

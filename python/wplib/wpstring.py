@@ -118,10 +118,26 @@ def stringMatches(testStr:str, matchStr, allowPartial=False, regex=False, fnMatc
 		return True
 	return
 
+def trailingDigits(s:str)->tuple[str, str]:
+	"""for a string message_012
+	return ("message_", "012")
+	if no trailing digits, second string will be empty
+	"""
+	if not s:
+		return s, ""
+	i = 1
+	while s[-i].isdigit():
+		i+=1
+	splitI = -(i-1)
+	return s[:splitI], s[splitI:]
+
 def _incrementNameInner(name, currentNames):
-	if name[-1].isdigit():  # increment digit like basic bitch
-		new = int(name[-1]) + 1
-		return name[:-1] + str(new)
+	name, digits = trailingDigits(name)
+	if digits:
+		nDigits = len(digits) # keep same number of characters by zfilling
+		val = int(nDigits) + 1
+		newDigits = str(val).zfill(nDigits)
+		return name + newDigits
 	if name[-1] in string.ascii_uppercase:  # ends with capital letter
 		if name[-1] == "Z":  # start over
 			name += "A"
@@ -131,7 +147,7 @@ def _incrementNameInner(name, currentNames):
 	else:  # ends with lowerCase letter
 		name += "B"
 	return name
-def incrementName(name, currentNames=None):
+def incrementName(name, currentNames:T.Iterable[str]=None):
 	"""checks if name is already in children, returns valid one"""
 
 	# check if name already taken

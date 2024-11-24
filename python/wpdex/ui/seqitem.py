@@ -8,7 +8,6 @@ from wplib.inheritance import MetaResolver
 from wpdex import WpDex, SeqDex, WpDexProxy
 from wpdex.ui.atomic import AtomicWidgetOld, AtomicView, AtomicStandardItemModel, AtomStandardItem
 
-from wpdex.ui.base import WpDexView#, DexViewExpandButton
 
 
 
@@ -50,143 +49,12 @@ class SeqDexView(AtomicView
 	forTypes = (SeqDex,)
 
 
-	def _setValuesVisible(self, state=True):
-		self.setColumnHidden(1,
-		                     not state
-		                     )
-		self.resizeColumnToContents(0)
-		self.resizeColumnToContents(1)
-		self.update()
-		self.updateGeometry()
-		self.syncLayout()
-		self.parent().updateGeometry()
-		if isinstance(self.parent(), WpDexView):
-			self.parent().syncLayout()
-			self.parent().updateGeometries()
-			self.parent().syncLayout()
-
-
-
-
-# class ListWpItemWidget(WpItemWidget):
-# 	"""widget for a list"""
-# 	forTypes = SEQ_TYPES
-#
-# 	superView : ListWpDexView
-#
-# 	def __init__(self, superItem:ListSuperItem, parent=None,
-# 	             expanded=True):
-# 		super().__init__( superItem, parent=parent)
-#
-# 		# initialise view
-# 		self.superViewType = superItem._getComponentTypeForObject(
-# 			self.superItem.wpPyObj, "view")
-# 		self.superView = self.superViewType(
-# 			self.superItem, parent=self
-# 		)
-# 		self.superView.setModel(self.superItem.wpChildModel)
-# 		self.superView.buildIndexWidgets()
-# 		# layout = QtWidgets.QVBoxLayout(self)
-# 		# layout.addWidget(self.superView)
-# 		# self.setLayout(layout)
-#
-# 		self.makeLayout()
-#
-# 		log("list w init", self.typeLabel)
-#
-# 		# set expanded state
-# 		#self.setExpanded(expanded)
-#
-# 		#self.resize(self.sizeHint())
-#
-#
-# 		#self.resize(300, 300)
-# 		#self.setFixedSize(300, 300)
-# 		#self.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
-#
-#
-#
-#
-# 		# # make expanded widget
-# 		# self.expandedWidget = QtWidgets.QWidget(parent=self)
-# 		# # bookend
-# 		# self.firstBookendLabel = QtWidgets.QPushButton(
-# 		# 	self.superItem.getBookendChars()[0],
-# 		# 	parent=self.expandedWidget)
-# 		# self.firstBookendLabel.clicked.connect(self.toggleExpanded)
-# 		#
-# 		# # initialise view
-# 		# self.superViewType = superItem._getComponentTypeForObject(
-# 		# 	self.superItem.wpPyObj, "view")
-# 		# self.superView = self.superViewType(
-# 		# 	self.superItem, parent=self.expandedWidget
-# 		# )
-# 		# #log("list widget init", self.superView, self.superItem.wpPyObj[0])
-# 		# self.superView.buildIndexWidgets()
-# 		# self.superView.resize(300, 300)
-# 		# self.expandedWidget.resize(200, 200)
-# 		#
-# 		#
-# 		# expandedLayout = QtWidgets.QHBoxLayout(self.expandedWidget)
-# 		# expandedLayout.addWidget(self.firstBookendLabel)
-# 		# expandedLayout.addWidget(self.superView)
-# 		# expandedLayout.setAlignment(self.firstBookendLabel, QtCore.Qt.AlignTop)
-# 		# self.expandedWidget.setLayout(expandedLayout)
-# 		#
-# 		# # make collapsed widget
-# 		# # closed bookends (replace with typing summary)
-# 		# self.stowedBookendLabel = QtWidgets.QPushButton(
-# 		# 	self.superItem.getBookendChars()[0] + " ... " + self.superItem.getBookendChars()[1],
-# 		# 	parent=self)
-# 		# self.stowedBookendLabel.clicked.connect(self.toggleExpanded)
-# 		#
-# 		# # make stacked layout
-# 		# # self.layout = QtWidgets.QStackedLayout(self)
-# 		# # self.layout.setStackingMode(QtWidgets.QStackedLayout.StackAll)
-# 		# # self.layout.addWidget(self.stowedBookendLabel)
-# 		# # self.layout.addWidget(self.expandedWidget)
-# 		# # self.setLayout(self.layout)
-# 		# layout = QtWidgets.QVBoxLayout(self)
-# 		# layout.addWidget(self.stowedBookendLabel)
-# 		# layout.addWidget(self.expandedWidget)
-# 		# self.setLayout(layout)
-# 		#
-# 		# layout.setAlignment(self.stowedBookendLabel, QtCore.Qt.AlignTop)
-# 		# # layout.setStretch(0, 1)
-# 		# # layout.setStretch(1, 1)
-# 		#
-# 		# # set model from item
-# 		# self.superView.setModel(self.superItem.wpItemModel)
-# 		#
-# 		# # appearance
-# 		# self.setAutoFillBackground(True)
-#
-#
-#
-# 	def isExpanded(self) -> bool:
-# 		"""return True if expanded"""
-# 		return self.expandedWidget.isVisible()
-#
-# 	def setExpanded(self, expanded:bool):
-# 		"""set expanded state"""
-# 		return
-# 		self.expandedWidget.setVisible(expanded)
-# 		self.stowedBookendLabel.setVisible(not expanded)
-# 		#self.updateGeometry()
-# 		#self.setGeometry(self.expandedWidget.geometry() if expanded else self.stowedBookendLabel.geometry())
-# 		self.superView.scheduleDelayedItemsLayout()
-# 		print("set expanded", expanded)
-# 		self.superView.executeDelayedItemsLayout()
-#
-#
-# 	def toggleExpanded(self, *args, **kwargs):
-# 		"""toggle expanded state"""
-# 		self.setExpanded(not self.isExpanded())
 
 
 if __name__ == '__main__':
 
 	from wpdex.ui.base import WpDexWindow
+	from wpdex.ui import AtomicWindow
 	data = [1, 2, 3,
 	            [4, 5],
 	        6,
@@ -201,8 +69,10 @@ if __name__ == '__main__':
 	log("ref", ref, "ref val", ref.rx.value)
 
 	app = QtWidgets.QApplication()
-	w = WpDexWindow(parent=None,
-	                value=ref)
+	# w = WpDexWindow(parent=None,
+	#                 value=ref)
+	w = AtomicWindow(parent=None,
+	                 value=ref)
 	w.show()
 	app.exec_()
 

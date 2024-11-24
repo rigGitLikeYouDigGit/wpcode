@@ -4,7 +4,7 @@ import typing as T
 
 from PySide2 import QtWidgets, QtCore, QtGui
 
-from wplib.string import lowFirst
+from wplib.wpstring import lowFirst
 
 from wp.object import CleanupMixin
 

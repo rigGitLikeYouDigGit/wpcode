@@ -2,17 +2,7 @@
 
 from __future__ import annotations
 
-import pprint
-import typing as T
-
-from wplib import log, Sentinel, TypeNamespace
-from wplib.constant import MAP_TYPES, SEQ_TYPES, STR_TYPES, LITERAL_TYPES, IMMUTABLE_TYPES
-from wplib.uid import getUid4
-from wplib.inheritance import clsSuper
-from wplib.object import UidElement, ClassMagicMethodMixin, CacheObj, Adaptor
-from wplib.serial import Serialisable
-from wplib.object import VisitAdaptor, Visitable
-
+from wplib.object import Adaptor
 
 from PySide2 import QtCore, QtWidgets, QtGui
 
@@ -22,12 +12,10 @@ from wpdex.ui import StringWidget
 
 from chimaera import ChimaeraNode
 from wpdex import WpDexProxy, WX
-from wpdex.ui import AtomicMain
-
+from wpui.widget.collapsible import ShrinkWrapWidget
 
 if T.TYPE_CHECKING:
 	from .scene import ChimaeraScene
-	from .view import ChimaeraView
 
 """
 
@@ -39,47 +27,6 @@ TODO: consider maybe inverting the flow for painting widgets? if every one in a 
 refType = (WpDexProxy, WX)
 
 
-
-def paintDropdownSquare(rect:QtCore.QRect, painter:QtGui.QPainter,
-          canExpand=True, expanded=False):
-	painter.drawRect(rect)
-	innerRect = QtCore.QRect(rect)
-	innerRect.setSize(rect.size() / 3.0 )
-	innerRect.moveCenter(rect.center())
-	if expanded:
-		rect.moveCenter(QtCore.QPoint(rect.center().x(), rect.bottom()))
-	if canExpand:
-		painter.drawRect(innerRect)
-
-
-class TreePlugSpine(QtWidgets.QGraphicsItem):
-	"""draw an expanding tree structure"""
-
-	def __init__(self, parent=None, size=10.0):
-		super().__init__(parent)
-		self._expanded = False
-		self.size = 10.0
-
-	def childTreeSpines(self)->list[TreePlugSpine]:
-		return [i for i in self.childItems() if isinstance(i, TreePlugSpine)]
-
-	def expanded(self): return self._expanded
-	def setExpanded(self, state): self._expanded = state; self.update()
-
-	def boundingRect(self):
-		return QtCore.QRectF(0, 0, self.size, self.size)
-	def paint(self, painter:QtGui.QPainter, option, widget=...):
-		"""draw a line backwards,
-		a cross if not expanded,
-		and the vertical bar down if expanded
-		"""
-		mid = self.size / 2.0
-		painter.drawLine(-mid, mid, mid, mid)
-		childSpines = self.childTreeSpines()
-		if not self.childTreeSpines(): return
-		paintDropdownSquare(rect=self.boundingRect(), painter=painter,
-		                    canExpand=True, expanded=self.expanded())
-
 expandPolicy = QtWidgets.QSizePolicy(
 	QtWidgets.QSizePolicy.Expanding,
 	QtWidgets.QSizePolicy.Expanding
@@ -88,19 +35,6 @@ shrinkPolicy = QtWidgets.QSizePolicy(
 	QtWidgets.QSizePolicy.Maximum,
 	QtWidgets.QSizePolicy.Maximum
 )
-class ShrinkWrapWidget(QtWidgets.QWidget):
-
-	def sizeHint(self):
-		baseRect = QtCore.QRect()
-		for i in self.children():
-			for at in ["boundingRect", "rect"]:
-				try:
-					r = getattr(i, at)()
-					baseRect = baseRect.united(r)
-					break
-				except: continue
-		size = baseRect.size()
-		return size
 
 
 class RoundLabel(QtWidgets.QLabel):
@@ -248,7 +182,9 @@ class NodeDelegate(
 		#self.w.setWindowOpacity(1)
 		self.setWidgetResult = self.proxyW.setWidget(self.w)
 		self.wLayout = QtWidgets.QVBoxLayout(self.w)
+		self.iconHLayout = QtWidgets.QHBoxLayout(self.w)
 		self.w.setLayout(self.wLayout)
+		self.wLayout.addLayout(self.iconHLayout)
 
 		shrinkPolicy = QtWidgets.QSizePolicy(
 			QtWidgets.QSizePolicy.Maximum,
@@ -267,24 +203,29 @@ class NodeDelegate(
 		self.typeText.setPen(QtGui.QPen(QtGui.QColor.fromRgbF(1.0, 1.0, 1.0, 0.5)))
 		self.typeText.setBrush(QtGui.QBrush(QtGui.QColor.fromRgbF(1.0, 1.0, 1.0, 0.5)))
 
-		self.nameLine = LabelWidget(
-			label="name",
-			w=StringWidget(self.node.ref("@N"), #TODO: conditions
-			               parent=self.w,       # don't set node to empty name, you'll mess stuff up
-			               placeHolderText="",
-			               ),
-            parent=self.w)
+		# self.nameLine = LabelWidget(
+		# 	label="name",
+		# 	w=StringWidget(self.node.ref("@N"), #TODO: conditions
+		# 	               parent=self.w,       # don't set node to empty name, you'll mess stuff up
+		# 	               placeHolderText="",
+		# 	               ),
+        #     parent=self.w)
 
-		self.wLayout.addWidget(self.nameLine)
-		self.nameLine.setSizePolicy(shrinkPolicy)
+		self.nameLine = StringWidget(self.node.ref("@N"),  # TODO: conditions
+		               parent=self.w,  # don't set node to empty name, you'll mess stuff up
+		               placeHolderText="",
+		               )
+		#self.wLayout.addWidget(self.nameLine)
+		#self.nameLine.setSizePolicy(shrinkPolicy)
+		self.iconHLayout.addWidget(self.nameLine)
 
-		log("setup icon", self.icon())
+		#log("setup icon", self.icon())
 		if self.icon() is not None:
-			item = QtWidgets.QGraphicsPixmapItem(self)
+			#item = QtWidgets.QGraphicsPixmapItem(self)
+			item = QtWidgets.QLabel(self.w)
 			item.setPixmap(QtGui.QPixmap(self.icon().pixmap(30, 30)))
-
-
-		#self.syncSize()
+			self.iconHLayout.insertWidget(0, item)
+		self.syncLayout()
 
 	def icon(self)->QtGui.QIcon:
 		"""return icon to show for node - by default nothing"""
@@ -297,10 +238,9 @@ class NodeDelegate(
 	def node(self, val:ChimaeraNode):
 		raise NotImplementedError
 
-	def syncSize(self):
-		baseRect = self.proxyW.rect()
+	def syncLayout(self):
+		baseRect = self.boundingRect()
 		expanded = baseRect.marginsAdded(QtCore.QMargins(10, 10, 10, 10))
-		self.setRect(expanded)
 
 		self.typeText.setPos(expanded.right() + 3, 3)
 

@@ -3,7 +3,7 @@ import typing as T
 
 import re
 
-from wplib import string as libstring
+from wplib import wpstring as libstring
 
 from wplib.validation import Rule, RuleSet, ValidationError
 

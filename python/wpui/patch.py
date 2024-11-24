@@ -5,8 +5,11 @@ import typing as T
 
 from PySide2 import QtCore, QtGui, QtWidgets
 
-# like maya, patch some classes for quality of life
-
+"""
+instead of full type patching, try instead patching individual
+objects to add in mixin-type behaviour?
+signals directly from mouse click, mouse hover etc?
+"""
 
 # tests for patching ps2 types for quality of life
 def _patchSetContentsMargins(layout:QtWidgets.QLayout,

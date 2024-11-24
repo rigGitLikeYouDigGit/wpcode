@@ -47,7 +47,7 @@ class Window(QtWidgets.QWidget):
 		w = cls()
 		w.show()
 
-		#w.w.graphW.scene.graph().createNode("i:MayaSessionNode")
+		w.w.graphW.scene.graph().createNode("MayaSessionNode")
 		#
 		# def _onFocusChanged(*args):
 		# 	log("onFocusChanged", args)

@@ -15,7 +15,7 @@ from typing import TypedDict, NamedTuple
 from dataclasses import dataclass
 
 from wplib import log, Sentinel
-from wplib.string import sliceFromString
+from wplib.wpstring import sliceFromString
 from wplib.sequence import flatten, isSeq
 from wplib.object import TypeNamespace
 from wptree import Tree

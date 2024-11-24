@@ -4,6 +4,12 @@ import signal
 
 from wplib.object.signal import Signal
 
+"""TODO:
+investigate this idea as a way of syncing USD and scene pieces across idem - 
+for things like camera, user meshes etc
+
+"""
+
 class DistributedMirror:
 	"""emulating behaviour of something like Git -
 	different views of a single object,
