@@ -41,7 +41,11 @@ class NamespaceElement(ClassMagicMethodMixin):
 	#
 	# def __format__(self, format_spec):
 	# 	return self.clsName().__format__(format_spec)
-
+	@classmethod
+	def __class_hash__(cls):
+		"""index maps with the string of a type's name -
+		more flexible this way"""
+		return hash(cls.__name__)
 	@classmethod
 	def __class_str__(cls):
 		return cls.clsName()
