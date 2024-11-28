@@ -19,6 +19,7 @@ from wplib.serial import Serialisable
 
 from wpui.keystate import KeyState
 from wpui import lib as uilib
+from wplib.maths import shape, arr, fromArr, arrT
 
 from wpui.canvas.element import WpCanvasElement
 
@@ -86,6 +87,19 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 		# graph for tracking general relationships between objects
 		self.relationGraph = nx.MultiGraph()
 
+		# template dashed path to preview dragged connections between ports
+		self._dragPath = QtWidgets.QGraphicsPathItem()
+		pen = QtGui.QPen(QtCore.Qt.yellow, 1.0,
+		                 s=QtCore.Qt.PenStyle.DashDotLine)
+		self._dragPath.setPen(pen)
+		self.addItem(self._dragPath)
+		self._dragPath.hide()
+		self._dragSource : ConnectionPoint = None # if not none, dragging in progress
+
+
+		self._buildBackground()
+
+	def _buildBackground(self):
 		self.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(0, 0, 0, 255)))
 		self.setSceneRect(0, 0, 1000, 1000)
 		# create brushes to use - base one for black background,
@@ -132,8 +146,8 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 
 	def addItem(self, item):
 		#from .element import WpCanvasElement
-		super().addItem(item)
 		log("scene addItem", item, type(item))
+		super().addItem(item)
 
 		# check through all children in case we need to connect up elements known "globally" to scene
 		for i in iterQGraphicsItems(item, includeRoot=True):
@@ -142,7 +156,7 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 			self.relationGraph.add_node(i)
 			i.elementChanged.connect(self._onItemChanged)
 			self.objDelegateMap[i.obj].add(i)
-		log("after addItem", item, item.obj)
+			log("after addItem", item, item.obj)
 		return item
 
 	def removeItem(self, item):
@@ -196,12 +210,50 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 				): #type:QtWidgets.QGraphicsItem
 					group.update()
 
+	def isDragging(self):
+		return self._dragSource is not None
 	def onConnectionDragBegin(self, fromObj:ConnectionPoint):
-		"""start drawing path (s)"""
-		pass
+		"""start drawing path (s)
+
+		TODO: have template edges inherit colours of plugs they come from
+		"""
+		log("scene connection begin")
+		self._dragSource = fromObj
+		self._dragPath.show()
+
+	def mouseMoveEvent(self, event):
+		#log("scene mouse move event", self.isDragging())
+		if self.isDragging():
+			# update path
+			point, vec = self._dragSource.connectionPoint(None)
+			point = QtCore.QPointF(*point)
+			point = self._dragSource.mapToScene(point)
+			mousePos = event.scenePos()
+			path = QtGui.QPainterPath(point)
+			path.lineTo(mousePos)
+			self._dragPath.setPath(path)
+		return super().mouseMoveEvent(event)
+
+	def mouseReleaseEvent(self, event):
+		"""if a candidate connection point has been
+		set by a scene connectionPoint object, make the connection?
+
+		remove source point, hide path, come out of dragging state"""
+		self._dragPath.hide()
+		self._dragSource = None
+		# CONSCIOUSLY NOT CLEARING PATH SHAPE HERE
+		# BECAUSE THE STALE TEMPLATE PATH LOOKS COOL
+		return super().mouseReleaseEvent(event)
 
 	def onConnectionDragMove(self, ):
 		pass
+
+	def mousePressEvent(self, event):
+		if event.button() == QtCore.Qt.RightButton:
+			#log("scene context menu")
+			#return
+			pass
+		return super().mousePressEvent(event)
 
 	# # TODO: get this working for large scale scenes, processing multiple nodes at once
 	# def _onItemsChanged(self,

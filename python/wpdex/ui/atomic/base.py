@@ -908,8 +908,7 @@ class AtomicWindow(ContextMenuProvider,
 		else:
 			self.view.hide()
 			#self.layout().removeWidget(self.view)
-		if self.parent():
-
+		if self.atomicViewParent():
 			self.atomicViewParent().syncLayout()
 			#self.parent().updateGeometry()
 

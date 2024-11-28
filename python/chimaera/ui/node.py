@@ -8,9 +8,10 @@ from PySide2 import QtCore, QtWidgets, QtGui
 
 from wpui.canvas import *
 
-from wpdex.ui import StringWidget
-from wpdex import WpDexProxy, WX
+from wpdex.ui import StringWidget, AtomicView, AtomicWindow
+from wpdex import WpDexProxy, WX, WpDex
 from wpui.widget.collapsible import ShrinkWrapWidget
+
 
 from chimaera import ChimaeraNode
 
@@ -26,6 +27,8 @@ TODO: consider maybe inverting the flow for painting widgets? if every one in a 
 	called back to a single root-defined function to see if it needs overrides
 	or special treatment, colours etc ?
 """
+
+SEL_COLOUR = (1.0, 0.8, 0.5)
 
 refType = (WpDexProxy, WX)
 
@@ -121,8 +124,9 @@ class LabelWidget(QtWidgets.QWidget):
 		self.layout().setContentsMargins(0, 0, 0, 0)
 
 class NodeDelegate(
-	QtWidgets.QGraphicsItem,
     WpCanvasElement,
+	QtWidgets.QGraphicsItem,
+
 	Adaptor,
 ):
 	"""
@@ -165,6 +169,7 @@ class NodeDelegate(
 		QtWidgets.QGraphicsItem.__init__(self, parent)
 		WpCanvasElement.__init__(self,# scene=None,
 		                         obj=node)
+		#QtWidgets.QGraphicsItem.__init__(self, parent)
 
 		# not making a whole special subclass to make this call less annoying
 		self.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable)
@@ -203,10 +208,15 @@ class NodeDelegate(
 			item.setPixmap(QtGui.QPixmap(self.icon().pixmap(30, 30)))
 			self.iconHLayout.insertWidget(0, item)
 
-		# self.settingsLabelW = LabelWidget(
-		# 	label="settings",
-		# 	w=
-		# )
+		# editable tree view for settings
+		self.settingsLabelW = LabelWidget(
+			label="settings",
+			w=AtomicWindow(value=WpDex(node.settings.override()),
+			               parent=None),
+			parent=self.w
+		)
+		self.settingsW = self.settingsLabelW.w
+		self.wLayout.addWidget(self.settingsW)
 
 		shrinkPolicy = QtWidgets.QSizePolicy(
 			QtWidgets.QSizePolicy.Maximum,
@@ -233,14 +243,13 @@ class NodeDelegate(
 			parent=self,
 			isInput=True
 		)
+
 		# self.node.F.resolve()
-		# self.outPlug = PlugBranchItem(
-		# 	branch=self.node.data.ref("@F").rx.pipe(
-		# 		self.node.resolveAttribute
-		# 	),
-		# 	parent=self,
-		# 	isInput=False
-		# )
+		self.outPlug = PlugBranchItem(
+			value=self.node.templateFlowOut(),
+			parent=self,
+			isInput=False
+		)
 
 		self.syncLayout()
 
@@ -260,7 +269,8 @@ class NodeDelegate(
 		expanded = baseRect.marginsAdded(QtCore.QMargins(10, 10, 10, 10))
 		self.typeText.setPos(expanded.right() + 3, 3)
 
-		#self.inPlug.setPos(-self.inPlug.boundingRect().width(), 0)
+		self.inPlug.setPos(-self.inPlug.boundingRect().width(), 0)
+		self.outPlug.setPos(self.boundingRect().width() + 80, 0)
 
 
 	def boundingRect(self)->QtCore.QRectF:
@@ -283,7 +293,10 @@ class NodeDelegate(
 		path.addRoundedRect(QtCore.QRectF(self.boundingRect()), 5, 5)
 		painter.fillPath(path, brush)
 
-		pen = QtGui.QPen(QtGui.QColor.fromRgbF(*self.getColour()))
+		if self.isSelected():
+			pen = QtGui.QPen(QtGui.QColor.fromRgbF(*SEL_COLOUR))
+		else:
+			pen = QtGui.QPen(QtGui.QColor.fromRgbF(*self.getColour()))
 		painter.setPen(pen)
 		painter.drawPath(path)
 

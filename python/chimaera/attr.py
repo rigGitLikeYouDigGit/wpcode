@@ -195,7 +195,10 @@ def newAttributeData(name: str, linking=("T", ), override=())->Tree:
 
 class NodeAttrWrapper:
 	"""TODO: move logic from this into main chimaeraNode -
-	use this class only as convenience to track data branch"""
+	use this class only as convenience to track data branch
+
+
+	"""
 	def __init__(self, attrData:Tree, node:ChimaeraNode):
 		self.tree = attrData
 		self._cachedIncomingExpandedTree : Tree = None

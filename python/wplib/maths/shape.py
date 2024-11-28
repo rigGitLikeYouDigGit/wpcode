@@ -87,13 +87,13 @@ def segmentFromDir(dir:v3,
 	             origin + dir * t1])
 
 def infLineFromDir(dir:v3,
-                   origin:v3=np.array(0, 0, 0)):
+                   origin:v3=np.array((0, 0, 0))):
 	"""convert to form [a, b, c, d]
 	for aX + bY + cZ = d"""
 	return np.array([dir, origin])
 
 def distanceFromInfLine(segment,
-                        pos:v3=np.array(0, 0, 0)):
+                        pos:v3=np.array((0, 0, 0))):
 	"""expect line as [pt1, pt2]
 	to a point p0 (from wolframAlpha)"""
 	return np.linalg.norm( np.cross(pos - segment[0], pos - segment[1])) / \

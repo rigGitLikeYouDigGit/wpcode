@@ -84,13 +84,15 @@ class TreeDexModel(AtomicStandardItemModel):
 		#self._clearChildWidgets()
 
 		#TODO: possible we should give each WpDex a uid too
+
+		#ERROR when we initialise on a tree not at root - fix
 		for treeDex in self.dex().treeDexes(includeSelf=True):
 			parentItem = self.invisibleRootItem()
 			if treeDex.parent:
 				if isinstance(treeDex.parent, TreeDex):
 					parentItem = self.uidBranchItemMap.get(
 						treeDex.parent.obj.uid
-					)
+					) or parentItem # if None, we're initialised on a lower parent tree, use the root
 
 			branchItem = TreeBranchItem(value=treeDex.branchMap()["@N"],
 			                            dex=treeDex)

@@ -16,7 +16,7 @@ from wpdex import WpDexProxy
 from wplib.serial import Serialisable
 
 from wpui.keystate import KeyState
-from wpui import lib as uilib
+from wpui import lib as uilib, treemenu
 
 """
 bases for items in canvas, 
@@ -69,3 +69,45 @@ class WpCanvasElement(base,
 	               change:QtWidgets.QGraphicsItem.GraphicsItemChange,
 	               value):
 		self.elementChanged.emit(self, change, value)
+		return super().itemChange(change, value)
+
+	def _getContextMenuTree(self)->Tree:
+		"""
+		get element-specific context menu tree
+		"""
+		t = Tree("root")
+		t["action"] = lambda : print("eyyy")
+		return t
+		pass
+
+	def mousePressEvent(self, event):
+		"""EVENT FLOW goes
+		view -> scene -> graphicsItem -
+		relies on super() being called on each one"""
+		#log("element mouse press")
+		if event.button() == QtCore.Qt.RightButton:
+			log("element right click")
+			tree = self._getContextMenuTree()
+			if not tree:
+				return
+			menu = treemenu.buildMenuFromTree(tree)
+			fn = lambda *a, **k : menu.exec_(event.screenPos())
+			self.clearFocus()
+			fn()
+			# TODO:
+			#   weird behaviour where right-clicking first opens menu, then
+			#   right-clicking again anywhere in the scene reopens it again -
+			#   events are still getting fed here.
+			#   not a big issue but fix it
+
+			#### the below did not work, to trigger the menu after this event is
+			#  done processing
+			# showTimer = QtCore.QTimer()
+			# showTimer._event = event
+			# showTimer._menu = menu
+			# self._tempTimer = showTimer
+			# #showTimer.timeout.connect()
+			# showTimer.singleShot(10, fn)
+			event.accept()
+		return super().mousePressEvent(event)
+		pass

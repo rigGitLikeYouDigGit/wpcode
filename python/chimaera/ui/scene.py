@@ -84,6 +84,9 @@ class ChimaeraScene(
 			#TODO: support node delegate creating its own secondary elements
 
 		endDelegates = set(i for i in self.items() if isinstance(i, WpCanvasElement))
+		# log("end items", self.items())
+		# for i in self.items():
+		# 	log(isinstance(i, WpCanvasElement), type(i), type(i).__mro__, i)
 		log("endDelegates", endDelegates)
 
 

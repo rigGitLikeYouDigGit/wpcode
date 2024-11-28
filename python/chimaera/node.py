@@ -132,11 +132,6 @@ may generate new nodes, and nodes are saved as overrides on parent data
 
 """
 
-def getEmptyNodeAttributeData(name: str, linking=("T", ), defined=())->Tree:
-	t = Tree(name)
-	t["linking"] = list(linking)
-	t["override"] = list(defined)
-	return t
 
 class ChimaeraNode(Modelled,
                    Pathable,
@@ -713,6 +708,10 @@ class ChimaeraNode(Modelled,
 		work with raw data of model in init, since nothing should be
 		connected up yet - node still needs to be added to graph
 		as a branch
+
+		TODO: should attr wrappers be passed raw or proxy-wrapped data?
+			probably wrapped
+			but errors :)
 		"""
 		log("Chimaera init", data)
 		assert isinstance(data, Tree)
@@ -722,6 +721,7 @@ class ChimaeraNode(Modelled,
 		self.type = NodeAttrWrapper(self.rawData()("@T"), node=self)
 		self.T = self.type
 		# I would prefer to call this "parametres", but @P confuses with "parent"
+		#self.settings = NodeAttrWrapper(self.rawData()("@S"), node=self)
 		self.settings = NodeAttrWrapper(self.rawData()("@S"), node=self)
 		self.S = self.settings
 		self.memory = NodeAttrWrapper(self.rawData()("@M"), node=self)
@@ -822,6 +822,16 @@ class ChimaeraNode(Modelled,
 
 	if T.TYPE_CHECKING:
 		def branches(self)->list[ChimaeraNode]: pass
+
+	#region user methods
+	def getContextMenuOptions(self, clickedItem, selectedItems=None)->T.Optional[Tree]:
+		"""clicked item will be self if user just clicks on node,
+		or the specific branch item from ui if clicked directly
+
+		Return a tree of actions with lambdas as values
+		"""
+
+	#endregion
 
 	def createNode(self, nodeType:type[ChimaeraNode]=None, name="")->ChimaeraNode:
 		with self.data.deltaContext():

@@ -85,11 +85,17 @@ class OpenPlugRow(QtWidgets.QGraphicsItem):
 	def boundingRect(self):
 		return self.childrenBoundingRect()
 
-
+# base = (WpCanvasElement,
+#         ConnectionPoint,
+#         QtWidgets.QGraphicsItem)
+# if T.TYPE_CHECKING:
+# 	base = (QtWidgets.QGraphicsItem,
+# 	        ConnectionPoint,
+# 	        WpCanvasElement)
 class ChimaeraConnector(
+	ConnectionPoint,
 	QtWidgets.QGraphicsItem,
-	WpCanvasElement,
-	ConnectionPoint):
+):
 	"""
 	Connection point for data streams - when open, show a ]
 	shape to show available; when attached, show a [ around wire
@@ -109,14 +115,16 @@ class ChimaeraConnector(
 		                         )
 		self.size = size
 
+
 	def boundingRect(self):
+		pad = 50
 		return QtCore.QRectF(self.size, self.size,
 		                     self.size, self.size).marginsAdded(
-			QtCore.QMarginsF(20, 20, 20, 20)
+			QtCore.QMarginsF(pad, pad, pad, pad)
 		)
 
 	def connectionPoint(self,
-	                    forDelegate:ConnectionGroupDelegate
+	                    forDelegate:ConnectionGroupDelegate=None
 	                    ) ->tuple[tuple[float, float], (tuple[float, float], None)]:
 		pos = (self.size / 2.0, self.size / 2.0)
 		if self.isInput: # incoming
@@ -133,26 +141,38 @@ class ChimaeraConnector(
 		"""
 		painter.save()
 		pen = QtGui.QPen(QtCore.Qt.lightGray)
-		pen.setWidth(1)
+		pen.setWidthF(0.5)
 		painter.setPen(pen)
-		lines = self.connectionLines()
-		if lines:  # has connections
-			# points sorted properly, [ (x, y) ]
-			upLinePoints = [(1, 0), (0, 0), (0, 1)]
-			downLinePoints = [(1, 4), (0, 4), (0, 3)]
-		else: # empty
-			upLinePoints = [(4, 1), (4, 0), (3, 0)]
-			downLinePoints = [(4, 3), (4, 4), (3, 4)]
-		upLineQPoints = [QtCore.QPointF(*i) for i in upLinePoints]
-		downLineQPoints = [QtCore.QPointF(*i) for i in downLinePoints]
 		scaleF = self.size / 5.0
 		painter.scale(scaleF, scaleF)
-		painter.drawLine(upLineQPoints[0], upLineQPoints[1])
-		painter.drawLine(upLineQPoints[1], upLineQPoints[2])
-		painter.drawLine(downLineQPoints[0], downLineQPoints[1])
-		painter.drawLine(downLineQPoints[1], downLineQPoints[2])
+
+		painter.setBrush(QtCore.Qt.NoBrush)
+
+		if self.isUnderMouse():
+			painter.scale(1.2, 1.2)
+		if self.isInput:
+			lines = self.connectionLines()
+			if lines:  # has connections
+				# points sorted properly, [ (x, y) ]
+				upLinePoints = [(1, 0), (0, 0), (0, 1)]
+				downLinePoints = [(1, 4), (0, 4), (0, 3)]
+			else: # empty
+				upLinePoints = [(4, 1), (4, 0), (3, 0)]
+				downLinePoints = [(4, 3), (4, 4), (3, 4)]
+			upLineQPoints = [QtCore.QPointF(*i) for i in upLinePoints]
+			downLineQPoints = [QtCore.QPointF(*i) for i in downLinePoints]
+
+			painter.drawLine(upLineQPoints[0], upLineQPoints[1])
+			painter.drawLine(upLineQPoints[1], upLineQPoints[2])
+			painter.drawLine(downLineQPoints[0], downLineQPoints[1])
+			painter.drawLine(downLineQPoints[1], downLineQPoints[2])
+		else: # for outputs just draw a square
+			#painter.drawRect(QtCore.QRect(-2, -2, 2, 2))
+			painter.drawRect(QtCore.QRect(0, 0, 3, 3))
 
 		painter.restore()
+
+
 
 
 class PlugBranchItem(QtWidgets.QGraphicsItem,
@@ -202,8 +222,10 @@ class PlugBranchItem(QtWidgets.QGraphicsItem,
 		                                        parent=self)
 		self.text.setDefaultTextColor(QtCore.Qt.lightGray)
 		self.text.setPos(0, -10)
-		self.connector.setPos(self.boundingRect().left() - 20, 0)
-
+		if self.isInput:
+			self.connector.setPos(self.boundingRect().left() - 20, 0)
+		else:
+			self.connector.setPos(self.text.pos().x() + self.text.boundingRect().width() + 20, 0)
 	def boundingRect(self):
 		return self.text.boundingRect().marginsAdded(
 			QtCore.QMarginsF(5, 5, 5, 5)
@@ -274,7 +296,11 @@ class PlugBranchItem(QtWidgets.QGraphicsItem,
 		"""only single layer
 		TODO: extend to open plug entry items
 		"""
-		self.connector.setPos(-20, 0)
+		if self.isInput:
+			self.connector.setPos(-20, 0)
+
+		else:
+			self.connector.setPos(self.text.boundingRect().width() + self.text.pos().x() + 20, 0)
 
 		totalRect = self.boundingRect().united(self.childrenBoundingRect())
 		y = totalRect.height()

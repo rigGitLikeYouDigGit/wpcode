@@ -252,8 +252,11 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 		self.keySlotMap[tuple(slot.keys)] = slot
 
 	def _getMousePosForObjCreation(self)->QtCore.QPoint:
-		return self.ks.mousePositions[0] \
-			if self.ks.mousePositions else self.rect().center()
+		log("mousePos", self.ks.mousePositions[0], self.ks.mousePositions[0] == QtCore.QPoint(0, 0))
+		if self.ks.mousePositions[0] == QtCore.QPoint(0, 0):
+			return self.rect().center()
+		return self.ks.mousePositions[0]
+
 
 	def checkFireKeySlots(self, event:QtGui.QKeyEvent):
 		"""check if any key functions should be fired -
@@ -370,6 +373,12 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 
 				self.scene().select(items, mode=mode)
 				#return
+
+		elif event.button() == self.ks.rmbKey:
+			"""begin context menu -
+			defer down to scene items to show final menu,
+			here only supply actions to take based on wider state"""
+			#log("view context menu")
 		super().mousePressEvent(event)
 		#log("end selection", self.scene().selectedItems())
 

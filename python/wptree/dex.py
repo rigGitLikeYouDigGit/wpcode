@@ -51,7 +51,7 @@ class TreeDex(WpDex):
 		else:
 			#log("writing new key to tree", key, value)
 			assert isinstance(value, TreeInterface)
-			self.obj.addBranch(newBranch=value)
+			self.obj.addBranch(newBranch=value, force=True)
 		#log("after write to tree", self, self.obj, self.obj.value)
 
 	# def _buildBranchMap(self, **kwargs) ->dict[DexPathable.keyT, WpDex]:

@@ -12,7 +12,7 @@ from wpdex.ui.atomic import ExpWidget
 from wpdex import WpDexProxy, WX, react
 from wpdex.ui import AtomicUiInterface
 from wpui.widget.collapsible import ShrinkWrapWidget
-
+from .element import WpCanvasElement
 
 if T.TYPE_CHECKING:
 	from .node import NodeDelegate
@@ -22,13 +22,15 @@ if T.TYPE_CHECKING:
 """
 how the heck do we handle drawing connection points within scene
 
-each "end" of a connection has to update all its related items on movement 
+each "end" of a connection has to update all its related items on movement
+
+all connection points will be CanvasElement objects 
 
 """
-base = object
-if T.TYPE_CHECKING:
-	base = WpCanvasElement
-class ConnectionPoint(base):
+# base = object
+# if T.TYPE_CHECKING:
+# 	base = WpCanvasElement
+class ConnectionPoint(WpCanvasElement):
 	"""this shouldn't know much
 	for now we assume a point is either a source or destination,
 	as opposed to assuming connections are always dragged from
@@ -47,6 +49,10 @@ class ConnectionPoint(base):
 		self.isInput = isInput
 		self.hoverRange = hoverRange
 		self.isHovered = False
+		self.setAcceptHoverEvents(True)
+		self.setAcceptDrops(True)
+
+
 
 	def connectionLines(self)->list[ConnectionGroupDelegate]:
 		"""return all connection line delegates attached to this point"""
@@ -54,10 +60,14 @@ class ConnectionPoint(base):
 
 	def paint(self, *args, **kwargs):
 		"""if mouse is nearby draw a template connection to show
-		drag can be done"""
+		drag can be done
+
+		if drag is in progress, check through all connections
+		and grey out all those that cannot accept it
+		"""
 
 	def connectionPoint(self,
-	                    forDelegate:ConnectionGroupDelegate
+	                    forDelegate:ConnectionGroupDelegate=None
 	                    )->tuple[tuple[float, float], (tuple[float, float], None)]:
 		"""implement custom logic for the given delegate if wanted
 		by default falls back to nearest point on outline, on bounding
@@ -67,7 +77,7 @@ class ConnectionPoint(base):
 
 		"""
 
-	def connectionPath(self, forDelegate:ConnectionGroupDelegate)->QtGui.QPainterPath:
+	def connectionPath(self, forDelegate:ConnectionGroupDelegate=None)->QtGui.QPainterPath:
 		"""in case a connection can be made / slide along a patch on the given
 		object
 		by default return None"""
@@ -77,6 +87,9 @@ class ConnectionPoint(base):
 		"""overall method - if False, this won't be included in scene event checks
 		for valid targets when dragging a connection"""
 		return False
+
+	def canCreateDragConnections(self):
+		return True
 
 	def acceptsIncomingConnection(self, fromObj:ConnectionPoint)->bool:
 		"""check if this point accepts a drag connection from the given source"""
@@ -91,9 +104,25 @@ class ConnectionPoint(base):
 		pass
 	def onOutgoingConnectionAccepted(self, toObj:ConnectionPoint)->bool:
 		pass
+
+	def hoverMoveEvent(self, event):
+		self.update()
+	def hoverEnterEvent(self, event):
+		self.update()
+	def hoverLeaveEvent(self, event):
+		self.update()
+
+	def mousePressEvent(self, event):
+		if self.isUnderMouse():
+			self.scene().onConnectionDragBegin(fromObj=self)
+		return super().mousePressEvent(event)
+
+
+	# def dragLeaveEvent(self, event):
+	# 	self.scene().onConnectionDragBegin(fromObj=self)
 	#endregion
 
-class ConnectionGroupDelegate(base):
+class ConnectionGroupDelegate(WpCanvasElement):
 	"""
 	holds start and end objects that could be ANYTHING - graphicsItems, widgets, points, etc
 
