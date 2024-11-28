@@ -69,3 +69,53 @@ class OverrideProvider:
 
 		return found[0]
 
+# test for a more flexible approach looking for
+# arbitrary attributes on objects
+# (for example Qt widgets)
+def _getDirectOverrides(obj, attributeDictName, default):
+	if isinstance(obj, OverrideProvider):
+		return obj._getDirectOverrides()
+	return getattr(obj, attributeDictName, default)
+def getOverride(obj, key: str,
+                attributeDictName: str,
+                getAncestorsFn:T.Callable[[T.Any], tuple[T.Any]],
+				default=Sentinel.FailToFind,
+                returnObj=False,
+                onlyFirst=True,
+                ):
+	"""TODO: we don't need a whole other system of adaptors for this -
+			maybe could extend visitAdaptor
+	"""
+	toCheck = [obj]
+	found = []
+	while toCheck:
+		provider = toCheck.pop(0)
+		#overrides = provider._getDirectOverrides()
+		#ancestors = provider._getOverrideAncestors(forKey=key) if isinstance(provider, OverrideProvider) else getAncestorsFn(obj)
+		ancestors = getAncestorsFn(obj)
+		overrides = _getDirectOverrides(obj, attributeDictName, {})
+		result = overrides.get(key, default=Sentinel.FailToFind)
+		if result is Sentinel.FailToFind:  # on miss, go looking up on ancestors
+			#toCheck.extend(provider._getOverrideAncestors(forKey=key))
+			toCheck.extend(ancestors)
+			continue
+		# check if we want all matching overrides
+		if not onlyFirst:
+			found.append((provider, result))
+			toCheck.extend(ancestors)
+			continue
+		# check if we want object or value
+		if returnObj:
+			found.append(provider)
+		else:
+			found.append(result)
+		break
+
+	if not found:  # nothing found
+		if not onlyFirst:  # return empty list
+			return found
+		if default is Sentinel.FailToFind:
+			raise KeyError(f"No override found for key {key} on object {self} ")
+		return default
+
+	return found[0]

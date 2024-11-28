@@ -47,8 +47,8 @@ class WpCanvasElement(base,
 		for view, allow pinning to edges, etc, setting offset from edges, corners
 	"""
 
-	def __hash__(self):
-		return id(self)
+	# def __hash__(self):
+	# 	return id(self)
 
 	def __init__(self,
 	             #scene:WpCanvasScene=None,
@@ -58,7 +58,14 @@ class WpCanvasElement(base,
 		self.obj = obj
 		# can't use proper QT signals since graphicsItems aren't QObjects
 		self.elementChanged = Signal("elementChanged")
+
+		# disable these if things get as slow as the docs warn - we rely on
+		# efficient filtering at scene level
+		self.setFlag(QtWidgets.QGraphicsItem.ItemSendsGeometryChanges)
+		self.setFlag(QtWidgets.QGraphicsItem.ItemSendsScenePositionChanges)
 		pass
 
-	def itemChange(self, change, value):
+	def itemChange(self,
+	               change:QtWidgets.QGraphicsItem.GraphicsItemChange,
+	               value):
 		self.elementChanged.emit(self, change, value)

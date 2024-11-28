@@ -1,15 +1,11 @@
 
 from __future__ import annotations
 
-import pprint
 import traceback
-import typing as T
 
-from PySide2 import QtCore, QtWidgets, QtGui
-from wplib import log, Sentinel, TypeNamespace
+from PySide2 import QtCore
 
-
-from wpui.widget.canvas import WpCanvasView
+from wpui.canvas import WpCanvasView
 from wpdex import *
 from wpdex.ui import StringWidget
 #from .catalogue import\ NodeCatalogue

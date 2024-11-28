@@ -9,8 +9,10 @@ import numpy as np
 
 from PySide2 import QtWidgets, QtCore, QtGui
 #from param import rx
+import networkx as nx
 
-from wplib import log, sequence
+from wplib import log, sequence, nxlib
+
 from wptree import Tree
 from wpdex import WpDexProxy
 from wplib.serial import Serialisable
@@ -18,10 +20,13 @@ from wplib.serial import Serialisable
 from wpui.keystate import KeyState
 from wpui import lib as uilib
 
-from .element import WpCanvasElement
+from wpui.canvas.element import WpCanvasElement
+
+from wpui.canvas.connection import ConnectionPoint, ConnectionsPainter, ConnectionGroupDelegate
 
 if T.TYPE_CHECKING:
 	from .element import WpCanvasElement
+	from .connection import ConnectionPoint, ConnectionGroupDelegate
 
 def drawGridOverRect(rect:QtCore.QRect,
                      painter:QtGui.QPainter,
@@ -48,20 +53,23 @@ def drawGridOverRect(rect:QtCore.QRect,
 		                              points[1][0], y))
 
 
-
-def toArr(obj)->np.ndarray:
-	"""we will eventually define adaptors for every random numeric type
-	of every random library
-	to get them into numpy"""
-	if isinstance(obj, (QtCore.QPoint, QtCore.QPointF)):
-		return np.array(obj.toTuple())
-
+def iterQGraphicsItems(rootItem, includeRoot=True):
+	result = [rootItem] if includeRoot else []
+	toIter = [rootItem]
+	while toIter:
+		item : QtWidgets.QGraphicsItem = toIter.pop(-1)
+		result.extend(item.childItems())
+		toIter.extend(item.childItems())
+	return result
 
 class WpCanvasScene(QtWidgets.QGraphicsScene):
 	"""scene for a single canvas
 
 	- setting all the single-use property things to be dynamic/reactive would be rad
 	- setting the more complicated event callbacks to be reactive may not be useful
+
+	- framework for items connected to each other ( and specialised for path connections
+		between nodes )
 
 	TODO: ACTIONS
 		for changing selection state
@@ -74,6 +82,9 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 
 		self.objDelegateMap : dict[T.Any, set[QtWidgets.QGraphicsItem]] = defaultdict(set)
 		#self.delegateObjMap : dict[int, T.Any] = {} #delegates hold their own object reference
+
+		# graph for tracking general relationships between objects
+		self.relationGraph = nx.MultiGraph()
 
 		self.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(0, 0, 0, 255)))
 		self.setSceneRect(0, 0, 1000, 1000)
@@ -89,46 +100,120 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 		self.coarsePen.setCosmetic(True)
 		self.coarsePen.setStyle(QtCore.Qt.DashLine)
 
+	# def addConnectionPointToGroup(self,
+	#                             ptA:ConnectionPoint,
+	#                             connectionGroupDelegate:ConnectionGroupDelegate=None
+	#                             ):
+	# 	"""TODO: try and inject a user way to get a new connection for
+	# 			 a given point
+	# 	"""
+	# 	if connectionGroupDelegate not in self.relationGraph:
+	# 	self.relationGraph.add_edge(ptA, ptB, key="connectEnd")
+
+	def connectPoints(self,
+	                  ptA:ConnectionPoint,
+	                  ptB:ConnectionPoint,
+	                  connectionGroupDelegate:ConnectionGroupDelegate
+	                  ):
+		"""specific function to link 2 points together -
+		add a more general version later if needed
+		TODO: use proper constant names here, not just raw strings
+		"""
+		self.relationGraph.add_edge(ptA, ptB, key="connectPoint")
+		self.relationGraph.add_edge(ptA, connectionGroupDelegate, key="connectGroup")
+		self.relationGraph.add_edge(ptB, connectionGroupDelegate, key="connectGroup")
+
+	def connectedItems(self,
+	                   seedItem,
+	                   key="connectPoint")->T.Iterable[WpCanvasElement]:
+		return nxlib.multiGraphAdjacentNodesForKey(
+			self.relationGraph, seedItem, key=key
+		)
+
 	def addItem(self, item):
 		#from .element import WpCanvasElement
 		super().addItem(item)
 		log("scene addItem", item, type(item))
-		#if not getattr(item, "elementChanged", None): return # only process proper canvasElements
-		if not isinstance(item, WpCanvasElement): return # only process proper canvasElements
-		item : WpCanvasElement
-		item.elementChanged.connect(self._onItemChanged)
-		self.objDelegateMap[item.obj].add(item)
+
+		# check through all children in case we need to connect up elements known "globally" to scene
+		for i in iterQGraphicsItems(item, includeRoot=True):
+			if not isinstance(i, WpCanvasElement):
+				continue # only process proper canvasElements
+			self.relationGraph.add_node(i)
+			i.elementChanged.connect(self._onItemChanged)
+			self.objDelegateMap[i.obj].add(i)
 		log("after addItem", item, item.obj)
 		return item
 
 	def removeItem(self, item):
+		"""
+		we check if item was a connectionPoint, and if so, remove
+		any connectionGroup items it was connected to.
+		might not be the right place for it
+		"""
 		#from .element import WpCanvasElement
 		#if getattr(item, "elementChanged", None):
-		if isinstance(item, WpCanvasElement):
-			log("removeItem", item)
-			item: WpCanvasElement
-			#item.itemChange.connect(self._onItemChanged)
-			if item.obj in self.objDelegateMap:
-				self.objDelegateMap[item.obj].remove(item)
+		for child in iterQGraphicsItems(item, includeRoot=True):
+			if not isinstance(child, WpCanvasElement):
+				continue
+			self.relationGraph.remove_node(child)
+			if isinstance(child, WpCanvasElement):
+				#item.itemChange.connect(self._onItemChanged)
+				if child.obj in self.objDelegateMap:
+					self.objDelegateMap[child.obj].remove(child)
+
+			if isinstance(child, ConnectionPoint):
+				# remove all individual groups / lines using this point
+				for i in tuple(nxlib.multiGraphAdjacentNodesForKey(
+					self.relationGraph, child, key="connectGroup"
+				)):
+					self.relationGraph.remove_node(i)
+					self.removeItem(i)
+
 		super().removeItem(item)
 
 	def _onItemChanged(self, item:WpCanvasElement,
 	                   change:QtWidgets.QGraphicsItem.GraphicsItemChange,
 	                   value:T.Any):
-		"""process each change of each item"""
+		"""process each change of each item -
+		look at relation graph to see if connected items need updating -
 
+		but can't we achieve this with QGraphicsPathItem?
+		why are we even doing this
+		BECAUSE I don't see another good way to set up bidirectional
+			dependency between items; even if we look at connection points
+			within a pathItem's path() method, that method still has
+			to fire when the points move
+		 """
+		#log("scene _onItemChanged", item, change, value)
 
-	# TODO: get this working for large scale scenes, processing multiple nodes at once
-	def _onItemsChanged(self,
-	                    changeItemMap:dict[
-	                                  QtWidgets.QGraphicsItem.GraphicsItemChange :
-	                                  T.Sequence[WpCanvasElement]]):
-		"""signal from scene when one or more items change as part of single operation
-		passed map of 
-		{ itemsMoved : (all items that moved) } etc
-		
-		TODO: order events by priority? we would want removed to come after everything
-		"""
+		if change in (QtWidgets.QGraphicsItem.ItemPositionChange,
+						QtWidgets.QGraphicsItem.ItemPositionHasChanged,
+						QtWidgets.QGraphicsItem.ItemScenePositionHasChanged):
+			if isinstance(item, ConnectionPoint):
+				for group in nxlib.multiGraphAdjacentNodesForKey(
+					self.relationGraph, item, key="connectGroup"
+				): #type:QtWidgets.QGraphicsItem
+					group.update()
+
+	def onConnectionDragBegin(self, fromObj:ConnectionPoint):
+		"""start drawing path (s)"""
+		pass
+
+	def onConnectionDragMove(self, ):
+		pass
+
+	# # TODO: get this working for large scale scenes, processing multiple nodes at once
+	# def _onItemsChanged(self,
+	#                     changeItemMap:dict[
+	#                                   QtWidgets.QGraphicsItem.GraphicsItemChange :
+	#                                   T.Sequence[WpCanvasElement]]):
+	# 	"""signal from scene when one or more items change as part of single operation
+	# 	passed map of
+	# 	{ itemsMoved : (all items that moved) } etc
+	#
+	# 	TODO: order events by priority? we would want removed to come after everything
+	# 	"""
 
 	"""single real object may have multiple delegates, be drawn in multiple
 	places at once"""
@@ -213,3 +298,26 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 		painter.setPen(self.coarsePen)
 		drawGridOverRect(rect, painter, cellSize=(self.coarseScale, self.coarseScale))
 		painter.restore()
+
+if __name__ == '__main__':
+
+	class TestPoint:pass
+	class TestEdge:pass
+	g = nx.MultiGraph()
+	ptA = TestPoint()
+	ptB = TestPoint()
+	g.add_node(ptA)
+	g.add_node(ptB)
+	e = TestEdge()
+	g.add_edge(ptA, ptB, key="connectEnd")
+	g.add_edge(ptA, e, key="connectLine")
+	g.add_edge(ptB, e, key="connectLine")
+
+	print(g.edges(ptA))
+	print(g.edges(ptA, keys=True))
+	print(*g.neighbors(ptA,))
+
+
+
+
+	pass

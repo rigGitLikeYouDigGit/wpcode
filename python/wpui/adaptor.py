@@ -9,6 +9,8 @@ from wpdex import WpDex
 from wptree import Tree
 from wpui import lib
 from wplib.maths import arr, NPArrayLike
+from wplib.object import OverrideProvider
+
 class Q1DArrayLike(NPArrayLike):
 	"""assume for now that arrays are always in floats for calculation,
 	and hope we can treat the F types in qt the same as otherwise"""
@@ -53,9 +55,10 @@ class QPolygonArrayLike(NPArrayLike):
 	def fromArray(cls:type[QtGui.QPolygon], ar, **kwargs):
 		pointType = QtCore.QPoint if cls == QtGui.QPolygon else QtCore.QPointF
 		return cls.fromList([pointType(*i) for i in ar])
-	
-class WidgetVisitAdaptor(VisitAdaptor):
 
+# visitors
+class WidgetVisitAdaptor(VisitAdaptor):
+	forTypes = (QtWidgets.QWidget, )
 	@classmethod
 	def childObjects(cls, obj:T.Any, params:PARAMS_T) ->CHILD_LIST_T:
 		"""return only widgets that have a name"""
@@ -67,6 +70,25 @@ class WidgetVisitAdaptor(VisitAdaptor):
 			result.append(data)
 		return result
 
+class QGraphicsVisitAdaptor(VisitAdaptor):
+	forTypes = (QtWidgets.QGraphicsItem, )
+	@classmethod
+	def childObjects(cls, obj:QtWidgets.QGraphicsItem, params:PARAMS_T) ->CHILD_LIST_T:
+		"""return indexed map of child graphicsItem object"""
+		return [VisitAdaptor.ChildData(
+			key=i, obj=v, data={}
+		) for i, v in enumerate(obj.childItems())]
+
+def qtOverrideAncestorsFn(obj, *args, **kwargs):
+	"""function providing ancestors for the given qt item
+	could add in a LOT more complex logic, should a graphics item continue to its scene,
+	its view, etc
+	"""
+	if isinstance(obj, QtCore.QObject):
+		if not obj.parent(): return ()
+		return (obj.parent(), )
+	if isinstance(obj, QtWidgets.QGraphicsItem):
+		return obj.parentItem() if obj.parentItem() else obj.scene()
 
 
 class WidgetDex(WpDex):

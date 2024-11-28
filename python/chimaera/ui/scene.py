@@ -3,10 +3,10 @@ from __future__ import annotations
 
 from chimaera import ChimaeraNode
 
-from wpui.widget.canvas import *
+from wpui.canvas import *
 from wplib.inheritance import resolveInheritedMetaClass
 from wpdex import *
-from wpdex import react, WX
+from wpdex import WX
 from wpdex.ui import AtomicUiInterface
 from .node import NodeDelegate
 
@@ -61,7 +61,7 @@ class ChimaeraScene(
 		leads to infinite loops
 		"""
 
-		log("SCENE on graph changed", args, kwargs)
+		log("SCENE sync ui", args, kwargs)
 		currentDelegates = set(i for i in self.items() if isinstance(i, WpCanvasElement))
 
 		# TODO: later a single node may create multiple delegates - group boxes, ports etc

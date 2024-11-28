@@ -1,18 +1,9 @@
 
 from __future__ import annotations
 
-import pprint
-import typing as T
+from PySide2 import QtCore, QtWidgets
 
-
-from PySide2 import QtCore, QtWidgets, QtGui
-
-from wplib import log, Sentinel, TypeNamespace
-
-from wpui.widget.canvas import *
-
-
-from chimaera import ChimaeraNode
+from wplib import log
 
 """
 widget to show when pressing tab, showing available nodes

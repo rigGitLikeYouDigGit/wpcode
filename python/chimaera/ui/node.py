@@ -6,13 +6,16 @@ from wplib.object import Adaptor
 
 from PySide2 import QtCore, QtWidgets, QtGui
 
-from wpui.widget.canvas import *
+from wpui.canvas import *
 
 from wpdex.ui import StringWidget
-
-from chimaera import ChimaeraNode
 from wpdex import WpDexProxy, WX
 from wpui.widget.collapsible import ShrinkWrapWidget
+
+from chimaera import ChimaeraNode
+
+from chimaera.ui.plug import PlugBranchItem
+
 
 if T.TYPE_CHECKING:
 	from .scene import ChimaeraScene
@@ -95,8 +98,6 @@ class RoundLabel(QtWidgets.QLabel):
 		painter.setPen(self.textPen)
 		painter.drawText(
 			self.rect(), self.text(), QtGui.QTextOption(QtCore.Qt.AlignCenter))
-
-
 
 class LabelWidget(QtWidgets.QWidget):
 	"""simple way of showing a label alongside
@@ -186,30 +187,6 @@ class NodeDelegate(
 		self.w.setLayout(self.wLayout)
 		self.wLayout.addLayout(self.iconHLayout)
 
-		shrinkPolicy = QtWidgets.QSizePolicy(
-			QtWidgets.QSizePolicy.Maximum,
-			QtWidgets.QSizePolicy.Maximum
-		)
-		expandPolicy = QtWidgets.QSizePolicy(
-			QtWidgets.QSizePolicy.Expanding,
-			QtWidgets.QSizePolicy.Expanding
-		)
-
-		#self.w.setSizePolicy(shrinkPolicy)
-		self.w.setSizePolicy(expandPolicy)
-
-		#TODO: later on, allow changing nodetype in-place by right-clicking
-		self.typeText = QtWidgets.QGraphicsSimpleTextItem(self.node.typeName(), parent=self)
-		self.typeText.setPen(QtGui.QPen(QtGui.QColor.fromRgbF(1.0, 1.0, 1.0, 0.5)))
-		self.typeText.setBrush(QtGui.QBrush(QtGui.QColor.fromRgbF(1.0, 1.0, 1.0, 0.5)))
-
-		# self.nameLine = LabelWidget(
-		# 	label="name",
-		# 	w=StringWidget(self.node.ref("@N"), #TODO: conditions
-		# 	               parent=self.w,       # don't set node to empty name, you'll mess stuff up
-		# 	               placeHolderText="",
-		# 	               ),
-        #     parent=self.w)
 
 		self.nameLine = StringWidget(self.node.ref("@N"),  # TODO: conditions
 		               parent=self.w,  # don't set node to empty name, you'll mess stuff up
@@ -225,6 +202,46 @@ class NodeDelegate(
 			item = QtWidgets.QLabel(self.w)
 			item.setPixmap(QtGui.QPixmap(self.icon().pixmap(30, 30)))
 			self.iconHLayout.insertWidget(0, item)
+
+		# self.settingsLabelW = LabelWidget(
+		# 	label="settings",
+		# 	w=
+		# )
+
+		shrinkPolicy = QtWidgets.QSizePolicy(
+			QtWidgets.QSizePolicy.Maximum,
+			QtWidgets.QSizePolicy.Maximum
+		)
+		expandPolicy = QtWidgets.QSizePolicy(
+			QtWidgets.QSizePolicy.Expanding,
+			QtWidgets.QSizePolicy.Expanding
+		)
+
+		#self.w.setSizePolicy(shrinkPolicy)
+		self.w.setSizePolicy(expandPolicy)
+
+		# region graphics
+		#TODO: later on, allow changing nodetype in-place by right-clicking
+		self.typeText = QtWidgets.QGraphicsSimpleTextItem(self.node.typeName(), parent=self)
+		self.typeText.setPen(QtGui.QPen(QtGui.QColor.fromRgbF(1.0, 1.0, 1.0, 0.5)))
+		self.typeText.setBrush(QtGui.QBrush(QtGui.QColor.fromRgbF(1.0, 1.0, 1.0, 0.5)))
+
+
+		# plug branches
+		self.inPlug = PlugBranchItem(
+			value=self.node.F.linking(),
+			parent=self,
+			isInput=True
+		)
+		# self.node.F.resolve()
+		# self.outPlug = PlugBranchItem(
+		# 	branch=self.node.data.ref("@F").rx.pipe(
+		# 		self.node.resolveAttribute
+		# 	),
+		# 	parent=self,
+		# 	isInput=False
+		# )
+
 		self.syncLayout()
 
 	def icon(self)->QtGui.QIcon:
@@ -241,8 +258,10 @@ class NodeDelegate(
 	def syncLayout(self):
 		baseRect = self.boundingRect()
 		expanded = baseRect.marginsAdded(QtCore.QMargins(10, 10, 10, 10))
-
 		self.typeText.setPos(expanded.right() + 3, 3)
+
+		#self.inPlug.setPos(-self.inPlug.boundingRect().width(), 0)
+
 
 	def boundingRect(self)->QtCore.QRectF:
 		#return QtCore.QRectF(0, 0, 50, 50)
@@ -269,6 +288,14 @@ class NodeDelegate(
 		painter.drawPath(path)
 
 
+if __name__ == '__main__':
+	app = QtWidgets.QApplication()
+	obj = QtCore.QObject()
+	obj.testAttr = "hello"
+	print(obj.testAttr)
+	obj = QtWidgets.QGraphicsRectItem()
+	obj.testAttr = "hello"
+	print(obj.testAttr)
 
 
 

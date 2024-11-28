@@ -52,7 +52,7 @@ class PostInitMeta(type):
 		try:
 			obj = super(PostInitMeta, cls).__call__( *args, **kwargs)
 		except TypeError:
-			obj = inheritance.clsSuper(type(cls)).__call__(cls)
+			obj = inheritance.clsSuper(type(cls)).__call__(cls, *args, **kwargs)
 
 		if hasattr(obj, "__post_init__"):
 			obj.__post_init__(*args, **kwargs)

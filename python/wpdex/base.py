@@ -173,12 +173,12 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 	             **kwargs):
 		"""initialise with object and parent"""
 		# superclass inits
-		HashIdElement.__init__(self)
 		EventDispatcher.__init__(self)
 		Pathable.__init__(self,
 		                  obj,
 		                  parent=parent,
 		                  name=name)
+		#HashIdElement.__init__(self) # need path declared first
 		OverrideProvider.__init__(self)
 
 		if obj is self:

@@ -17,4 +17,4 @@ updating from it
 from .scene import WpCanvasScene
 from .view import WpCanvasView
 from .element import WpCanvasElement
-
+from .connection import ConnectionPoint, ConnectionGroupDelegate, ConnectionsPainter

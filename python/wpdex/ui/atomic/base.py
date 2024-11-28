@@ -148,6 +148,8 @@ class AtomicUiInterface(
 
 	def setValue(self, value:(WpDex, WpDexProxy, WX, T.Any)):
 		"""
+		TODO: should distinguish between setting the literal value pointed at,
+			and setting/supplanting the current WpDex / proxy / WX references
 		set value on widget - can be called internally and externally
 		if passed a reactive element, set up all children and local
 		attributes

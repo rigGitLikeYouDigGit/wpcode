@@ -144,15 +144,16 @@ class UiIcon(TypeNamespace):
 	providing ways to draw in widgets, paint in graphics items etc
 	"""
 
-	class _Base(QtWidgets.QGraphicsItem, TypeNamespace.base()):
+	#class _Base(QtWidgets.QGraphicsItem, TypeNamespace.base()):
+	class _Base(TypeNamespace.base()):
 		"""smallest possible base class for   common shapes
 		within uniform 0-1 square area"""
 
-		def __init__(self, parent=None, **kwargs ):
-			QtWidgets.QGraphicsItem.__init__(self, parent=parent)
+		def __init__(self, **kwargs ):
+			#QtWidgets.QGraphicsItem.__init__(self, parent=parent)
 			#GraphicsMouseSignalMixin.__init__(self)
-			self._pen = self.defaultPen()
-			self._brush = self.defaultBrush()
+			# self._pen = self.defaultPen()
+			# self._brush = self.defaultBrush()
 			self._initKwargs = kwargs
 
 		def defaultPen(self)->QtGui.QPen:
@@ -163,13 +164,13 @@ class UiIcon(TypeNamespace):
 		def defaultBrush(self)->QtGui.QBrush:
 			return QtGui.QBrush(QtGui.QColor(128, 128, 128))
 
-		def setPen(self, pen :QtGui.QPen):
-			self._pen = pen
-			self.update()
+		# def setPen(self, pen :QtGui.QPen):
+		# 	self._pen = pen
+		# 	self.update()
 
-		def setBrush(self, brush :QtGui.QBrush):
-			self._brush = brush
-			self.update()
+		# def setBrush(self, brush :QtGui.QBrush):
+		# 	self._brush = brush
+		# 	self.update()
 
 		def boundingRect(self)->QtCore.QRectF:
 			return QtCore.QRectF(0, 0, 1, 1)

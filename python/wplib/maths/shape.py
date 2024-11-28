@@ -66,6 +66,7 @@ def v3(*args)->arrT:
 	vals = args[0] if isinstance(args[0], (tuple, list, np.ndarray)) else args[:3]
 	return np.array(vals, dtype=float)
 def segmentFromPoints(*args)->arrT:
+	"""put given arguments in np array as entries"""
 	i = 0
 	vals = []
 	while i < len(args):

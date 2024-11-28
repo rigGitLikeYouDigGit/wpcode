@@ -147,7 +147,7 @@ class Pathable(#Adaptor
 		self.isRoot = False #TEST for breakpoints without excessive tooling
 
 	def __hash__(self):
-		return hash((self.parent, self.keyT))
+		return hash(tuple(self.path))
 
 	@property
 	def obj(self):

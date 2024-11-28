@@ -252,6 +252,16 @@ class ChimaeraNode(Modelled,
 		this gives the default 'output' data that this node takes in to compute
 		compute"""
 		return Tree("root")
+
+	def templateFlowOut(self)->Tree:
+		""" return a TEMPLATE tree, with attrs enough to set up connections
+		without running node.
+
+		compute function of node might modify tree, but this should give
+		a consistent base to work from
+		TODO: classmethod? instance? consistency? competency?
+		"""
+		return self.defaultFlow(forNode=self)
 	#endregion
 
 	# region attribute internals
@@ -465,6 +475,9 @@ class ChimaeraNode(Modelled,
 		be overridden at any level of tree
 
 		TODO: cache result and maybe the intermediate stages here
+
+		TODO: COMPUTE
+			for @F , need to pass tree through node's compute() method
 		"""
 
 		#log("RESOLVE")
@@ -498,6 +511,14 @@ class ChimaeraNode(Modelled,
 		self._populateExpandedLinkingTree(t) # convert ref tuples to actual trees
 		self._collatePopulatedTree(t) # overlay linked trees together
 		treelib.overlayTreeInPlace(t, wrapper.override().copy()) # overlay override tree on top
+
+		# do specific compute methods
+		if atName == "@F" :
+			return self.compute(t)
+		elif atName == "@S" :
+			return self.computeSettings(t)
+		elif atName == "@M" :
+			return self.computeMemory(t)
 		return t
 
 	def _consumeFirstPathTokens(self, path: pathT, **kwargs
@@ -515,9 +536,21 @@ class ChimaeraNode(Modelled,
 			raise self.PathKeyError("No uid found for", token, path)
 		return super()._consumeFirstPathTokens(path, **kwargs)
 
-	def computeFlow(self, data: Tree) -> Tree:
+	def compute(self, data: Tree) -> Tree:
 		"""main compute function of data - by default just overlay
-		anything passed in as settings over flow
+		anything passed in as settings over Flow
+
+		naming this "compute" instead of "computeFlow", since you can just
+		use it like a normal maya node if you don't need to get deep into
+		the complexity of Chimaera
+
+		philosophically, should we prefer controlling/coercing input, or output?
+		I don't think there's much difference, you can always use a simpler node
+		before or after to rearrange the information
+
+		there's also something neater about compute being the absolute final
+		step, so if you check the input you're getting in your compute function,
+		you can be sure that nothing else is messing with what you pass out,
 
 		linking
 		expanded
@@ -527,6 +560,7 @@ class ChimaeraNode(Modelled,
 		-> compute
 		output
 
+		TODO: stages before and after to apply override?
 		"""
 		return treelib.overlayTrees(
 			[data,

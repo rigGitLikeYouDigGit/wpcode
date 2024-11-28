@@ -1,7 +1,7 @@
 
 
 from PySide2 import QtCore, QtWidgets, QtGui
-from wpui.widget.canvas import *
+from wpui.canvas import *
 
 app = QtWidgets.QApplication()
 

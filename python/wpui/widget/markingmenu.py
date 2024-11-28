@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from collections import defaultdict
 from wplib.sequence import resolveSeqIndex, iterWindow, flatten
 
-from wpui.widget.canvas.segment import RingSegment, SegmentData
+from wpui.canvas import RingSegment, SegmentData
 
 """honestly, past ed was cooking with this one
 
