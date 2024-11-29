@@ -10,7 +10,7 @@ import numpy as np
 from PySide2 import QtWidgets, QtCore, QtGui
 #from param import rx
 import networkx as nx
-
+ 
 from wplib import log, sequence, nxlib
 
 from wptree import Tree
@@ -178,11 +178,12 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 
 			if isinstance(child, ConnectionPoint):
 				# remove all individual groups / lines using this point
-				for i in tuple(nxlib.multiGraphAdjacentNodesForKey(
-					self.relationGraph, child, key="connectGroup"
-				)):
-					self.relationGraph.remove_node(i)
-					self.removeItem(i)
+				if child in self.relationGraph: # in case this gets fired twice
+					for i in tuple(nxlib.multiGraphAdjacentNodesForKey(
+						self.relationGraph, child, key="connectGroup"
+					)):
+						self.relationGraph.remove_node(i)
+						self.removeItem(i)
 
 		super().removeItem(item)
 
@@ -217,7 +218,7 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 
 		TODO: have template edges inherit colours of plugs they come from
 		"""
-		log("scene connection begin")
+		#log("scene connection begin")
 		self._dragSource = fromObj
 		self._dragPath.show()
 

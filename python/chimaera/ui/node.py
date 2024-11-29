@@ -197,6 +197,8 @@ class NodeDelegate(
 		               parent=self.w,  # don't set node to empty name, you'll mess stuff up
 		               placeHolderText="",
 		               )
+		self.nameLine.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding,
+		                            QtWidgets.QSizePolicy.Fixed)
 		#self.wLayout.addWidget(self.nameLine)
 		#self.nameLine.setSizePolicy(shrinkPolicy)
 		self.iconHLayout.addWidget(self.nameLine)
@@ -216,6 +218,7 @@ class NodeDelegate(
 			parent=self.w
 		)
 		self.settingsW = self.settingsLabelW.w
+		#self.wLayout.addWidget(self.settingsLabelW)
 		self.wLayout.addWidget(self.settingsW)
 
 		shrinkPolicy = QtWidgets.QSizePolicy(

@@ -88,7 +88,7 @@ class ExpWidget(MetaResolver, QtWidgets.QLineEdit, AtomicWidgetOld):
 		# size = self.fontMetrics().size(
 		# 	QtCore.Qt.TextWordWrap, self.text())
 		#log("sizeHint for", self.text(), " : ", size)
-		size = self.fontMetrics().tightBoundingRect(self.text()).size()
+		size = self.fontMetrics().boundingRect(self.text()).size()
 		return size
 
 if __name__ == '__main__':

@@ -117,6 +117,10 @@ class StringWidget(
 	QtWidgets.QLineEdit, AtomicWidgetOld
 	)
 ):
+	"""TODO:
+	absolutely unify this with the ExpWidget -
+	control through dex or path rules or something
+	"""
 
 	def __init__(self, value="", parent=None,
 	             options:T.Sequence[str]=(),
@@ -205,7 +209,9 @@ class StringWidget(
 			self.line.setSelection(highlightStartId, len(suggestPath) - 1)
 		#log("line selected text", self.line.selectedText())
 
-
+	def sizeHint(self):
+		size = self.fontMetrics().boundingRect(self.text()).size()
+		return size
 
 		
 

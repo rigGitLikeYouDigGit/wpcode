@@ -125,6 +125,8 @@ def trailingDigits(s:str)->tuple[str, str]:
 	"""
 	if not s:
 		return s, ""
+	if not s[-1].isdigit():
+		return s, ""
 	i = 1
 	while s[-i].isdigit():
 		i+=1
@@ -149,9 +151,11 @@ def _incrementNameInner(name, currentNames):
 	return name
 def incrementName(name, currentNames:T.Iterable[str]=None):
 	"""checks if name is already in children, returns valid one"""
-
+	from wplib import log
+	currentNames = tuple(currentNames)
+	log("increment name", name, currentNames)
 	# check if name already taken
-	while currentNames and name in currentNames:
+	while currentNames and (name in currentNames):
 		name = _incrementNameInner(name, currentNames)
 	return name
 
@@ -160,12 +164,17 @@ def incrementName(name, currentNames:T.Iterable[str]=None):
 if __name__ == '__main__':
 	pass
 
-	testS = "/root/trunk/branch/leaf/"
-	print(splitAround(testS, "/"))
-	testS = "root"
-	print(splitAround(testS, "/"))
-	testS = "/root//trunk/branch/leaf/"
-	print(splitAround(testS, "/"))
+	testS = "attempt24"
+	print(trailingDigits(testS))
+	testS = "attempt"
+	print(trailingDigits(testS))
+
+	# testS = "/root/trunk/branch/leaf/"
+	# print(splitAround(testS, "/"))
+	# testS = "root"
+	# print(splitAround(testS, "/"))
+	# testS = "/root//trunk/branch/leaf/"
+	# print(splitAround(testS, "/"))
 	# testS = "d-"
 	# print(multiSplit(testS, ("-", "."), before=False))
 	# print(multiSplit(testS, ("-", "."), before=True))

@@ -60,10 +60,11 @@ class ChimaeraScene(
 		Also need to work out proper delta comparison, as otherwise it DEFINITELY
 		leads to infinite loops
 		"""
-
+ 
 		log("SCENE sync ui", args, kwargs)
-		currentDelegates = set(i for i in self.items() if isinstance(i, WpCanvasElement))
-
+		#currentDelegates = set(i for i in self.items() if isinstance(i, WpCanvasElement))
+		currentDelegates = set(i for i in self.items() if isinstance(i, NodeDelegate))
+  
 		# TODO: later a single node may create multiple delegates - group boxes, ports etc
 		#   for now assume one to one
 
@@ -94,5 +95,4 @@ class ChimaeraScene(
 
 
 	pass
-
 
