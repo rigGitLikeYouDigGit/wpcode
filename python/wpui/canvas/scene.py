@@ -95,7 +95,7 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 		self.addItem(self._dragPath)
 		self._dragPath.hide()
 		self._dragSource : ConnectionPoint = None # if not none, dragging in progress
-
+		self._candidateConnectPoint : ConnectionPoint = None
 
 		self._buildBackground()
 
@@ -124,18 +124,36 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 	# 	if connectionGroupDelegate not in self.relationGraph:
 	# 	self.relationGraph.add_edge(ptA, ptB, key="connectEnd")
 
+	def _connectionDelegateForPoints(self, *points:ConnectionPoint)->ConnectionGroupDelegate:
+		"""return a new connectionDelegate object initialised on the
+		given points"""
+		raise NotImplementedError(self, points)
+
 	def connectPoints(self,
 	                  ptA:ConnectionPoint,
 	                  ptB:ConnectionPoint,
-	                  connectionGroupDelegate:ConnectionGroupDelegate
+	                  connectionGroupDelegate:ConnectionGroupDelegate=None
 	                  ):
-		"""specific function to link 2 points together -
-		add a more general version later if needed
+		"""
+		called when a valid connection is created in UI -
+		OVERRIDE
+		for use-specific logic
+
+		TODO: hoooooow do we create the connection delegate?
+				how does that gel with updating overall graph to model
+
 		TODO: use proper constant names here, not just raw strings
 		"""
+		if connectionGroupDelegate is None: # no existing group selected
+			connectionGroupDelegate = self._connectionDelegateForPoints(ptA, ptB)
+		self.addItem(connectionGroupDelegate)
 		self.relationGraph.add_edge(ptA, ptB, key="connectPoint")
 		self.relationGraph.add_edge(ptA, connectionGroupDelegate, key="connectGroup")
 		self.relationGraph.add_edge(ptB, connectionGroupDelegate, key="connectGroup")
+		return connectionGroupDelegate
+
+	def connectionPoints(self):
+		return (i for i in self.relationGraph if isinstance(i, ConnectionPoint))
 
 	def connectedItems(self,
 	                   seedItem,
@@ -213,6 +231,11 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 
 	def isDragging(self):
 		return self._dragSource is not None
+	def isConnectionPointAvailable(self, srcPt:ConnectionPoint, dstPt:ConnectionPoint):
+		if dstPt.acceptsIncomingConnection(fromObj=srcPt):
+			if srcPt.acceptsOutgoingConnection(toObj=dstPt):
+				return True
+		return False
 	def onConnectionDragBegin(self, fromObj:ConnectionPoint):
 		"""start drawing path (s)
 
@@ -222,6 +245,18 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 		self._dragSource = fromObj
 		self._dragPath.show()
 
+		# filter over all connection points in scene, check if they can
+		# receive this drag connection
+		for point in self.connectionPoints():
+			if not point.canAcceptDragConnections():
+				continue
+			# check both sides - here we don't care about input/output in graph, this is
+			# only the sequence they're connected by the user
+			state = self.isConnectionPointAvailable(fromObj, point)
+			point.setDragAvailable(state)
+
+	DRAG_SNAP_MAX_DIST = 50
+
 	def mouseMoveEvent(self, event):
 		#log("scene mouse move event", self.isDragging())
 		if self.isDragging():
@@ -230,6 +265,32 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 			point = QtCore.QPointF(*point)
 			point = self._dragSource.mapToScene(point)
 			mousePos = event.scenePos()
+
+			# check any nearby available connectionPoint objects -
+			# if any within range, snap to the nearest one
+			rect = QtCore.QRectF(0, 0, self.DRAG_SNAP_MAX_DIST,
+			                     self.DRAG_SNAP_MAX_DIST)
+			rect.moveCenter(mousePos)
+			nearConnectPoint : ConnectionPoint = None
+			nearConnectPos : QtCore.QPointF = None
+			dist = 1000000
+			for i in self.connectionPoints():
+				if not i.isDragAvailable():
+					continue
+				testPos, testVec = i.connectionPoint(None)
+				testPoint = QtCore.QPointF(*testPos)
+				testDist = (testPoint - mousePos).manhattanLength()
+				if testDist < dist:
+					dist = testDist
+					nearConnectPoint = i
+					nearConnectPos = testPoint
+
+			# if point is within range, snap the end of the path to it, and
+			# set it as the candidate point to connect on mouse up
+			if dist <= pow(self.DRAG_SNAP_MAX_DIST, 2): #
+				self._candidateConnectPoint = nearConnectPoint
+				mousePos = nearConnectPos
+
 			path = QtGui.QPainterPath(point)
 			path.lineTo(mousePos)
 			self._dragPath.setPath(path)
@@ -240,10 +301,19 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 		set by a scene connectionPoint object, make the connection?
 
 		remove source point, hide path, come out of dragging state"""
+
+		# if a candidate connection point has been selected,
+		# create the connection between those two points
+		if self._candidateConnectPoint is not None:
+			self.connectPoints(self._dragSource, self._candidateConnectPoint,
+			                   connectionGroupDelegate=None
+			                   )
+
 		self._dragPath.hide()
 		self._dragSource = None
 		# CONSCIOUSLY NOT CLEARING PATH SHAPE HERE
 		# BECAUSE THE STALE TEMPLATE PATH LOOKS COOL
+
 		return super().mouseReleaseEvent(event)
 
 	def onConnectionDragMove(self, ):

@@ -1,5 +1,7 @@
 
 from __future__ import annotations
+
+import math
 import typing as T
 
 import numpy as np
@@ -25,6 +27,10 @@ shrinkingPolicy = QtWidgets.QSizePolicy(
 	QtWidgets.QSizePolicy.Maximum,
 	QtWidgets.QSizePolicy.Fixed,
 )
+
+def pointLength(pt:(QtCore.QPoint, QtCore.QPointF))->float:
+	"""for some inane reason QT doesn't supply this"""
+	return math.sqrt(pow(pt.x(), 2) + pow(pt.y(), 2))
 
 def openExplorerOnPath(path:(pathlib.Path, str),
                        lowestExisting=True):

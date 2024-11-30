@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import traceback
 
-from PySide2 import QtCore
+from PySide2 import QtCore, QtGui, QtWidgets
 
 from wpui.canvas import WpCanvasView
 from wpdex import *
@@ -46,16 +46,20 @@ class ChimaeraView(WpCanvasView):
 	def _onGraphChanged(self, *a):
 		log("VIEW GRAPH CHANGED", a)
 
-	def _onTabPressed(self, view):
+	def _onTabPressed(self, event:QtGui.QKeyEvent, view):
+		# eventFilter in view catches first event, directly calls keyPressEvent, passes to checkFireKeySlots
+
 		if self.nodePaletteLine.isVisible():
 			self.nodePaletteLine.hide()
 			return
 		log("node options", self.scene().graph(),
 		    self.scene().graph().getAvailableNodeTypes())
 		#self.nodePaletteLine.setValue("")
+		#self.nodePaletteLine.setFocus()
 		self.nodePaletteLine.selectAll()
 		print("")
 		log("tab pressed", self.nodePaletteLine.value(), self.nodePaletteLine._processValueForUi(self.nodePaletteLine.value()))
+
 		return self.nodePaletteLine
 
 	def _onNodePaletteReturnPressed(self):

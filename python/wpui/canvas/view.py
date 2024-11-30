@@ -127,9 +127,16 @@ class ViewEventFilter(QtCore.QObject):
 		self._processingTab = False
 
 	def eventFilter(self, watched:WpCanvasView, event):
+		"""
+		I was previously sending a keyPressEvent for the tab, on both the key-down event
+		AND the key-up event
+		I am unsure why this has only just started affecting the program, it somehow worked before
+		you seemed unhappy - I present you a fool
+		"""
 		#log("eventFilter", event)
 
-		if isinstance(event, QtGui.QKeyEvent):
+		if isinstance(event, QtGui.QKeyEvent) and event.type() == QtCore.QEvent.KeyPress:
+			log("eventFilter key event", watched, event)
 			if event.key() in (QtCore.Qt.Key_Tab, QtCore.Qt.Key_Backtab):
 				#log("no tab for you")
 				if self._processingTab: return True # prevent feedback
@@ -139,6 +146,7 @@ class ViewEventFilter(QtCore.QObject):
 					                event.nativeModifiers(), event.text(),
 					                event.isAutoRepeat(), event.count())
 				watched.keyPressEvent(newEvent)
+				newEvent.accept()
 				self._processingTab = False
 				return True
 		if isinstance(event, QtGui.QHoverEvent):
@@ -167,7 +175,7 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 	@dataclass
 	class KeySlot:
 		"""easier declaration of hotkey-triggered events"""
-		fn : T.Callable[[WpCanvasView], (QtWidgets.QWidget, T.Any)]
+		fn : T.Callable[[QtGui.QKeyEvent, WpCanvasView], (QtWidgets.QWidget, T.Any)]
 		keys : tuple[QtCore.Qt.Key] = ()
 		closeWidgetOnFocusOut : bool = True
 
@@ -267,6 +275,7 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 		A : they mess up the control flow of the whole program, even if you block events
 			the hotkeys can "leak" up if you declare them higher
 		"""
+		result = False # if true, a slot was fired
 		# this is some of the dumbest code I've ever written
 		for keys, slot in self.keySlotMap.items():
 
@@ -283,7 +292,7 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 			if not matches: continue
 			# code equivalent of shovelling mud
 
-			result = slot.fn(self)
+			result = slot.fn(event, self)
 			if isinstance(result, QtWidgets.QWidget): # show the returned widget
 				# unsure if we should enforce it being a parent of this widget
 				result.setEnabled(True)
@@ -313,12 +322,15 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 		#log("key press", event.key(), uiconstant.keyDict[event.key()])
 
 		self.ks.keyPressed(event)
-		self.checkFireKeySlots(event)
+		result = self.checkFireKeySlots(event)
+		if result:
+			return True
 		super().keyPressEvent(event)
 
 
 	def keyReleaseEvent(self, event):
 		self.ks.keyReleased(event)
+		super().keyReleaseEvent(event)
 
 
 	def selection(self)->list[QtWidgets.QGraphicsItem]:

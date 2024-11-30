@@ -52,6 +52,16 @@ class ConnectionPoint(WpCanvasElement):
 		self.setAcceptHoverEvents(True)
 		self.setAcceptDrops(True)
 
+		# check if connection is being dragged -
+		# None is normal state, True is this point is available, False is not available
+		# used to cache state for painting, dragging only checks once
+		self._isAvailableForDrag = None
+
+	def isDragAvailable(self): return self._isAvailableForDrag
+	def setDragAvailable(self, state=None):
+		"""similar to isEnabled but specific to drag
+		connection system"""
+		self._isAvailableForDrag = state
 
 
 	def connectionLines(self)->list[ConnectionGroupDelegate]:
