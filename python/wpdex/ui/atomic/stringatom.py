@@ -209,9 +209,12 @@ class StringWidget(
 			self.line.setSelection(highlightStartId, len(suggestPath) - 1)
 		#log("line selected text", self.line.selectedText())
 
-	def sizeHint(self):
-		size = self.fontMetrics().boundingRect(self.text()).size()
-		return size
+	# DECLARING THE BELOW METHOD DOUBLE-TRIGGERS A TAB KEY PRESS ON QAPPLICATION
+	# I do not know why this happens, and I assume I never will
+
+	# def sizeHint(self):
+	# 	size = self.fontMetrics().boundingRect(self.text()).size()
+	# 	return size
 
 		
 

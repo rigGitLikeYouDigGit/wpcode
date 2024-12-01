@@ -132,11 +132,67 @@ class ViewEventFilter(QtCore.QObject):
 		AND the key-up event
 		I am unsure why this has only just started affecting the program, it somehow worked before
 		you seemed unhappy - I present you a fool
-		"""
-		#log("eventFilter", event)
 
+		TODO: later we might have our own way to focus out/through a node view,
+			as well as the directional focus idea
+			either way, for now I think we entirely remove automated tab focus from play in view, it's just annoying
+
+		Pressing tab first sends a ShortcutOverride keyEvent
+
+		because of the weird parentless node widgets, and the order of events going from view->scene->graphicsItem->graphicsProxyWidget->grandchild widget->parent widget->grandparentWidget,
+		- only follows the right order after passing through the proxy widget
+		so the main view and a random node widget can get focus at the same time.
+		honestly not one clue how to live with this
+
+		"""
+		#log("eventFilter", event.type(), event,)
+
+		if isinstance(event, QtGui.QFocusEvent):
+			eventTypeNameMap = {}
+			for k, v in QtCore.QEvent.__dict__.items():
+				try:
+					eventTypeNameMap[v] = k
+				except: continue
+			log("eventFilter FOCUS event",eventTypeNameMap[event.type()], event.reason())
+			eventReasonNameMap = {}
+			for k, v in QtCore.Qt.FocusReason.__dict__.items():
+				try:
+					eventReasonNameMap[v] = k
+				except: continue
+			if event.type() in (
+				#event.FocusOut,
+				event.FocusAboutToChange,
+			):
+
+				watched.releaseKeyboard()
+				log("released keyboard")
+			if event.reason() in (
+					QtCore.Qt.FocusReason.TabFocusReason,
+					QtCore.Qt.FocusReason.BacktabFocusReason,
+					QtCore.Qt.FocusReason.OtherFocusReason,
+
+			): # get outta here
+				#log("blocking focus event")
+				#event.ignore()
+				#self.
+				return False
+
+		### first line is CORRECT, since we only want to trigger on key down
+		# but without also checking for focus events, this still triggers the focus system
+		# to pass back the focus to whatever previous widget, EVEN IF THE KEY EVENT IS FILTERED.
+		# the tab focus system seems super deeply embedded in Qt
+		if isinstance(event, QtGui.QKeyEvent):
+			log(event.key())
+			if event.type() == QtGui.QKeyEvent.ShortcutOverride:
+				log("blocking shortcut")
+				##### why do neither of these options do anything, the doc says you accept the shortcut event to disable it
+				#event.accept()
+				#event.ignore()
+				return True
 		if isinstance(event, QtGui.QKeyEvent) and event.type() == QtCore.QEvent.KeyPress:
-			log("eventFilter key event", watched, event)
+
+		#if isinstance(event, QtGui.QKeyEvent):
+			log("eventFilter key event", watched, event.key())
 			if event.key() in (QtCore.Qt.Key_Tab, QtCore.Qt.Key_Backtab):
 				#log("no tab for you")
 				if self._processingTab: return True # prevent feedback
@@ -152,7 +208,9 @@ class ViewEventFilter(QtCore.QObject):
 		if isinstance(event, QtGui.QHoverEvent):
 			"""update the ks mouse history """
 			watched.ks.mouseMoved(event)
-		return super().eventFilter(watched, event)
+
+		return False
+		#return super().eventFilter(watched, event)
 
 class WpCanvasView(QtWidgets.QGraphicsView):
 	"""add some conveniences to serialise camera positions
@@ -169,6 +227,17 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 		under the cursor to receive focus, if it's already got focus, etc
 	"""
 
+	### does absolutely nothing :D
+	# def focusNextChild(self):
+	# 	return True
+	# def focusPreviousChild(self):
+	# 	return False
+
+	# def nextInFocusChain(self):
+	# 	return self
+	# def previousInFocusChain(self):
+	# 	return self
+
 	if T.TYPE_CHECKING:
 		def scene(self)->WpCanvasScene: pass
 
@@ -181,10 +250,19 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 
 	cameraChanged = QtCore.Signal(dict)
 
+	# def focusNextPrevChild(self, next:bool):
+	# 	self.setFocus()
+	# 	return True
+
 	def __init__(self,scene:WpCanvasScene, parent=None,
 	             ):
 		super().__init__(parent)
 		self.setScene(scene)
+
+		# self.setTabOrder(self, self)
+		# self.parent().setTabOrder(self, self)
+
+		#self.setFocusPolicy(QtCore.Qt.FocusPolicy.ClickFocus)
 
 		self.ks = KeyState()
 		self.filter = ViewEventFilter(parent=self)
@@ -243,6 +321,8 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 	# def focusOutEvent(self, event:QtGui.QFocusEvent):
 	# 	log("focusOut event", event.reason() in (QtCore.Qt.FocusReason.TabFocusReason,
 	# 	                                         QtCore.Qt.FocusReason.BacktabFocusReason))
+	# 	self.clearFocus()
+	# 	return True
 
 	# endregion
 

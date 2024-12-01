@@ -63,6 +63,33 @@ def iterQGraphicsItems(rootItem, includeRoot=True):
 		toIter.extend(item.childItems())
 	return result
 
+
+class SceneEventFilter(QtCore.QObject):
+	def eventFilter(self, watched, event):
+		if isinstance(event, QtGui.QFocusEvent):
+			log("SCENE focus event", event)
+			eventTypeNameMap = {}
+			for k, v in QtCore.QEvent.__dict__.items():
+				try:
+					eventTypeNameMap[v] = k
+				except: continue
+			log(eventTypeNameMap[event.type()], event.reason())
+			eventReasonNameMap = {}
+			for k, v in QtCore.Qt.FocusReason.__dict__.items():
+				try:
+					eventReasonNameMap[v] = k
+				except: continue
+
+			if event.reason() in (
+					QtCore.Qt.FocusReason.TabFocusReason,
+					QtCore.Qt.FocusReason.BacktabFocusReason,
+					QtCore.Qt.FocusReason.OtherFocusReason,
+
+			): # get outta here
+				log("SCENE blocking focus event")
+				return True
+		return False
+
 class WpCanvasScene(QtWidgets.QGraphicsScene):
 	"""scene for a single canvas
 
@@ -78,9 +105,11 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 		doing anything really - THAT is another advantage of having everything as data
 	"""
 
+
 	def __init__(self, parent=None):
 		super().__init__(parent=parent)
-
+		self.filterObj = SceneEventFilter(self)
+		#self.installEventFilter(self.filterObj) # focus events don't make it to scene
 		self.objDelegateMap : dict[T.Any, set[QtWidgets.QGraphicsItem]] = defaultdict(set)
 		#self.delegateObjMap : dict[int, T.Any] = {} #delegates hold their own object reference
 

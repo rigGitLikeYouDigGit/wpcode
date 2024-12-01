@@ -181,7 +181,8 @@ class NodeDelegate(
 		#  but this makes layout so much more difficult
 		self.proxyW = QtWidgets.QGraphicsProxyWidget(parent=self
 		                                             )
-		self.w = ShrinkWrapWidget(parent=None)
+		#self.w = ShrinkWrapWidget(parent=None)
+		self.w = ShrinkWrapWidget(parent=self.scene())
 		self.w.setContentsMargins(QtCore.QMargins(0, 0, 0, 0))
 		self.w.setAutoFillBackground(False)
 		self.w.setAttribute(QtCore.Qt.WA_TranslucentBackground)
@@ -192,13 +193,15 @@ class NodeDelegate(
 		self.w.setLayout(self.wLayout)
 		self.wLayout.addLayout(self.iconHLayout)
 
+		self.proxyW.setFocusPolicy(QtCore.Qt.FocusPolicy.ClickFocus)
+
 
 		self.nameLine = StringWidget(self.node.ref("@N"),  # TODO: conditions
 		               parent=self.w,  # don't set node to empty name, you'll mess stuff up
 		               placeHolderText="",
 		               )
-		self.nameLine.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding,
-		                            QtWidgets.QSizePolicy.Fixed)
+		# self.nameLine.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding,
+		#                             QtWidgets.QSizePolicy.Fixed)
 		#self.wLayout.addWidget(self.nameLine)
 		#self.nameLine.setSizePolicy(shrinkPolicy)
 		self.iconHLayout.addWidget(self.nameLine)
