@@ -111,3 +111,24 @@ class WpCanvasElement(base,
 			event.accept()
 		return super().mousePressEvent(event)
 		pass
+
+
+class WpCanvasProxyWidget(QtWidgets.QGraphicsProxyWidget):
+	"""subclass to set up signals for focus gained and lost,
+	tearing my hair out on how to do it otherwise"""
+
+	# signatures are (top proxy widget, widget that gained/lost focus)
+	focusGained = QtCore.Signal(object, object)
+	focusLost = QtCore.Signal(object, object)
+
+	def focusInEvent(self, event):
+		#log("proxy focus in")
+		# no good way to tell where event came from right now,
+		# might remove the second arg
+		self.focusGained.emit(self, self)
+		return super().focusInEvent(event)
+
+	def focusOutEvent(self, event):
+		#log("proxy focus out")
+		self.focusLost.emit(self, self)
+		return super().focusOutEvent(event)

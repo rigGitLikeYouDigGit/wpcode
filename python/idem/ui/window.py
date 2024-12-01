@@ -44,6 +44,7 @@ class Window(QtWidgets.QWidget):
 		from wpui.theme.dark import applyStyle
 		#app.setStyleSheet(STYLE_SHEET)
 		applyStyle(app)
+
 		w = cls()
 		w.show()
 

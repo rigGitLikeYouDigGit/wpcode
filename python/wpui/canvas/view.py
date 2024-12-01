@@ -193,9 +193,12 @@ class ViewEventFilter(QtCore.QObject):
 
 		#if isinstance(event, QtGui.QKeyEvent):
 			log("eventFilter key event", watched, event.key())
+			log("focused widget", watched.focusWidget(), watched.hasFocus())
 			if event.key() in (QtCore.Qt.Key_Tab, QtCore.Qt.Key_Backtab):
 				#log("no tab for you")
 				if self._processingTab: return True # prevent feedback
+				if not watched.hasFocus(): return True
+				#if not watched.keyboardGrabber(): return True
 				self._processingTab = True
 				newEvent = QtGui.QKeyEvent(event.type(), event.key(), event.modifiers(),
 					                event.nativeScanCode(), event.nativeVirtualKey(),

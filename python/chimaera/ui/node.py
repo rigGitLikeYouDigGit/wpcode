@@ -1,6 +1,7 @@
 
-
 from __future__ import annotations
+import types, typing as T
+from wplib import log
 
 from wplib.object import Adaptor
 
@@ -179,10 +180,14 @@ class NodeDelegate(
 		# TODO: maybe make it easier to use multiple graphics widgets,
 		#  map of proxy widgets and holders etc
 		#  but this makes layout so much more difficult
-		self.proxyW = QtWidgets.QGraphicsProxyWidget(parent=self
-		                                             )
-		#self.w = ShrinkWrapWidget(parent=None)
-		self.w = ShrinkWrapWidget(parent=self.scene())
+		#self.proxyW = QtWidgets.QGraphicsProxyWidget(parent=self)
+		self.proxyW = WpCanvasProxyWidget(parent=self)
+		#log("proxyW", self.proxyW, isinstance(self.proxyW, QtWidgets.QWidget), isinstance(self.proxyW, QtCore.QObject),)
+		self.proxyW.setFlag(QtWidgets.QGraphicsItem.ItemIsFocusable, True)
+
+		#self.w = ShrinkWrapWidget(parent=self.proxyW)
+		#self.w = ShrinkWrapWidget(parent=self.scene())
+		self.w = ShrinkWrapWidget(parent=None)
 		self.w.setContentsMargins(QtCore.QMargins(0, 0, 0, 0))
 		self.w.setAutoFillBackground(False)
 		self.w.setAttribute(QtCore.Qt.WA_TranslucentBackground)

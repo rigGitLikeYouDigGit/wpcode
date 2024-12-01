@@ -21,7 +21,7 @@ from wpui.keystate import KeyState
 from wpui import lib as uilib
 from wplib.maths import shape, arr, fromArr, arrT
 
-from wpui.canvas.element import WpCanvasElement
+from wpui.canvas.element import WpCanvasElement, WpCanvasProxyWidget
 
 from wpui.canvas.connection import ConnectionPoint, ConnectionsPainter, ConnectionGroupDelegate
 
@@ -191,6 +191,32 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 			self.relationGraph, seedItem, key=key
 		)
 
+	def onEmbeddedWidgetGainFocus(self, widget:QtWidgets.QWidget,
+	                            ownerTopItem:QtWidgets.QGraphicsItem,
+	                            ):
+		"""called when an embedded widget is clicked, or otherwise gains focus -
+		in base QT, this doesn't properly REMOVE focus from the outer widget.
+
+		TODO:
+			we need to pass events and such to focusing embedded widgets, but without
+			going through the GRAPHICS VIEW that actually holds them.
+			seems crazy but also easier than trying to hack each case separately as we do here.
+		"""
+		log("scene embedded widget gained focus", widget, ownerTopItem)
+		log("current focus widget", QtWidgets.QApplication.focusWidget(), QtWidgets.QApplication.focusWidget() is widget)
+
+		"""
+		It seems embedded widgets are just fully invisible to the main application,
+		
+		"""
+		if QtWidgets.QApplication.focusWidget() is None:
+			return
+		if QtWidgets.QApplication.focusWidget() is not widget:
+			w = QtWidgets.QApplication.focusWidget()
+			w.clearFocus()
+			w.releaseKeyboard()
+
+
 	def addItem(self, item):
 		#from .element import WpCanvasElement
 		log("scene addItem", item, type(item))
@@ -198,6 +224,10 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 
 		# check through all children in case we need to connect up elements known "globally" to scene
 		for i in iterQGraphicsItems(item, includeRoot=True):
+			# check for embedded widgets, connect focus signals to scene-level slots
+			if isinstance(i, WpCanvasProxyWidget):
+				i.focusGained.connect(self.onEmbeddedWidgetGainFocus)
+
 			if not isinstance(i, WpCanvasElement):
 				continue # only process proper canvasElements
 			self.relationGraph.add_node(i)
@@ -442,6 +472,7 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 	def drawBackground(self, painter:QtGui.QPainter, rect):
 		""""""
 		painter.save()
+		painter.beginNativePainting()
 		painter.fillRect(rect, self.baseBrush)
 
 		painter.setPen(self.gridPen)
@@ -449,6 +480,7 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 
 		painter.setPen(self.coarsePen)
 		drawGridOverRect(rect, painter, cellSize=(self.coarseScale, self.coarseScale))
+		painter.endNativePainting()
 		painter.restore()
 
 if __name__ == '__main__':
