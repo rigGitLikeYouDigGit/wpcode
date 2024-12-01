@@ -186,7 +186,7 @@ class ViewEventFilter(QtCore.QObject):
 			if event.type() == QtGui.QKeyEvent.ShortcutOverride:
 				log("blocking shortcut")
 				##### why do neither of these options do anything, the doc says you accept the shortcut event to disable it
-				#event.accept()
+				event.accept()
 				#event.ignore()
 				return True
 		if isinstance(event, QtGui.QKeyEvent) and event.type() == QtCore.QEvent.KeyPress:
