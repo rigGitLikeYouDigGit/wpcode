@@ -9,6 +9,7 @@ from wpui.canvas import WpCanvasView
 from wpdex import *
 from wpdex.ui import StringWidget
 #from .catalogue import\ NodeCatalogue
+from wpui import lib as uilib
 
 if T.TYPE_CHECKING:
 	from .scene import ChimaeraScene
@@ -35,7 +36,7 @@ class ChimaeraView(WpCanvasView):
 
 		self.addKeyPressSlot(
 			#self.KeySlot(lambda view : self.nodePaletteLine, keys=(QtCore.Qt.Key_Tab, ))
-			self.KeySlot(self._onTabPressed, keys=(QtCore.Qt.Key_Tab, ))
+			self.KeySlot(self._onTabPressed, keys=(uilib.SAFE_TAB_KEY, ))
 		)
 
 		self.testFlag = False

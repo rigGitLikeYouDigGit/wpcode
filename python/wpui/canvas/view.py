@@ -145,75 +145,11 @@ class ViewEventFilter(QtCore.QObject):
 		honestly not one clue how to live with this
 
 		"""
-		#log("eventFilter", event.type(), event,)
 
-		if isinstance(event, QtGui.QFocusEvent):
-			eventTypeNameMap = {}
-			for k, v in QtCore.QEvent.__dict__.items():
-				try:
-					eventTypeNameMap[v] = k
-				except: continue
-			log("eventFilter FOCUS event",eventTypeNameMap[event.type()], event.reason())
-			eventReasonNameMap = {}
-			for k, v in QtCore.Qt.FocusReason.__dict__.items():
-				try:
-					eventReasonNameMap[v] = k
-				except: continue
-			if event.type() in (
-				#event.FocusOut,
-				event.FocusAboutToChange,
-			):
-
-				watched.releaseKeyboard()
-				log("released keyboard")
-			if event.reason() in (
-					QtCore.Qt.FocusReason.TabFocusReason,
-					QtCore.Qt.FocusReason.BacktabFocusReason,
-					QtCore.Qt.FocusReason.OtherFocusReason,
-
-			): # get outta here
-				#log("blocking focus event")
-				#event.ignore()
-				#self.
-				return False
-
-		### first line is CORRECT, since we only want to trigger on key down
-		# but without also checking for focus events, this still triggers the focus system
-		# to pass back the focus to whatever previous widget, EVEN IF THE KEY EVENT IS FILTERED.
-		# the tab focus system seems super deeply embedded in Qt
-		if isinstance(event, QtGui.QKeyEvent):
-			log(event.key())
-			if event.type() == QtGui.QKeyEvent.ShortcutOverride:
-				log("blocking shortcut")
-				##### why do neither of these options do anything, the doc says you accept the shortcut event to disable it
-				event.accept()
-				#event.ignore()
-				return True
-		if isinstance(event, QtGui.QKeyEvent) and event.type() == QtCore.QEvent.KeyPress:
-
-		#if isinstance(event, QtGui.QKeyEvent):
-			log("eventFilter key event", watched, event.key())
-			log("focused widget", watched.focusWidget(), watched.hasFocus())
-			if event.key() in (QtCore.Qt.Key_Tab, QtCore.Qt.Key_Backtab):
-				#log("no tab for you")
-				if self._processingTab: return True # prevent feedback
-				if not watched.hasFocus(): return True
-				#if not watched.keyboardGrabber(): return True
-				self._processingTab = True
-				newEvent = QtGui.QKeyEvent(event.type(), event.key(), event.modifiers(),
-					                event.nativeScanCode(), event.nativeVirtualKey(),
-					                event.nativeModifiers(), event.text(),
-					                event.isAutoRepeat(), event.count())
-				watched.keyPressEvent(newEvent)
-				newEvent.accept()
-				self._processingTab = False
-				return True
 		if isinstance(event, QtGui.QHoverEvent):
 			"""update the ks mouse history """
 			watched.ks.mouseMoved(event)
-
 		return False
-		#return super().eventFilter(watched, event)
 
 class WpCanvasView(QtWidgets.QGraphicsView):
 	"""add some conveniences to serialise camera positions
@@ -230,17 +166,6 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 		under the cursor to receive focus, if it's already got focus, etc
 	"""
 
-	### does absolutely nothing :D
-	# def focusNextChild(self):
-	# 	return True
-	# def focusPreviousChild(self):
-	# 	return False
-
-	# def nextInFocusChain(self):
-	# 	return self
-	# def previousInFocusChain(self):
-	# 	return self
-
 	if T.TYPE_CHECKING:
 		def scene(self)->WpCanvasScene: pass
 
@@ -253,25 +178,15 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 
 	cameraChanged = QtCore.Signal(dict)
 
-	# def focusNextPrevChild(self, next:bool):
-	# 	self.setFocus()
-	# 	return True
 
 	def __init__(self,scene:WpCanvasScene, parent=None,
 	             ):
 		super().__init__(parent)
 		self.setScene(scene)
 
-		# self.setTabOrder(self, self)
-		# self.parent().setTabOrder(self, self)
-
-		#self.setFocusPolicy(QtCore.Qt.FocusPolicy.ClickFocus)
-
 		self.ks = KeyState()
 		self.filter = ViewEventFilter(parent=self)
 		self.installEventFilter(self.filter)
-		#self.setMouseTracking(True)
-
 
 		self.setTransformationAnchor(self.NoAnchor) # ????
 		self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
@@ -306,28 +221,6 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 		self.moveCamera([0, 0], relative=False)
 		self.setFocusPolicy(QtCore.Qt.StrongFocus)
 
-	# region focus
-
-	# def focusNextPrevChild(self, next):
-	# 	"""this holds the focus on this widget, prevents Tab from moving it
-	# 	FOR NOW this is ok, inkeeping with Maya, Houdini node editor conventions
-	#
-	# 	HOWEVER, later allow separate mode for full Vim key master focus switching -
-	# 		maybe that needs some extra treatment
-	# 	"""
-	# 	return True
-	# def focusNextChild(self):
-	# 	return True
-	# def nextInFocusChain(self):
-	# 	return self
-	#
-	# def focusOutEvent(self, event:QtGui.QFocusEvent):
-	# 	log("focusOut event", event.reason() in (QtCore.Qt.FocusReason.TabFocusReason,
-	# 	                                         QtCore.Qt.FocusReason.BacktabFocusReason))
-	# 	self.clearFocus()
-	# 	return True
-
-	# endregion
 
 	def addKeyPressSlot(self,
 	                    slot: (T.Callable[[WpCanvasView], (QtWidgets.QWidget, T.Any)],
@@ -402,7 +295,6 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 		TODO: for some reason tab events trigger this 3 times at once -
 			fix this sometime, for now push through it
 		"""
-		#log("key press", event.key(), uiconstant.keyDict[event.key()])
 
 		self.ks.keyPressed(event)
 		result = self.checkFireKeySlots(event)
@@ -528,12 +420,6 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 				self.scene().itemsDragged(items=self.scene().selectedItems(),
 				                          delta=self.ks.mouseDelta(forKey=self.ks.LMB))
 		super().mouseMoveEvent(event)
-
-
-
-	# def dragMoveEvent(self, event:QtGui.QDragMoveEvent):
-	#
-	# 	self.ks.mouseMoved(event)
 
 
 

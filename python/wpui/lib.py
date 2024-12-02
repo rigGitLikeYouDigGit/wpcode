@@ -28,6 +28,57 @@ shrinkingPolicy = QtWidgets.QSizePolicy(
 	QtWidgets.QSizePolicy.Fixed,
 )
 
+"""after several wasted days, I conclude the most scalable, most
+sane way to avoid built-in Qt hotkey behaviour is to avoid it entirely.
+Mainly for tab/backTab, here we define other key codes to replace them with,
+at the application level
+"""
+SAFE_TAB_KEY = QtCore.Qt.Key_Dead_Macron # jamais oublie
+SAFE_BACKTAB_KEY = QtCore.Qt.Key_Dead_Small_Schwa
+def filterAppKeyTabEvent(app:QtCore.QCoreApplication,
+                         watched:QtCore.QObject,
+                         event:QtCore.QEvent):
+	"""call this from within an app-level eventFilter() method -
+	if result is not None, return it then and there
+	"""
+	if event.type() == QtCore.QEvent.ShortcutOverride:
+		event.accept()
+		return True
+	if not isinstance(event, QtGui.QKeyEvent):
+		return None
+	if event.key() not in (QtCore.Qt.Key_Tab, QtCore.Qt.Key_Backtab):
+		return None
+	# replace with safe, underused keys
+	if event.key() == QtCore.Qt.Key_Tab:
+		newEvent = QtGui.QKeyEvent(event.type(), SAFE_TAB_KEY, event.modifiers(),
+					                event.nativeScanCode(), event.nativeVirtualKey(),
+					                event.nativeModifiers(), event.text(),
+					                event.isAutoRepeat(), event.count())
+	elif event.key() == QtCore.Qt.Key_Backtab:
+		newEvent = QtGui.QKeyEvent(event.type(), SAFE_BACKTAB_KEY, event.modifiers(),
+		                           event.nativeScanCode(), event.nativeVirtualKey(),
+		                           event.nativeModifiers(), event.text(),
+		                           event.isAutoRepeat(), event.count())
+	else: raise RuntimeError
+	# send new event (hopefully this doesn't cause any recursion weirdness within Qt)
+	app.notify(watched, newEvent)
+
+	# accept original event and return True
+	event.accept()
+	return True
+
+class AppTabFilter(QtCore.QObject):
+	"""convenience, if no other filters are needed at app-level, just
+	initialise this object with the QApplication as parent,
+	and install it as a filter"""
+	def eventFilter(self, watched, event):
+		baseResult = filterAppKeyTabEvent(self.parent(), watched, event)
+		if baseResult is None:
+			return False
+		return baseResult
+
+
+
 def pointLength(pt:(QtCore.QPoint, QtCore.QPointF))->float:
 	"""for some inane reason QT doesn't supply this"""
 	return math.sqrt(pow(pt.x(), 2) + pow(pt.y(), 2))
