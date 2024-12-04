@@ -311,12 +311,31 @@ class DeepVisitor:
 
 	def dispatchPass(self,
 	                 fromObj:T.Any,
-	                 passParams:VisitPassParams,
-	                 #visitFnTemplate:visitFnType=None,
-	                 **kwargs
+	                 passParams:VisitPassParams=None,
+
+					topDown:bool = True,
+					depthFirst:bool = True,
+					visitKwargs: dict = None,  # if given, kwargs to pass to visit function
+					visitFn:VisitPassParams.visitFnType = None, # if given, will yield (original, result) pairs or use result as new transformed object
+					transformVisitedObjects: bool = False,  # if true, modifies visited objects - yields (original, transformed) pairs
+					passChildDataObjects:bool = False, # if true, yield full ChildData objects and pass them to visitFn, not just obj
+					visitRoot:bool = True, # if true, visit root object
+
+	                 **kwargs # extra kwargs passed as VisitPassParams.visitKwargs
 	                 ):
 		"""dispatch a single pass of the visitor
+		UPDATE: this system is robust but unwieldy to call in code -
+			need to first create a visitor object, then a passParams object,
+			then call this method.
+			adding flags to allow basic usage with this method alone
+
 		"""
+		passParams = passParams or VisitPassParams(
+			topDown=topDown, depthFirst=depthFirst, visitKwargs=kwargs,
+			visitFn=visitFn, transformVisitedObjects=transformVisitedObjects,
+			passChildDataObjects=passChildDataObjects,
+			visitRoot=visitRoot
+		)
 
 		if passParams.transformVisitedObjects and passParams.visitFn is None:
 			raise ValueError("Cannot transform objects without a visit function")

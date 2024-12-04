@@ -13,7 +13,7 @@ from wptree import Tree
 from wpui import lib
 from wpui.widget.lantern import Status, Lantern
 from wpui.treemenu import buildMenuFromTree
-from wpdex.ui import AtomicWidgetOld, StringWidget, FileStringWidget, FileBrowserButton
+from wpdex.ui import AtomicWidgetOld, ExpWidget, FileStringWidget, FileBrowserButton
 from wpdex import react
 
 from wp.pipe.asset import Asset, Show, StepDir, search
@@ -106,7 +106,7 @@ class AssetSelectorWidget(
 		assert hasattr(lineValueRx, "rx")
 		assert react.getRx(lineValueRx)
 		#assert isinstance(lineValueRx, react.rx)
-		self.line = StringWidget(
+		self.line = ExpWidget(
 			# value=self.rxValue().rx.where(
 			# 	self.rxValue().strPath(),
 			# 	"<None>"),

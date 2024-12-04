@@ -620,6 +620,16 @@ class ExpSyntaxProcessor:
 	def parse(self,
 	          s:str,
 	          expGlobals:dict):
+		"""this returns a live lambda function for reasons by which I am not wholly convinced -
+		the intention is that you can embed live logic into the expression itself,
+		then get live updates by eval'ing the compiled expression, without having to recompile
+		every time (which takes orders of magnitude longer)
+
+		but it does feel a bit weird
+
+		TODO: we still pass in a static snapshot of the globals to the compile
+			system - we can still make it more dynamic
+		"""
 		from wplib import log
 
 		self.currentExpGlobals = expGlobals

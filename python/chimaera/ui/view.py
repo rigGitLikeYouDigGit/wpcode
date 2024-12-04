@@ -7,7 +7,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 
 from wpui.canvas import WpCanvasView
 from wpdex import *
-from wpdex.ui import StringWidget
+from wpdex.ui import ExpWidget
 #from .catalogue import\ NodeCatalogue
 from wpui import lib as uilib
 
@@ -24,7 +24,7 @@ class ChimaeraView(WpCanvasView):
 
 		# simple node creation search bar - in future consider visual panes
 		# might be useful to pull in different assets
-		self.nodePaletteLine = StringWidget(
+		self.nodePaletteLine = ExpWidget(
 			value="",
 			parent=self,
 			options=self.scene().rxGraph().getAvailableNodeTypes().keys()

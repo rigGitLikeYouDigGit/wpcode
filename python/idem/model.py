@@ -8,6 +8,8 @@ from pathlib import Path
 
 from wplib import Sentinel, log
 from wplib.object import Signal
+from wplib.time import TimeBlock
+from wplib.serial import serialise, deserialise
 from wptree import Tree
 from wpdex import *
 from wp import Asset, constant
@@ -28,12 +30,21 @@ Q: now that we're so advanced, is there really much stopping us from going
 	full object-hierarchy instead of full container-hierarchy?
 A: yes, because user-exposed data has to be editable by hand,
 	that's more difficult if you have to express a custom object in strings
+	
+^ now tackling the above with typed/augmented tree branches in node settings, where needed
 """
+
+DEFAULT_CHI = "plan.chi"
 
 def getDefaultAsset():
 	return Asset.topAssets()[0]
 
 class IdemSession(Modelled):
+	"""single instance of Idem
+	TODO:
+		- DCC environment for this session object
+		- support having no asset selected - currently snaps to whatever the default asset is
+	"""
 
 	@classmethod
 	def dataT(cls):
@@ -46,6 +57,40 @@ class IdemSession(Modelled):
 		root["filePath"] = Path("plan.chi")
 		root["graph"] = IdemGraph.create(name="graph")
 		return root
+
+	#TODO: these methods will return static values I think - if needed,
+	#   caller can wrap results directly in WpDexProxy and it should find its
+	#   way back to where needed
+	def asset(self)->Asset:
+		return self.rawData()["asset"]
+
+	def fullChiPath(self)->Path:
+		return self.asset().diskPath() / self.data["filePath"]
+
+	#region serialisation
+	def saveSession(self, toPath:Path=None):
+		"""serialises the current session to the given path, or to the currently
+		selected asset/file if none given
+
+		timing: with a single basic node, serialisation takes about 0.005 seconds
+
+		flatbuffers : strongly typed, non-starter for general serialisation
+		flexbuffers : dynamically typed, smaller in memory but slower (how much slower?) than flatbuffers
+		protobuf : typing.Any
+		capnproto: AnyPointer
+
+		"""
+		toPath = toPath or self.fullChiPath()
+		log("begin saving scene")
+		with TimeBlock() as t:
+			data = self.serialise()
+		log("saved scene in ", t.time)
+
+
+
+
+
+	#endregion
 
 if __name__ == '__main__':
 	s = IdemSession.create(name="testIdem")
@@ -72,80 +117,9 @@ if __name__ == '__main__':
 # from sketches it might evidently let us build more
 # complex behaviour, and give a more stable structure
 for the path referencing
+
+sketches below were superceded by other parts of the current system:
+	- reactive widgets to update ui when internal state changes
+	- typed / augmented tree branches used when declaring user-facing structures
+	- WpDex and WpDexController managing path-based overrides 
 """
-
-class Field:
-	""" TEST
-	really just reinventing half of param
-
-	BUT here the advantage is we don't declare fields in the context of parent
-	types, we just define them as their own objects and place them in
-	a tree wherever needed
-
-	persistent slot in structure holding typed information
-
-	PASS IN PARENT if needed to retrieve value
-
-	field itself has no additional address?
-
-	if we don't do it this way, and do EVERYTHING by paths, we still need to set
-	all the rules, validation, signals etc but without strong access to the actual values
-	so try active fields for now
-
-	"""
-
-	def __init__(self, valType:(type, tuple[type], types.FunctionType),
-	             value=None, **kwargs ):
-		self.valType = valType
-		self._value = value
-
-		self.valueChanged = Signal("valueChanged")
-
-	def setValue(self, val):
-		self._value = val
-	def getValue(self):
-		return self._value
-
-
-class PathField(Field):
-
-	def __init__(self, valType,
-	             value=None,
-	             **kwargs):
-		super().__init__(valType, value, **kwargs)
-
-DEFAULT_CHI = "strategy.chi"
-
-def newModel():
-	""" add """
-	root = Tree("root")
-	root["asset"] = AssetField(default=None,
-	                           optional=False,
-	                           single=True
-	                           )
-	#root["chiPath"] = PathField(default=lambda : root["asset"].value.diskPath() / "stategy.chi")
-	root["chiPath"] = PathField(
-		parentDir=ref("../asset").diskPath(),
-		default="strategy.chi",
-		conditions=[ref("v").in_(ref("../asset").diskPath().iterdir())]
-	)
-
-	# set default paths
-
-	# # if we use functions and callbacks
-	# root["asset"].valueChanged.connect(
-	# 	lambda **kwargs : root["chiPath"].setValue(DEFAULT_CHI))
-	#
-	# # if we try something more declarative?
-	# root["chiPath"].setDefault(DEFAULT_CHI)
-	# # some way to 'lift' a regular python function into a pipeline to call later?
-	# #root["asset"].setDefault(Asset.fromDiskPath(root["chiPath"]))
-	#
-	# root["asset"].setDefault(lambda **kwargs : Asset.fromDiskPath(root["chiPath"]))
-
-
-
-
-
-
-	pass

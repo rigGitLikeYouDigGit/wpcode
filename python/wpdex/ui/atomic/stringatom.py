@@ -21,6 +21,10 @@ from wpdex.ui.atomic.base import AtomicWidgetOld
 from wpui.widget import FileBrowserButton, Lantern
 from wpui.treemenu import buildMenuFromTree
 
+# i summon ancient entities
+from wpexp.syntax import SyntaxPasses, ExpSyntaxProcessor
+
+
 """
 
 
@@ -111,15 +115,16 @@ class _MenuLineEdit(QtWidgets.QLineEdit):
 			#self._lastHighlighted = ""
 
 
-class StringWidget(
+class ExpWidget(
+	inheritance.MetaResolver,
 	QtWidgets.QLineEdit, AtomicWidgetOld,
-	metaclass=inheritance.resolveInheritedMetaClass(
-	QtWidgets.QLineEdit, AtomicWidgetOld
-	)
+	# metaclass=inheritance.resolveInheritedMetaClass(
+	# QtWidgets.QLineEdit, AtomicWidgetOld
+	# )
 ):
 	"""TODO:
-	absolutely unify this with the ExpWidget -
-	control through dex or path rules or something
+	control settings through dex or path rules or something, it's getting
+	too complex to define as __init__ args
 	"""
 
 	def __init__(self, value="", parent=None,
@@ -128,7 +133,10 @@ class StringWidget(
 	             warnLive=False,
 	             light=False,
 	             enableInteractionOnLocked=False,
-	             placeHolderText=""
+	             placeHolderText="",
+	             allowEval=False,
+	             forceResultType:(type, tuple[type])=None,
+
 	             ):
 		QtWidgets.QLineEdit.__init__(self, parent=parent)
 		AtomicWidgetOld.__init__(self, value=value,
@@ -140,18 +148,20 @@ class StringWidget(
 		self.setCompleter(QtWidgets.QCompleter(self))
 
 		self.menuTree = Tree("menu")
+		self.allowEval = allowEval
+		self.forceResultType = forceResultType
 
-		self.options = options if isinstance(options, rx) else rx(options)
+		self.options = options if isinstance(options, rx) else WX(options)
 		self.options.rx.watch(
 			self._setOptions,
-			onlychanged=False)
-		#self.options.rx.value = self.options.rx.value
-		#self.options.rx.value = self.options.rx.value
-		#react.PING(self.options)
-		self._placeHolderText = rx(placeHolderText)
-		self._placeHolderText.rx.watch(self.setPlaceholderText)
-		canBeSet = react.canBeSet(self.rxValue())
-		log(self, "init can be set", canBeSet)
+			onlychanged=False,
+			fire=True
+		)
+
+		self._placeHolderText = WX(placeHolderText)
+		self._placeHolderText.rx.watch(self.setPlaceholderText, fire=True)
+		# canBeSet = react.canBeSet(self.rxValue())
+		# log(self, "init can be set", canBeSet)
 		#assert not canBeSet
 
 		# connect signals
@@ -190,6 +200,49 @@ class StringWidget(
 	def _processValueForUi(self, rawValue):
 		return toStr(rawValue)
 
+	def _processResultFromUi(self, rawResult:str):
+		"""
+		here we do any dynamic eval if it's allowed
+		"""
+		if not EVAL(self.allowEval):
+			return rawResult
+
+		#log("eval-ing", rawResult, str(rawResult), f"{rawResult}")
+		if not rawResult: # empty string, return empty result - by default a new init of whatever the current value type is
+			return type(self.value())()
+
+		# set syntax passes - for now only one to catch raw strings
+		#TODO: rework a decent bit of the syntax passes, but it's finally
+		#   WORKING IN SITU :D
+		rawStrPass = SyntaxPasses.NameToStrPass()
+		ensureLambdaPass = SyntaxPasses.EnsureLambdaPass()
+		processor = ExpSyntaxProcessor(
+			syntaxStringPasses=[rawStrPass, ensureLambdaPass],
+			syntaxAstPasses=[rawStrPass, ensureLambdaPass]
+		)
+		result = processor.parse(rawResult, {})
+		#log("parsed", result, type(result))
+		# always returns a lambda function - more consistent that way
+		result = result()
+
+		# check if result type has to be coerced
+		if self.forceResultType is None:
+			return result
+
+		forceResultType = EVAL(self.forceResultType)
+		# check if it's already an instance of the type(s) given
+		if isinstance(result, forceResultType):
+			return result
+		# try to coerce type one by one
+		forceResultType = forceResultType if isinstance(forceResultType, tuple) else ( forceResultType, )
+		for i in forceResultType:
+			try:
+				return i(result)
+			except:
+				continue
+		raise TypeError(self, f"Cannot convert string eval'd value {result} to one of types {forceResultType}")
+
+
 	#### TODO #####
 	#       come back and tangle with the highlighting on option selection
 	#           really make it sorry for talking back
@@ -219,7 +272,7 @@ class StringWidget(
 		
 
 
-class FileStringWidget(StringWidget):
+class FileStringWidget(ExpWidget):
 	"""
 	we might declare this as
 	path = PathWidget(parent=None,
@@ -268,8 +321,8 @@ class FileStringWidget(StringWidget):
 		self.dialogCaption = rx(dialogCaption) if dialogCaption else \
 			rx("Choose {}").format(self.fileMask.rx.pipe(str))
 
-		StringWidget.__init__(self, value, parent,
-		                            placeHolderText=placeHolderText)
+		ExpWidget.__init__(self, value, parent,
+		                   placeHolderText=placeHolderText)
 
 		# AtomicWidget.__init__( self, value=value, #name=name
 		#                        )

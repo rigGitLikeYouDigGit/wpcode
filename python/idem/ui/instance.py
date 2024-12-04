@@ -43,6 +43,12 @@ class IdemWidget(QtWidgets.QWidget):
 
 	aero is fleeting
 	mondrian is forever
+
+	TODO:
+		- serialisation -
+			- consider the errors that can occur on loading file - assets might be invalid,
+				python types might have moved in code -
+				have UI to check for all of these, present cases to user, to be resolved
 	"""
 
 	def __init__(self,
@@ -93,12 +99,19 @@ class IdemWidget(QtWidgets.QWidget):
 		l.addWidget(self.graphW, 0, 1, 4, 3)
 		l.addWidget(self.logW, 4, 1, 1, 3)
 
-		# test
-		#log("get root")
-		#log(uilib.rootWidget(self.filePathW))
-		#log(uilib.widgetParents(self.filePathW))
+		saveAction = QtWidgets.QAction(self)
+		# QtCore.Qt.CTRL != QtCore.Qt.Key_Control - the more you know
+		saveAction.setShortcut(QtGui.QKeySequence(QtCore.Qt.CTRL +
+		                                          QtCore.Qt.Key_S))
+		saveAction.triggered.connect(self.saveSession)
+		self.addAction(saveAction)
 
 
+	def saveSession(self, toPath:Path=None):
+		"""serialises the current session to the given path, or to the currently
+		selected asset/file if none given
+		"""
+		self.session.saveSession(toPath=toPath)
 
 
 

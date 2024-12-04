@@ -9,7 +9,7 @@ from PySide2 import QtCore, QtWidgets, QtGui
 
 from wpui.canvas import *
 
-from wpdex.ui import StringWidget, AtomicView, AtomicWindow
+from wpdex.ui import ExpWidget, AtomicView, AtomicWindow
 from wpdex import WpDexProxy, WX, WpDex
 from wpui.widget.collapsible import ShrinkWrapWidget
 
@@ -201,10 +201,10 @@ class NodeDelegate(
 		self.proxyW.setFocusPolicy(QtCore.Qt.FocusPolicy.ClickFocus)
 
 
-		self.nameLine = StringWidget(self.node.ref("@N"),  # TODO: conditions
-		               parent=self.w,  # don't set node to empty name, you'll mess stuff up
-		               placeHolderText="",
-		               )
+		self.nameLine = ExpWidget(self.node.ref("@N"),  # TODO: conditions
+		                          parent=self.w,  # don't set node to empty name, you'll mess stuff up
+		                          placeHolderText="",
+		                          )
 		# self.nameLine.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding,
 		#                             QtWidgets.QSizePolicy.Fixed)
 		#self.wLayout.addWidget(self.nameLine)

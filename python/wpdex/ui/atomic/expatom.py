@@ -14,7 +14,7 @@ from wpdex import *
 from wpexp.syntax import SyntaxPasses, ExpSyntaxProcessor
 
 
-class ExpWidget(MetaResolver, QtWidgets.QLineEdit, AtomicWidgetOld):
+class ExpWidgetOld(MetaResolver, QtWidgets.QLineEdit, AtomicWidgetOld):
 	"""general-purpose text edit to
 	allow defining new values as whatever is eval'd
 	on commit

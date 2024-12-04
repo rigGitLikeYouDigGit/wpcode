@@ -41,9 +41,10 @@ def filterAppKeyTabEvent(app:QtCore.QCoreApplication,
 	"""call this from within an app-level eventFilter() method -
 	if result is not None, return it then and there
 	"""
-	if event.type() == QtCore.QEvent.ShortcutOverride:
-		event.accept()
-		return True
+	# if event.type() == QtCore.QEvent.ShortcutOverride:
+	# 	if event.key() == Qt
+	# 	event.accept()
+	# 	return True
 	if not isinstance(event, QtGui.QKeyEvent):
 		return None
 	if event.key() not in (QtCore.Qt.Key_Tab, QtCore.Qt.Key_Backtab):

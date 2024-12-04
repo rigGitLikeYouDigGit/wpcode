@@ -115,6 +115,21 @@ class Wreactive_ops(reactive_ops):
 	# 		)
 	# 	self._reactive._wrapper.object = resolve_value(new)
 
+	def watch(self, fn=None, onlychanged=True, queued=False, precedence=0, fire=False):
+		"""
+		Adds a callable that observes the output of the pipeline.
+		If no callable is provided this simply causes the expression
+		to be eagerly evaluated.
+
+		Added "fire" flag to call given function once, after bind
+		"""
+		if precedence < 0:
+			raise ValueError("User-defined watch callbacks must declare "
+							 "a positive precedence. Negative precedences "
+							 "are reserved for internal Watchers.")
+		self._watch(fn, onlychanged=onlychanged, queued=queued, precedence=precedence)
+		if fire:
+			fn(self.value)
 
 class WX(rx):
 	"""By default, printing an rx object freaks out because it returns
@@ -122,6 +137,7 @@ class WX(rx):
 
 	putting in caps so that it's obvious when we do stuff with it
 	"""
+	rx : Wreactive_ops
 	def __repr__(self):
 		try:
 			return f"WX({repr(self.rx.value)})"
@@ -189,3 +205,5 @@ class WX(rx):
 			return rootDex.access(rootDex, path, values=False, one=True).getValueProxy()
 		if value:
 			return self.rx.value
+
+

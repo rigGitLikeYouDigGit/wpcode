@@ -8,16 +8,6 @@ from wplib.inheritance import MetaResolver
 from wpdex import WpDex, SeqDex, WpDexProxy, DictDex
 from wpdex.ui.atomic import AtomicWidgetOld, AtomicView, AtomicStandardItemModel, AtomStandardItem
 
-# class DictKeyStandardModel(AtomicStandardItemModel):
-#
-# 	def _processValueForUi(self, rawValue):
-# 		assert isinstance(rawValue, str) # internal key of the dex (for the value that holds the actual dict key) should always be a string
-# 		if rawValue.startswith("key:"):
-# 			rawValue = rawValue.split("key:", 1)[0]
-# 		return rawValue
-#
-# 	def
-
 
 class DictDexModel(AtomicStandardItemModel):
 	forTypes = (DictDex, )
