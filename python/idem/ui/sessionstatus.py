@@ -5,6 +5,7 @@ from wplib import log
 import numpy as np
 from PySide2 import QtCore, QtGui, QtWidgets
 
+from wplib.inheritance import MetaResolver, resolveInheritedMetaClass
 from wpui.widget import Status
 from wpdex import *
 from wpdex.ui import AtomicWidgetOld
@@ -33,7 +34,7 @@ class CustomProperty(QtCore.QObject):
 
 
 
-class Blinker(QtCore.QObject):
+class _Blinker(QtCore.QObject):
 
 	def __init__(self,
 	             propertyName:str,
@@ -80,7 +81,12 @@ class Blinker(QtCore.QObject):
 		self.anim.setCurrentTime(0)
 		self.anim.start(policy=QtCore.QAbstractAnimation.DeletionPolicy.KeepWhenStopped)
 
-class BlinkLight(AtomicWidgetOld, QtWidgets.QWidget):
+class BlinkLight(MetaResolver,
+
+                 QtWidgets.QWidget,
+AtomicWidgetOld,
+	#metaclass=resolveInheritedMetaClass(AtomicWidgetOld, QtWidgets.QWidget)
+):
 	"""return a round widget that blinks a solid colour -
 
 	TODO:
@@ -88,21 +94,27 @@ class BlinkLight(AtomicWidgetOld, QtWidgets.QWidget):
 		that feels like inversion to me
 		this should only ever be a display of activity, not a driver
 	"""
+	Status = Status
 	def __init__(self, parent=None,
-	             value:Status.T()=Status.Neutral):
+	             value:Status.T()=Status.Neutral,
+	             size=20):
 		QtWidgets.QWidget.__init__(self, parent)
 		AtomicWidgetOld.__init__(self, value=value)
-		self.blinker = Blinker(propertyName="brightness",
-		                       )
+		self.blinker = _Blinker(propertyName="brightness",
+		                        )
 		self.brightness = 0.0
 		self.solid = None
 		self.blinker.valueChanged.connect(lambda f : self.setBrightness(f))
 		self.rxValue().rx.watch(lambda *a : self.repaint(), onlychanged=False)
 		self.setAutoFillBackground(False)
-		self.setFixedSize(20, 20)
+		self.setFixedSize(size, size)
 		self.setContentsMargins(0, 0, 0, 0)
 
+	def _setRawUiValue(self, value):
+		self.blinker.blink()
 
+	def _rawUiValue(self):
+		return
 
 	def setBrightness(self, f):
 		self.brightness = f
@@ -153,29 +165,87 @@ class BlinkLight(AtomicWidgetOld, QtWidgets.QWidget):
 		# painter.drawEllipse(self.rect())
 
 
-class SessionDisplayWidget(QtWidgets.QWidget):
+class ProcessStatusWidget(QtWidgets.QFrame):
 	"""overall tab to display live dcc sessions -
 	on left, logo and session name
 	on right, 3 lights - status, outgoing, incoming
 
+	TODO: should this include a log output from that process?
+
 	"""
+	
+	def __init__(self,
+	             parent=None,
+	             name="no_process",
+	             processData="no_data"):
+		super().__init__(parent)
+
+		self.nameLabel = QtWidgets.QLabel("", parent=self)
+		self.nameLabel.setEnabled(False)
+		self.processLabel = QtWidgets.QLabel("", parent=self)
+		self.processLabel.setEnabled(False)
+
+		lightSize = 10
+		self.healthLight = BlinkLight(parent=self, value=Status.Neutral, size=lightSize)
+		self.sendLight = BlinkLight(parent=self, value=Status.Outgoing, size=lightSize)
+		self.recvLight = BlinkLight(parent=self, value=Status.Incoming, size=lightSize)
+
+		labelL = QtWidgets.QVBoxLayout()
+		labelL.addWidget(self.nameLabel)
+		labelL.addWidget(self.processLabel)
+		labelL.setContentsMargins(2, 2, 2, 2)
+
+		lightL = QtWidgets.QVBoxLayout()
+		lightL.addWidget(self.healthLight)
+		lightL.addWidget(self.sendLight)
+		lightL.addWidget(self.recvLight)
+		lightL.setContentsMargins(1, 1, 1, 1)
+
+		hl = QtWidgets.QHBoxLayout()
+		hl.addLayout(labelL)
+		hl.addLayout(lightL)
+		hl.setContentsMargins(0, 0, 0, 0)
+		self.setLayout(hl)
+
+		# gl = QtWidgets.QGridLayout()
+		# gl.addWidget(self.nameLabel, 0, 0, 3, 6)
+		# gl.addWidget(self.processLabel, 3, 0, 3, 6)
+		#
+		# gl.addWidget(self.healthLight, 0, 7, 2, 1)
+		# gl.addWidget(self.sendLight, 2, 7, 2, 1)
+		# gl.addWidget(self.recvLight, 4, 7, 2, 1)
+		# gl.setContentsMargins(0, 0, 0, 0)
+		# self.setLayout(gl)
+
+		self.setProcessName(name)
+		self.setProcessData(processData)
+
+	#TODO: no idea what to do here
+	def setProcessName(self, name):
+		self.nameLabel.setText(name)
+	def setProcessData(self, data):
+		self.processLabel.setText(data)
+	
 
 if __name__ == '__main__':
 
 	app = QtWidgets.QApplication()
 
-	w = QtWidgets.QWidget()
-	l = QtWidgets.QVBoxLayout()
-	w.setLayout(l)
-	light = BlinkLight(parent=w,
-	                   value=Status.Outgoing)
-	l.addWidget(light)
-	l.setContentsMargins(0, 0, 0, 0)
-	timer = QtCore.QTimer(parent=w)
+	# w = QtWidgets.QWidget()
+	# l = QtWidgets.QVBoxLayout()
+	# w.setLayout(l)
+	# light = BlinkLight(parent=w,
+	#                    value=Status.Outgoing)
+	# l.addWidget(light)
+	# l.setContentsMargins(0, 0, 0, 0)
+	# timer = QtCore.QTimer(parent=w)
+	#
+	# timer.setInterval(1000)
+	# timer.timeout.connect(lambda *a : light.blink())
+	# timer.start()
 
-	timer.setInterval(1000)
-	timer.timeout.connect(lambda *a : light.blink())
-	timer.start()
+	w = ProcessStatusWidget()
+
 	w.show()
 	app.exec_()
 

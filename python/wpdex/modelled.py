@@ -62,6 +62,12 @@ class Modelled(#Visitable,
 	# def dataChangedSignal(self, path:Pathable.pathT=()):
 	# 	return self.data.ref(path).
 
+	def setDataModel(self, data:dataT()):
+		"""transplant the core WpDexProxy to the new data object -
+		this should preserve and update any references
+		made relative to the proxy object"""
+		self.data._setProxyTarget(self.data, data)
+
 	def encode(self, encodeParams:dict=None) ->dict:
 		return self.rawData()
 	@classmethod

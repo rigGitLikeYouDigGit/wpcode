@@ -735,6 +735,8 @@ class ChimaeraNode(Modelled,
 	if T.TYPE_CHECKING:
 		def __init__(self, dataOrNodeName:(ChimaeraNode, Tree, str)): ...
 
+	# def graph(self)->T.Optional[ChimaeraNode]:
+	# 	"""return the top-level of """
 
 
 	def childObjects(self, params:PARAMS_T) ->CHILD_LIST_T:
@@ -824,12 +826,18 @@ class ChimaeraNode(Modelled,
 		def branches(self)->list[ChimaeraNode]: pass
 
 	#region user methods
-	def getContextMenuOptions(self, clickedItem, selectedItems=None)->T.Optional[Tree]:
-		"""clicked item will be self if user just clicks on node,
-		or the specific branch item from ui if clicked directly
-
+	if T.TYPE_CHECKING: #### ONLY FOR TYPING #####
+		from PySide2 import QtCore, QtGui, QtWidgets
+	def getContextMenuTree(self,
+	                       event:QtGui.QMouseEvent=None,
+	                       uiData:dict=None)->T.Optional[Tree]:
+		"""
+		BRIDGE method called by UI - if this is called, assume a valid QApplication is running,
+		screen is being painted, etc
+		pass in the event of the click, and whatever UI data you want to pack in,
 		Return a tree of actions with lambdas as values
 		"""
+
 
 	#endregion
 

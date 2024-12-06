@@ -69,7 +69,7 @@ def EVAL(i, *args, **kwargs):
 		# evaluate all arguments, then function itself
 		fargs, fkwargs = EVALA(*i.args), EVALK(**i.keywords)
 		return i.func(*fargs, **fkwargs)
-	if isinstance(i, types.FunctionType):
+	if isinstance(i, (types.FunctionType, types.MethodType)):
 		return i(*EVALA(*args), **EVALK(**kwargs))
 	return i
 

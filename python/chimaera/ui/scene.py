@@ -1,8 +1,11 @@
 
 from __future__ import annotations
+import typing as T, types
 
+from PySide2 import QtCore, QtGui, QtWidgets
 from chimaera import ChimaeraNode
 
+from wptree import Tree
 from wpui.canvas import *
 from wplib.inheritance import resolveInheritedMetaClass
 from wpdex import *
@@ -91,7 +94,16 @@ class ChimaeraScene(
 		log("endDelegates", endDelegates)
 
 
-
+	# def getContextMenuTree(self,
+	#                        event:QtGui.QMouseEvent=None,
+	#                        #selectedItems:list[WpCanvasElement]
+	#                        )->T.Optional[Tree]:
+	# 	"""called by view on context menu request -
+	# 	DO NOT get context options from nodes here, view
+	# 	collates that"""
+	# 	t = Tree("sceneContext")
+	# 	t["open"] = lambda *a, *k : self.value()
+	# 	return
 
 
 	pass

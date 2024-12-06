@@ -21,11 +21,11 @@ from wpdex import WpDexProxy
 from wplib.serial import Serialisable
 
 from wpui.keystate import KeyState
-from wpui import lib as uilib, constant as uiconstant
+from wpui import lib as uilib, constant as uiconstant, treemenu
 
 if T.TYPE_CHECKING:
 	from .scene import WpCanvasScene
-	from .element import WpCanvasItem
+	from .element import WpCanvasElement
 
 class WpCanvasMiniMap(QtWidgets.QWidget):
 	"""give a houdini-style overview of where the viewport is, in relation
@@ -121,6 +121,10 @@ class WpCanvasMiniMap(QtWidgets.QWidget):
 
 
 class ViewEventFilter(QtCore.QObject):
+	"""
+	- update mouse state on ks
+	- zoom scene on scroll in/out
+	"""
 
 	def __init__(self, parent=None):
 		super().__init__(parent)
@@ -149,6 +153,26 @@ class ViewEventFilter(QtCore.QObject):
 		if isinstance(event, QtGui.QHoverEvent):
 			"""update the ks mouse history """
 			watched.ks.mouseMoved(event)
+
+		# scroll wheel control
+		if isinstance(event, QtGui.QWheelEvent): #type:QtGui.QWheelEvent
+			angle = event.angleDelta().y()
+			# shift is horizontal
+			if event.modifiers() == QtCore.Qt.SHIFT:
+				log("shift scroll")
+				watched.moveCamera((angle, 0), relative=True)
+			# alt is vertical
+			elif event.modifiers() == QtCore.Qt.ALT:
+				log("alt scroll")
+				watched.moveCamera((0, angle), relative=True)
+			# otherwise zoom
+			else:
+				log("default scroll")
+				watched.zoom(angle * watched.zoomSpeed)
+			event.accept()
+			return True
+
+
 		return False
 
 class WpCanvasView(QtWidgets.QGraphicsView):
@@ -183,7 +207,7 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 	             ):
 		super().__init__(parent)
 		self.setScene(scene)
-
+		self.setMouseTracking(True)
 		self.ks = KeyState()
 		self.filter = ViewEventFilter(parent=self)
 		self.installEventFilter(self.filter)
@@ -220,6 +244,19 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 		# set init camera pos
 		self.moveCamera([0, 0], relative=False)
 		self.setFocusPolicy(QtCore.Qt.StrongFocus)
+
+		self.zoomSpeed = 0.1
+		self.maxZoom = 10.0
+		self.minZoom = 0.1
+
+	def zoom(self, factor:float):
+		"""if zoom in, centre view on point you zoom -
+		if zoom out, push centre of view away"""
+		log("zoom factor", factor)
+
+		factor = min(self.maxZoom, max(factor, self.minZoom))
+		self.scale(factor, factor)
+
 
 
 	def addKeyPressSlot(self,
@@ -344,6 +381,50 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 		self.cameraChanged.emit({"old" : thisPos,
 		                         "new" : pos})
 
+	def getContextMenuTree(self,
+	                       event:QtGui.QMouseEvent,
+	                       #selectedNodes:list[WpCanvasElement]
+	                       )->T.Optional[Tree]:
+		return
+
+	def _collateContextMenuTreeForEvent(self,
+	                                    event:QtGui.QMouseEvent):
+		# TODO: maybe replace with the library collation function when it's done
+		tree = Tree("viewContextMenu")
+		# check if an element is under cursor - if so, don't show options from scene or view
+		mouseItem = self.scene().itemAt(self.mapToScene(event.pos()), QtGui.QTransform())
+		if mouseItem is not None:
+			#### DON'T collate from all item's parents - if you click on an item or a child
+			#### you specifically want that item's options
+			while mouseItem:
+				if hasattr(type(mouseItem), "getContextMenuTree"):
+					itemTree = mouseItem.getContextMenuTree(event)
+					if itemTree:
+						for i in tuple(itemTree.branches):
+							tree.addBranch(i)
+						return tree
+				mouseItem = mouseItem.parentItem()
+
+		sceneTree = self.scene().getContextMenuTree(event)
+		if sceneTree:
+			for i in tuple(sceneTree.branches):
+				tree.addBranch(i)
+		viewTree = self.getContextMenuTree(event)
+		if viewTree:
+			for i in tuple(viewTree.branches):
+				tree.addBranch(i)
+
+		# TODO: should we have a branch for "nodes", then individual node branches, then their options?
+		# TODO: replace with marking menu
+		# TODO: add multiple selection to marking menu
+		nodeTrees = {i: i.getContextMenuTree(event)
+		             for i in self.scene().selectedElements()}
+		for k, v in nodeTrees.items():
+			if v is None: continue
+			# for b in v.branches:
+			# 	sceneTree(k.node)
+			tree.addBranch(v)
+		return tree
 
 	def mousePressEvent(self, event):
 		self.ks.mousePressed(event)
@@ -364,8 +445,26 @@ class WpCanvasView(QtWidgets.QGraphicsView):
 		elif event.button() == self.ks.rmbKey:
 			"""begin context menu -
 			defer down to scene items to show final menu,
-			here only supply actions to take based on wider state"""
-			#log("view context menu")
+			here only supply actions to take based on wider state
+				TODO: collate similar actions from multiple selected items
+			
+			- scene
+			- view 
+			- selected nodes
+			"""
+			sceneTree = self._collateContextMenuTreeForEvent(event)
+			menu = treemenu.buildMenuFromTree(sceneTree)
+			#log("show VIEW menu")
+			#menu.move(event.pos())
+			menu.exec_(event.screenPos().toPoint())
+
+			return True
+
+
+
+
+
+
 		super().mousePressEvent(event)
 		#log("end selection", self.scene().selectedItems())
 

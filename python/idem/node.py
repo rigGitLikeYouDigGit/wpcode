@@ -8,11 +8,22 @@ import typing as T
 from PySide2 import QtCore, QtGui, QtWidgets
 
 from wplib import log, Sentinel, TypeNamespace
-
+from wptree import Tree
+from wpui.widget import LogWidget
 from chimaera import ChimaeraNode
 from chimaera.ui import NodeDelegate
 from idem.dcc import DCC#, Maya
+
+# TODO: ASSETS
+#   how can an idem/chimaera graph know about things like current asset, current file path?
+#   some kind of context object? assigned to the graph when the higher model changes?
+
+if T.TYPE_CHECKING:
+	from idem.model import IdemSession
+
 class IdemGraph(ChimaeraNode):
+
+	session : IdemSession
 
 	def getAvailableNodesToCreate(self)->list[str]:
 		"""return a list of node types that this node can support as
@@ -48,7 +59,19 @@ class DCCSessionNode(ChimaeraNode):
 	could we try and show a "process" node for each one, that takes you to the DCC
 	chimaeara graph when you open it?
 
+	session nodes don't have strong links to others, just collect separate IO nodes for their
+	session in groups
+
 	"""
+	#if T.TYPE_CHECKING:
+	parent : IdemGraph
+
+	def __init__(self, data:Tree):
+		super().__init__(data)
+		# save live reference to this node's program process -
+		# DO NOT serialise this
+		self.process = None
+
 	@classmethod
 	def dcc(cls)->type[DCC]:
 		raise NotImplementedError
@@ -59,6 +82,21 @@ class DCCSessionNode(ChimaeraNode):
 	def canBeCreated(cls):
 		return cls.__name__ != "DCCSessionNode"
 
+	def createDCCProcess(self):
+		"""use the name and type of this node to spawn a new process
+		of the given DCC"""
+		asset = self.parent.session.asset()
+		log("create session of", self.dcc(), "in asset", asset)
+
+	def getContextMenuTree(self,
+	                       event:QtGui.QMouseEvent=None,
+	                       uiData:dict=None) ->T.Optional[Tree]:
+		t = Tree(self.name)
+		if self.process is None:
+			t["launch"] = self.createDCCProcess
+		return t
+
+
 """
 sending : blue
 receiving : orange
@@ -68,16 +106,6 @@ status :
 	red for crash / error
 	grey for inactive
 """
-
-class SessionNodeDelegate(NodeDelegate):
-	forTypes = (DCCSessionNode, )
-
-	node : DCCSessionNode
-
-	def icon(self) -> (None, QtGui.QIcon):
-		"""return icon to show for node - by default nothing"""
-		return QtGui.QIcon(str(self.node.dcc().iconPath())
-		                   )
 
 
 if __name__ == '__main__':

@@ -324,14 +324,6 @@ class FileStringWidget(ExpWidget):
 		ExpWidget.__init__(self, value, parent,
 		                   placeHolderText=placeHolderText)
 
-		# AtomicWidget.__init__( self, value=value, #name=name
-		#                        )
-		#self.line = QtWidgets.QLineEdit(self)
-		# self.line = StringWidget(value=value, parent=self)
-
-		# self.placeholderText = rx(placeHolderText)
-		# self.placeholderText.rx.watch(self.line.setPlaceholderText)
-
 		# add button to bring up file browser
 		self.button = FileBrowserButton(parent=self,
 		                                defaultBrowserPath=self.parentDir,
@@ -343,20 +335,6 @@ class FileStringWidget(ExpWidget):
 		                                )
 
 		self.button.pathSelected.connect(self._onPathSelected)
-		#self.postInit()
-		# # connect signals
-		# self.line.displayEdited.connect(self._fireDisplayEdited)
-		# self.line.displayCommitted.connect(self._fireDisplayCommitted)
-
-		# # layout
-		# hl = QtWidgets.QHBoxLayout(self)
-		# hl.addWidget(self.line)
-		# self.setLayout(hl)
-		# self.layout().setContentsMargins(1, 1, 1, 1)
-		# self.layout().setSpacing(0)
-
-
-		#self.layout().addWidget(self.button)
 
 	def resizeEvent(self, event):
 		self.setContentsMargins(0, 0, self.button.sizeHint().width(), 0)

@@ -55,8 +55,11 @@ class WpDexController:
 		self.overrides = {
 			"default" : defaultdict(list), # pointless having more than 1 on single object
 			"validation" : defaultdict(list), # reasonble to have more than 1, and add with any others
-			"allowTrailing" : defaultdict(list),
+			"allowTrailing" : defaultdict(list), # whether to show a trailing empty entry in UI to allow extension?
 		}
+	#TODO: replace with the full Rule objects from before, just sketch
+	def validationRuleMap(self)->dict[str, T.Callable]:
+		return self.overrides["validation"]
 
 	# def dex(self):
 	# 	from react import EVAL
@@ -568,6 +571,31 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 	# overrides
 	def _getOverrideAncestors(self, forKey="") ->T.Iterable[OverrideProvider]:
 		return (self.parent, )
+
+	def controllerTies(self)->list[tuple[WpDexController, WpDex]]:
+		"""return a list of (WpDexController, WpDex with that controller set)
+		for now only one controller can be set on a wpDex at once
+		"""
+		return self.getOverride(key="WpDexController", default=[],
+		                        returnValue=True, returnProvider=True,
+		                        onlyFirst=False)
+	def controllers(self)->list[WpDexController]:
+		"""return a list of controllers acting on this dex
+		"""
+		return self.getOverride(key="WpDexController", default=[],
+		                        returnValue=True, returnProvider=False,
+		                        onlyFirst=False)
+
+	def getValidationRules(self)->list[T.Callable]:
+		"""return all rules defined by controllers above this dex,
+		 that apply to this path"""
+		rules = []
+		path = self.strPath()
+		for controller in self.controllers():
+			for pattern, rules in controller.validationRuleMap():
+				if pathMatches(path, pattern):
+					rules.extend(rules)
+		return rules
 
 	# serialisation
 	def asStr(self)->str:

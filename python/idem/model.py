@@ -5,6 +5,7 @@ from __future__ import annotations
 import types
 import typing as T
 from pathlib import Path
+import orjson
 
 from wplib import Sentinel, log
 from wplib.object import Signal
@@ -57,6 +58,11 @@ class IdemSession(Modelled):
 		root["filePath"] = Path("plan.chi")
 		root["graph"] = IdemGraph.create(name="graph")
 		return root
+	
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		# set reference to this session object on graph
+		self.rawData()["graph"].session = self
 
 	#TODO: these methods will return static values I think - if needed,
 	#   caller can wrap results directly in WpDexProxy and it should find its
@@ -80,12 +86,37 @@ class IdemSession(Modelled):
 		capnproto: AnyPointer
 
 		"""
-		toPath = toPath or self.fullChiPath()
-		log("begin saving scene")
+		if toPath is None:
+			if self.asset() is None:
+				log("first select an asset and file path to save")
+				return False
+
+		toPath = str(toPath or self.fullChiPath())
+		# check suffix
+		toPath = toPath.rsplit(".", 1)[0] + ".chi"
+
+		log("begin saving scene to path", toPath)
 		with TimeBlock() as t:
 			data = self.serialise()
-		log("saved scene in ", t.time)
+		log("serialised scene in ", t.time)
+		with TimeBlock() as t:
+			with open(toPath, "wb") as f:
+				f.write(orjson.dumps(data))
+		log("wrote to file in", t.time)
 
+	def loadSession(self, fromPath):
+		fromPath = Path(fromPath)
+		assert fromPath.is_file()
+		log("load chimaera session from ", fromPath)
+		with TimeBlock() as t:
+			with open(fromPath, mode="rb") as f:
+				serialData = orjson.loads(f.read())
+		log("read from file in ", t.time)
+
+		with TimeBlock() as t:
+			data = deserialise(serialData)
+			self.setDataModel(data)
+		log("loaded Idem session in ", t.time)
 
 
 

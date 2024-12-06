@@ -13,7 +13,7 @@ from wp import constant
 from wp.pipe.ui import AssetSelectorWidget
 from wpdex.ui.atomic import *
 from chimaera.ui import ChimaeraWidget
-from wpui.widget import ScriptWidget, LogWidget
+from wpui.widget import ScriptWidget, LogWidget, FileBrowserButton
 
 from wpui import lib as uilib
 
@@ -106,12 +106,33 @@ class IdemWidget(QtWidgets.QWidget):
 		saveAction.triggered.connect(self.saveSession)
 		self.addAction(saveAction)
 
+		openAction = QtWidgets.QAction(self)
+		# QtCore.Qt.CTRL != QtCore.Qt.Key_Control - the more you know
+		openAction.setShortcut(QtGui.QKeySequence(QtCore.Qt.CTRL +
+		                                          QtCore.Qt.Key_O))
+		openAction.triggered.connect(self.selectSessionAndOpen)
+		self.addAction(openAction)
 
 	def saveSession(self, toPath:Path=None):
 		"""serialises the current session to the given path, or to the currently
 		selected asset/file if none given
 		"""
 		self.session.saveSession(toPath=toPath)
+
+
+	def selectSessionAndOpen(self, dirPath=None):
+		result = QtWidgets.QFileDialog.getOpenFileName(
+			parent=self,
+			caption="Open chimaera session",
+			dir=str(dirPath or self.session.fullChiPath().parent),
+			filter="CHI file (*.chi)"
+		) or ""
+		if not result:
+			return
+		result = result[0]
+		self.session.loadSession(result)
+
+
 
 
 

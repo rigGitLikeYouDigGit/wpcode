@@ -177,7 +177,7 @@ class AtomicUiInterface(
 		i guess when you put it like that it seems a bit complicated
 		"""
 		a = 1
-		log("set value", value, type(value), self)
+		#log("set value", value, type(value), self)
 
 		# the wrapped functions don't count as instances of rx
 
@@ -437,7 +437,7 @@ class AtomicWidgetOld(
 		from the __init__ of the final class,
 		i'm not your mother
 		"""
-		log("postInit", self, self.value())
+		#log("postInit", self, self.value())
 		#log(self._processValueForUi(self.value()))
 		self._syncUiFromValue()
 		# try: self._syncUiFromValue()

@@ -14,8 +14,8 @@ def buildMenuFromTree(
 )->QtWidgets.QMenu:
 	"""expect tree with values of partials or lambdas"""
 	menu = menu or QtWidgets.QMenu(title=tree.name) # top level title never appears
-	log("buildMenu", tree)
-	log(tree.branchMap())
+	# log("buildMenu", tree)
+	# log(tree.branchMap())
 	for name, branch in tree.branchMap().items():
 		if branch.branches: # make new menu
 			newMenu = menu.addMenu(branch.name)
@@ -25,15 +25,27 @@ def buildMenuFromTree(
 			continue
 		else :
 			action = menu.addAction(branch.name)
-			log("newAction", action, branch.name, branch.auxProperties)
-			if branch.value is not None:
+			log("newAction", action, branch.name, branch.v, branch.auxProperties)
+			# multiple functions under same branch
+			if isinstance(branch.value, (list, tuple)):
+				action.triggered.connect(lambda: EVAL(i) for i in branch.value)
+			# single function, just trigger as normal
+			elif branch.value is not None:
 				action.triggered.connect(lambda : EVAL(branch.value))
+
 			if branch.auxProperties.get("icon"):
 				action.setIcon(branch.auxProperties["icon"])
 			if "enable" in branch.auxProperties: # allow greying out some actions
 				if not EVAL(branch.auxProperties["enable"]):
 					action.setEnabled(False)
 	return menu
+
+def collateMenuTrees(trees:T.Iterable[Tree], parentBranch:Tree=None):
+	"""
+	TODO:
+	if 2 branches of the same name are found, and they both have callable values,
+	merge them together"""
+
 
 base = object
 if T.TYPE_CHECKING:

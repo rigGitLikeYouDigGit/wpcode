@@ -153,6 +153,9 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 	# 	if connectionGroupDelegate not in self.relationGraph:
 	# 	self.relationGraph.add_edge(ptA, ptB, key="connectEnd")
 
+	def selectedElements(self)->T.Iterable[WpCanvasElement]:
+		return [i for i in self.selectedItems() if isinstance(i, WpCanvasElement)]
+
 	def _connectionDelegateForPoints(self, *points:ConnectionPoint)->ConnectionGroupDelegate:
 		"""return a new connectionDelegate object initialised on the
 		given points"""
@@ -190,6 +193,16 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 		return nxlib.multiGraphAdjacentNodesForKey(
 			self.relationGraph, seedItem, key=key
 		)
+
+	def getContextMenuTree(self,
+	                       event:QtGui.QMouseEvent=None,
+	                       #selectedItems:list[WpCanvasElement]
+	                       )->T.Optional[Tree]:
+		"""called by view on context menu request -
+		DO NOT get context options from nodes here, view
+		collates that"""
+		return
+
 
 	def onEmbeddedWidgetGainFocus(self, widget:QtWidgets.QWidget,
 	                            ownerTopItem:QtWidgets.QGraphicsItem,

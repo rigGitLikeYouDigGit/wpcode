@@ -7,7 +7,7 @@ from PySide2 import QtCore, QtWidgets, QtGui
 
 from wplib import Sentinel, log
 from wpdex import *
-from .instance import IdemWidget, IdemSession
+from .idemwidget import IdemWidget, IdemSession
 
 from wpui.lib import AppTabFilter
 """

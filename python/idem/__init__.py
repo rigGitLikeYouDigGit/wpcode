@@ -39,6 +39,6 @@ TODO: a better name
 
 """
 
-from . import adaptor, model, node
-
+from . import adaptor, model, node, ui
+from .model import IdemSession, IdemGraph
 from .maya import *

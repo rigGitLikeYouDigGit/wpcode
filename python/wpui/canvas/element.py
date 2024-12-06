@@ -71,14 +71,17 @@ class WpCanvasElement(base,
 		self.elementChanged.emit(self, change, value)
 		return super().itemChange(change, value)
 
-	def _getContextMenuTree(self)->Tree:
+	def getContextMenuTree(self,
+	                       event:QtGui.QMouseEvent=None,
+	                       )->Tree:
 		"""
 		get element-specific context menu tree
+
 		"""
-		t = Tree("root")
-		t["action"] = lambda : print("eyyy")
-		return t
-		pass
+		# t = Tree("root")
+		# t["action"] = lambda : print("eyyy")
+		# return t
+		#pass
 
 	def mousePressEvent(self, event):
 		"""EVENT FLOW goes
@@ -87,7 +90,7 @@ class WpCanvasElement(base,
 		#log("element mouse press")
 		if event.button() == QtCore.Qt.RightButton:
 			log("element right click")
-			tree = self._getContextMenuTree()
+			tree = self.getContextMenuTree()
 			if not tree:
 				return
 			menu = treemenu.buildMenuFromTree(tree)

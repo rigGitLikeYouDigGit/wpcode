@@ -29,8 +29,8 @@ class OverrideProvider:
 		raise NotImplementedError(self)
 
 	def getOverride(self, key:str, default=Sentinel.FailToFind,
-	                 returnObj=False,
-	                onlyFirst=True):
+	                returnValue=True, returnProvider=False,
+	                onlyFirst=True)->(T.Any, T.Iterable):
 		""" return an override value for all this object's
 		override ancestors
 		if obj, return the provider object with the given override
@@ -38,6 +38,10 @@ class OverrideProvider:
 		if not onlyFirst, exhaust every accessible override provider
 		to find overrides set against the given key, and return them in a list of tuples:
 		[ (provider object, override value) ]
+
+		TODO: make this an iterator on returning multiple values,
+			so external processes can check returned overrides and decide outside if they
+			need to continue
 		"""
 		toCheck = [self]
 		found = []
@@ -54,9 +58,11 @@ class OverrideProvider:
 				toCheck.extend(provider._getOverrideAncestors(forKey=key))
 				continue
 			# check if we want object or value
-			if returnObj:
+			if returnValue and returnProvider: # fizzbuzz pros in shambles
+				found.append((result, provider))
+			elif returnProvider:
 				found.append(provider)
-			else:
+			elif returnValue:
 				found.append(result)
 			break
 

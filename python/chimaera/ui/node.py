@@ -7,12 +7,13 @@ from wplib.object import Adaptor
 
 from PySide2 import QtCore, QtWidgets, QtGui
 
+from wptree import Tree
 from wpui.canvas import *
 
 from wpdex.ui import ExpWidget, AtomicView, AtomicWindow
 from wpdex import WpDexProxy, WX, WpDex
 from wpui.widget.collapsible import ShrinkWrapWidget
-
+from wpui.treemenu import buildMenuFromTree
 
 from chimaera import ChimaeraNode
 
@@ -263,6 +264,42 @@ class NodeDelegate(
 		)
 
 		self.syncLayout()
+
+	# delegate context menu to python object
+	def getContextMenuTree(self,
+	                       event:QtGui.QMouseEvent=None,
+	                       ) ->Tree:
+		return self.node.getContextMenuTree(
+			event,
+			uiData={"delegate" : self,
+			        "scene" : self.scene(),
+			        #"mainWindow" : self.scene().topLevelWidget()
+			        #"view" : event.source()
+			        }
+		)
+
+
+	###### context menu right clicks dealt with at view level for now
+	# def mousePressEvent(self, event:QtGui.QMouseEvent):
+	# 	"""if right click, get context actions from node,
+	# 	and display menu"""
+		# if event.button() == QtCore.Qt.RightButton:
+		# 	tree = self.node.getContextMenuTree(
+		# 		clickedItem=self, selectedItems=self.scene().selectedItems()
+		# 	)
+		# 	if not tree:
+		# 		return False
+		#
+		# 	qMenu = buildMenuFromTree(tree)
+		# 	#qMenu.exec_(self.mapToScene(event.globalPos()))
+		# 	#qMenu.exec_(event.screenPos())
+		# 	qMenu.move(event.pos())
+		# 	#log("show menu")
+		# 	qMenu.exec_()
+		#
+		# 	return True
+
+
 
 	def icon(self)->QtGui.QIcon:
 		"""return icon to show for node - by default nothing"""

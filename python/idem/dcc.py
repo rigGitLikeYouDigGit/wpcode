@@ -49,7 +49,22 @@ idemConfig = orjson.loads((p / "config.json").read_bytes())
 log("config", idemConfig)
 class DCC:
 	dccName = ""
-	pass
+
+	def formatStartupFile(self,
+	                      templatePath:Path,
+	                      args:tuple,
+	                      kwargs:dict,
+	                      outputPath:Path
+	                      ):
+		"""format the code file passed to DCC on startup -
+		pass only primitives as arguments here,
+		once process is started up, an RPC link can be used to
+		send more complex information"""
+		baseStr = templatePath.read_text()
+		formattedStr = baseStr.replace("$ARGS", str(args)).replace("$KWARGS", str(kwargs))
+		outputPath.write_text(formattedStr)
+
+
 
 	@classmethod
 	def iconPath(cls)->Path:
