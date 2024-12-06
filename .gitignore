@@ -330,3 +330,5 @@ python/gsheetpy/client_secret_973132948585-q2mf0lm3a3g3t042a7upsk7mfs04409b.apps
 python/gsheetpy/__init__.py
 external/*
 python/wpm/core/node/author/__init__.py
+/python/wpscratch
+python/wpscratch/testCall.py

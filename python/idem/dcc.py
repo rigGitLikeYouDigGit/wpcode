@@ -1,14 +1,15 @@
 
 from __future__ import annotations
-
-import typing as T
+import typing as T, types
 
 import sys, os, subprocess, threading, importlib
 
 from pathlib import Path
-import orjson
+import orjson, inspect
 
-from wplib import log, WP_PY_RESOURCE_PATH
+from argparse import ArgumentParser
+
+from wplib import log, WP_PY_RESOURCE_PATH, WP_ROOT, WP_ROOT_PATH, WP_PY_ROOT
 
 """
 idem-specific DCC classes shouldn't do too much, just
@@ -40,15 +41,46 @@ DCCSession - inherited DCC specific class, only accessible from within domain
 """
 
 
-p = Path(__file__)
-while p.name != "idem":
-	p = p.parent
-log("p", p)
-
-idemConfig = orjson.loads((p / "config.json").read_bytes())
-log("config", idemConfig)
 class DCC:
 	dccName = ""
+
+	def __init__(self, processName:str):
+		# process name is idem-side identifier for live process, independent of DCC scene name
+		self.processName = processName
+		self.process = None
+
+	@classmethod
+	def getConfig(cls)->dict:
+		from idem import getConfig
+		return getConfig()
+
+	@classmethod
+	def argParser(cls)->ArgumentParser:
+		"""idem-specific parser to pull out idem params from CLI"""
+		parser = ArgumentParser()
+		# parser.add_argument("idem_params"#, required=False
+		#                     )
+		return parser
+
+	def idemStartupFilePath(self)->Path:
+		"""by default, look for a 'startuptemplate.py' file
+		next to this definition
+
+		this should only include idem-specific startup, and should run
+		AFTER any general code base work for the dcc
+		"""
+		return Path(inspect.getfile(type(self))).parent / "startup.py"
+
+	def startupFormattedFilePath(self,
+	                             processName:str=""
+	                             ):
+		""" return scratch file, NOT VERSIONED
+		replace WP_ROOT token in path with proper py root -
+		TODO: a proper expansion system for paths like Houdini does it"""
+		processName = processName or self.processName
+		configPath = self.getConfig()["scratchDir"]
+		configPath = configPath.replace("$WP_PY_ROOT", str(WP_PY_ROOT))
+		return Path(configPath) / processName
 
 	def formatStartupFile(self,
 	                      templatePath:Path,
@@ -64,10 +96,13 @@ class DCC:
 		formattedStr = baseStr.replace("$ARGS", str(args)).replace("$KWARGS", str(kwargs))
 		outputPath.write_text(formattedStr)
 
-
-
 	@classmethod
 	def iconPath(cls)->Path:
 		return WP_PY_RESOURCE_PATH / "icon" / (cls.dccName + ".png")
 
+	def launch(self,
+	           #startupFn=None
+	           idemParams:dict
+	           ):
+		raise NotImplementedError
 

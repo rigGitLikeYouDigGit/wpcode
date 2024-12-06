@@ -8,7 +8,8 @@
       "2023" : {},
       "startup": "wpm.startup"
     }
-  }
+  },
+  "scratchDir" : "$WP_PY_ROOT/wpscratch/idem"
 }
 
 

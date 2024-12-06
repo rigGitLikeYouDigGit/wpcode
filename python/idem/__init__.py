@@ -1,4 +1,12 @@
 
+from __future__ import annotations
+import typing as T, types
+
+import sys, os, subprocess, threading, importlib
+
+from pathlib import Path
+import orjson, inspect
+
 """
 overall launcher for asset-focused program sessions
 
@@ -38,6 +46,12 @@ TODO: a better name
  isles?
 
 """
+
+def getConfig()->dict:
+	p = Path(__file__).parent
+	idemConfig = orjson.loads((p / "config.json").read_bytes())
+	return idemConfig
+
 
 from . import adaptor, model, node, ui
 from .model import IdemSession, IdemGraph

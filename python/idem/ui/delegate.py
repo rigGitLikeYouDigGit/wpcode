@@ -31,5 +31,5 @@ class SessionNodeDelegate(NodeDelegate):
 
 	def icon(self) -> (None, QtGui.QIcon):
 		"""return icon to show for node - by default nothing"""
-		return QtGui.QIcon(str(self.node.dcc().iconPath())
+		return QtGui.QIcon(str(self.node.dcc.iconPath())
 		                   )

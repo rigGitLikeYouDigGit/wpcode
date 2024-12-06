@@ -70,10 +70,11 @@ class DCCSessionNode(ChimaeraNode):
 		super().__init__(data)
 		# save live reference to this node's program process -
 		# DO NOT serialise this
+		self.dcc = self.dccType()(self.name) #initialised empty
 		self.process = None
 
 	@classmethod
-	def dcc(cls)->type[DCC]:
+	def dccType(cls)->type[DCC]:
 		raise NotImplementedError
 	@classmethod
 	def prefix(cls) ->tuple[str]:
@@ -86,7 +87,12 @@ class DCCSessionNode(ChimaeraNode):
 		"""use the name and type of this node to spawn a new process
 		of the given DCC"""
 		asset = self.parent.session.asset()
-		log("create session of", self.dcc(), "in asset", asset)
+		log("create session of", self.dcc, "in asset", asset)
+		self.dcc.launch(
+			idemParams={"processName" : self.name,
+			            "launchInDir" : str(self.parent.session.asset().diskPath()),
+			            "portNumber" : 121312}
+		)
 
 	def getContextMenuTree(self,
 	                       event:QtGui.QMouseEvent=None,

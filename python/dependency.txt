@@ -2,6 +2,7 @@
 
 forbiddenfruit
 numpy
+ordered-set
 qt-material
 watchdog
 whoosh
