@@ -1,6 +1,6 @@
 
 
-python scripts run on DCC startup,
+python scripts run on DCCProcess startup,
 but not importable as modules -
 
 use these to set up the environment for the user,

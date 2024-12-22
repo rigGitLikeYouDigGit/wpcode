@@ -1,5 +1,6 @@
 
-#from .base import MayaOp
+from __future__ import annotations
+import typing as T, types
 
 """
 for rig structure, we assume that bits of our puppet can be built and
@@ -65,12 +66,15 @@ clay rig can define sculpts,
 
 """
 
+from .base import MayaOp
+
 # abbreviate headings in chimaera tree summary
 {"cm" : {},
  "am" : {},
  "al" : {}
  }
-
+from .node import skeletonop
+#from . import *
 
 """
 example of head

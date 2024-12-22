@@ -12,7 +12,7 @@ from wptree import Tree
 from wpui.widget import LogWidget
 from chimaera import ChimaeraNode
 from chimaera.ui import NodeDelegate
-from idem.dcc import DCC#, Maya
+from idem.dcc import DCCProcess#, Maya
 
 # TODO: ASSETS
 #   how can an idem/chimaera graph know about things like current asset, current file path?
@@ -70,11 +70,11 @@ class DCCSessionNode(ChimaeraNode):
 		super().__init__(data)
 		# save live reference to this node's program process -
 		# DO NOT serialise this
-		self.dcc = self.dccType()(self.name) #initialised empty
+		self.dcc = self.dccProcessType()(self.name) #initialised empty
 		self.process = None
 
 	@classmethod
-	def dccType(cls)->type[DCC]:
+	def dccProcessType(cls)->type[DCCProcess]:
 		raise NotImplementedError
 	@classmethod
 	def prefix(cls) ->tuple[str]:

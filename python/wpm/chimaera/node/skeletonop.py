@@ -7,67 +7,41 @@ from dataclasses import dataclass
 import numpy as np
 
 
-from wplib import Expression
+#from wplib import Expression
 
 from wptree import Tree
 
-from chimaera import ChimaeraNode, PlugNode
-
+from chimaera import ChimaeraNode
 from wpm import cmds, om, oma, WN
 
 """
-Consider a tree
-branches form a spine
-values form rich data
-
-groupA : transform
-	groupB : transform
-		meshA : Mesh 
-			topology : buffer
-			positions : buffer
-			
-so do we actually need more than one "real" output plug?
-if the real plug just represents the outgoing data stream, then we 
-have various filter plugs to separate out substreams from it?
-
-can we / how can we embed expressions in data?
-not for now
+coming back to this with a proper system backing Chimaera,
+don't worry about doing fancy stuff with plugs,
+just match the output hierarchy exactly
 """
 
-@dataclass
-class Transform:
-	"""data object for transform
-	TEMP TEMP TEMP just a sketch for tree value
-	"""
-	matrix : np.ndarray = np.identity(4)
 
-class SkeletonOp(PlugNode):
+
+class SkeletonOp(ChimaeraNode):
 	"""Node for creating joint hierarchies.
 	Create joints in place from saved data view
+	- set up template inputs
+	- set up template outputs
 	"""
 
 	@classmethod
-	def defaultParams(cls, paramRoot:Tree) ->Tree:
-		jointRoot = paramRoot("joints", create=True)
-		jointRoot.desc = "Branches below this will each correspond to a joint."
-		return paramRoot
+	def defaultSettings(cls, forNode:ChimaeraNode) ->Tree:
+		"""TODO: set up cls-super
+		"""
+		t = Tree("root")
+		t("joints").description = "Branches below this will be literally created as joints"
+		t["joints", "a", "b", "c"]
+
 
 	@classmethod
-	def makePlugs(cls, inRoot:Tree, outRoot:Tree)->None:
-		"""create plugs for this node
-		Output root will be set with data object, to be filtered if needed"""
-		inRoot("parent", create=True)
+	def templateFlowOut(self) ->Tree:
+		pass
 
-		outRoot("joints", create=True)
-
-	@classmethod
-	def makeDataFromJointTree(cls, jointTree:Tree):
-		"""create data from joint tree -
-		skip root"""
-		for branch in jointTree.allBranches(includeSelf=False):
-			data = Transform()
-			branch.value = data
-		return jointTree
 
 	#@classmethod
 	def compute(self, **kwargs) ->None:
@@ -75,26 +49,10 @@ class SkeletonOp(PlugNode):
 		generate new hierarchy data for joints including transforms
 		add to parent,
 		return new data"""
-		parentData = self.plugChildMap(self.ownInputPlugRoot())["parent"].resultData()
+		settings = self.settings()
 
-		# load existing data from storage,
-		existData = self.resultStorage()("joints", create=True)
-		# create any new data from params
-		newData = self.makeDataFromJointTree(self.sourceParams()("joints"))
-
-		# update with any existing entries
-		# don't create new entries if none are found from storage,
-		mergeData = combineDataTrees(newData, existData, mode="intersect")
-
-		# then update storage again, preserve any unknown entries in case of mistype?
-		combineDataTrees(self.sourceStorage()("joints", create=True),
-		                 mergeData, mode="union")
-
-		# editing in maya is then done by creating a data view on
-		# the STORAGE tree
-
-		# update output data
-		self.plugChildMap(self.ownOutputPlugRoot())["joints"].setValue(mergeData)
+		### what in god's country was past ed cooking
+		#parentData = self.plugChildMap(self.ownInputPlugRoot())["parent"].resultData() # ????
 
 
 

@@ -20,7 +20,7 @@ WN("myTransform", new=0) -> error if not found
 
 WN.Transform -> Transform node wrapper class
 WN["Transform"] -> Transform node wrapper class
-WN.Transform("myTransform") -> Transform node wrapper class
+WN.Transform("myTransform") -> transform node instance wrapping a node named "myTransform"
 
 """
 

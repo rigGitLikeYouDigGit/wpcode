@@ -41,7 +41,7 @@ DCCSession - inherited DCC specific class, only accessible from within domain
 """
 
 
-class DCC:
+class DCCProcess:
 	dccName = ""
 
 	def __init__(self, processName:str):

@@ -152,7 +152,7 @@ def runInput(node:WN, targetPath:Path=None):
 def runOutput(node:WN, targetPath:Path=None):
 	"""run output on node"""
 	targetPath = Path(targetPath if targetPath is not None else nodeIoPath(node))
-	assert cmds.file(q=True, sn=True), "Maya scene has no path on disk"
+	assert cmds.file(q=True, sn=True), "MayaProcess scene has no path on disk"
 	# check that we output to a usda file
 	if targetPath.suffix != ".usda":
 		targetPath = targetPath.with_suffix(".usda")
@@ -175,7 +175,7 @@ class MayaHasScenePathRule(Rule):
 	"""Check that the current maya scene has a path on disk"""
 	def checkInput(self, data: str) -> bool:
 		if not cmds.file(q=True, sn=True):
-			raise ValidationError(f"Maya scene has no path on disk")
+			raise ValidationError(f"MayaProcess scene has no path on disk")
 		return True
 
 ioPathValidationRuleSet = RuleSet(

@@ -45,7 +45,23 @@ TODO: a better name
  isle?
  isles?
 
+
+tracking local idem sessions is done through localsessions folder - 
+each new system or service creates a new named file there,
+and updates it if it connects to a bridge
+
+files also store data to find the process they relate to?
+
+for now just use basic json serialisation for communicating - 
+later it might be worth having separate "command pipe" and "data pipe"
+to send any random json dict for directions, but the dense mesh stuff
+over port?
+
+
 """
+
+def getIdemDir()->Path:
+	return Path(__file__).parent
 
 def getConfig()->dict:
 	p = Path(__file__).parent
@@ -55,4 +71,4 @@ def getConfig()->dict:
 
 from . import adaptor, model, node, ui
 from .model import IdemSession, IdemGraph
-from .maya import *
+from .dcc.maya import *

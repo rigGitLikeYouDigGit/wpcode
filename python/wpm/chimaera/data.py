@@ -13,7 +13,7 @@ from chimaera.core import DataTree
 
 from wpm import om, WN
 from wpm.core import classConstantValueToNameMap
-from wpm.lib.tracker import NodeLifespanTracker, NodeHierarchyTracker
+from wpm.lib.tracker import NodeLifespanBound, NodeHierarchyTracker
 from wpm.lib import hierarchy as h
 from wpm.constant import Space
 

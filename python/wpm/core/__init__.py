@@ -1,4 +1,5 @@
-
+from __future__ import annotations
+import types, typing as T
 """essential code for maya workflows - should not be lightly edited"""
 
 import sys
@@ -30,6 +31,15 @@ from wpm.core.callbackowner import CallbackOwner
 from . import plug
 
 """
+
+can we make our api package threadsafe somehow?
+
+
+if a thread calls "om.MDagNode.setParent()", can the "om." go through a
+check to see if maya is currently executing a callback, or busy?
+and if so wait until it isn't?
+
+
 there are still quite a few areas to develop:
 
 PLUGS : 
@@ -40,6 +50,7 @@ PLUGS :
 	- broadcasting 
 	
 NODES :
+	- got generation working in principle
 	
 
 """

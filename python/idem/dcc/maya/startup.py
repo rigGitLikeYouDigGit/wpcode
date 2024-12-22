@@ -31,8 +31,8 @@ sys.path.insert(0, str(WP_PY_ROOT))
 
 
 from wplib import log
-from idem import maya as idmaya
-dccType = idmaya.dcc.Maya
+from idem.dcc import maya as idmaya
+dccType = idmaya.MayaProcess
 import orjson
 
 # check if any idem parametres packed in system args

@@ -22,9 +22,9 @@ TODO:
 		generally how to launch programs, but
 """
 
-from idem.dcc import DCC
+from idem.dcc import DCCProcess
 
-class Maya(DCC):
+class MayaProcess(DCCProcess):
 	""""""
 	dccName = "maya"
 
@@ -93,7 +93,7 @@ class Maya(DCC):
 
 if __name__ == '__main__':
 
-	dcc = Maya("testMayaProcess")
+	dcc = MayaProcess("testMayaProcess")
 	dcc.launch(idemParams={
 		"processName" : "testMaya",
 		"portNumber" : 23998

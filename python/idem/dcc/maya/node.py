@@ -3,10 +3,10 @@ import types, typing as T
 import pprint
 from wplib import log
 
-from idem.maya.dcc import Maya
+from idem.dcc.maya import MayaProcess
 from idem.node import DCCSessionNode
 
 class MayaSessionNode(DCCSessionNode):
 	@classmethod
-	def dccType(cls)->type[Maya]:
+	def dccProcessType(cls)->type[Maya]:
 		return Maya

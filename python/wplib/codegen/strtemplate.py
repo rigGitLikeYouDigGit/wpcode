@@ -284,10 +284,10 @@ class ClassTemplate(StringCodeTemplate):
 
 	def __init__(self,
 	             className:str,
-	             classBaseClasses:tuple[str],
+	             classBaseClasses:T.Sequence[str],
 	             #classAttrs:dict[argT, T.Any]=None,
-	             classLines:tuple[StringCodeTemplate]=(),
-	             classMethods:tuple[FunctionTemplate]=(),
+	             classLines:T.Sequence[StringCodeTemplate]=(),
+	             classMethods:T.Sequence[FunctionTemplate]=(),
 	             depth:int=0,
 	             ):
 		super().__init__(depth=depth)

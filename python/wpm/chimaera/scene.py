@@ -8,7 +8,7 @@ from wplib import log
 
 from wpexp.plugin import SceneExpPlugin, ExpError, ExpWarning
 
-from wpm import cmds, om
+from wpm import cmds, om, WN
 """integration with maya scene, file paths, etc
 name of top chimaera node is the name of the graph file?
 
@@ -24,6 +24,18 @@ getting save path raises an error
 FOR NOW, save everything under top node in a single file, including data
 
 """
+
+def chiGrp():
+	"""return the top-level group 'chi_GRP'
+	"""
+	return WN.Transform("chi_GRP", new=None, parent=None)
+
+
+def chiSel():
+	"""return the top-level selection set "chi_SEL"
+	"""
+	return WN.ObjectSet("chi_SEL", new=None)
+
 
 
 class MayaSceneExpPlugin(SceneExpPlugin):

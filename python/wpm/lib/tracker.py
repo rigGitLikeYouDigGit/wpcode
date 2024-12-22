@@ -12,7 +12,7 @@ could probably be a subclass of some abstract Lifespan object
 """
 
 
-class NodeLifespanTracker(CallbackOwner):
+class NodeLifespanBound(CallbackOwner):
 	"""simple class tied to lifespan of specific maya node -
 	can be a mixin,
 	could probably be a subclass of some abstract Lifespan object.
@@ -139,7 +139,7 @@ class NodeLifespanTracker(CallbackOwner):
 
 
 
-class NodeHierarchyTracker(NodeLifespanTracker):
+class NodeHierarchyTracker(NodeLifespanBound):
 	"""track hierarchy of nodes
 	generate events whenever any child is modified, added or removed
 	can probably get by without multiple tracker objects,

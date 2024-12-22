@@ -229,12 +229,13 @@ class ChimaeraNode(Modelled,
 		if attrName == "@NODES" : return None # special case
 		return Tree("root")
 	@classmethod
-	def defaultSettings(cls, forNode:ChimaeraNode)->Tree:
+	def defaultSettings(cls, forNode:ChimaeraNode, inheritedTree:Tree)->Tree:
 		"""OVERRIDE to give the default parametre tree that this node will
-		draw from"""
+		draw from
+		inherited tree is passed by chimaera superclass"""
 		return Tree("root")
 	@classmethod
-	def defaultMemory(cls, forNode:ChimaeraNode)->Tree:
+	def defaultMemory(cls, forNode:ChimaeraNode, inheritedTree:Tree)->Tree:
 		"""OVERRIDE to give default format for any dense data this node
 		needs to store on file
 		TODO: do we give each node a separate storage file for this,
@@ -242,13 +243,13 @@ class ChimaeraNode(Modelled,
 			assets?"""
 		return Tree("root")
 	@classmethod
-	def defaultFlow(cls, forNode:ChimaeraNode)->Tree:
+	def defaultFlow(cls, forNode:ChimaeraNode, inheritedTree:Tree)->Tree:
 		"""OVERRIDE
 		this gives the default 'output' data that this node takes in to compute
 		compute"""
 		return Tree("root")
 
-	def templateFlowOut(self)->Tree:
+	def templateFlowOut(self, inheritedTree:Tree)->Tree:
 		""" return a TEMPLATE tree, with attrs enough to set up connections
 		without running node.
 

@@ -6,7 +6,7 @@ import os, sys
 from pathlib import Path
 
 from wpm import om
-from wpm.lib.tracker import NodeLifespanTracker
+from wpm.lib.tracker import NodeLifespanBound
 from wplib.expression import Expression
 
 """lifespan watcher to keep set updated,
@@ -20,7 +20,7 @@ whenever:
 - another object set's membership changes
 """
 
-class ActiveSetLifespanTracker(NodeLifespanTracker):
+class ActiveSetLifespanTracker(NodeLifespanBound):
 	"""callback listener for lifespan of active set node"""
 
 	SET_KEY = "activeSet"

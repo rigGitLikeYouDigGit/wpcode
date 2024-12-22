@@ -1,6 +1,6 @@
 
 from __future__ import annotations
-import typing as T
+import typing as T, types
 import ast
 from typing import TypedDict, NamedTuple
 from collections import namedtuple
@@ -9,6 +9,7 @@ import numpy as np
 
 # tree libs for core behaviour
 #from wptree import Tree
+from wplib import Sentinel, log
 from wplib.object import Signal, Adaptor
 from wplib.inheritance import iterSubClasses
 from wplib.wpstring import camelJoin
@@ -591,10 +592,25 @@ class WNMeta(type):
 
 	# endregion
 
-	def __call__(cls, node:T.Union[str, om.MObject, WN], **kwargs)->WN:
+	def __call__(cls,
+	             node:(str, om.MObject, WN),
+	             new=None,
+	             parent:(str, om.MObject, WN)=None,
+	             **kwargs)->WN:
 		"""filter arguments to correct MObject,
 		check if a node already exists for it,
 		if so return that node
+
+		if node is a string name:
+			if new is None:
+				if no node with given name found:
+					create a new node under parent
+				else:
+					return the existing node
+			if new is False:
+				get existing node, error if not found
+			if new is True:
+				create new node under parent, increment name if necessary
 
 		create node wrapper - from a specific subclass if defined,
 		else normal EdNode
@@ -754,12 +770,26 @@ class WN( # short for WePresentNode
 	@classmethod
 	def create(cls,
 	           name:str="", dgMod_:om.MDGModifier=None, parent_:nodeArgT=None, **kwargs)->WN:
-		"""suffix _ to avoid name clashes with kwargs
+		"""
+		explicitly create a new node of this type, incrementing name if necessary
+
+		suffix _ to avoid name clashes with kwargs
 		if dgmod is passed, add actions to it - otherwise immediately
 		execute"""
 		opMod = dgMod_ or om.MDGModifier()
 		if parent_ is not None:
 			parent = filterToMObject(parent_)
+
+	@classmethod
+	def invoke(cls, name:str, parent=Sentinel.Default,
+	           **kwargs)->WN:
+		"""find a node with the given name and the given parent ; create
+		it if not found
+
+		if parent not passed, find with any parent - if parent is None,
+		explicitly means a top-level node?
+		"""
+
 
 	def setInitAttrs(self, ):
 		"""subclasses should populate function signature
@@ -824,29 +854,29 @@ class WN( # short for WePresentNode
 
 	# region creation
 
-	@classmethod
-	def create(cls, type=None, n="", parent=None, dgMod:om.MDGModifier=None, existOk=True)->WN:
-		"""any subsequent wrapper class will create its own node type
-		If modifier object is passed, add operation to it but do not execute yet.
-		Otherwise create and execute a separate modifier each time.
-		:rtype cls"""
-
-		# initialise wrapper on existing node
-		if existOk and n:
-			if cmds.objExists(n):
-				return cls(n)
-
-		nodeType = type or cls.clsApiType
-		name = n or nodeType
-
-		if dgMod:
-			node = cls(dgMod.createNode(nodeType))
-			dgMod.renameNode(node.MObject, name)
-		else:
-			node = cls(om.MFnDependencyNode().create(nodeType, name)) # cheeky
-
-		#node.setDefaults()
-		return node
+	# @classmethod
+	# def create(cls, type=None, n="", parent=None, dgMod:om.MDGModifier=None, existOk=True)->WN:
+	# 	"""any subsequent wrapper class will create its own node type
+	# 	If modifier object is passed, add operation to it but do not execute yet.
+	# 	Otherwise create and execute a separate modifier each time.
+	# 	:rtype cls"""
+	#
+	# 	# initialise wrapper on existing node
+	# 	if existOk and n:
+	# 		if cmds.objExists(n):
+	# 			return cls(n)
+	#
+	# 	nodeType = type or cls.clsApiType
+	# 	name = n or nodeType
+	#
+	# 	if dgMod:
+	# 		node = cls(dgMod.createNode(nodeType))
+	# 		dgMod.renameNode(node.MObject, name)
+	# 	else:
+	# 		node = cls(om.MFnDependencyNode().create(nodeType, name)) # cheeky
+	#
+	# 	#node.setDefaults()
+	# 	return node
 
 	# endregion
 
