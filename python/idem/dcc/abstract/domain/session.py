@@ -5,13 +5,38 @@ from wplib import log
 
 import os, sys
 from collections import defaultdict
-import threading, multiprocessing
+import threading, multiprocessing, socket, socketserver, traceback
 from pathlib import Path
 from uuid import uuid4
+from dataclasses import dataclass
+
+from idem import getIdemDir
 
 import orjson
 
 import win32pipe
+
+from wplib.network import libsocket
+
+class SlotRequestHandler(socketserver.StreamRequestHandler):
+	request : socket.socket
+	def handle(self):
+		"""call back to slots on server
+		first deserialise from bytes with orjson"""
+		#log("handling request")
+		#req = self.rfile.readline()
+		req = self.rfile.read()
+		# if req.startswith(libsocket.LEN_PREFIX_CHAR) or req.startswith(libsocket.LEN_PREFIX_CHAR.encode("utf-8")):
+		# 	req = req[4:]
+		req = req[4:] # strip the length prefix char from libsocket.sendMsg
+		data = orjson.loads(req)
+		for i in getattr(self.server, "slotFns", ()):
+			try:
+				i(data)
+			except Exception as e:
+				log("error handling req", data, "for server", self.server)
+				traceback.print_exc()
+
 
 class DCCIdemSession:
 	"""domain-side class for access within a dcc,
@@ -29,16 +54,28 @@ class DCCIdemSession:
 	dccType = "python" # override with "maya", "houdini", etc
 
 	def __init__(self, sessionTempName="", linkTo=""):
-		self.uuid = str(uuid4())[:4]
+		#self.uuid = str(uuid4())[:4]
 		self.sessionTempName = sessionTempName
 
 		self.loopThread : threading.Thread = None
+		portId = libsocket.getFreeLocalPortIndex()
+		# self.uuid = str(portId)
+		self.server = socketserver.ThreadingTCPServer(
+		#self.server = socketserver.TCPServer(
+			("localhost", portId),
+			#("", 0),
+			SlotRequestHandler
+			#socketserver.BaseRequestHandler
+		)
+		self.uuid = str(self.server.socket.getsockname()[1])
+
+		self.server.slotFns = [self.handleMessage]
 
 		# create starting data files
-		self.clear() # get rid of any leftover files
+		#self.clear() # get rid of any leftover files
 		self.writeSessionFileData(self.liveData())
-		os.mkfifo(self.inPipeFilePath())
-		os.mkfifo(self.outPipeFilePath())
+		# os.mkfifo(self.inPipeFilePath())
+		# os.mkfifo(self.outPipeFilePath())
 
 
 		if linkTo: # immediately link to a known session
@@ -59,15 +96,9 @@ class DCCIdemSession:
 			return
 		for i in tuple(self.sessionFileDir().glob(self.uuid + "_*")):
 			i.unlink(missing_ok=True)
-
-	def sessionNiceName(self):
-		s = f"{self.uuid}_{self.dccType}"
-		try:
-			if self._sessionFileName():
-				s += ("_" + self._sessionFileName())
-		except NotImplementedError:
-			pass
-		return s
+		#if self.server
+		#self.server.server_close()
+		self.server.shutdown()
 
 
 	def __del__(self):
@@ -115,7 +146,6 @@ class DCCIdemSession:
 
 	@classmethod
 	def sessionFileDir(cls)->Path:
-		from idem import getIdemDir
 		return getIdemDir() / "localsessions"
 
 	def _sessionFileName(self)->str:
@@ -130,30 +160,111 @@ class DCCIdemSession:
 		#raise NotImplementedError
 		return self.sessionTempName
 
-	def outPipeFileName(self)->str:
-		return f"{self.uuid}_OUT"
-	def outPipeFilePath(self)->Path:
-		return self.sessionFilePath() / self.outPipeFileName()
-	def inPipeFileName(self)->str:
-		return f"{self.uuid}_IN"
-	def inPipeFilePath(self)->Path:
-		return self.sessionFilePath() / self.inPipeFileName()
+	def sessionNiceName(self):
+		s = f"{self.uuid}_{self.dccType}"
+		try:
+			if self._getDCCFileName():
+				s += ("_" + self._getDCCFileName())
+		except NotImplementedError:
+			pass
+		return s
+
 
 	def runThreaded(self):
 		"""execute the below run() method in a child thread
 		"""
-		self.loopThread = threading.Thread(target=self.run)
+		self.loopThread = threading.Thread(target=self.run, daemon=True)
 		self.loopThread.start()
 
 	def run(self):
 		"""startup method that begins event loop, handles errors
 		for now we just hack an event loop here
 		"""
-		#
-		with open(self.inPipeFilePath()) as fifo:
-			for line in fifo:
-				self.handleMessage(line)
+		self.server.serve_forever(poll_interval=1.0)
 
 	def handleMessage(self, data):
 		print(self.sessionNiceName() + "handle:", data)
+
+	def portId(self)->int:
+		return int(self.uuid)
+
+	def send(self, data, waitForResponse=False):
+		"""send a message from this session back to the bridge
+
+		TODO: unsure if there's a point in sending a direct response back
+			this way, maybe for confirmation of publish, in case there's an
+			error in the export somehow?
+			but naively I'd rather catch and filter that as a general incoming message
+		"""
+		with socket.socket() as sock:
+			sock.connect(("localhost", self.portId()))
+			#sock.sendall(bytes(data, 'utf-8'))
+			libsocket.sendMsg(sock, orjson.dumps(data, ))
+
+			if waitForResponse:
+				return libsocket.recvMsg(sock)
+
+
+def getPortDataPathMap()->dict[int, Path]:
+	"""may not all be active"""
+	return {int(i.name.split("_")[0]) : i
+	                     for i in DCCIdemSession.sessionFileDir().iterdir()}
+
+def getActivePortDataPathMap()->dict[int, Path]:
+	return {k : v for k, v in getPortDataPathMap().items()
+	        if libsocket.portIsOpen("localhost", k)}
+
+
+@dataclass
+class ChildSessionData:
+	port : int
+	server : socketserver.ThreadingTCPServer
+	dccTypeName : str = ""
+
+
+class IdemBridgeSession:
+	"""central coordinating system, sitting in separate thread/process,
+	for now just echoing events back to all open sessions
+
+	write all attached processes into datafile, so other bridges
+	don't try and steal them
+
+	- manage named blocks of shared memory
+
+	"""
+
+	def __init__(self):
+		self.linkedSessions : dict[int, ChildSessionData] = {}
+
+	def connectToSocket(self, portId:int):
+		server = socketserver.ThreadingTCPServer(
+			("localhost", portId),
+			SlotRequestHandler
+		)
+		server.slotFns = [
+			lambda *args, **kwargs : self.handleMessageFrom(
+				portId, *args, fromPort=portId, **kwargs)
+		                  ]
+		self.linkedSessions[portId] = ChildSessionData(
+			portId, server)
+		# ask server for some other information
+
+
+	def sendMsg(self, data, toPort=None, waitForResponse=False):
+		if toPort is None:
+			for k, server in self.linkedSessions.items():
+				self.sendMsg(data, toPort=k)
+			return
+		with socket.socket() as sock:
+			sock.connect(("localhost", toPort))
+			#sock.sendall(bytes(data, 'utf-8'))
+			libsocket.sendMsg(sock, orjson.dumps(data, ))
+			if waitForResponse:
+				libsocket.recvMsg(sock)
+
+	def handleMessageFrom(self, data, *args, fromPort:int=None, **kwargs):
+		"""if fromPort is None, probably came from
+		this bridge session"""
+
+
 
