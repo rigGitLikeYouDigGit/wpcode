@@ -20,6 +20,20 @@ Usually these are just used as bulkier enums
 
 """
 
+constantTypes = (str, int, float, bool)
+class ConstantNamespace(ClassMagicMethodMixin):
+
+	@classmethod
+	def elementMap(cls)->dict[str, constantTypes]:
+		return {k : v for k, v in cls.__dict__.items() if isinstance(v, constantTypes)}
+
+	@classmethod
+	def __class_iter__(cls):
+		return iter(tuple(cls.elementMap().values()))
+
+	@classmethod
+	def __class_getitem__(cls, item):
+		return cls.elementMap()[item]
 
 class NamespaceElement(ClassMagicMethodMixin):
 	"""base class for items to put in class-level dict

@@ -332,3 +332,4 @@ external/*
 python/wpm/core/node/author/__init__.py
 /python/wpscratch
 python/wpscratch/testCall.py
+/python/idem/localsessions

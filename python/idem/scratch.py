@@ -5,10 +5,14 @@ import time
 import types, typing as T
 import pprint
 from wplib import log
+import sys, os
 
 from socketserver import TCPServer, ThreadingTCPServer
 
+
+from wplib.network import libsocket
 from idem.dcc.abstract.domain import DCCIdemSession
+from idem.dcc.abstract.domain import session
 
 #s = TCPServer(("", 0), socketserver.BaseRequestHandler)
 # s = ThreadingTCPServer(("", 0), socketserver.BaseRequestHandler)
@@ -16,19 +20,23 @@ from idem.dcc.abstract.domain import DCCIdemSession
 #
 # raise
 
-sessionA = DCCIdemSession(sessionTempName="A")
-
-#sessionA.server.serve_forever(0.1)
-
-#sessionA.server.server_close()
-
-sessionB = DCCIdemSession(sessionTempName="B")
-
+sessionA = DCCIdemSession(name="A")
 log("before run A")
 sessionA.runThreaded()
-log("before run B")
-sessionB.runThreaded()
+
+
+#sessionB = DCCIdemSession(sessionTempName="B")
+#log("before run B")
+#sessionB.runThreaded()
 log("before send")
-sessionA.send("hello")
+sessionA.send(sessionA.message({"my" : "message"}))
 log("after send")
-#time.sleep(10)
+
+#print(libsocket.getOpenSockets())
+#print(session.getActivePortDataPathMap())
+session.clearInactiveDataFiles()
+
+bridge = session.IdemBridgeSession()
+
+bridge.connectToSocket(sessionA.portId())
+
