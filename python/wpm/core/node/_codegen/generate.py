@@ -251,7 +251,8 @@ def genNodeFileStr(data:NodeData,
 	# node attributes
 	nodeAssigns = []
 	nodeAssigns.append(Assign("typeName", Literal(nodeType)))
-	nodeAssigns.append(Assign("apiTypeInt", data.apiTypeConstant))
+	if str(data.apiTypeConstant).strip():
+		nodeAssigns.append(Assign("apiTypeInt", data.apiTypeConstant))
 	# MFn type
 	# TODO: get the correct MFn type for the node, gather from maya
 	nodeAssigns.append(Assign("MFnCls", "om." + data.apiTypeStr))

@@ -20,7 +20,7 @@ for i in [msg] + msg.__subclasses__():
     print(str(generateClassStub(i)))
 
 """
-
+import maya.utils
 class MMessage(object):
 	# currentCallbackId : staticmethod = <staticmethod object at 0x000002F149F25E80>
 	# nodeCallbacks : staticmethod = <staticmethod object at 0x000002F149F25E50>

@@ -3,6 +3,7 @@ from __future__ import annotations
 import typing as T
 import os, shutil, types, importlib, traceback
 from pathlib import Path
+from wplib import log
 
 
 """package for defining custom wrappers around individual maya node types
@@ -52,37 +53,54 @@ class NodeClassRetriever:
 			return genPath
 		#raise FileNotFoundError(nodeClsName)
 
+	authorPackage = "wpm.core.node.author"
+	genPackage = "wpm.core.node.gen"
+
 	def getNodeModule(self, nodeClsName:str):
 		#path = self.getNodeFile(nodeClsName)
 		try:
 			mod = importlib.import_module(
-				"." + nodeClsName.lower(),
-				package="wpscratch._nodeoutline.node.author"
+				"." + nodeClsName,
+				package=self.authorPackage
 			)
+			log("loading", nodeClsName, "from AUTHOR")
 			return mod
-		except Exception as e:
-			print("IMPORT ERROR")
-			traceback.print_exc()
+		except ModuleNotFoundError as e:
+			# print("IMPORT ERROR")
+			# traceback.print_exc()
+			pass
 
 		mod = importlib.import_module(
-			"." + nodeClsName.lower(),
-			package="wpscratch._nodeoutline.node.gen"
+			"." + nodeClsName,
+			package=self.genPackage
 		)
+		log("loading", nodeClsName, "from GEN")
 		return mod
 
 	def getNodeCls(self, nodeClsName:str)->type[WN]:
-		found = self.nodeClsCache.get(nodeClsName)
+		"""
+		there is a bit of weirdness when classes try to import their
+		parent types, since those are written with capital first letters,
+		but modules and node types have lower first
+		:param nodeClsName:
+		:return:
+		"""
+		log("getNodeCls", nodeClsName, self.nodeClsCache)
+		nodeClsNameLower = nodeClsName[0].lower() + nodeClsName[1:]
+		nodeClsNameUpper = nodeClsName[0].upper() + nodeClsName[1:]
+		found = self.nodeClsCache.get(nodeClsNameLower)
 		if found:
 			return found
-		mod = self.getNodeModule(nodeClsName)
-		cls = getattr(mod, nodeClsName)
-		self.nodeClsCache[nodeClsName] = cls
+		mod = self.getNodeModule(nodeClsNameLower)
+		cls = getattr(mod, nodeClsNameUpper)
+		self.nodeClsCache[nodeClsNameLower] = cls
 		return cls
 
 retriever = NodeClassRetriever()
 
-from .base import WN
+from .base import WN, WNMeta as _WNMeta
 
+_WNMeta.retriever = retriever
 
 if __name__ == '__main__':
 

@@ -8,17 +8,19 @@ from wp.w3d.data import *
 from wpm import cmds, om, WN
 """maya-side implementations of the various data types"""
 
+class MayaData(WpData):
+	pass
 
-class CameraData(CameraData):
+class CameraData(WpData, CameraData):
 
-	def apply(self, node:WN.Camera):
+	def apply(self:CameraData, node:WN.Camera):
 		node = node.shape
-		om.MFnTransform(node.transform.object()).setTransformation(
-			om.MTransformationMatrix()
-		)
+		node.transform.setWorldMatrix(self["matrix"])
 		pass
 
 	@classmethod
 	def gather(cls, node:WN.Camera):
+		mat = node.transform.worldMatrix()
+		return cls(matrix=mat)
 		pass
 

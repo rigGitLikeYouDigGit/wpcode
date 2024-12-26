@@ -160,10 +160,25 @@ def getMPlug(plug:(str, om.MPlug, PlugBase))->om.MPlug:
 	raise TypeError(f"getMPlug: invalid arg {plug} type {type(plug)}")
 
 
-def nodeTypeFromMObject(mobj:om.MObject):
+def nodeTypeFromMObject(mobj:om.MObject)->str:
 	"""return a nodeTypeName string that can be passed to cmds.createNode
 	"""
-	return getCache().nodeTypeFromMObject(mobj)
+	# trying something quite simple here -
+	typeName = mobj.apiTypeStr[1].lower() + mobj.apiTypeStr[2:]
+	return typeName
+
+	# #return getCache().nodeTypeFromMObject(mobj)
+	# #return om.MNodeClass(om.MTypeId(mobj.apiType())).typeName
+	# apiType = mobj.apiType()
+	# print("apiType", apiType, mobj.isNull(), mobj.apiTypeStr)
+	# typeId = om.MTypeId(apiType)
+	# print("typeId", typeId, typeId.id())
+	# nodeCls = om.MNodeClass(typeId)
+	# print("nodeCls", nodeCls)
+	# typeName = nodeCls.typeName
+	# print("typeName", typeName, type(typeName))
+	# return typeName
+
 
 # region specific mfn functions
 # dissuaded other than for explicit function use, since getMFn is superior

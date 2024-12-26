@@ -59,7 +59,7 @@ class _TDMeta(type):
 		return b
 
 
-class TDefDict(T.TypedDict, metaclass=_TDMeta):
+class TDefDict(T.TypedDict, AttrDict, metaclass=_TDMeta):
 
 	def __str__(self):
 		return f"<{self.__class__.__name__}{str(dict(self))}>"
@@ -70,12 +70,12 @@ if __name__ == '__main__':
 	class Test(TDefDict):
 		"""order not guaranteed (yet), haven't found it useful"""
 		a: int = 22
-		b: str = "hello"
+		bounce: str = "hello"
 		pass
-
 
 	t = Test(a=3, b="ey")
 	print(t, type(t))
+
 	t = Test(a=3)
 	print(t, type(t))
 	t = Test( b="ey")

@@ -548,18 +548,37 @@ class WNMeta(type):
 			return self.retriever.getNodeCls(item)
 		raise AttributeError(f"no attribute {item}")
 
-	@staticmethod
-	def wrapperClassForNodeType(nodeType: str) -> T.Type[WN]:
+	@classmethod
+	def wrapperClassForNodeType(cls, nodeType: str) -> T.Type[WN]:
 		"""return a wrapper class for the given node's type
 		if it exists"""
-		return WN.nodeTypeClassMap().get(nodeType, WN)
+		if result := WN.nodeTypeNameWNClassMap.get(nodeType):
+			return result
+		# not already cached, go looking with retriever
+		try:
+			return cls.retriever.getNodeCls(nodeType)
+		except:
+			return WN
 
-	@staticmethod
-	def wrapperClassForMObject(mobj: om.MObject):
+	@classmethod
+	def wrapperClassForMObject(cls, mobj:om.MObject):
 		"""return a wrapper class for the given mobject
 		bit more involved if we don't know the string type
 		"""
-		return WN.apiTypeClassMap().get(mobj.apiType(), WN)
+		apiType = mobj.apiType()
+		if result := WN.apiTypeWNClassMap.get(apiType):
+			log("result", result)
+			return result
+		className = api.nodeTypeFromMObject(mobj)
+		log("className", className)
+		return cls.retriever.getNodeCls(className)
+
+		try:
+			return cls.retriever.getNodeCls(className)
+		except:
+			return WN
+		#return WN.apiTypeWNClassMap.get(mobj.apiType(), WN)
+		#return api.getCache().api.apiTypeClassMap().get(mobj.apiType(), WN)
 	# endregion
 
 	# region unique MObject lookup
@@ -620,7 +639,7 @@ class WNMeta(type):
 
 		simple
 		"""
-
+		log("WNMeta _call_", node, new, kwargs)
 		# filter input to MObject
 		if isinstance(node, WN):
 			return node
@@ -629,11 +648,13 @@ class WNMeta(type):
 
 		# check if MObject is known
 		if mobj in WNMeta.objMap:
+			log("mobj known")
 			# return node object associated with this MObject
 			return WNMeta.objMap[mobj]
 
 		# get specialised WNode subclass if it exists
 		wrapCls = WNMeta.wrapperClassForMObject(mobj)
+		log("wrapCls", wrapCls)
 
 		# create instance
 		ins = super(WNMeta, wrapCls).__call__(mobj, **kwargs)
@@ -642,11 +663,6 @@ class WNMeta(type):
 
 		return ins
 
-
-"""
-WN("transform1") # this should ERROR if transform1 doesn't exist
-WN.Transform("transform1") # this will create a new node
-"""
 
 
 class Catalogue:
@@ -676,7 +692,16 @@ class WN( # short for WePresentNode
 	"""
 
 	# type constant for link to api for specific subclasses
-	clsApiType : int = None
+	apiTypeInt : int = None
+
+	apiTypeWNClassMap : dict[int, type[WN]] = {}
+	nodeTypeNameWNClassMap : dict[str, type[WN]] = {}
+	def __init_subclass__(cls, **kwargs):
+		if cls.apiTypeInt is not None:
+			cls.apiTypeWNClassMap[cls.apiTypeInt] = cls
+			cls.nodeTypeNameWNClassMap[cls.__name__] = cls
+
+
 
 	# TODO: put specific MFn types here in generated classes
 	MFnCls = om.MFnDagNode

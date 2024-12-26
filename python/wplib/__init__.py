@@ -49,3 +49,7 @@ WP_PY_RESOURCE_PATH = Path(__file__).parent / "resource"
 
 # extra convenience imports
 from .pathable import Pathable
+
+from .object import to
+
+from .maths import toArr, arr

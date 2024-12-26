@@ -4,8 +4,9 @@ from __future__ import annotations
 import typing as T
 import itertools, inspect
 from collections import defaultdict
+import networkx as nx
 from wplib.log import log
-from wplib.inheritance import SuperClassLookupMap, superClassLookup, clsSuper
+from wplib.inheritance import SuperClassLookupMap, superClassLookup, clsSuper, containsSuperClass
 
 class Adaptor:
 	"""Abstract-abstract class for registering "companion" objects
@@ -197,7 +198,12 @@ def baseConvertFn(val: T.Any, toType: type, **kwargs) -> T.Any:
 
 class ToType:
 	edgeRegister : dict[type, dict[type, ToType]] = defaultdict(dict)
+	typeGraph = nx.DiGraph()
 	typeCache : dict[tuple[type, type], ToType] = {}
+
+	# path cache uses a single compiled lambda function to give the desired type
+	pathCache : dict[tuple[type, type], T.Callable[[T.Any], T.Any]] = {}
+
 	def __init__(self,
 	             fromTypes: tuple[type],
 	             toTypes: tuple[type],
@@ -221,21 +227,61 @@ class ToType:
 		for i in self.fromTypes:
 			for n in self.toTypes:
 				self.edgeRegister[i][n] = self
+				self.typeGraph.add_edge(i, n, toType=self)
 
 	@classmethod
-	def getMatchingConverter(cls, fromType:type, toType:type)->ToType:
-		"""wouldn't it be silly to try and do stepping-stone jumps between
-		types we know are valid to discover conversion sequences
-		yes it would, move on"""
+	def getMatchingConvertFn(cls, fromType:type, toType:type)->T.Callable[[T.Any, type, T.ParamSpecKwargs], T.Any]:
+		"""I had to do it to em
+		if a direct edge is not found, try and look up through any
+		matching types to see if there's a conversion path
+		we can take
+
+		a path is returned as ( (ToType, type, kwargDict), (ToType, type, etc) ... )
+		"""
 		if test := cls.typeCache.get((fromType, toType)):
+			return test.convertFn
+		if test := cls.pathCache.get((fromType, toType)): # return compiled lambda from path cache
 			return test
-		fromEdgesFound = superClassLookup(cls.edgeRegister, fromType)
-		assert fromEdgesFound, f"no conversion from type {fromType}"
-		toEdgeFound = superClassLookup(fromEdgesFound, toType)
-		assert toEdgeFound, f"no conversion from type {fromType} to type {toType}"
-		cls.typeCache[(fromType, toType)] = toEdgeFound
-		return toEdgeFound
+
+		# check that start and end types exist in graph
+		foundSrcSuperType = containsSuperClass(tuple(cls.typeGraph), fromType)
+		assert foundSrcSuperType, f"no src type {fromType}"
+		foundDstSuperType = containsSuperClass(tuple(cls.typeGraph), toType)
+		assert foundDstSuperType, f"no dst type {toType}"
+
+		path = nx.shortest_path(
+			cls.typeGraph,
+			source=foundSrcSuperType,
+			target=foundDstSuperType
+		)
+		if len(path) == 2: # direct edge found
+			edgeObj = cls.typeGraph.edges[fromType, toType]["toType"]
+			cls.typeCache[(fromType, toType)] = edgeObj
+			return edgeObj.convertFn
+
+		# build list of convert functions and stepping-stone types to
+		# convert through
+		log("graph nodes", list(cls.typeGraph))
+		log("found path", path)
+		stepList = []
+		for i in range(1, len(path)):
+			edgeObj = cls.typeGraph.edges[path[i-1], path[i]]["toType"]
+			stepList.append((path[i], edgeObj))
+
+		def _convertFn(v, t, **kwargs):
+			# pass the given target type only to the final function
+			log("convertFn", v, t)
+			log(stepList)
+			for i in stepList[:-1]:
+				v = i[1].convertFn(v, i[0], **kwargs)
+			return stepList[-1][1].convertFn(v, t, **kwargs)
+		cls.pathCache[(fromType, toType)] = _convertFn
+		return _convertFn
+
 
 def to(val, t: type, **kwargs) -> t:
-	foundEdge = ToType.getMatchingConverter(type(val), t)
-	return foundEdge.convertFn(val, t, **kwargs)
+	if type(val) == t:
+		return val
+	foundFn = ToType.getMatchingConvertFn(type(val), t)
+	return foundFn(val, t, **kwargs)
+

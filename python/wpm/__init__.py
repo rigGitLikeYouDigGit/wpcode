@@ -50,4 +50,4 @@ from .core import (
 PLUG_VAL = (PlugTree, object)
 
 from wplib import log
-from .lib.adaptor import to, arr
+from .lib.adaptor import to, arr, toArr
