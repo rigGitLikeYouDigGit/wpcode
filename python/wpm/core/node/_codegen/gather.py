@@ -1,5 +1,7 @@
 
 from __future__ import annotations
+
+import traceback
 import typing as T
 import json, sys, os
 from pathlib import Path
@@ -9,10 +11,11 @@ from dataclasses import dataclass
 
 import orjson
 
+from wplib import log
 from wptree import Tree
 
 from wpm import WN, om, cmds
-from wpm.core import getMFn, getMFnType, apiTypeMap
+from wpm.core import getMFn, getMFnType, apiTypeMap, getCache
 
 
 TARGET_NODE_DATA_PATH = Path(__file__).parent / "nodeData.json"
@@ -42,7 +45,7 @@ def getAttrData(obj:om.MObject):
 		name=baseFn.name,
 		type=baseFn.type(),
 		#typeName=str(type(baseFn)),
-		typeName=baseFn.object().apiTypeStr(),
+		typeName=baseFn.object().apiTypeStr,
 		isArray=baseFn.array,
 		shortName=baseFn.shortName,
 		isInput=baseFn.writable,
@@ -61,6 +64,7 @@ class NodeData:
 	typeName:str
 	apiTypeConstant:int
 	apiTypeStr : str # MFnTransform
+	mfnStr : str
 	bases: tuple[str] = ()
 	isAbstract:bool = False
 
@@ -70,8 +74,14 @@ class NodeData:
 
 	#attrNames:tuple[str] = ()
 
+reportTypes = {"nurbsCurve", "transform", "lambert", "animLayer",
+               "bakeSet", "anisotropic"}
+
 def getNodeData(nodeTypeName:str):
 
+	def pr(*s):
+		if nodeTypeName in reportTypes:
+			print(*s)
 	mclass = om.MNodeClass(nodeTypeName)
 
 	# get node class bases
@@ -85,16 +95,30 @@ def getNodeData(nodeTypeName:str):
 		print("failed to get attributes for", nodeTypeName)
 		raise
 	# get all attribute data
-	attrDatas =list(sorted((getAttrData(attr) for attr in attrs), key=lambda x: x.name))
-	mfn = om.MFnBase
+	attrDatas = list(sorted((getAttrData(attr) for attr in attrs), key=lambda x: x.name))
+	#mfn :om.MFnBase = om.MFnBase()
+	apiTypeConstant = 0
+	apiTypeStr = "kBase"
+	mfnStr = "MFnBase"
 	try:
-		mfn = getMFnType(int(mclass.typeId.id()))
+		pr("nodetype", nodeTypeName, )
+		# mfn : om.MFnBase = getCache().nodeTypeLeafMFnMap[nodeTypeName](om.MObject())
+		# "mfn", mfn
+		mfn : om.MFnBase = getCache().nodeTypeLeafMFnMap[nodeTypeName]
+		kStr = getCache().nodeTypeNameToKStr(nodeTypeName)
+		apiTypeConstant = getCache().classNameConstantMaps[om.MFn][kStr]
+		apiTypeStr = getCache().classConstantNameMaps[om.MFn][apiTypeConstant]
+		mfnStr = mfn.__name__
 	except:
+		if nodeTypeName in reportTypes:
+			traceback.print_exc()
 		pass
 	data = NodeData(
 		typeName=nodeTypeName,
-		apiTypeConstant=int(mclass.typeId.id()),
-		apiTypeStr=mfn.__name__,
+
+		apiTypeConstant=apiTypeConstant,
+		apiTypeStr=apiTypeStr,
+		mfnStr=mfnStr,
 		#attrs=mclass.attributeList()
 		attrDatas=attrDatas,
 		bases=tuple(baseClasses),
@@ -156,7 +180,8 @@ def getBaseNodeData():
 	return NodeData(
 		typeName="_BASE_",
 		apiTypeConstant=0,
-		apiTypeStr="MFnBase",
+		apiTypeStr="kBase",
+		mfnStr="MFnBase",
 		attrDatas=[ messageData, cachingData, frozenData,
 		            isHistoricallyInterestingData, nodeStateData ],
 		bases=(),
@@ -198,6 +223,9 @@ def gatherNodeData():
 			data = getNodeData(nodeType)
 			data.isAbstract = abstractMap[nodeType]
 			nodeData[str(typeLen)][nodeType] = data
+			if nodeType in reportTypes:
+				log("writing data", nodeType)
+				print(data)
 
 
 
@@ -206,12 +234,13 @@ def gatherNodeData():
 		f.write(
 			orjson.dumps(nodeData, option=orjson.OPT_INDENT_2).decode("utf-8")
 		)
-
+	
+	log("gather done")
 """
 script:
 
 from importlib import reload
-from wpm.core.node.gen import gather
+from wpm.core.node._codegen import gather
 
 reload(gather)
 

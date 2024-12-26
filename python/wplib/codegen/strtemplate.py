@@ -199,7 +199,7 @@ class Assign(StringCodeTemplate):
 		self.right = right
 
 	def _resultString(self):
-		if self.right:
+		if str(self.right):
 			return f"{formatArg(self.left, space=True)} = {str(self.right)}"
 		return f"{formatArg(self.left, space=True)}"
 

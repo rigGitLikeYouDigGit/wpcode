@@ -567,10 +567,10 @@ class WNMeta(type):
 		"""
 		apiType = mobj.apiType()
 		if result := WN.apiTypeWNClassMap.get(apiType):
-			log("result", result)
+			#log("result", result)
 			return result
 		className = api.nodeTypeFromMObject(mobj)
-		log("className", className)
+		#log("className", className)
 		return cls.retriever.getNodeCls(className)
 
 		try:
@@ -639,7 +639,7 @@ class WNMeta(type):
 
 		simple
 		"""
-		log("WNMeta _call_", node, new, kwargs)
+		#log("WNMeta _call_", node, new, kwargs)
 		# filter input to MObject
 		if isinstance(node, WN):
 			return node
@@ -648,13 +648,13 @@ class WNMeta(type):
 
 		# check if MObject is known
 		if mobj in WNMeta.objMap:
-			log("mobj known")
+			#log("mobj known")
 			# return node object associated with this MObject
 			return WNMeta.objMap[mobj]
 
 		# get specialised WNode subclass if it exists
 		wrapCls = WNMeta.wrapperClassForMObject(mobj)
-		log("wrapCls", wrapCls)
+		#log("wrapCls", wrapCls)
 
 		# create instance
 		ins = super(WNMeta, wrapCls).__call__(mobj, **kwargs)

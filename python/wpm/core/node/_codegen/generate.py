@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 import orjson
 
-from wplib import wpstring
+from wplib import wpstring, log
 
 from wptree import Tree
 
@@ -66,6 +66,7 @@ class NodeData:
 	typeName:str
 	apiTypeConstant:int
 	apiTypeStr : str
+	mfnStr : str
 	bases: tuple[str] = ()
 	isAbstract:bool = False
 
@@ -251,12 +252,14 @@ def genNodeFileStr(data:NodeData,
 	# node attributes
 	nodeAssigns = []
 	nodeAssigns.append(Assign("typeName", Literal(nodeType)))
+	#log("apiTypeConstant", data.apiTypeConstant)
 	if str(data.apiTypeConstant).strip():
 		nodeAssigns.append(Assign("apiTypeInt", data.apiTypeConstant))
+		nodeAssigns.append(Assign("apiTypeStr", Literal(data.apiTypeStr)))
 	# MFn type
 	# TODO: get the correct MFn type for the node, gather from maya
-	nodeAssigns.append(Assign("MFnCls", "om." + data.apiTypeStr))
-	nodeAssigns.append(Assign(("MFn", "om." + data.apiTypeStr)))
+	nodeAssigns.append(Assign("MFnCls", "om." + data.mfnStr))
+	#nodeAssigns.append(Assign(("MFn", "om." + data.apiTypeStr)))
 
 
 	# generate main node
@@ -288,6 +291,7 @@ def genNodeFileStr(data:NodeData,
 def genNodes(#project:CodeGenProject
 		genDir:Path = Path(__file__).parent.parent / "gen",
 		onlyTransform=False,
+		onlyBase=False
              ):
 	"""generate nodes from json data"""
 
@@ -314,6 +318,16 @@ def genNodes(#project:CodeGenProject
 				continue
 			targetNodes.append(nodeData[nameNBasesMap[base]][base])
 		targetNodes.append(nodeData["4"]["transform"])
+
+	elif onlyBase:
+		targetNodes = []
+		try:
+			for nBases, nameMap in nodeData.items():
+				for name, data in nameMap.items():
+					targetNodes.append(data)
+					raise RuntimeError
+		except RuntimeError:
+			pass
 
 	else: # regenerate every single node in maya
 		targetNodes = []
@@ -415,7 +429,10 @@ if __name__ == '__main__':
 
 	resetGenDir()
 
-	genNodes()
+	genNodes(
+		onlyTransform=False,
+		onlyBase=False
+	)
 
 	processGenInitFile(genDir / "__init__.py", genDir)
 

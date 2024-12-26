@@ -63,7 +63,7 @@ class NodeClassRetriever:
 				"." + nodeClsName,
 				package=self.authorPackage
 			)
-			log("loading", nodeClsName, "from AUTHOR")
+			#log("loading", nodeClsName, "from AUTHOR")
 			return mod
 		except ModuleNotFoundError as e:
 			# print("IMPORT ERROR")
@@ -74,7 +74,7 @@ class NodeClassRetriever:
 			"." + nodeClsName,
 			package=self.genPackage
 		)
-		log("loading", nodeClsName, "from GEN")
+		#log("loading", nodeClsName, "from GEN")
 		return mod
 
 	def getNodeCls(self, nodeClsName:str)->type[WN]:
@@ -85,7 +85,7 @@ class NodeClassRetriever:
 		:param nodeClsName:
 		:return:
 		"""
-		log("getNodeCls", nodeClsName, self.nodeClsCache)
+		#log("getNodeCls", nodeClsName, self.nodeClsCache)
 		nodeClsNameLower = nodeClsName[0].lower() + nodeClsName[1:]
 		nodeClsNameUpper = nodeClsName[0].upper() + nodeClsName[1:]
 		found = self.nodeClsCache.get(nodeClsNameLower)

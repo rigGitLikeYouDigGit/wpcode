@@ -19,19 +19,13 @@ import threading # cache api stuff as threaded jobs to avoid slow startup
 from wplib import log
 from .patch import cmds, om, oma, omr, omui
 
-@dataclass
-class MFnTypeData:
-	typeId: int
-	name: str
-	nearestMfnCls: type
-
-
 shapeTypeConstantNames = {
 	"kMesh", "kMeshGeom", "kNurbsCurve", "kNurbsCurveGeom",
 	"kNurbsSurface", "kNurbsSurfaceGeom",
 	"kSubdiv", "kSubdivGeom",
 	"kLocator"
 }
+
 
 conformGetName = lambda x: (x[-1] + x[:-1] if x[-1].isdigit() else x)
 
@@ -60,7 +54,15 @@ class APICache:
 	cache useful relationships for MFn classes and Maya's
 	object type system
 	"""
+	shapeTypeConstantNames = shapeTypeConstantNames
+	shapeTypeConstants = set() # build later
 
+	@staticmethod
+	def nodeTypeNameToKStr(nodeTypeName="addDoubleLinear")->str:
+		return "k" + nodeTypeName[0].upper() + nodeTypeName[1:]
+	@staticmethod
+	def kStrToNodeTypeName(kStr="kAddDoubleLinear")->str:
+		return kStr[1].lower() + kStr[2:]
 	def __init__(self):
 		self.mObjRegister = {}
 		# MObjects can't be weakref'd for some reason
@@ -76,8 +78,10 @@ class APICache:
 
 		self.apiTypeLeafMFnMap : dict[int, MFnT] = {} # specific to MFnBase
 		self.apiStrLeafMFnMap: dict[str, MFnT] = {}
+		self.nodeTypeLeafMFnMap : dict[str, MFnT] = {}
 
 		self.apiTypeMFnDataMap : dict[int, type[om.MFnData]] = {}
+
 
 	def classTypeIdNameMemberMap(self, MFnCls:MFnT)->dict[int, str]:
 		if MFnCls not in self.classConstantNameMaps:
@@ -106,7 +110,7 @@ class APICache:
 		mfnMap = self.classTypeIdNameMemberMap(om.MFn)
 
 		nameMap = self.classNameTypeIdMemberMap(om.MFn)
-		# mfnBaseMap = self.classTypeIdNameMemberMap(om.MFnBase)
+		#mfnBaseMap = self.classTypeIdNameMemberMap(om.MFnBase)
 		# pprint.pp(mfnMap)
 		#
 		# pprint.pp(mfnBaseMap)
@@ -118,6 +122,8 @@ class APICache:
 		self.apiStrLeafMFnMap = {
 			self.classTypeIdNameMemberMap(om.MFn)[k] : v
 			for k, v in typeLeafMFnMap.items()}
+		self.nodeTypeLeafMFnMap = {k[1].lower() + k[2:] : v
+		                           for k, v in self.apiStrLeafMFnMap.items()}
 		#pprint.pp(self.apiStrLeafMFnMap)
 
 
@@ -136,6 +142,11 @@ class APICache:
 					apiTypeMFnDataMap[typeId] = subCls
 		#pprint.pp(apiTypeMFnDataMap)
 		self.apiTypeMFnDataMap = apiTypeMFnDataMap
+
+		# cache shape constants
+		self.shapeTypeConstants = {
+			self.classNameConstantMaps[om.MFn][i] for i in self.shapeTypeConstantNames
+		}
 
 
 
@@ -236,7 +247,7 @@ class APICache:
 		the ls uid method"""
 		return om.MObjectHandle(obj).hashCode()
 
-	def getMObjectCached(self, node)->om.MObject:
+	def getMObject(self, node, checkValid=True)->om.MObject:
 		"""this is specialised for dg nodes -
 		component MObjects will have their own functions anyway if needed
 		TODO: rework this good grief
@@ -245,7 +256,7 @@ class APICache:
 			getMObject function like every other sane person
 		"""
 		if isinstance(node, om.MObject):
-			if node.isNull():
+			if node.isNull() and checkValid:
 				raise RuntimeError("object for ", node, " is invalid")
 			return node
 		else:
@@ -267,23 +278,12 @@ class APICache:
 	def nodeTypeFromMObject(self, mobj:om.MObject)->str:
 		"""return a nodeTypeName string that can be passed to cmds.createNode
 		"""
-		name = self.apiCodeNameMap[mobj.apiType()]
-		# name = mobj.apiTypeStr
+		#name = self.apiCodeNameMap[mobj.apiType()]
+		#name = self.apiTypeLeafMFnMap[mobj.apiType()]
+		#name = self.classNameConstantMaps[om.MFn][mobj.apiType()]
+		name = mobj.apiTypeStr
 		return name[1].lower() + name[2:]
 
-
-	# function presenting the above as dict of dataclasses
-	def buildApiTypeDataMap(self, apiTypeMap, apiCodeNameMap):
-		typeDataMap = {}
-		for typeConstant, cls in apiTypeMap.items():
-			typeDataMap[typeConstant] = MFnTypeData(
-				typeConstant,
-				apiCodeNameMap[typeConstant],
-				cls
-			)
-		return typeDataMap
-
-	# apiTypeDataMap = buildApiTypeDataMap(apiTypeMap, apiTypeCodeMap, apiCodeNameMap)
 
 	def buildMFnDataMap(self):
 		"""build a map of MFn constant kName to corresponding
@@ -300,21 +300,30 @@ class APICache:
 			valueTypeMap[value] = lookupCls
 		return valueTypeMap
 
-	# mfnDataConstantTypeMap = buildMFnDataMap()
-
 	#pprint.pprint(apiTypeMap)
 	# coercing input to MObject in functions below is not most futureproof,
 	# but worth it for the lines saved
+	def mfnForNodeType(self, nodeType:str="addDoubleLinear"):
+		"""for a normal nodeType 'kAddDoubleLinear', get the best fitting MFn
+		type for it
+		"""
+		return self.classNameConstantMaps
+
+	def mfnForDataConstantName(self, dataConstantName:str="kAddDoubleLinear"):
+		return self.apiStrLeafMFnMap
+
 	def getMFnType(self, obj:om.MObject)->T.Type[om.MFnBase]:
 		"""returns the highest available MFn
 		for given object, based on sequence order
 		above"""
 		if isinstance(obj, int):
-			return self.apiTypeMap[obj]
+			#return self.apiTypeMap[obj]
+			return self.apiTypeLeafMFnMap[obj]
 		obj = self.getMObject(obj)
 		# print("getMFnType", obj.apiType(),
 		# 	  apiCodeNameMap[obj.apiType()], apiTypeMap[obj.apiType()])
-		return self.apiTypeMap[obj.apiType()]
+		#return self.apiTypeMap[obj.apiType()]
+		return self.apiTypeLeafMFnMap[obj.apiType()]
 
 	def getMFn(self, obj:om.MObject)->om.MFnBase:
 		"""return mfn function set initialised on the given object"""
