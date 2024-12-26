@@ -21,7 +21,7 @@ from wpm import log, cmds, om, oma, WN
 
 
 class ChannelSlider(QtWidgets.QLineEdit):
-	"""textedit mirroring Maya dragging behaviour"""
+	"""lineedit mirroring Maya dragging behaviour"""
 
 	def __init__(self, parent=None):
 		super(ChannelSlider, self).__init__(parent=parent)

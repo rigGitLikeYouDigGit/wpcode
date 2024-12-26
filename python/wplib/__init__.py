@@ -1,5 +1,6 @@
 
-
+from __future__ import annotations
+import typing as T, types
 """dedicated library package for pure-python utilities -
 nothing project-specific, nothing applied
 
@@ -12,6 +13,12 @@ from .log import log
 from .coderef import CodeRef
 
 #from .expression import *
+
+# small reactive function I've found useful everywhere
+def EVAL(x):
+	while isinstance(x, (types.FunctionType, types.MethodType)):
+		x = x()
+	return x
 
 from wplib.object import Adaptor, TypeNamespace, Sentinel
 

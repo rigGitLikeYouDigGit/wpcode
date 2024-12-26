@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 import typing as T
-
+import itertools, inspect
+from collections import defaultdict
 from wplib.log import log
 from wplib.inheritance import SuperClassLookupMap, superClassLookup, clsSuper
 
@@ -180,3 +181,61 @@ class Adaptor:
 	# endregion
 
 
+# TODO:
+"""
+hitting some cases where Adaptor is
+at once too much and too little - 
+in general for conversion, we can have an NxN
+number of possible conversions between types,
+some of which can share logic
+none of which can ever conflict (otherwise you shouldn't be using a simple system anyway)
+"""
+
+
+def baseConvertFn(val: T.Any, toType: type, **kwargs) -> T.Any:
+	return toType(val)
+
+class ToType:
+	edgeRegister : dict[type, dict[type, ToType]] = defaultdict(dict)
+	typeCache : dict[tuple[type, type], ToType] = {}
+	def __init__(self,
+	             fromTypes: tuple[type],
+	             toTypes: tuple[type],
+	             convertFn: T.Callable[[T.Any, T.Type, T.ParamSpecKwargs], T.Any] = baseConvertFn,
+	             backFn:T.Optional[T.Callable[[T.Any, T.Type, T.ParamSpecKwargs], T.Any]]=None
+	             ):
+		self.fromTypes = fromTypes if isinstance(fromTypes, T.Sequence) else (fromTypes, )
+		self.toTypes = toTypes if isinstance(toTypes, T.Sequence) else (toTypes, )
+		self.convertFn = convertFn
+		self.updateRegisters()
+
+		# for conversions that reverse, no point redeclaring another instance
+		if backFn: # create a separate sub-object with params flipped
+			ToType(fromTypes=self.toTypes,
+			       toTypes=self.fromTypes,
+			       convertFn=backFn,
+			       backFn=None)
+
+	def updateRegisters(self):
+		"""update this exact edge in type map"""
+		for i in self.fromTypes:
+			for n in self.toTypes:
+				self.edgeRegister[i][n] = self
+
+	@classmethod
+	def getMatchingConverter(cls, fromType:type, toType:type)->ToType:
+		"""wouldn't it be silly to try and do stepping-stone jumps between
+		types we know are valid to discover conversion sequences
+		yes it would, move on"""
+		if test := cls.typeCache.get((fromType, toType)):
+			return test
+		fromEdgesFound = superClassLookup(cls.edgeRegister, fromType)
+		assert fromEdgesFound, f"no conversion from type {fromType}"
+		toEdgeFound = superClassLookup(fromEdgesFound, toType)
+		assert toEdgeFound, f"no conversion from type {fromType} to type {toType}"
+		cls.typeCache[(fromType, toType)] = toEdgeFound
+		return toEdgeFound
+
+def to(val, t: type, **kwargs) -> t:
+	foundEdge = ToType.getMatchingConverter(type(val), t)
+	return foundEdge.convertFn(val, t, **kwargs)

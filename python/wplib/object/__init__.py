@@ -1,11 +1,13 @@
 
-from .adaptor import Adaptor
+from .adaptor import Adaptor, ToType, to
+from .attrdict import AttrDict, TDefDict
 
 from .builtinextension import UserSet, PostDecMethodWrapper
 
 from .namespace import TypeNamespace, Sentinel
 
 from .cache import CacheObj
+from .catalogue import Catalogue
 #from .delta import DeltaAtom, PrimDeltaAtom, MoveDelta, InsertDelta
 
 from .decorator import UserDecorator

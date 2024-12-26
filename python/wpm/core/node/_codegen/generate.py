@@ -65,6 +65,7 @@ class NodeData:
 	"""data for a single node type"""
 	typeName:str
 	apiTypeConstant:int
+	apiTypeStr : str
 	bases: tuple[str] = ()
 	isAbstract:bool = False
 
@@ -171,15 +172,15 @@ def genNodeFileStr(data:NodeData,
 		# no direct import, go through retriever class
 		importLines.append("from .. import retriever")
 		# Dag = retriever.getNodeCls("Dag")
-		importLines.append(f"{string.cap(parent)} = retriever.getNodeCls(\"{string.cap(parent)}\")")
+		importLines.append(f"{wpstring.cap(parent)} = retriever.getNodeCls(\"{wpstring.cap(parent)}\")")
 
 		# type-checking time import for final user-authored file
 		# for parent class and for node itself,
 		# to set hint ".node" attribute on plugs
 		typeCheckImports = IfBlock(
 			conditionBlocks=[["T.TYPE_CHECKING",
-			                  ["from .. import " + string.cap(parent),
-			                   "from .. import " + string.cap(nodeType)],
+			                  ["from .. import " + wpstring.cap(parent),
+			                   "from .. import " + wpstring.cap(nodeType)],
 			                   ]],
 		)
 		importLines.append(str(typeCheckImports))
@@ -203,11 +204,11 @@ def genNodeFileStr(data:NodeData,
 	plugTemplates = []
 	#for attrData in attrDatas:
 	for attrData in newAttrDatas:
-		className = string.cap(attrData.name) + "Plug"
+		className = wpstring.cap(attrData.name) + "Plug"
 
 		parentName = ""
 		if attrData.parentName:
-			parentName = string.cap(attrData.parentName) + "Plug"
+			parentName = wpstring.cap(attrData.parentName) + "Plug"
 
 		#childMap : dict[argT, FunctionCallTemplate] = {}
 		childLines = []
@@ -221,7 +222,7 @@ def genNodeFileStr(data:NodeData,
 				)
 			)
 		for childData in attrData.childDatas:
-			childName = string.cap(childData.name) + "Plug"
+			childName = wpstring.cap(childData.name) + "Plug"
 			descriptorCall = FunctionCallTemplate(
 				"PlugDescriptor",
 				fnArgs=((Literal(childData.name), ), {} )
@@ -230,7 +231,7 @@ def genNodeFileStr(data:NodeData,
 			childLines.append(Assign((childData.shortName + "_", childName), descriptorCall))
 
 		# set node attr
-		childLines.append(Assign(("node", string.cap(nodeType)),))
+		childLines.append(Assign(("node", wpstring.cap(nodeType)),))
 
 		classDef = ClassTemplate(
 			className=className,
@@ -245,7 +246,7 @@ def genNodeFileStr(data:NodeData,
 					"PlugDescriptor",
 					fnArgs=((Literal(attrData.name), ), {} )
 				)
-		plugAssigns.append(Assign((attrData.name + "_", string.cap(attrData.name) + "Plug"), descriptorCall))
+		plugAssigns.append(Assign((attrData.name + "_", wpstring.cap(attrData.name) + "Plug"), descriptorCall))
 
 	# node attributes
 	nodeAssigns = []
@@ -253,16 +254,17 @@ def genNodeFileStr(data:NodeData,
 	nodeAssigns.append(Assign("apiTypeInt", data.apiTypeConstant))
 	# MFn type
 	# TODO: get the correct MFn type for the node, gather from maya
-	nodeAssigns.append(Assign("MFnCls", "om.MFnDagNode"))
+	nodeAssigns.append(Assign("MFnCls", "om." + data.apiTypeStr))
+	nodeAssigns.append(Assign(("MFn", "om." + data.apiTypeStr)))
 
 
 	# generate main node
 	if parent is not None:
-		classBaseClasses = (string.cap(parent),)
+		classBaseClasses = (wpstring.cap(parent),)
 	else:
 		classBaseClasses = ("WN",)
 	nodeDef = ClassTemplate(
-		className=string.cap(nodeType),
+		className=wpstring.cap(nodeType),
 		# classBaseClasses=(string.cap(parent),),
 		classBaseClasses=classBaseClasses,
 		classLines=plugAssigns + [Comment(), Comment("node attributes"), Comment()] +  nodeAssigns,
@@ -365,10 +367,10 @@ def processGenInitFile(initFile:Path,
 			continue
 		imports.append(Import(
 			fromModule="." + refFile.stem,
-			module=string.cap(refFile.stem),
+			module=wpstring.cap(refFile.stem),
 		))
 		assignments.append(Assign(
-			string.cap(refFile.stem), string.cap(refFile.stem)
+			wpstring.cap(refFile.stem), wpstring.cap(refFile.stem)
 		))
 
 	catalogueClassDef = ClassTemplate(

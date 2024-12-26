@@ -12,7 +12,7 @@ import orjson
 from wptree import Tree
 
 from wpm import WN, om, cmds
-from wpm.core import getMFn
+from wpm.core import getMFn, getMFnType, apiTypeMap
 
 
 TARGET_NODE_DATA_PATH = Path(__file__).parent / "nodeData.json"
@@ -31,6 +31,8 @@ class AttrData:
 	shortName:str = ""
 	parentName:str = "" # parent attribute name if attribute is a child
 	# isInternal:bool = False
+
+	#todo: get the data type constants where possible - k2float, kTime, etc
 
 def getAttrData(obj:om.MObject):
 	baseFn : om.MFnAttribute = getMFn(obj)
@@ -58,6 +60,7 @@ class NodeData:
 	"""data for a single node type"""
 	typeName:str
 	apiTypeConstant:int
+	apiTypeStr : str # MFnTransform
 	bases: tuple[str] = ()
 	isAbstract:bool = False
 
@@ -83,10 +86,15 @@ def getNodeData(nodeTypeName:str):
 		raise
 	# get all attribute data
 	attrDatas =list(sorted((getAttrData(attr) for attr in attrs), key=lambda x: x.name))
-
+	mfn = om.MFnBase
+	try:
+		mfn = getMFnType(int(mclass.typeId.id()))
+	except:
+		pass
 	data = NodeData(
 		typeName=nodeTypeName,
 		apiTypeConstant=int(mclass.typeId.id()),
+		apiTypeStr=mfn.__name__,
 		#attrs=mclass.attributeList()
 		attrDatas=attrDatas,
 		bases=tuple(baseClasses),
@@ -148,6 +156,7 @@ def getBaseNodeData():
 	return NodeData(
 		typeName="_BASE_",
 		apiTypeConstant=0,
+		apiTypeStr="MFnBase",
 		attrDatas=[ messageData, cachingData, frozenData,
 		            isHistoricallyInterestingData, nodeStateData ],
 		bases=(),

@@ -9,14 +9,13 @@ import threading, multiprocessing, socket, socketserver, traceback
 from pathlib import Path
 from uuid import uuid4
 from dataclasses import dataclass
-
-from idem import getIdemDir
-
 import orjson
 
-import win32pipe
 
 from wplib.network import libsocket
+
+from idem import getIdemDir
+from idem.dcc.abstract.command import *
 
 
 def getPortDataPathMap()->dict[int, Path]:
@@ -39,11 +38,7 @@ def clearInactiveDataFiles():
 	for k, p in getPortDataPathMap().items():
 		if not k in activeMap:
 			p.unlink()
-#
-# class MsgDict(T.TypedDict):
-# 	#data : dict # main data of the message
-# 	r : bool # does the sender want a response
-# 	sender : (int, str)
+
 
 class SlotRequestHandler(socketserver.StreamRequestHandler):
 	request : socket.socket
@@ -64,7 +59,9 @@ class SlotRequestHandler(socketserver.StreamRequestHandler):
 		if data["sender"][0] == self.server.socket.getsockname()[1]:
 			log("not responding to own message") # works
 			return
-		log("handle data", data)
+		if "t" in data:
+			data = IdemCmd(data)
+		log(self.server.socket.getsockname()[1], "handle data", data)
 
 		for i in getattr(self.server, "slotFns", ()):
 			try:
@@ -75,7 +72,7 @@ class SlotRequestHandler(socketserver.StreamRequestHandler):
 
 	def sendResponse(self, msg:dict):
 		"""send the given message dict back along the open socket"""
-		#libsocket.sendMsg(self.request, orjson.dumps(msg))
+		log(self.server.socket.getsockname()[1], "send response", msg)
 		libsocket.sendMsg(self.request, msg)
 
 class ReusableThreadingTCPServer(socketserver.ThreadingTCPServer):
@@ -112,7 +109,7 @@ class DataFileServer:
 		self.liveData = {
 			"id" : self.uuid,
 			"processId" : os.getpid(),
-			"connected" : None
+			"connected" : None # central bridge connected
 		}
 		self.writeSessionFileData(self.liveData)
 
@@ -233,15 +230,21 @@ class DataFileServer:
 		log(self._sessionFileName(), "send to", toPort, msg)
 		with socket.socket() as sock:
 			sock.connect(("localhost", toPort))
-			#sock.sendall(bytes(data, 'utf-8'))
-			#libsocket.sendMsg(sock, orjson.dumps(msg, ))
 			libsocket.sendMsg(sock, msg)
 
 			if msg["r"]: # wait for response
 				log(self._sessionFileName(), "wait for reply")
 				result = libsocket.recvMsg(sock)
 				log(self._sessionFileName(), "got reply", result)
-				return
+				return result
+
+	def getSessionIdData(self)->SessionIdData:
+		return SessionIdData(id=(self.portId(), self.name),
+		                     dcc=self.dccType)
+
+class SessionIdData(T.TypedDict):
+	id : tuple[int, str]
+	dcc : str
 
 
 
@@ -281,21 +284,36 @@ class DCCIdemSession(DataFileServer):
 			pass
 		return s
 
+
 	def handleMessage(self, handler:SlotRequestHandler, data:dict):
 		"""handle incoming messages from bridge"""
 		log(self._sessionFileName(), "handle", data)
-		if "connectToBridgeCmd" in data: # connect to the given bridge session
-			self.updateConnectedBridge(data["connectToBridgeCmd"])
+		if isinstance(data, ConnectToBridgeCmd):
+			self.updateConnectedBridge(data["sender"])
 			handler.sendResponse(
-				self.message({"connectedSession" : (self.portId(), self.name)}, wantResponse=False))
+				self.message({"connectedSession" : self.getSessionIdData()}, # should we have a function to make this response?
+				             wantResponse=False)
+			)
 			return
 		#return super().handleMessage(handler, data)
+
+
+
+	def getSessionCamera(self):
+		"""return a DCC camera to link to idem,
+		updating views simultaneously across programs.
+		If this works it'll be so cool"""
+
+
+
 
 @dataclass
 class ChildSessionData:
 	port : int
 	server : socketserver.ThreadingTCPServer
+	serverThread: threading.Thread
 	dccTypeName : str = ""
+
 
 
 class IdemBridgeSession(DataFileServer):
@@ -308,6 +326,7 @@ class IdemBridgeSession(DataFileServer):
 	- manage named blocks of shared memory
 
 	"""
+	dccType = "bridge"
 
 	def __init__(self, name="bridge"):
 		super().__init__(name)
@@ -317,6 +336,13 @@ class IdemBridgeSession(DataFileServer):
 			lambda *args, **kwargs : self.handleMessage(
 				*args, fromPort=self.portId(), **kwargs)
 		                  ]
+
+		self.liveData = {
+			"id" : self.uuid,
+			"processId" : os.getpid(),
+			"connected" : {} # type:dict[int, SessionIdData]
+		}
+		self.writeSessionFileData(self.liveData)
 
 	def connectToSocket(self, portId:int):
 		"""create a new server listening on the given child socket"""
@@ -328,15 +354,33 @@ class IdemBridgeSession(DataFileServer):
 			lambda *args, **kwargs : self.handleMessage(
 				*args, fromPort=portId, **kwargs)
 		                  ]
+		thread = threading.Thread(target=server.serve_forever)
 		self.linkedSessions[portId] = ChildSessionData(
-			portId, server)
-		# ask server for some other information
+			portId, server, serverThread=thread)
 
-		self.send(self.message(
-			{"connectToBridgeCmd" : self.portId()}, wantResponse=True),
+		# ask server for some other information
+		result = self.send(self.message(
+			ConnectToBridgeCmd(), wantResponse=True),
 			toPort=portId
 		)
+		if not result:
+			raise RuntimeError("could not connect to child session ", portId)
+		if "connectedSession" in result:
+			log("successfully connected child session", result["connectedSession"])
+			# json keys apparently can't be integers, only strings
+			# been working with this format 7 years, only learned that today
+			self.liveData["connected"][str(portId)] = result["connectedSession"]
+			self.writeSessionFileData(self.liveData)
 
+	def disconnectSocket(self, portId:int):
+		"""remove connection to the given port -
+		shutdown listening server
+		halt listening thread
+		remove from connections"""
+		self.linkedSessions[portId].server.shutdown()
+		self.linkedSessions.pop(portId)
+		self.liveData["connected"].pop(str(portId))
+		self.writeSessionFileData(self.liveData)
 
 	def send(self, msg:dict, toPort=None):
 		if toPort is None:
@@ -347,14 +391,13 @@ class IdemBridgeSession(DataFileServer):
 			return
 		return super().send(msg, toPort)
 
-	# def handleMessage(self, handler:SlotRequestHandler, data:dict, *args,
-	#                       fromPort=0, **kwargs):
-	# 	"""if fromPort is None, probably came from
-	# 	this bridge session"""
-	#
-	# 	if data["r"] : # wants a response
-	# 		response = self.message({"my_bridge" : "response"})
-	# 		libsocket.sendMsg(handler.request, response)
+	def handleMessage(self, handler:SlotRequestHandler, data:(IdemCmd, dict), *args,
+	                      fromPort=0, **kwargs):
+		"""if fromPort is None, probably came from
+		this bridge session"""
+		if isinstance(data, ConnectToSessionCmd):
+			self.connectToSocket(data["targetPort"])
+			handler.sendResponse({"connectedSession" : self.getSessionIdData()})
 
-
-
+		if isinstance(data, DisconnectSessionCmd):
+			self.disconnectSocket(data["targetPort"])

@@ -68,7 +68,11 @@ def getConfig()->dict:
 	idemConfig = orjson.loads((p / "config.json").read_bytes())
 	return idemConfig
 
-
 from . import adaptor, model, node, ui
 from .model import IdemSession, IdemGraph
 from .dcc.maya import *
+
+__IDEM__ = None
+def getSession()->IdemSession:
+	return __IDEM__
+

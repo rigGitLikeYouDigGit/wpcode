@@ -11,14 +11,15 @@ from socketserver import TCPServer, ThreadingTCPServer
 
 
 from wplib.network import libsocket
-from idem.dcc.abstract.domain import DCCIdemSession
+from idem.dcc.abstract import DCCIdemSession
 from idem.dcc.abstract.domain import session
 
 #s = TCPServer(("", 0), socketserver.BaseRequestHandler)
 # s = ThreadingTCPServer(("", 0), socketserver.BaseRequestHandler)
 # s.serve_forever()
 #
-# raise
+
+session.clearInactiveDataFiles()
 
 sessionA = DCCIdemSession(name="A")
 log("before run A")
@@ -34,9 +35,9 @@ log("after send")
 
 #print(libsocket.getOpenSockets())
 #print(session.getActivePortDataPathMap())
-session.clearInactiveDataFiles()
 
 bridge = session.IdemBridgeSession()
+bridge.runThreaded()
 
 bridge.connectToSocket(sessionA.portId())
 

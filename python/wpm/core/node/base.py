@@ -780,16 +780,6 @@ class WN( # short for WePresentNode
 		if parent_ is not None:
 			parent = filterToMObject(parent_)
 
-	@classmethod
-	def invoke(cls, name:str, parent=Sentinel.Default,
-	           **kwargs)->WN:
-		"""find a node with the given name and the given parent ; create
-		it if not found
-
-		if parent not passed, find with any parent - if parent is None,
-		explicitly means a top-level node?
-		"""
-
 
 	def setInitAttrs(self, ):
 		"""subclasses should populate function signature
@@ -813,9 +803,22 @@ class WN( # short for WePresentNode
 	def name(self):
 		return str(self).split("|")[-1]
 
-	def setName(self, value):
-		"""atomic setter, does not trigger checks for shapes etc"""
-		self.MFn.setName(value)
+	def setName(self, value:str, exact=False):
+		"""if exact, only rename this exact node to exactly what you give;
+		if not exact, do some checks to keep shapes in line with transforms
+		"""
+		# exact forces exact result
+		# non-dags have no extra rules to keep in check
+		# multiple shapes imply more exact naming
+		if exact or (not self.isDag()) or (len(self.shapes) != 1):
+			self.MFn.setName(value)
+			return
+		if value.endswith("Shape"):
+			self.shape.setName(value, exact=True)
+			self.transform.setName(value.rsplit("Shape")[0], exact=True)
+		else:
+			self.transform.setName(value, exact=True)
+			self.shape.setName(value + "Shape", exact=True)
 
 	def address(self)->tuple[str]:
 		"""return sequence of node names up to root """
@@ -917,7 +920,7 @@ class WN( # short for WePresentNode
 		return next(iter(self.shapes), None)
 
 	@property
-	def transform(self)->WN:
+	def transform(self)->WN.Transform:
 		if not self.isDag():
 			return None
 		if self.isTransform():
