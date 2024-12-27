@@ -40,8 +40,8 @@ class WpData(TDefDict):
 
 class CameraData(WpData):
 	"""class representing state of camera in 3d scene"""
-	matrix: np.ndarray[(4, 4), float]
+	matrix: np.ndarray
 	focalLength: float
 	resolution: tuple[int, int]
-	orbitFocus: np.ndarray[3, float]
+	orbitFocus: np.ndarray
 

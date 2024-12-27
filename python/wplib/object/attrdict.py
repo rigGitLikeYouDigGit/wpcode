@@ -51,14 +51,20 @@ class _TDMeta(type):
 
 	def __call__(cls, *args, **kwargs):
 		#log("_TDMeta _call_", args, kwargs)
-		hints = T.get_type_hints(cls)
+
 		b : dict = super().__call__( *args, **kwargs)
-		for k, v in hints.items():
-			if hasattr(cls, k):
-				b.setdefault(k, EVAL(getattr(cls, k)))
+		try:
+			hints = T.get_type_hints(cls)
+			for k, v in hints.items():
+				if hasattr(cls, k):
+					b.setdefault(k, EVAL(getattr(cls, k)))
+		except TypeError:
+			pass
 		return b
 
-
+"""brother I am quite ready to give up on this.
+just read your own class and write your own dictionary keys,
+christ"""
 class TDefDict(T.TypedDict, AttrDict, metaclass=_TDMeta):
 
 	def __str__(self):

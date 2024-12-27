@@ -113,8 +113,22 @@ class DataFileServer:
 		}
 		self.writeSessionFileData(self.liveData)
 
+		self.replicatedData = {
+			"cameraTickTime" : 1.0/24.0
+		} # consider just propagating this across all sessions -
+		# for example, camera update speed
+
 		if linkTo: # immediately link to a known session
 			pass
+		pass
+
+	def onReplicatedDataChanged(self):
+		"""but then do we pass in the keys that have changed, and the deltas,
+		or do we have each be a discrete object that we hook signals to,
+		and then we're back to doing reactive UI stuff except now it's not just
+		data structures, it's coming over a network.
+		I hate coding so much man
+		"""
 		pass
 
 	def updateConnectedBridge(self, bridgeId):
@@ -139,13 +153,13 @@ class DataFileServer:
 		"""clear up all data and pipe files for this session"""
 		if self.loopThread:
 			self.loopThread.join()
+		#self.server.shutdown()
 		if not self.sessionFileDir().is_dir():
 			return
 		for i in tuple(self.sessionFileDir().glob(self.uuid + "_*")):
 			i.unlink(missing_ok=True)
 		#if self.server
 		#self.server.server_close()
-		self.server.shutdown()
 
 
 	def __del__(self):
@@ -202,7 +216,7 @@ class DataFileServer:
 		"""
 		self.server.serve_forever(poll_interval=1.0)
 
-	def handleMessage(self, handler:SlotRequestHandler, data:dict):
+	def handleMessage(self, handler:SlotRequestHandler, msg:dict):
 		"""handle incoming messages from bridge"""
 		raise NotImplementedError
 		# if data["r"] : # wants a response
@@ -229,7 +243,20 @@ class DataFileServer:
 		toPort = toPort if toPort is not None else self.portId()
 		log(self._sessionFileName(), "send to", toPort, msg)
 		with socket.socket() as sock:
-			sock.connect(("localhost", toPort))
+			if msg["r"]:  # allow longer for response
+				sock.settimeout(1.0)
+			else:
+				sock.settimeout(1.0)
+
+			try:
+				sock.connect(("localhost", toPort))
+			except ConnectionRefusedError:
+				log(self.uuid, f"IDEM ERROR: no listening port on {toPort}, aborting send")
+				return
+			except socket.timeout:
+				# later consider retrying any 'important' commands?
+				log(self.uuid, f"IDEM ERROR: port {toPort} timed out, aborting send")
+				return
 			libsocket.sendMsg(sock, msg)
 
 			if msg["r"]: # wait for response
@@ -237,6 +264,9 @@ class DataFileServer:
 				result = libsocket.recvMsg(sock)
 				log(self._sessionFileName(), "got reply", result)
 				return result
+
+	# def sendCmd(self, msg:DCCCmd, toPort=None):
+	# 	"""send the given command across the network to synchronise idem data"""
 
 	def getSessionIdData(self)->SessionIdData:
 		return SessionIdData(id=(self.portId(), self.name),
@@ -285,11 +315,14 @@ class DCCIdemSession(DataFileServer):
 		return s
 
 
-	def handleMessage(self, handler:SlotRequestHandler, data:dict):
+	def handleMessage(self, handler:SlotRequestHandler, msg:dict):
 		"""handle incoming messages from bridge"""
-		log(self._sessionFileName(), "handle", data)
-		if isinstance(data, ConnectToBridgeCmd):
-			self.updateConnectedBridge(data["sender"])
+		log(self._sessionFileName(), "handle", msg)
+		if isinstance(msg, ReplicateDataCmd):
+			self.replicatedData = msg["data"]
+			return
+		if isinstance(msg, ConnectToBridgeCmd):
+			self.updateConnectedBridge(msg["sender"])
 			handler.sendResponse(
 				self.message({"connectedSession" : self.getSessionIdData()}, # should we have a function to make this response?
 				             wantResponse=False)
@@ -391,13 +424,17 @@ class IdemBridgeSession(DataFileServer):
 			return
 		return super().send(msg, toPort)
 
-	def handleMessage(self, handler:SlotRequestHandler, data:(IdemCmd, dict), *args,
+	def handleMessage(self, handler:SlotRequestHandler, msg:(IdemCmd, dict), *args,
 	                      fromPort=0, **kwargs):
 		"""if fromPort is None, probably came from
 		this bridge session"""
-		if isinstance(data, ConnectToSessionCmd):
-			self.connectToSocket(data["targetPort"])
+		if isinstance(msg, ReplicateDataCmd):
+			self.replicatedData = msg["data"]
+			return
+		if isinstance(msg, ConnectToSessionCmd):
+			self.connectToSocket(msg["targetPort"])
 			handler.sendResponse({"connectedSession" : self.getSessionIdData()})
-
-		if isinstance(data, DisconnectSessionCmd):
-			self.disconnectSocket(data["targetPort"])
+			return
+		if isinstance(msg, DisconnectSessionCmd):
+			self.disconnectSocket(msg["targetPort"])
+			return

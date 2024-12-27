@@ -5,7 +5,7 @@ from wplib import log
 
 from wplib.object import AttrDict, Catalogue
 
-from wp.w3d import CameraData
+from wp.w3d.data import CameraData
 """test for serialisable typed commands as dictionaries for Idem"""
 
 if T.TYPE_CHECKING:
@@ -62,6 +62,9 @@ class DisconnectSessionCmd(IdemCmd):
 	pass
 class HeartbeatCmd(IdemCmd):
 	pass
+
+class ReplicateDataCmd(IdemCmd):
+	data : dict
 
 # dcc commands
 class DCCCmd(IdemCmd):

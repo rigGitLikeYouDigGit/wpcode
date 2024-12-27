@@ -7,7 +7,7 @@ from PySide2 import QtCore, QtWidgets, QtGui
 from wptree import Tree
 
 from wplib import inheritance, nxlib
-from wplib.maths import arr,fromArr
+from wplib.maths import arr#,fromArr
 from wpdex.ui.atomic import ExpWidget
 from wpdex import WpDexProxy, WX, react
 from wpdex.ui import AtomicUiInterface

@@ -19,7 +19,6 @@ from wplib.serial import Serialisable
 
 from wpui.keystate import KeyState
 from wpui import lib as uilib
-from wplib.maths import shape, arr, fromArr, arrT
 
 from wpui.canvas.element import WpCanvasElement, WpCanvasProxyWidget
 

@@ -18,7 +18,7 @@ except ImportError:
 
 from PySide2 import QtCore, QtWidgets, QtGui
 
-from wplib.maths import shape, arr, fromArr, arrT
+from wplib.maths import shape, arr, arrT
 from wpdex import *
 from wpui.keystate import KeyState
 

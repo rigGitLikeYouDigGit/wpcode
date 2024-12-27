@@ -14,6 +14,13 @@ def arr(obj, dtype=None, copy=None, **kwargs)->np.ndarray:
 	return to(obj, np.ndarray, dtype=dtype, copy=copy, **kwargs)
 toArr = arr
 
+arrSeqEdges = ToType(
+	fromTypes=(list, tuple, set),
+	toTypes=(np.ndarray, ),
+	convertFn=lambda v, t, **kwargs:np.array(v),
+	backFn=lambda v, t, **kwargs:v.tolist()
+)
+
 class NPArrayLike(Adaptor):
 	"""mixin laying out array method template -
 	use this as an adaptor for types that can't be extended,
