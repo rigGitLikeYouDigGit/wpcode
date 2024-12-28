@@ -47,7 +47,7 @@ class MayaIdemSession(DCCIdemSession):
 		data = CameraData(matrix=toArr(mat).tolist())
 
 		self.send(self.message(SetCameraCmd(data=data)))
-		print("emitted", data)
+		#print("emitted", data)
 
 	def handleMessage(self, handler:SlotRequestHandler, msg:dict):
 		super().handleMessage(handler, msg)

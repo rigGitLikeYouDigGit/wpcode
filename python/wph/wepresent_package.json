@@ -10,9 +10,7 @@
       "Path" : ["F:/wp/code/python",
         {"method" : "append"} ],
       "PATH" : ["F:/wp/code/python",
-        {"method" : "append"} ],
-        "PYTHONPATH" : [ "$WEPRESENT_ROOT/code/python",
-          {"method" : "append"} ]
+        {"method" : "append"} ]
     }
 
   ]

@@ -4,7 +4,7 @@
 Unsure of how to split python code between tools and HDAs -
 for now each worthy HDA gets its own tool package
 """
-
+from . import adaptor
 
 import sys, gc
 def reloadWPH(andWp=True):

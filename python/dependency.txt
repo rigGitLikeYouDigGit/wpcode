@@ -1,8 +1,10 @@
 
-
+deepdiff
 forbiddenfruit
+networkx
 numpy
 ordered-set
+orjson
+param
 qt-material
-watchdog
 whoosh

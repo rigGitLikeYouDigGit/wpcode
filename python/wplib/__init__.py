@@ -6,8 +6,17 @@ nothing project-specific, nothing applied
 
 This should depend on nothing else in wp, or any other project.
 
-Will migrate things from tree.lib.object as needed, if they get used.
 """
+# TEMP: add local 3.9 libs so 3.11 in houdini doesn't break
+import sys
+if sys.version.startswith("3.9"):
+	_sitePackagePath = "C:\Python39\Lib\site-packages"
+elif sys.version.startswith("3.11"):
+	_sitePackagePath = "C:\Python311\Lib\site-packages"
+if not _sitePackagePath in sys.path:
+	sys.path.append(_sitePackagePath)
+
+
 from .log import log
 
 from .coderef import CodeRef

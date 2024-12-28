@@ -4,7 +4,6 @@ import typing as T
 
 from PySide2 import QtCore, QtWidgets, QtGui
 
-import reactivex as rx
 
 from wplib import log
 from wplib.object import Signal

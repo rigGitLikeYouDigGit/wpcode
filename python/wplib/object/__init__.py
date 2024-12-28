@@ -7,6 +7,7 @@ from .builtinextension import UserSet, PostDecMethodWrapper
 from .namespace import TypeNamespace, Sentinel
 
 from .cache import CacheObj
+from .callback import WpCallback
 from .catalogue import Catalogue
 #from .delta import DeltaAtom, PrimDeltaAtom, MoveDelta, InsertDelta
 
