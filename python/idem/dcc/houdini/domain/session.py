@@ -18,10 +18,11 @@ class HoudiniIdemSession(DCCIdemSession):
 	dccType = "houdini"
 	cameraCallbackObj : WpHoudiniCallback
 
-	_session : HoudiniIdemSession = None
-	@classmethod
-	def session(cls)->(None, HoudiniIdemSession):
-		return cls._session
+	if T.TYPE_CHECKING:
+		_session : HoudiniIdemSession = None
+		@classmethod
+		def session(cls)->(None, HoudiniIdemSession):
+			return cls._session
 	@classmethod
 	def getSession(cls, name="houdiniIdem")->HoudiniIdemSession:
 		if not cls._session:
@@ -59,11 +60,7 @@ class HoudiniIdemSession(DCCIdemSession):
 		ports, hook up idem camera, sets etc
 		"""
 		log("houdini bootstrap")
-		if cls.session():
-			cls.session().clear()
-
-		# adding callbacks for camera
-		newSession = cls(name=sessionName)
+		newSession = super().bootstrap(sessionName)
 
 		node = newSession.getSessionCamera()
 

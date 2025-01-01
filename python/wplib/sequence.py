@@ -33,6 +33,12 @@ def strList(i)->list[str]:
 
 getFirst = lambda x: next(iter(x), None)
 
+def anyIn(searchSeq:T.Sequence, containerSeq:T.Sequence, checkIs=False):
+	"""returns a list of all elements in a that occur in b"""
+	if checkIs:
+		return [i for i in searchSeq if isIn(i, containerSeq)]
+	return [i for i in searchSeq if i in containerSeq]
+
 def flatten(l, ltypes=(list, tuple))->(tuple, list):
 	"""after Mike C Fletcher"""
 	if isinstance(l, str):

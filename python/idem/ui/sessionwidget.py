@@ -42,8 +42,10 @@ callbacks like that
 import threading
 from PySide2 import QtCore, QtGui, QtWidgets
 
+from wplib import sequence
 from idem.dcc.abstract import DCCIdemSession, IdemBridgeSession, DataFileServer
 from idem.dcc.abstract import session
+from idem.dcc import DCCProcess
 
 from idem.ui.sessionstatus import BlinkLight
 
@@ -101,7 +103,7 @@ class SessionWidget(QtWidgets.QGroupBox):
 	def __init__(self, parent=None):
 		super().__init__(parent)
 		self.setTitle("IDEM")
-		self.session : DataFileServer = None
+		self.session : DataFileServer = DataFileServer.session()
 		self.nameLabel = QtWidgets.QLabel("name", self)
 
 		self.indicator = BlinkLight(parent=self,
@@ -112,6 +114,7 @@ class SessionWidget(QtWidgets.QGroupBox):
 		self.indicator.move(1, 4)
 
 		self.sessionCtlW = _SessionCtlWidget(parent=self)
+		self.sessionCtlW.btn.clicked.connect(self._onSessionCtlWBtnPress)
 
 		self.connectedGroupBox = QtWidgets.QGroupBox("connected:", parent=self)
 		self.availGroupBox = QtWidgets.QGroupBox("available:", parent=self)
@@ -135,15 +138,43 @@ class SessionWidget(QtWidgets.QGroupBox):
 	def setSession(self, session:DataFileServer):
 		"""update the session for this widget to focus on"""
 		self.session = session
+		self.sessionCtlW.setHasSession(True)
 		self.sync()
 
 	def _onSessionCtlWBtnPress(self, *args, **kwargs):
 		if self.session: # end current session
 			self.session.clear()
 			self.sessionCtlW.setHasSession(False)
+			self.session = None
 			self.sync()
 		else: # start new session
+			# get user input for new session name
+			# when launched from a bridge this will already have been set
+			#TODO: I don't like the aesthetics of the "ok" "cancel" buttons qt gives by default
+			text, ok = QtWidgets.QInputDialog.getText(None,
+				"Enter IDEM session name",
+				"",
+				QtWidgets.QLineEdit.EchoMode.Normal,
+				DCCProcess.currentDCCProcessCls().dccName + "Idem",
+				QtCore.Qt.Popup,
+				QtCore.Qt.ImhNone
+			)
+			if not ok: #cancelled, don't do anything
+				log("cancelled, no session created")
+				return
+			if not text:
+				log("Idem session must have a name")
+				return
+			# validate
+			blockChars = " _/\\\'\"\n"
+			if sequence.anyIn(blockChars, text):
+				log("Invalid character entered, Idem session cannot contain: " + blockChars)
+				return
 
+			# bootstrap new session for this dcc
+			sessionCls = DCCProcess.idemSessionCls()
+			log("bootstrapping", sessionCls)
+			self.setSession(sessionCls.bootstrap(text))
 
 
 	def sync(self):

@@ -89,6 +89,16 @@ class DataFileServer:
 		#return socketserver.ThreadingTCPServer
 		return ReusableThreadingTCPServer
 
+	# class-level module for the current session, in the current interpreter
+	_session :DataFileServer = None
+	@classmethod
+	def session(cls)->(None, DataFileServer):
+		return cls._session
+	@classmethod
+	def getSession(cls, name="abstractIdem")->DataFileServer:
+		if not cls._session:
+			cls._session = cls.bootstrap(name)
+		return cls._session
 
 	def __init__(self, name="", linkTo=""):
 		#self.uuid = str(uuid4())[:4]
@@ -175,6 +185,8 @@ class DataFileServer:
 			return
 		for i in tuple(self.sessionFileDir().glob(self.uuid + "_*")):
 			i.unlink(missing_ok=True)
+
+		self._session = None
 		#if self.server
 		#self.server.server_close()
 
@@ -347,13 +359,20 @@ class DCCIdemSession(DataFileServer):
 			return
 		#return super().handleMessage(handler, data)
 
-
-
 	def getSessionCamera(self):
 		"""return a DCC camera to link to idem,
 		updating views simultaneously across programs.
 		If this works it'll be so cool"""
 
+	@classmethod
+	def bootstrap(cls, sessionName="IDEM")->type[cls]:
+		"""load up a MayaIdemSession from standing start, set up
+		ports, hook up idem camera, sets etc
+		"""
+		if cls.session():
+			cls.session().clear()
+		newSession = cls(name=sessionName)
+		return newSession
 
 
 

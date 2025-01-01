@@ -36,6 +36,11 @@ class MayaProcess(DCCProcess):
 		except ImportError:
 			return False
 
+	@classmethod
+	def idemSessionCls(cls) -> type[DCCIdemSession]:
+		from idem.dcc.maya.domain.session import MayaIdemSession
+		return MayaIdemSession
+
 	def launch(self,
 	           #startupFn=None
 	           idemParams:dict=None

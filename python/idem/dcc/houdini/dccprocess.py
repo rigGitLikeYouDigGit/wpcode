@@ -27,3 +27,8 @@ class HoudiniProcess(DCCProcess):
 			return True
 		except ImportError:
 			return False
+
+	@classmethod
+	def idemSessionCls(cls) -> type[DCCIdemSession]:
+		from idem.dcc.houdini.domain.session import HoudiniIdemSession
+		return HoudiniIdemSession

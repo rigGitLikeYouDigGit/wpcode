@@ -20,10 +20,11 @@ class MayaIdemSession(DCCIdemSession):
 
 	cameraCallbackObj : WpCallback
 
-	_session :MayaIdemSession = None
-	@classmethod
-	def session(cls)->(None, MayaIdemSession):
-		return cls._session
+	if T.TYPE_CHECKING:
+		_session :MayaIdemSession = None
+		@classmethod
+		def session(cls)->(None, MayaIdemSession):
+			return cls._session
 	@classmethod
 	def getSession(cls, name="mayaIdem")->MayaIdemSession:
 		if not cls._session:
@@ -62,13 +63,7 @@ class MayaIdemSession(DCCIdemSession):
 		"""load up a MayaIdemSession from standing start, set up
 		ports, hook up idem camera, sets etc
 		"""
-		log("maya bootstrap")
-		if cls.session():
-			cls.session().clear()
-
-		# adding callbacks for camera
-		newSession = cls(name=sessionName)
-
+		newSession = super().bootstrap(sessionName)
 
 		cameraCallback = WpCallback(
 			fns=[newSession.emitCameraData],

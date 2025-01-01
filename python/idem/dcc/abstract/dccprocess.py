@@ -40,6 +40,8 @@ DCCSession - inherited DCC specific class, only accessible from within domain
 
 """
 
+if T.TYPE_CHECKING:
+	from idem.dcc.abstract.session import IdemBridgeSession, DCCIdemSession
 
 class DCCProcess:
 	dccName = ""
@@ -48,6 +50,30 @@ class DCCProcess:
 		# process name is idem-side identifier for live process, independent of DCC scene name
 		self.processName = processName
 		self.process = None
+
+	"""we should be able to import the current relevant 
+	code from a uniform path?
+	
+	from idem.dcc.domain - no matter where from, this should bring in
+		domain-specialised versions of the same functions
+	
+	is there a good reason NOT to just wrap this up in a class, and use inheritance?
+	no
+	"""
+
+	@classmethod
+	def currentDCCProcessCls(cls) -> type[DCCProcess]:
+		"""return the class of the DCC process
+		fitting the current working environment"""
+		for i in DCCProcess.__subclasses__():
+			if i.isThisCurrentDCC():
+				return i
+		return DCCProcess
+
+	@classmethod
+	def idemSessionCls(cls)->type[DCCIdemSession]:
+		from idem.dcc.abstract.session import DCCIdemSession
+		return DCCIdemSession
 
 	@classmethod
 	def getConfig(cls)->dict:
@@ -123,5 +149,6 @@ class DCCProcess:
 		except ImportError:
 			return False
 		"""
+		raise NotImplementedError
 
 

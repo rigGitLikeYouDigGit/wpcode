@@ -12,7 +12,6 @@ from wptree import Tree
 from wpui.widget import LogWidget
 from chimaera import ChimaeraNode
 from chimaera.ui import NodeDelegate
-from idem.dcc import DCCProcess#, Maya
 
 # TODO: ASSETS
 #   how can an idem/chimaera graph know about things like current asset, current file path?
@@ -20,6 +19,8 @@ from idem.dcc import DCCProcess#, Maya
 
 if T.TYPE_CHECKING:
 	from idem.model import IdemSession
+	from idem.dcc.abstract.dccprocess import DCCProcess  # , Maya
+
 
 class IdemGraph(ChimaeraNode):
 
