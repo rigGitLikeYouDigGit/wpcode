@@ -9,6 +9,8 @@ This should depend on nothing else in wp, or any other project.
 """
 # TEMP: add local 3.9 libs so 3.11 in houdini doesn't break
 import sys
+if sys.version.startswith("3.7"):
+	_sitePackagePath = "C:\Python37\Lib\site-packages"
 if sys.version.startswith("3.9"):
 	_sitePackagePath = "C:\Python39\Lib\site-packages"
 elif sys.version.startswith("3.11"):

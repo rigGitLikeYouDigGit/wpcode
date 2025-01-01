@@ -106,3 +106,22 @@ class DCCProcess:
 	           ):
 		raise NotImplementedError
 
+	@classmethod
+	def isThisCurrentDCC(cls)->bool:
+		"""absolutely braindead way to find out which DCC is running -
+		(compare against trying to analyse the current path, making that
+		robust to headless modes, different versions, install locations,
+		Houdini calling other things in TOP nets etc) -
+
+		try and import a domain-specific python module for that DCC.
+		If it works, we know where we are.
+
+		eg:
+		try:
+			from maya import cmds
+			return True
+		except ImportError:
+			return False
+		"""
+
+

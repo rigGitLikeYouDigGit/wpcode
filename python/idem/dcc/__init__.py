@@ -5,3 +5,14 @@ from wplib import log
 
 from .abstract import *
 
+from .houdini import *
+from .maya import *
+
+
+def currentDCCProcessCls()->type[DCCProcess]:
+	"""return the class of the DCC process
+	fitting the current working environment"""
+	for i in DCCProcess.__subclasses__():
+		if i.isThisCurrentDCC():
+			return i
+	return

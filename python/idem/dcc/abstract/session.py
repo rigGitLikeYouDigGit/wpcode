@@ -131,12 +131,29 @@ class DataFileServer:
 		"""
 		pass
 
-	def updateConnectedBridge(self, bridgeId):
+	def updateConnectedBridge(self, bridgeId, sendCmd=False):
+		"""called on CHILD to drive BRIDGE"""
+		if self.connectedBridgeId():
+			raise RuntimeError("Disconnect session bridge before connecting to a new one")
+		if sendCmd:
+			result = self.send(self.message(
+				ConnectToSessionCmd(targetPort=bridgeId),
+				wantResponse=True
+			))
+			assert result, "Got no result from bridge after sending connectToSession CMD"
 		data = self.liveData
 		data["connection"] = bridgeId
 		self.writeSessionFileData(data)
 
-	def availableBridgeSessions(self)->dict[int, str]:
+	def disconnectBridge(self, sendCmd=True):
+		if not self.connectedBridgeId():
+			return
+		if sendCmd:
+			self.send(self.message(DisconnectSessionCmd(targetPort=self.portId())))
+		self.liveData["connection"] = None
+		self.writeSessionFileData(self.liveData)
+
+	def availableBridgeSessions(self)->dict[int, Path]:
 		bridgeFiles = {k : v for k, v in self.portToFileMap().items() if v.name.split("_")[1].startswith("bridge")}
 		activeMap = getActivePortDataPathMap()
 		return {k : v for k, v in bridgeFiles.items() if k in activeMap}
@@ -293,8 +310,8 @@ class DCCIdemSession(DataFileServer):
 
 	dccType = "python" # override with "maya", "houdini", etc
 
-	def _sessionFileName(self)->str:
-		return f"{self.uuid}_{self.dccType}_{self._getDCCFileName()}"
+	# def _sessionFileName(self)->str:
+	# 	return f"{self.uuid}_{self.dccType}_{self._getDCCFileName()}"
 	def sessionFilePath(self)->Path:
 		return self.sessionFileDir() / (self._sessionFileName() + ".json")
 	def _getDCCFileName(self)->str:
@@ -378,7 +395,11 @@ class IdemBridgeSession(DataFileServer):
 		self.writeSessionFileData(self.liveData)
 
 	def connectToSocket(self, portId:int):
-		"""create a new server listening on the given child socket"""
+		"""create a new server listening on the given child socket
+
+		called on BRIDGE to drive CHILD
+
+		"""
 		server = self.serverCls()(
 			("localhost", portId),
 			SlotRequestHandler
@@ -415,10 +436,12 @@ class IdemBridgeSession(DataFileServer):
 		self.liveData["connected"].pop(str(portId))
 		self.writeSessionFileData(self.liveData)
 
-	def send(self, msg:dict, toPort=None):
+	def send(self, msg:dict, toPort=None, notToPort=None):
 		if toPort is None:
 			for k, server in self.linkedSessions.items():
 				# can't get response from general message
+				if server.port == notToPort:
+					continue
 				msg["r"] = False
 				self.send(msg, toPort=k)
 			return
@@ -428,9 +451,6 @@ class IdemBridgeSession(DataFileServer):
 	                      fromPort=0, **kwargs):
 		"""if fromPort is None, probably came from
 		this bridge session"""
-		if isinstance(msg, ReplicateDataCmd):
-			self.replicatedData = msg["data"]
-			return
 		if isinstance(msg, ConnectToSessionCmd):
 			self.connectToSocket(msg["targetPort"])
 			handler.sendResponse({"connectedSession" : self.getSessionIdData()})
@@ -438,3 +458,11 @@ class IdemBridgeSession(DataFileServer):
 		if isinstance(msg, DisconnectSessionCmd):
 			self.disconnectSocket(msg["targetPort"])
 			return
+
+		if isinstance(msg, ReplicateDataCmd):
+			self.replicatedData = msg["data"]
+
+		# by default echo each command received by bridge to all sessions,
+		# except its own sender
+		self.send(msg, notToPort=msg["sender"][0])
+

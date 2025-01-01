@@ -59,6 +59,8 @@ class HoudiniIdemSession(DCCIdemSession):
 		ports, hook up idem camera, sets etc
 		"""
 		log("houdini bootstrap")
+		if cls.session():
+			cls.session().clear()
 
 		# adding callbacks for camera
 		newSession = cls(name=sessionName)
@@ -78,6 +80,8 @@ class HoudiniIdemSession(DCCIdemSession):
 							)
 		)
 		newSession.cameraCallbackObj = cameraCallback
+
+		newSession.runThreaded()
 
 		return newSession
 

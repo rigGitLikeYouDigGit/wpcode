@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import time
 import types, typing as T
 import pprint
 from wplib import log
@@ -36,6 +38,8 @@ class CustomProperty(QtCore.QObject):
 
 class _Blinker(QtCore.QObject):
 
+	valueChanged = QtCore.Signal(float)
+
 	def __init__(self,
 	             propertyName:str,
 	             propertyCls=CustomProperty,
@@ -55,31 +59,120 @@ class _Blinker(QtCore.QObject):
 		absolutely NO BUSINESS LOGIC IN THIS AT ALL
 
 		might be excessive to make this a QObject
+
+		for some reason the animation isn't resetting properly after completing -
+		try regenerating a separate one each time
 		"""
 		super().__init__(parent=parent)
-		self.value = CustomProperty("value",
-		                               parent=self,
-		                               value=keys[0])
+
 		self.decayLength = decayLength
 
-		self.anim = QtCore.QPropertyAnimation(
-			#self, QtCore.QByteArray(b"value"), self
+		self.keys = keys
+		self.decayLength = decayLength
+		self.curve = curve
+		#self.valueChanged = self.value.valueChanged
+		self.value : CustomProperty = None
+		self.anim :QtCore.QPropertyAnimation = None
+		self.anim = self.getAnim()
+		#self.valueChanged.connect(self.debug)
+
+	def debug(self, *args, **kwargs):
+		print("v", args, kwargs, self.anim.currentTime())
+
+	def _onLoopChanged(self, *args, **kwargs):
+		"""
+		EXTREMELY messy solution to get a light to blink properly, but I
+		honestly couldn't find any other way - anim.resume() just doesn't
+		seem to work if you call it from a different thread.
+		So here, we watch for the loop changing, then continuously push back execution to
+		just before the loop change, and just keep doing it.
+		blink() sets current time to 1, before anim gets back into the loop region.
+
+		this really is impressively stupid, but I want my flashing light
+		"""
+		#print("LOOP CHANGED", args, kwargs)
+
+		#self.anim.setCurrentTime(1)
+		#self.anim.currentLoopTime()
+		if args[0]:
+			#print("pause", args[0], type(args[0]))
+			pauseTime = self.decayLength * 1000 - 20
+			#self.anim.pause()
+			self.anim.setCurrentTime(pauseTime)
+			#self.anim.updateCurrentTime(pauseTime)
+			#self.anim.setCurrentTime(1)
+			#self.anim.resume()
+
+	def getAnim(self)->QtCore.QPropertyAnimation:
+		if self.value is not None:
+			self.value.valueChanged.disconnect(self.valueChanged)
+			self.value.deleteLater()
+		if self.anim is not None:
+			self.anim.deleteLater()
+
+		self.value = CustomProperty("value",
+		                            parent=self,
+		                            value=0.0)
+		self.value.valueChanged.connect(self.valueChanged)
+			#self.anim.setParent(None)
+		anim = QtCore.QPropertyAnimation(
+			# self, QtCore.QByteArray(b"value"), self
 			self.value, b"value", self
 		)
-		space = np.linspace(0.0, 1.0, len(keys))
+		self.anim = anim
+
+		anim.setLoopCount(2)
+
+		anim.setKeyValueAt(0.099, 0.0) # loop buffer, then snap illumination on
+		space = np.linspace(0.1, 1.0, len(self.keys))
 		for i, t in enumerate(space):
-			self.anim.setKeyValueAt(t, keys[i])
-		self.anim.setDuration(int(decayLength * 1000))
-		if curve is not None:
-			self.anim.setEasingCurve(curve)
-		self.valueChanged = self.value.valueChanged
+			#self.anim.setKeyValueAt(t * self.decayLength, keys[i])
+			anim.setKeyValueAt(t, self.keys[i])
+		#anim.setKeyValueAt(1.05, 0.01)
+		anim.setDuration(int(self.decayLength * 1003))
+		#self.anim.setDuration(1000000000)
+		if self.curve is not None:
+			anim.setEasingCurve(self.curve)
+
+		anim.currentLoopChanged.connect(self._onLoopChanged)
+		self.anim.start(policy=QtCore.QAbstractAnimation.DeletionPolicy.KeepWhenStopped)
+
+		return anim
 
 	def blink(self):
-		"""start or restart the animation"""
-		# if self.anim.state() == self.anim.State.Running:
+		"""start or restart the animation
+		SO apparently start() and resume() just don't do anything,
+		if they're called from a different thread, once the animation
+		has finished once.
+
+		"""
+		# print("inner blink", self.anim.state(), self.anim.currentTime(), self.anim.currentLoop(), self.anim.currentValue())
+		# try:
 		# 	self.anim.stop()
-		self.anim.setCurrentTime(0)
-		self.anim.start(policy=QtCore.QAbstractAnimation.DeletionPolicy.KeepWhenStopped)
+		# except: pass
+		self.anim.setCurrentTime(1)
+		#self.anim.updateCurrentTime(1)
+		#self.anim.resume()
+
+		#self.anim.setLoopCount(2) # for some reason setting this makes everything work
+			# and we get a nice little heartbeat signal out of it
+		#self.anim.setLoopCount(1)
+		#self.anim = self.getAnim()
+		# self.anim.stop()
+		# self.anim.setCurrentTime(0)
+		# self.anim.start(policy=QtCore.QAbstractAnimation.DeletionPolicy.KeepWhenStopped)
+		# self.anim.setCurrentTime(1)
+		# self.anim.updateCurrentTime(1)
+
+		#self.anim.start(policy=QtCore.QAbstractAnimation.DeletionPolicy.DeleteWhenStopped)
+		#time.sleep(0.1)
+		#self.anim.setCurrentTime(3)
+		# self.anim.pause()
+		# self.anim.resume()
+
+		#print("anim data", self.anim.currentValue(), self.anim.currentTime())
+		# self.anim = self.getAnim()
+		# self.anim.start(policy=QtCore.QAbstractAnimation.DeletionPolicy.DeleteWhenStopped)
 
 class BlinkLight(MetaResolver,
 
@@ -97,11 +190,12 @@ AtomicWidgetOld,
 	Status = Status
 	def __init__(self, parent=None,
 	             value:Status.T()=Status.Neutral,
-	             size=20):
+	             size=20,
+	             decayLength=1.0):
 		QtWidgets.QWidget.__init__(self, parent)
 		AtomicWidgetOld.__init__(self, value=value)
 		self.blinker = _Blinker(propertyName="brightness",
-		                        )
+		                        decayLength=decayLength)
 		self.brightness = 0.0
 		self.solid = None
 		self.blinker.valueChanged.connect(lambda f : self.setBrightness(f))
@@ -117,8 +211,10 @@ AtomicWidgetOld,
 		return
 
 	def setBrightness(self, f):
-		self.brightness = f
-		self.repaint()
+		try:
+			self.brightness = f
+			self.repaint()
+		except:pass
 
 	def blink(self): # a bit cringe to have passthrough methods like this -
 		# maybe this should inherit from blinker directly? idk
@@ -130,7 +226,7 @@ AtomicWidgetOld,
 		self.repaint()
 
 	def paintEvent(self, event:QtGui.QPaintEvent):
-		#print("paintevent")
+		#print("paintevent", self.value())
 		painter = QtGui.QPainter(self)
 		painter.setRenderHint(QtGui.QPainter.Antialiasing, True)
 		painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform, True)

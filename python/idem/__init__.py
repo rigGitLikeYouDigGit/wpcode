@@ -58,6 +58,9 @@ to send any random json dict for directions, but the dense mesh stuff
 over port?
 
 
+need to pack things better over network - prefer sending a few large 
+sync signals over sockets than loads of smaller ones
+
 """
 
 def getIdemDir()->Path:

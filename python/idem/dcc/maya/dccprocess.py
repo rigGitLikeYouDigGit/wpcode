@@ -28,6 +28,14 @@ class MayaProcess(DCCProcess):
 	""""""
 	dccName = "maya"
 
+	@classmethod
+	def isThisCurrentDCC(cls) ->bool:
+		try:
+			from maya import cmds
+			return True
+		except ImportError:
+			return False
+
 	def launch(self,
 	           #startupFn=None
 	           idemParams:dict=None

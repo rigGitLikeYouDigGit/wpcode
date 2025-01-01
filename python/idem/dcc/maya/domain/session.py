@@ -63,6 +63,8 @@ class MayaIdemSession(DCCIdemSession):
 		ports, hook up idem camera, sets etc
 		"""
 		log("maya bootstrap")
+		if cls.session():
+			cls.session().clear()
 
 		# adding callbacks for camera
 		newSession = cls(name=sessionName)
