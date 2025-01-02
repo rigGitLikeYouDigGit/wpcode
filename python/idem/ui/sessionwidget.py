@@ -43,6 +43,7 @@ import threading
 from PySide2 import QtCore, QtGui, QtWidgets
 
 from wplib import sequence
+from wpui.widget import GenGroupBox
 from idem.dcc.abstract import DCCIdemSession, IdemBridgeSession, DataFileServer
 from idem.dcc.abstract import session
 from idem.dcc import DCCProcess
@@ -89,6 +90,7 @@ class _SessionCtlWidget(QtWidgets.QWidget):
 
 
 
+
 class SessionWidget(QtWidgets.QGroupBox):
 	"""show session name, if it's active
 	show dropdown of connected sessions
@@ -100,11 +102,13 @@ class SessionWidget(QtWidgets.QGroupBox):
 
 	instance = None
 
-	def __init__(self, parent=None):
+	def __init__(self, parent=None, name="IDEM"):
 		super().__init__(parent)
-		self.setTitle("IDEM")
+		self.setTitle(name)
 		self.session : DataFileServer = DataFileServer.session()
 		self.nameLabel = QtWidgets.QLabel("name", self)
+
+		self.delay = 1.0
 
 		self.indicator = BlinkLight(parent=self,
 		                            value=BlinkLight.Status.Success,
@@ -116,17 +120,49 @@ class SessionWidget(QtWidgets.QGroupBox):
 		self.sessionCtlW = _SessionCtlWidget(parent=self)
 		self.sessionCtlW.btn.clicked.connect(self._onSessionCtlWBtnPress)
 
-		self.connectedGroupBox = QtWidgets.QGroupBox("connected:", parent=self)
-		self.availGroupBox = QtWidgets.QGroupBox("available:", parent=self)
+		def _updateConnectedWidgetsFn(groupBox):
+			result = []
+			if not self.session:
+				return []
+			if self.session.connectedBridgeId():
+				w = ConnectedSessWidget(
+					parent=groupBox,
+					name=str(self.session.connectedBridgeId()),
+					isConnected=True,
+				)
+				w.button.clicked.connect(
+					lambda sender: self.onConnectBtnPressed(sender, w))
+				#self.connectedVL.addWidget(w)
+				result.append(w)
+			return result
+
+		def _updateAvailWidgetsFn(groupBox):
+			result = []
+			if not self.session:
+				return []
+			for k, path in self.session.availableBridgeSessions().items():
+				w = ConnectedSessWidget(
+					parent=groupBox,
+					name=str(k),
+					isConnected=False,
+				)
+				w.button.clicked.connect(
+					lambda sender: self.onConnectBtnPressed(sender, w))
+				#self.availVL.addWidget(w)
+				result.append(w)
+			return result
+
+		self.connectedGroupBox = GenGroupBox(
+			"connected:", parent=self,
+			getWidgetsFn=_updateConnectedWidgetsFn
+		)
+		self.availGroupBox = GenGroupBox(
+			"available:", parent=self,
+			getWidgetsFn=_updateAvailWidgetsFn
+		)
 
 		self.shouldStop = False
 		self.syncThread :threading.Thread = None
-
-		self.connectedVL = QtWidgets.QVBoxLayout(self.connectedGroupBox)
-		self.availVL = QtWidgets.QVBoxLayout(self.availGroupBox)
-
-		self.connectedGroupBox.setLayout(self.connectedVL)
-		self.availGroupBox.setLayout(self.availVL)
 
 		vl = QtWidgets.QVBoxLayout()
 		vl.addWidget(self.nameLabel)
@@ -204,18 +240,20 @@ class SessionWidget(QtWidgets.QGroupBox):
 	def syncThreaded(self):
 		while not self.shouldStop:
 			self.sync()
-			time.sleep(1.0)
+			time.sleep(self.delay)
 
-	def syncForever(self):
+	def syncForever(self, delay=1.0):
+		self.delay = delay
 		self.syncThread = threading.Thread(target=self.syncThreaded,
 		                                   daemon=True)
 		self.syncThread.start()
 		#self.syncThreaded()
 
 	def connectedWidgets(self):
-		return [self.connectedVL.itemAt(i) for i in range(self.connectedVL.count())]
+		#return [self.connectedVL.itemAt(i).widget() for i in range(self.connectedVL.count())]
+		return self.connectedGroupBox.widgets()
 	def availWidgets(self):
-		return [self.availVL.itemAt(i) for i in range(self.availVL.count())]
+		return self.availGroupBox.widgets()
 
 	def onConnectBtnPressed(self, sender, sessW:ConnectedSessWidget):
 		"""check if widget was a linked one or not"""
@@ -231,63 +269,40 @@ class SessionWidget(QtWidgets.QGroupBox):
 			self.sync()
 
 	def syncAvailWidgets(self):
-		"""TODO: would be nice to have some kind of generative layout object,
-					 not the first time we've had this updating list behaviour
-					 """
-		for i in self.connectedWidgets():
-			self.connectedVL.removeWidget(i)
-		for i in self.availWidgets():
-			self.availVL.removeWidget(i)
-
-		if isinstance(self.session, DCCIdemSession):
-			if self.session.connectedBridgeId():
-				w = ConnectedSessWidget(
-					parent=self.connectedGroupBox,
-					name=str(self.session.connectedBridgeId()),
-					isConnected=True,
-				)
-				w.button.clicked.connected(
-					lambda sender: self.onConnectBtnPressed(sender, w))
-				self.connectedVL.addWidget(w)
-			for k, path in self.session.availableBridgeSessions().items():
-				w = ConnectedSessWidget(
-					parent=self.availGroupBox,
-					name=str(k),
-					isConnected=False,
-				)
-				w.button.clicked.connected(
-					lambda sender: self.onConnectBtnPressed(sender, w))
-				self.availVL.addWidget(w)
-			return
-
-		# if no session set up yet, show available processes
-		if self.session is None:
-			activeMap = session.getActivePortDataPathMap()
-			for portId, path in activeMap.items():
-				w = ConnectedSessWidget(
-					parent=self.availGroupBox,
-					name=str(portId),
-					isConnected=False,
-				)
-				w.button.clicked.connected(
-					lambda sender: self.onConnectBtnPressed(sender, w))
-				self.availVL.addWidget(w)
-			return
-
+		"""					 """
+		self.availGroupBox.sync()
+		self.connectedGroupBox.sync()
 
 	@classmethod
 	def getInstance(cls)->SessionWidget:
 		if cls.instance: return cls.instance
-		cls.instance = SessionWidget()
+		cls.instance = cls()
 		return cls.instance
 
+	def closeEvent(self, event):
+		"""pause the sync pings if you close the window"""
+		self.shouldStop = True
+		if self.syncThread is not None:
+			self.syncThread.join()
+		super().closeEvent(event)
+
+	def showEvent(self, event):
+		"""restart syncing"""
+		self.shouldStop = False
+		self.syncForever()
+		super().showEvent(event)
+
+	def __del__(self):
+		self.shouldStop = True
+		if self.syncThread is not None:
+			self.syncThread.join()
 
 if __name__ == '__main__':
 
 	app = QtWidgets.QApplication()
 	w = SessionWidget.getInstance()
 	w.show()
-	w.syncForever()
+
 	app.exec_()
 
 

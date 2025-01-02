@@ -100,6 +100,20 @@ class DataFileServer:
 			cls._session = cls.bootstrap(name)
 		return cls._session
 
+	@classmethod
+	def bootstrap(cls, sessionName="IDEM", start=True)->type[cls]:
+		"""load up a MayaIdemSession from standing start, set up
+		ports, hook up idem camera, sets etc
+		"""
+		if cls.session():
+			cls.session().clear()
+		clearInactiveDataFiles()
+		newSession = cls(name=sessionName)
+		if start:
+			newSession.runThreaded()
+		return newSession
+
+
 	def __init__(self, name="", linkTo=""):
 		#self.uuid = str(uuid4())[:4]
 		self.name = name
@@ -163,13 +177,18 @@ class DataFileServer:
 		self.liveData["connection"] = None
 		self.writeSessionFileData(self.liveData)
 
-	def availableBridgeSessions(self)->dict[int, Path]:
-		bridgeFiles = {k : v for k, v in self.portToFileMap().items() if v.name.split("_")[1].startswith("bridge")}
+	@classmethod
+	def availableBridgeSessions(cls)->dict[int, Path]:
+		"""does not check if connected"""
+		bridgeFiles = {k : v for k, v in cls.portToFileMap().items() if v.name.split("_")[1].startswith("bridge")}
 		activeMap = getActivePortDataPathMap()
 		return {k : v for k, v in bridgeFiles.items() if k in activeMap}
 
-	def availableDCCSessions(self)->dict[int, str]:
-		bridgeFiles = {k : v for k, v in self.portToFileMap().items() if not v.name.split("_")[1].startswith("bridge")}
+	@classmethod
+	def availableDCCSessions(cls)->dict[int, Path]:
+		"""does not check if connected
+		rename to 'currentDCCSessions' or smt"""
+		bridgeFiles = {k : v for k, v in cls.portToFileMap().items() if not v.name.split("_")[1].startswith("bridge")}
 		activeMap = getActivePortDataPathMap()
 		return {k : v for k, v in bridgeFiles.items() if k in activeMap}
 
@@ -364,15 +383,6 @@ class DCCIdemSession(DataFileServer):
 		updating views simultaneously across programs.
 		If this works it'll be so cool"""
 
-	@classmethod
-	def bootstrap(cls, sessionName="IDEM")->type[cls]:
-		"""load up a MayaIdemSession from standing start, set up
-		ports, hook up idem camera, sets etc
-		"""
-		if cls.session():
-			cls.session().clear()
-		newSession = cls(name=sessionName)
-		return newSession
 
 
 
