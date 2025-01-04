@@ -41,7 +41,9 @@ DCCSession - inherited DCC specific class, only accessible from within domain
 """
 
 if T.TYPE_CHECKING:
-	from idem.dcc.abstract.session import IdemBridgeSession, DCCIdemSession
+	from idem.dcc.abstract.session import DCCIdemSession
+	from idem.dcc import IdemBridgeSession
+
 
 class DCCProcess:
 	dccName = ""

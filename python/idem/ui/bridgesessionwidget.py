@@ -8,7 +8,9 @@ from PySide2 import QtCore, QtGui, QtWidgets
 from wplib import sequence
 from wpui.widget import GenGroupBox
 from idem.ui.sessionwidget import SessionWidget, ConnectedSessWidget, _SessionCtlWidget
-from idem.dcc.abstract.session import IdemBridgeSession, DCCIdemSession, DataFileServer, getActivePortDataPathMap
+from idem.dcc.abstract.session import DCCIdemSession, DataFileServer, getActivePortDataPathMap
+from idem.dcc import IdemBridgeSession
+
 
 class IdemBridgeWidget(SessionWidget):
 	"""TEMP TEMP TEMP TEMP

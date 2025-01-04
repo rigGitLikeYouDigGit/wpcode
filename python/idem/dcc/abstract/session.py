@@ -1,22 +1,18 @@
 from __future__ import annotations
-import types, typing as T
-import pprint
-from wplib import log
 
-import os, sys, time, datetime
-from collections import defaultdict
-import threading, multiprocessing, socket, socketserver, traceback
+import os, datetime, sys
+import pprint
+import threading, socket, socketserver, traceback, atexit
 from pathlib import Path
-from uuid import uuid4
-from dataclasses import dataclass
 import orjson
 
-
+from wplib.exchook import MANAGER
 from wplib.network import libsocket
 
 from idem import getIdemDir
 from idem.dcc.abstract.command import *
 
+MANAGER.activate()
 
 def getPortDataPathMap()->dict[int, Path]:
 	"""may not all be active"""
@@ -24,14 +20,18 @@ def getPortDataPathMap()->dict[int, Path]:
 	                     for i in DCCIdemSession.sessionFileDir().iterdir()}
 
 def getActivePortDataPathMap()->dict[int, Path]:
-	activePortMap = libsocket.localPortSocketMap()
-	result = {}
-	for k, v in getPortDataPathMap().items():
-		if not k in activePortMap:
-			continue
-		if activePortMap[k].type == "TCP" and activePortMap[k].state == "LISTENING":
-			result[k] = v
-	return result
+	"""this is not robust enough since some sockets hang around for unknown
+	lengths of time -
+	instead relying solely on the files in the localsessions folder"""
+	# activePortMap = libsocket.localPortSocketMap()
+	# result = {}
+	# for k, v in getPortDataPathMap().items():
+	# 	if not k in activePortMap:
+	# 		continue
+	# 	if activePortMap[k].type == "TCP" and activePortMap[k].state == "LISTENING":
+	# 		result[k] = v
+	# return result
+	return getPortDataPathMap()
 
 def clearInactiveDataFiles():
 	activeMap = getActivePortDataPathMap()
@@ -54,6 +54,9 @@ class SlotRequestHandler(socketserver.StreamRequestHandler):
 		req = libsocket.recvMsg(self.request)
 		#data : dict = orjson.loads(req)
 		data = req
+
+		if data == "PING" : # basic lookup signal to find out which sockets are active
+			self.sendResponse("PONG")
 
 		# if the sender was this request's own server, don't respond to it
 		if data["s"][0] == self.server.socket.getsockname()[1]:
@@ -108,7 +111,10 @@ class DataFileServer:
 		"""
 		if cls.session():
 			cls.session().clear()
-		clearInactiveDataFiles()
+		log("bootstrap", cls, "listening sockets:")
+		# pprint.pp(libsocket.localPortSocketMap(), sort_dicts=True)
+		# pprint.pp(getActivePortDataPathMap())
+		#clearInactiveDataFiles()
 		newSession = cls(name=sessionName)
 		if start:
 			newSession.runThreaded()
@@ -147,7 +153,17 @@ class DataFileServer:
 
 		if linkTo: # immediately link to a known session
 			pass
-		pass
+
+		# ensure no matter what we always remove the file record for this session
+		atexit.register(self.clear)
+		#MANAGER.weakFns.add(self.onExceptHook)
+		MANAGER.fns.append(self.onExceptHook)
+
+	def onExceptHook(self, excType, val, tb):
+		if excType in (KeyboardInterrupt, ):
+			self.clear()
+
+
 
 	def log(self, *args):
 		return log(datetime.datetime.now().time(), ": ", self._sessionFileName(), ": ", *args, framesUp=1)
@@ -214,10 +230,10 @@ class DataFileServer:
 		# if self.loopThread:
 		# 	self.loopThread.join()
 		#self.server.shutdown()
-
-		if self.connectedBridgeId():
-			self.log("disconnecting bridge")
-			self.disconnectBridge(sendCmd=True)
+		if self.sessionFileData() is not None:
+			if self.connectedBridgeId():
+				self.log("disconnecting bridge")
+				self.disconnectBridge(sendCmd=True)
 
 		if self.sessionFileDir().is_dir():
 			for i in tuple(self.sessionFileDir().glob(self.uuid + "_*")):
@@ -417,136 +433,4 @@ class DCCIdemSession(DataFileServer):
 
 
 
-
-@dataclass
-class ChildSessionData:
-	port : int
-	server : socketserver.ThreadingTCPServer
-	serverThread: threading.Thread
-	dccTypeName : str = ""
-
-
-
-class IdemBridgeSession(DataFileServer):
-	"""central coordinating system, sitting in separate thread/process,
-	for now just echoing events back to all open sessions
-
-	write all attached processes into datafile, so other bridges
-	don't try and steal them
-
-	- manage named blocks of shared memory
-
-	"""
-	dccType = "bridge"
-
-	def __init__(self, name="bridge"):
-		super().__init__(name)
-		self.linkedSessions : dict[int, ChildSessionData] = {}
-
-		self.server.slotFns = [
-			lambda *args, **kwargs : self.handleMessage(
-				*args, fromPort=self.portId(), **kwargs)
-		                  ]
-
-		self.liveData = {
-			"id" : self.uuid,
-			"processId" : os.getpid(),
-			"connected" : {} # type:dict[str, int]
-		}
-		self.writeSessionFileData(self.liveData)
-
-	def connectToSocket(self, portId:int,
-	                    sendCmd=True):
-		"""create a new server listening on the given child socket
-
-		called on BRIDGE to drive CHILD
-
-		"""
-		server = self.serverCls()(
-			("localhost", portId),
-			SlotRequestHandler
-		)
-		server.slotFns = [
-			lambda *args, **kwargs : self.handleMessage(
-				*args, fromPort=portId, **kwargs)
-		                  ]
-		thread = threading.Thread(target=server.serve_forever)
-		self.linkedSessions[portId] = ChildSessionData(
-			portId, server, serverThread=thread)
-
-		# ask server for some other information
-		# driving CHILD from BRIDGE
-		if sendCmd:
-			result = self.send(self.message(
-				ConnectToBridgeCmd(), wantResponse=True),
-				toPort=portId
-			)
-			if not result:
-				raise RuntimeError("could not connect to child session ", portId)
-			if "connectedSession" in result:
-				log("successfully connected child session", result["connectedSession"])
-				# json keys apparently can't be integers, only strings
-				# been working with this format 7 years, only learned that today
-				self.liveData["connected"][str(portId)] = portId
-				self.writeSessionFileData(self.liveData)
-			return
-
-		else: # driving BRIDGE from CHILD
-			# we assume the outer scope already has a response ready
-			self.liveData["connected"][str(portId)] = portId
-			self.writeSessionFileData(self.liveData)
-			pass
-
-	def disconnectSocket(self, portId:int):
-		"""remove connection to the given port -
-		shutdown listening server
-		halt listening thread
-		remove from connections"""
-
-		server = self.linkedSessions[portId].server
-		# self.linkedSessions[portId].server.shutdown()
-		self.log("linked sessions", self.linkedSessions)
-		self.linkedSessions.pop(portId)
-		self.liveData["connected"].pop(str(portId), None) # todo:scrap livedata
-		self.writeSessionFileData(self.liveData)
-
-		self.log("shutting down server", portId)
-		server.shutdown()
-		self.log("server shutdown complete", portId)
-
-	def send(self, msg:dict, toPort=None, notToPort=None):
-		if toPort is None:
-			for k, server in self.linkedSessions.items():
-				# can't get response from general message
-				if server.port == notToPort:
-					continue
-				msg["r"] = False
-				self.send(msg, toPort=k)
-			return
-		return super().send(msg, toPort)
-
-	def handleMessage(self, handler:SlotRequestHandler, msg:(IdemCmd, dict), *args,
-	                      fromPort=0, **kwargs):
-		"""if fromPort is None, probably came from
-		this bridge session"""
-		self.log("handle :", msg)
-		self.log(type(msg), isinstance(msg, DisconnectSessionCmd))
-		if isinstance(msg, ConnectToSessionCmd):
-			# connect to the port that sent this message
-			self.connectToSocket(msg["s"][0], sendCmd=False)
-			handler.sendResponse({"connectedSession" : self.getSessionIdData()})
-			return
-		if isinstance(msg, DisconnectSessionCmd):
-			self.log("disconnecting from msg")
-			self.disconnectSocket(msg["s"][0])
-			self.log("disconnected session from bridge", msg["s"][0])
-			self.log(self.linkedSessions)
-			return
-
-		if isinstance(msg, ReplicateDataCmd):
-			self.replicatedData = msg["data"]
-
-		# by default echo each command received by bridge to all sessions,
-		# except its own sender
-		self.send(msg, notToPort=msg["s"][0])
 

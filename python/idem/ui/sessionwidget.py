@@ -44,9 +44,9 @@ from PySide2 import QtCore, QtGui, QtWidgets
 
 from wplib import sequence
 from wpui.widget import GenGroupBox
-from idem.dcc.abstract import DCCIdemSession, IdemBridgeSession, DataFileServer
+from idem.dcc.abstract import DCCIdemSession, DataFileServer
 from idem.dcc.abstract import session
-from idem.dcc import DCCProcess
+from idem.dcc import DCCProcess, IdemBridgeSession
 
 from idem.ui.sessionstatus import BlinkLight
 

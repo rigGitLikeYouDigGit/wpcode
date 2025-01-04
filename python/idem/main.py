@@ -1,6 +1,8 @@
 from __future__ import annotations
 import types, typing as T
 import pprint
+
+import idem.dcc.abstract.bridge
 from wplib import log
 
 
@@ -18,9 +20,9 @@ from idem.dcc.abstract import session
 # s.serve_forever()
 #
 
-session.clearInactiveDataFiles()
+#session.clearInactiveDataFiles()
 
-bridge = session.IdemBridgeSession()
+bridge = idem.dcc.abstract.bridge.IdemBridgeSession()
 bridge.runThreaded()
 
 

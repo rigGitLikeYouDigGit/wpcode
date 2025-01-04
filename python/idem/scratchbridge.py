@@ -3,7 +3,7 @@ import types, typing as T
 import pprint
 from wplib import log
 import time
-from idem.dcc.abstract import IdemBridgeSession
+from idem.dcc import IdemBridgeSession
 
 s : IdemBridgeSession = IdemBridgeSession.bootstrap("bridgeTest", start=True)
 
