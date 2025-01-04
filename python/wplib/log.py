@@ -48,19 +48,20 @@ def getLineLink(file=None, line=None) ->str:
 	"""return clickable link to file, to output to log"""
 	return f'File "{file}", line {max(line, 1)}'.replace("\\", "/")
 
-def log(*args, file=None, line=None, printMsg=True, vars=False, frames=False, **kwargs):
+def log(*args, file=None, line=None, printMsg=True, vars=False, frames=False, framesUp=0, **kwargs):
 	"""print and append link to line, for easier debugging"""
+	frameId = 1 + framesUp
 	if file is None:
-		file = inspect.stack()[1].filename
+		file = inspect.stack()[frameId].filename
 	if line is None:
-		line = inspect.stack()[1].lineno
+		line = inspect.stack()[frameId].lineno
 	#string = f'File "{file}", line {max(line, 1)}'.replace("\\", "/")
 	string = ""
 	if vars:
-		string += " \nVARS: " +pprint.pformat(inspect.stack()[1].frame.f_locals) + "\n^ "# + " \n^ " + str(inspect.stack()[1].frame.f_globals)
+		string += " \nVARS: " +pprint.pformat(inspect.stack()[frameId].frame.f_locals) + "\n^ "# + " \n^ " + str(inspect.stack()[1].frame.f_globals)
 	if frames:
 		n = 1
-		for i in inspect.stack()[1:]:
+		for i in inspect.stack()[frameId:]:
 			string += getLineLink(i.filename, i.lineno) + "\n" + "\t" * n
 			n+=1
 	else:

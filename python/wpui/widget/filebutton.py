@@ -76,12 +76,15 @@ class FileBrowserButton(QtWidgets.QPushButton):
 		log("caption", EVAL(self.browserDialogCaption))
 		mode = EVAL(self.mode)
 		log("mode", mode, mode == "dir", "parent dir", EVAL(self.defaultBrowserPath))
+		parentDir = str(EVAL(self.defaultBrowserPath))
+		if not Path(parentDir).is_dir(): # can't let defaultPath error the popup
+			parentDir = ""
 		if mode == self.Mode.File:
 			if EVAL(self.allowMultiple):
 				result = self.browserDialogCls.getOpenFileNames(
 					parent=self,
 					caption=str(EVAL(self.browserDialogCaption)),
-					dir=str(EVAL(self.defaultBrowserPath)),
+					dir=parentDir,
 					filter=EVAL(self.fileMask)
 				) or ""
 				log("result files", result)
@@ -92,7 +95,7 @@ class FileBrowserButton(QtWidgets.QPushButton):
 				result = self.browserDialogCls.getOpenFileName(
 					parent=self,
 					caption=str(EVAL(self.browserDialogCaption)),
-					dir=str(EVAL(self.defaultBrowserPath)),
+					dir=parentDir,
 					filter=EVAL(self.fileMask)
 				) or ""
 				log("result file", result)
@@ -108,7 +111,7 @@ class FileBrowserButton(QtWidgets.QPushButton):
 			result = self.browserDialogCls.getExistingDirectory(
 				parent=self,
 				caption=EVAL(self.browserDialogCaption),
-				dir=str(EVAL(self.defaultBrowserPath)),
+				dir=parentDir,
 			) or ""
 			log("result dir", result)
 			# returns raw dir string

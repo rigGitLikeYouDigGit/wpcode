@@ -5,7 +5,9 @@ import typing as T
 
 from PySide2 import QtWidgets, QtCore, QtGui
 
-"""lib for qt layouts"""
+"""lib for qt layouts
+TODO: should we just move this into the big ui lib file?
+"""
 
 def genAutoLayout(rootWidg:QtWidgets.QWidget, recurse=True):
 	"""for iteration on tools - generates an automatic
@@ -18,15 +20,17 @@ def genAutoLayout(rootWidg:QtWidgets.QWidget, recurse=True):
 
 	"""
 	#vl = QtWidgets.QVBoxLayout(rootWidg)
-	vl = QtWidgets.QVBoxLayout()
+	vl = QtWidgets.QVBoxLayout(rootWidg)
 	#rootWidg.setLayout(vl)
 
 	for i in rootWidg.children():
 		if not isinstance(i, QtWidgets.QWidget):
 			continue
-		print("add w ", i)
+		#print("add w ", i)
 		vl.addWidget(i)
-	#rootWidg.setLayout(vl)
+		# if recurse: # check for any widgets that don't already have a layout?
+		# 	pass
+	rootWidg.setLayout(vl)
 	return vl
 
 

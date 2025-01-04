@@ -125,6 +125,9 @@ class ExpWidget(
 	"""TODO:
 	control settings through dex or path rules or something, it's getting
 	too complex to define as __init__ args
+
+	for warnLive, have indicator lantern give warning,
+		set its tooltip popup to print the error / report from conditions
 	"""
 
 	def __init__(self, value="", parent=None,
@@ -295,6 +298,11 @@ class FileStringWidget(ExpWidget):
 		if parent dir is specified
 
 
+
+	CONSIDER a way to make miscellaneous properties dynamic -
+	def getProperties():
+		return {fileMask, allowMultiple, editable} etc
+	then run EVAL() on each one to get the current value
 	"""
 
 	Mode = FileBrowserButton.Mode
@@ -308,13 +316,14 @@ class FileStringWidget(ExpWidget):
 	             dialogCaption="",
 	             showRelativeFromParent=True,
 				pathCls=pathlib.Path,
-	             placeHolderText=""
+	             placeHolderText="",
+	             editable=True
 	             ):
 		"""
 		"""
 		self.showRelativeFromParent = rx(showRelativeFromParent)
 		self.pathCls = pathCls
-		self.parentDir = rx(parentDir or "").rx.pipe(self.pathCls)
+		# self.parentDir = rx(parentDir or "C:").rx.pipe(self.pathCls)
 		self.fileSelectMode = rx(fileSelectMode)
 		self.fileMask = rx(fileMask)
 		self.allowMultiple = rx(allowMultiple)
@@ -323,6 +332,8 @@ class FileStringWidget(ExpWidget):
 
 		ExpWidget.__init__(self, value, parent,
 		                   placeHolderText=placeHolderText)
+
+		self.parentDir = rx(parentDir).rx.or_(self.rxValue()).rx.or_("C:").rx.pipe(self.pathCls).rx.pipe(lambda x: x if x.is_dir() else x.parent)
 
 		# add button to bring up file browser
 		self.button = FileBrowserButton(parent=self,
@@ -335,6 +346,8 @@ class FileStringWidget(ExpWidget):
 		                                )
 
 		self.button.pathSelected.connect(self._onPathSelected)
+		if not editable: # only allow selection by button
+			self.setReadOnly(True)
 
 	def resizeEvent(self, event):
 		self.setContentsMargins(0, 0, self.button.sizeHint().width(), 0)
@@ -384,12 +397,13 @@ class FileStringWidget(ExpWidget):
 		Matching relative widget paths up to parent dir has to be done
 		as a separate process, too confusing otherwise
 
-
+		we do get rid of backslashes, since they make it painful to copy-paste into
+		dcc browsers
 		"""
 		if not value.strip():
 			return None
 		# check if there are semicolons for multiple files
-		strPaths = [i.strip() for i in str(value).split(";")]
+		strPaths = [i.strip().replace("\\", "/") for i in str(value).split(";")]
 
 		# if EVAL(self.showRelativeFromParent): # don't extend value to global
 		# 	paths = [EVAL(self.parentDir) / i for i in strPaths]
@@ -399,6 +413,7 @@ class FileStringWidget(ExpWidget):
 
 		if EVAL(self.allowMultiple):
 			return paths
+		log("got value", paths)
 		return paths[0]
 
 	def _processSinglePathForRelative(self, value):
@@ -412,60 +427,11 @@ class FileStringWidget(ExpWidget):
 	def _processValueForUi(self, value)->str:
 		if not value: return ""
 		if isinstance(value, (tuple, list)):
-			return " ; ".join(map(toStr, value))
-		return toStr(value)
+			value = " ; ".join(map(toStr, value))
+		s = toStr(value)
+		s = s.replace("\\", "/")
+		return s
 
-		# if isinstance(value, (tuple, list)):
-		# 	paths = map(self._processSinglePathForRelative,
-		# 	            value)
-		# 	return " ; ".join(map(str, paths))
-		# return str(self._processSinglePathForRelative(value))
-		# value = wplib.sequence.toSeq(value)
-
-		# return " ; ".join(map(str, value))
-
-
-
-# class FileStringWidget(QtWidgets.QWidget, AtomicWidget):
-# 	"""line edit with a file button next to it"""
-#
-# 	atomicType = FieldWidgetType.File
-#
-# 	def __init__(self, value=None, params:FieldWidgetParams=None, parent=None):
-#
-# 		QtWidgets.QWidget.__init__(self, parent)
-# 		self.line = QtWidgets.QLineEdit(self)
-# 		StringWidgetBase.__init__( self, value, params)
-#
-# 		self.line.textChanged.connect(self._onWidgetChanged)
-#
-# 		# layout
-# 		hl = QtWidgets.QHBoxLayout(self)
-# 		hl.addWidget(self.line)
-# 		self.setLayout(hl)
-# 		self.layout().setContentsMargins(1, 1, 1, 1)
-# 		self.layout().setSpacing(0)
-#
-# 		# add button to bring up file browser
-# 		self.button = FileBrowserButton(
-# 			name="...", parent=self,
-# 			defaultBrowserPath=self._params.defaultFolder,
-# 			mode=self._params.fileSelectMode,
-# 			fileMask=self._params.fileMask,
-# 			browserDialogCaption=self._params.caption
-# 			)
-# 		self.layout().addWidget(self.button)
-# 		self.postInit()
-#
-#
-# 	def _rawUiValue(self):
-# 		return self.line.text()
-# 	def _setRawUiValue(self, value):
-# 		self.line.setText(value)
-# 	def _processUiResult(self, rawResult):
-# 		return Path(rawResult)
-# 	def _processValueForUi(self, rawValue):
-# 		return str(rawValue)
 
 if __name__ == '__main__':
 	"""test initialising objects on rx"""

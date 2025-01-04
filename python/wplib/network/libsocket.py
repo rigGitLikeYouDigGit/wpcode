@@ -80,6 +80,8 @@ def recvMsg(sock:socket.socket, deserialise=True):
 	raw_msglen = recvall(sock, 4)
 	if not raw_msglen:
 		return None
+	#while not raw_msglen:
+		#raw_msglen = recvall(sock, 4) # this hangs even with timeout set
 	msglen = struct.unpack(LEN_PREFIX_CHAR, raw_msglen)[0]
 	# Read the message data
 	result = recvall(sock, msglen)

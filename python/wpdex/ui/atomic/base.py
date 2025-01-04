@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import traceback
+import types
 
 from weakref import WeakValueDictionary
 
@@ -21,16 +22,22 @@ from wpdex import *
 class Condition:
 	"""EXTREMELY verbose, but hopefully this lets us reuse
 	rules and logic as much as possible"""
-	def __init__(self, *args, **kwargs):
+	def __init__(self, *args,
+	             validateFn=lambda v : True,
+	             correctFn=lambda v : v,
+	             **kwargs,
+	             ):
 		self.args = args
 		self.kwargs = kwargs
+		self.validateFn = validateFn
+		self.correctFn = correctFn
 	def validate(self, value, *args, **kwargs):
 		"""
 		return None -> all fine
 		raise error -> validation failed
 		return (error, val) -> failed with suggested result
 		"""
-		raise NotImplementedError
+		return self.validateFn(value, *args, **kwargs)
 
 	def correct(self, value):
 		raise NotImplementedError
@@ -42,6 +49,10 @@ class Condition:
 		to collect the results of multiple conditions
 		at once"""
 		for i in conditions:
+			# try just passing a raw function
+			if isinstance(i, (types.FunctionType, types.MethodType)):
+				assert i(value, *args, **kwargs)
+				continue
 			i.validate(value, *args, **kwargs)
 
 

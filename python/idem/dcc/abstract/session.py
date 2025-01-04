@@ -3,7 +3,7 @@ import types, typing as T
 import pprint
 from wplib import log
 
-import os, sys
+import os, sys, time, datetime
 from collections import defaultdict
 import threading, multiprocessing, socket, socketserver, traceback
 from pathlib import Path
@@ -56,7 +56,7 @@ class SlotRequestHandler(socketserver.StreamRequestHandler):
 		data = req
 
 		# if the sender was this request's own server, don't respond to it
-		if data["sender"][0] == self.server.socket.getsockname()[1]:
+		if data["s"][0] == self.server.socket.getsockname()[1]:
 			log("not responding to own message") # works
 			return
 		if "t" in data:
@@ -76,6 +76,7 @@ class SlotRequestHandler(socketserver.StreamRequestHandler):
 		libsocket.sendMsg(self.request, msg)
 
 class ReusableThreadingTCPServer(socketserver.ThreadingTCPServer):
+	daemon_threads = True
 	def server_bind(self):
 		self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		super().server_bind()
@@ -101,7 +102,7 @@ class DataFileServer:
 		return cls._session
 
 	@classmethod
-	def bootstrap(cls, sessionName="IDEM", start=True)->type[cls]:
+	def bootstrap(cls, sessionName="IDEM", start=True)->cls:
 		"""load up a MayaIdemSession from standing start, set up
 		ports, hook up idem camera, sets etc
 		"""
@@ -111,6 +112,8 @@ class DataFileServer:
 		newSession = cls(name=sessionName)
 		if start:
 			newSession.runThreaded()
+		newSession.log("bootstrapped", sessionName, start)
+
 		return newSession
 
 
@@ -146,6 +149,10 @@ class DataFileServer:
 			pass
 		pass
 
+	def log(self, *args):
+		return log(datetime.datetime.now().time(), ": ", self._sessionFileName(), ": ", *args, framesUp=1)
+
+
 	def onReplicatedDataChanged(self):
 		"""but then do we pass in the keys that have changed, and the deltas,
 		or do we have each be a discrete object that we hook signals to,
@@ -160,10 +167,13 @@ class DataFileServer:
 		if self.connectedBridgeId():
 			raise RuntimeError("Disconnect session bridge before connecting to a new one")
 		if sendCmd:
+			log(self.portId(), "->", bridgeId, ": connect from session to bridge")
 			result = self.send(self.message(
 				ConnectToSessionCmd(targetPort=bridgeId),
 				wantResponse=True
-			))
+			),
+				toPort=bridgeId
+			)
 			assert result, "Got no result from bridge after sending connectToSession CMD"
 		data = self.liveData
 		data["connection"] = bridgeId
@@ -173,7 +183,10 @@ class DataFileServer:
 		if not self.connectedBridgeId():
 			return
 		if sendCmd:
-			self.send(self.message(DisconnectSessionCmd(targetPort=self.portId())))
+			self.send(
+				self.message(DisconnectSessionCmd(targetPort=self.portId())),
+				toPort=self.connectedBridgeId()
+			)
 		self.liveData["connection"] = None
 		self.writeSessionFileData(self.liveData)
 
@@ -197,17 +210,27 @@ class DataFileServer:
 
 	def clear(self):
 		"""clear up all data and pipe files for this session"""
-		if self.loopThread:
-			self.loopThread.join()
+		self.log("CLEAR start", self.loopThread, self.server)
+		# if self.loopThread:
+		# 	self.loopThread.join()
 		#self.server.shutdown()
-		if not self.sessionFileDir().is_dir():
-			return
-		for i in tuple(self.sessionFileDir().glob(self.uuid + "_*")):
-			i.unlink(missing_ok=True)
+
+		if self.connectedBridgeId():
+			self.log("disconnecting bridge")
+			self.disconnectBridge(sendCmd=True)
+
+		if self.sessionFileDir().is_dir():
+			for i in tuple(self.sessionFileDir().glob(self.uuid + "_*")):
+				i.unlink(missing_ok=True)
 
 		self._session = None
-		#if self.server
-		#self.server.server_close()
+		if self.server:
+			self.log("try server shutdown")
+			#self.server.server_close()
+			self.server.shutdown()
+			self.log("server closed successfully")
+		if self.loopThread:
+			self.log("loop thread final", self.loopThread, self.loopThread.is_alive())
 
 
 	def __del__(self):
@@ -262,7 +285,7 @@ class DataFileServer:
 		"""startup method that begins event loop, handles errors
 		for now we just hack an event loop here
 		"""
-		self.server.serve_forever(poll_interval=1.0)
+		self.server.serve_forever(poll_interval=0.1)
 
 	def handleMessage(self, handler:SlotRequestHandler, msg:dict):
 		"""handle incoming messages from bridge"""
@@ -276,7 +299,7 @@ class DataFileServer:
 
 	def message(self, data:dict, wantResponse=False)->MsgDict:
 		"""add message attributes to dict"""
-		data["sender"] = (self.portId(), self.name)
+		data["s"] = (self.portId(), self.name)
 		data["r"] = wantResponse
 		return data
 
@@ -290,27 +313,36 @@ class DataFileServer:
 		"""
 		toPort = toPort if toPort is not None else self.portId()
 		log(self._sessionFileName(), "send to", toPort, msg)
-		with socket.socket() as sock:
-			if msg["r"]:  # allow longer for response
-				sock.settimeout(1.0)
-			else:
-				sock.settimeout(1.0)
 
-			try:
-				sock.connect(("localhost", toPort))
-			except ConnectionRefusedError:
-				log(self.uuid, f"IDEM ERROR: no listening port on {toPort}, aborting send")
-				return
-			except socket.timeout:
-				# later consider retrying any 'important' commands?
-				log(self.uuid, f"IDEM ERROR: port {toPort} timed out, aborting send")
-				return
+		sock = socket.create_connection(
+			("localhost", toPort), timeout=3.0
+		)
+		self.log("created conn", toPort, sock)
+
+
+		#with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+		with sock:
+			# if msg["r"]:  # allow longer for response
+			# 	sock.settimeout(1.0)
+			# 	sock.setblocking(True)
+			# else:
+			# 	sock.settimeout(1.0)
+
+			# try:
+			# 	sock.connect(("localhost", toPort))
+			# except ConnectionRefusedError:
+			# 	log(self.uuid, f"IDEM ERROR: no listening port on {toPort}, aborting send")
+			# 	return
+			# except socket.timeout:
+			# 	# later consider retrying any 'important' commands?
+			# 	log(self.uuid, f"IDEM ERROR: port {toPort} timed out, aborting send")
+			# 	return
 			libsocket.sendMsg(sock, msg)
 
 			if msg["r"]: # wait for response
-				log(self._sessionFileName(), "wait for reply")
+				self.log("wait for reply")
 				result = libsocket.recvMsg(sock)
-				log(self._sessionFileName(), "got reply", result)
+				self.log( "got reply", result)
 				return result
 
 	# def sendCmd(self, msg:DCCCmd, toPort=None):
@@ -370,7 +402,7 @@ class DCCIdemSession(DataFileServer):
 			self.replicatedData = msg["data"]
 			return
 		if isinstance(msg, ConnectToBridgeCmd):
-			self.updateConnectedBridge(msg["sender"])
+			self.updateConnectedBridge(msg["s"])
 			handler.sendResponse(
 				self.message({"connectedSession" : self.getSessionIdData()}, # should we have a function to make this response?
 				             wantResponse=False)
@@ -419,11 +451,12 @@ class IdemBridgeSession(DataFileServer):
 		self.liveData = {
 			"id" : self.uuid,
 			"processId" : os.getpid(),
-			"connected" : {} # type:dict[int, SessionIdData]
+			"connected" : {} # type:dict[str, int]
 		}
 		self.writeSessionFileData(self.liveData)
 
-	def connectToSocket(self, portId:int):
+	def connectToSocket(self, portId:int,
+	                    sendCmd=True):
 		"""create a new server listening on the given child socket
 
 		called on BRIDGE to drive CHILD
@@ -442,28 +475,44 @@ class IdemBridgeSession(DataFileServer):
 			portId, server, serverThread=thread)
 
 		# ask server for some other information
-		result = self.send(self.message(
-			ConnectToBridgeCmd(), wantResponse=True),
-			toPort=portId
-		)
-		if not result:
-			raise RuntimeError("could not connect to child session ", portId)
-		if "connectedSession" in result:
-			log("successfully connected child session", result["connectedSession"])
-			# json keys apparently can't be integers, only strings
-			# been working with this format 7 years, only learned that today
-			self.liveData["connected"][str(portId)] = result["connectedSession"]
+		# driving CHILD from BRIDGE
+		if sendCmd:
+			result = self.send(self.message(
+				ConnectToBridgeCmd(), wantResponse=True),
+				toPort=portId
+			)
+			if not result:
+				raise RuntimeError("could not connect to child session ", portId)
+			if "connectedSession" in result:
+				log("successfully connected child session", result["connectedSession"])
+				# json keys apparently can't be integers, only strings
+				# been working with this format 7 years, only learned that today
+				self.liveData["connected"][str(portId)] = portId
+				self.writeSessionFileData(self.liveData)
+			return
+
+		else: # driving BRIDGE from CHILD
+			# we assume the outer scope already has a response ready
+			self.liveData["connected"][str(portId)] = portId
 			self.writeSessionFileData(self.liveData)
+			pass
 
 	def disconnectSocket(self, portId:int):
 		"""remove connection to the given port -
 		shutdown listening server
 		halt listening thread
 		remove from connections"""
-		self.linkedSessions[portId].server.shutdown()
+
+		server = self.linkedSessions[portId].server
+		# self.linkedSessions[portId].server.shutdown()
+		self.log("linked sessions", self.linkedSessions)
 		self.linkedSessions.pop(portId)
-		self.liveData["connected"].pop(str(portId))
+		self.liveData["connected"].pop(str(portId), None) # todo:scrap livedata
 		self.writeSessionFileData(self.liveData)
+
+		self.log("shutting down server", portId)
+		server.shutdown()
+		self.log("server shutdown complete", portId)
 
 	def send(self, msg:dict, toPort=None, notToPort=None):
 		if toPort is None:
@@ -480,12 +529,18 @@ class IdemBridgeSession(DataFileServer):
 	                      fromPort=0, **kwargs):
 		"""if fromPort is None, probably came from
 		this bridge session"""
+		self.log("handle :", msg)
+		self.log(type(msg), isinstance(msg, DisconnectSessionCmd))
 		if isinstance(msg, ConnectToSessionCmd):
-			self.connectToSocket(msg["targetPort"])
+			# connect to the port that sent this message
+			self.connectToSocket(msg["s"][0], sendCmd=False)
 			handler.sendResponse({"connectedSession" : self.getSessionIdData()})
 			return
 		if isinstance(msg, DisconnectSessionCmd):
-			self.disconnectSocket(msg["targetPort"])
+			self.log("disconnecting from msg")
+			self.disconnectSocket(msg["s"][0])
+			self.log("disconnected session from bridge", msg["s"][0])
+			self.log(self.linkedSessions)
 			return
 
 		if isinstance(msg, ReplicateDataCmd):
@@ -493,5 +548,5 @@ class IdemBridgeSession(DataFileServer):
 
 		# by default echo each command received by bridge to all sessions,
 		# except its own sender
-		self.send(msg, notToPort=msg["sender"][0])
+		self.send(msg, notToPort=msg["s"][0])
 

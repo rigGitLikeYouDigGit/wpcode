@@ -11,8 +11,10 @@ from copy import deepcopy
 from collections import defaultdict
 from functools import cache, cached_property
 import weakref
+from pathlib import Path
 
 import deepdiff
+import orjson
 
 from wplib import log, Sentinel, sequence
 from wplib.object import Adaptor, TypeNamespace, HashIdElement, ObjectReference, EventDispatcher, OverrideProvider
@@ -160,7 +162,10 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		        # set this to false to prevent dex from parenting existing
 		        # objects in branch map -
 		        # False forces a new dex object for every branch
-		        "reentrantInit" : True
+		        "reentrantInit" : True,
+
+		        # add a file path here to update a file on disk whenever data changes
+		        "pairedPath" : None
 		        }
 
 	@classmethod
@@ -200,7 +205,20 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		# save data against paths to persist across
 		# destroying and regenerating dex structure
 		self._rootData : dict[tuple[str], dict[str]] = {}
-		self._persistData = self._newPersistData()
+
+		# should this not inherit the state of reentrantInit?
+		#self._persistData = self._newPersistData()
+		self._persistData = dict(
+			deltaBase=None,
+
+			# set this to false to prevent dex from parenting existing
+			# objects in branch map -
+			# False forces a new dex object for every branch
+			reentrantInit=reentrantInit,
+
+			# add a file path here to update a file on disk whenever data changes
+			pairedPath=None
+		)
 
 		self.isPreppedForDeltas = False
 
@@ -211,6 +229,38 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 			self._branchMap = _branchMap
 		else:
 			self.updateChildren(recursive=0, reentrantInit=reentrantInit )
+
+	def setObj(self, obj:T.Any,
+	           updateChildren=True,
+	           reentrantInit=True, # find a better name for this flag good grief
+	           emit=True
+	           ):
+		"""update the current object pointed to by this dex
+		only use if you don't already have proxies set up -
+		usually easier to change the target of the proxy
+
+		this should also only be used on the root of a hierarchy -
+		expressly not how leaves of wpdex are meant to work, change the actual
+		data and update them instead
+		"""
+		# remove references
+		self.objIdDexMap.pop(id(self.obj), None)
+
+		# set obj on pathable and other parents
+		super().setObj(obj)
+		# update dexmap reference
+		self.objIdDexMap[id(obj)] = self
+
+		# build new children
+		if updateChildren: # why would you ever not update children on obj change
+			self.updateChildren(recursive=1, reentrantInit=reentrantInit)
+
+		# send most general update signal possible
+		if emit:
+			self.sendEvent({
+				"type": "deltas",
+				"deltas" : {tuple(self.path) : {"change" : "any"}}
+			})
 
 	if T.TYPE_CHECKING:
 		def branches(self)->list[WpDex]:...
@@ -399,17 +449,23 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		else:
 			event["path"] = []
 		return super()._handleEvent(event, key)
-			
+
+	def serialiseData(self, serialParams=None)->(dict, list):
+		return serialise(
+			Proxy.flatten(
+				self.obj, serialParams=serialParams),
+			serialParams=serialParams
+		)
+
 	def staticCopy(self)->WpDex:
 		"""return a fully separate hierarchy, wrapped in a separate
 		network of WpDex objects"""
 		serialParams = {"PreserveUid" : True}
 
-		dex = WpDex(deserialise(serialise(Proxy.flatten(
-			self.obj, serialParams=serialParams,
-		), serialParams=serialParams),
-			serialParams=serialParams
-		),
+		serialData = self.serialiseData(serialParams)
+
+		dex = WpDex(
+			deserialise(serialData,	serialParams=serialParams),
 			reentrantInit=False)
 		# don't need to update children since we build on init
 		#dex.updateChildren(recursive=1, reentrantInit=False)
@@ -602,4 +658,37 @@ class WpDex(Adaptor,  # integrate with type adaptor system
 		"""return a string representation of this object"""
 		#TODO: replace with visitor for serialisation
 		return str(self.obj)
+
+	# link data structure to file path, saving continuously or reverting
+	# TODO: this might need integrating better with controller, not sure it should be
+	#       part of the main object here
+	def linkedFilePath(self)->Path:
+		persistPath = self._persistData.get("pairedPath")
+		if persistPath:
+			return Path(persistPath)
+		return None
+	def linkToFile(self, targetPath:Path):
+		self._persistData["pairedPath"] = str(targetPath)
+
+	def serialiseObjToFile(self, targetPath:Path=None, serialParams=None):
+		"""serialise the target object to path - does not save any WpDex metadata
+		"""
+		targetPath = targetPath or self._persistData.get("pairedPath")
+		assert targetPath, f"Must give or previously pair a valid path to serialise, not {targetPath}"
+		with open(targetPath, "wb") as f:
+			f.write(orjson.dumps(self.serialiseData(serialParams)))
+
+	def deserialiseObjFromFile(self, targetPath:Path=None, serialParams=None):
+		"""update state of the wrapped object from the target path, or the paired
+		path of this dex if none given
+		"""
+		targetPath = targetPath or self._persistData.get("pairedPath")
+		assert targetPath, f"Must give or previously pair a valid path to deserialise, not {targetPath}"
+		with open(targetPath, "rb") as f:
+			data = orjson.loads(f.read())
+		obj = deserialise(data, serialParams=serialParams)
+		# update internal obj
+		self.setObj(obj)
+
+
 

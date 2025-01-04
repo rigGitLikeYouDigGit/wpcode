@@ -780,8 +780,6 @@ class LinkProxy(Proxy):
 
 
 
-#class ReactiveProxy
-
 
 if __name__ == '__main__':
 

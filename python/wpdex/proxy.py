@@ -6,16 +6,25 @@ import weakref
 import types
 import typing as T
 from collections import defaultdict
+from pathlib import Path
 
 from wpdex.wx import WX, Wreactive_ops
 from wpdex.context import ReentrantContext
 
 from wplib import log
 from wplib.object import Adaptor, Proxy, ProxyData, ProxyMeta
+from wplib.serial import serialise, deserialise
 from wpdex.base import WpDex
 
 from param import rx
 import param
+
+#import json as _json
+# try:
+# 	import orjson as _json
+# except ImportError:
+	#pass
+import orjson
 
 setattr(param.reactive, "reactive_ops", Wreactive_ops)
 
@@ -71,7 +80,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 	and provide a hook for rx. the source stays the same
 
 	now go back to interface layer idea, rather than embedding proxies into hierarchy -
-	INTERNALLY, wrappe object should be able to verify itself
+	INTERNALLY, wrapped object should be able to verify itself
 	with "is" and exact checks - shouldn't ever touch a proxy directly
 
 	proxy only exists to capture calls and sets -
@@ -99,6 +108,8 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		self._proxyData["deltaCallDepth"] = 0
 		self._proxyData["wxRefs"] : dict[WpDex.pathT, WX] = {}
 		self._proxyData["deltaContext"] : ReentrantContext = kwargs.pop("deltaContext", None)
+		self._proxyData["filePath"] : Path = None # file for live-linking
+		#self._proxyData["fileSerialParams"] : dict = None # file for live-linking
 
 		#self._proxyData["parent"] = self._proxyData.get("parent", None)
 
@@ -316,6 +327,8 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 			if isinstance(result, WpDexProxy):
 				result = result._proxyTarget()
 		else:
+			# only wrap part of the data structure, as mapped out by WpDex,
+			# not just any random attr / property that could be procedural
 			foundDex = WpDex.dexForObj(result)
 			if foundDex:
 				result = WpDexProxy(result, wpDex=foundDex)
@@ -327,8 +340,10 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		super()._setProxyTarget(proxy, target)
 		if not "wpDex" in proxy._proxyData:
 			return
-		proxy.dex().obj = target
-		proxy.dex().updateChildren()
+		#proxy.dex().obj = target
+		proxy.dex().setObj(target, )
+		#proxy.dex().updateChildren()
+
 		#proxy._linkDexProxyChildren()
 
 	#region reactive referencing
@@ -401,6 +416,42 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 
 
 	#endregion
+
+	def linkToFile(self, path:Path, serialParams=None):
+		self._proxyData["filePath"] = path
+		self._proxyData["fileSerialParams"] = serialParams
+		self.dex().getEventSignal("main").connect(
+			lambda *a, **kw : self.writeToFile(serialParams=serialParams))
+	def writeToFile(self, path:Path=None, serialParams=None):
+		targetPath = path or self._proxyData["filePath"]
+		serialParams = serialParams or self._proxyData.get("serialParams")
+		assert targetPath, f"Must give or previously pair a valid path to serialise, not {targetPath}"
+		with open(targetPath, "wb") as f:
+			f.write(orjson.dumps(self.dex().serialiseData(serialParams)))
+
+	def readFromFile(self, path:Path=None, serialParams=None):
+		targetPath = path or self._proxyData["filePath"]
+		serialParams = serialParams or self._proxyData.get("serialParams")
+		assert targetPath, f"Must give or previously pair a valid path to deserialise, not {targetPath}"
+		assert targetPath.exists(), f"no path found at {targetPath} to deserialise {self}"
+		with open(targetPath, "rb") as f:
+			data = orjson.loads(f.read())
+		obj = deserialise(data, serialParams=serialParams)
+		self._setProxyTarget(self, obj)
+
+	@classmethod
+	def fileLinkedObject(cls, defaultObj, path:Path,
+	                     readOnStart=True,
+	                     writeOnStart=False,
+	                     serialParams=None):
+		proxy = WpDexProxy(defaultObj)
+		proxy.linkToFile(path, serialParams=serialParams)
+		if path.exists() and readOnStart: #
+			proxy.readFromFile()
+		if writeOnStart:
+			proxy.writeToFile()
+		return proxy
+
 
 
 

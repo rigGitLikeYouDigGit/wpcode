@@ -27,7 +27,7 @@ class IdemCmd(T.TypedDict, Catalogue, AttrDict ):
 	"""
 
 	t : str # type of the command
-	sender : tuple[int, str]
+	s : tuple[int, str]
 	r : bool # does this command need a response
 
 	catalogue = {}
@@ -80,10 +80,10 @@ class SetCameraCmd(DCCCmd):
 
 if __name__ == '__main__':
 
-	print(IdemCmd({'t': 'ConnectToBridgeCmd', 'sender': [58378, 'bridge'], 'r': True}))
+	print(IdemCmd({'t': 'ConnectToBridgeCmd', 's': [58378, 'bridge'], 'r': True}))
 
 
-	test = IdemCmd(sender=(3, "b"))
+	test = IdemCmd(s=(3, "b"))
 	print(test)
 	print(isinstance(test, IdemCmd))
 	print(isinstance(test, dict))

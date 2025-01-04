@@ -26,7 +26,8 @@ class IdemBridgeWidget(SessionWidget):
 			if not self.session:
 				return []
 			#log("update connected b",)
-			#print(self.session.linkedSessions)
+			#log("linked sessions:", self.session.linkedSessions)
+			#log("availDCCSessions", DataFileServer.availableDCCSessions())
 			for k, v in self.session.linkedSessions.items():
 				w = ConnectedSessWidget(
 					parent=groupBox,
@@ -41,13 +42,11 @@ class IdemBridgeWidget(SessionWidget):
 
 		def _updateAvailWidgetsFn(groupBox):
 			result = []
-			if not self.session:
-				return []
-			#log("update avail")
-			#print(self.session.availableDCCSessions())
-			for k, path in self.session.availableDCCSessions().items():
-				if k in self.session.linkedSessions:
-					continue
+
+			for k, path in IdemBridgeSession.availableDCCSessions().items():
+				if self.session:
+					if k in self.session.linkedSessions:
+						continue
 				w = ConnectedSessWidget(
 					parent=groupBox,
 					name=DataFileServer.availableDCCSessions()[k].stem,
@@ -55,12 +54,19 @@ class IdemBridgeWidget(SessionWidget):
 				)
 				w.button.clicked.connect(
 					lambda sender: self.onConnectBtnPressed(sender, w))
-				#self.availVL.addWidget(w)
+				if not self.session:
+					w.setEnabled(False)
 				result.append(w)
 			return result
 
 		self.connectedGroupBox.getWidgetsFn = _updateConnectedWidgetsFn
 		self.availGroupBox.getWidgetsFn = _updateAvailWidgetsFn
+
+	def onConnectBtnPressed(self, sender, sessW:ConnectedSessWidget):
+		"""connect target session to this bridge"""
+		self.session.connectToSocket(sessW.port)
+		self.sync()
+
 
 	instance : IdemBridgeWidget = None
 
@@ -97,7 +103,6 @@ class IdemBridgeWidget(SessionWidget):
 			# bootstrap new session for this dcc
 			text = "bridge" + text # all bridge sessions start with it in name
 			session = IdemBridgeSession.bootstrap(text)
-			session.runThreaded()
 			self.setSession(session)
 			#self.setSession(sessionCls.bootstrap(text))
 
@@ -108,6 +113,8 @@ if __name__ == '__main__':
 	app = QtWidgets.QApplication()
 	w = IdemBridgeWidget.getInstance()
 	w.show()
+	w.setMinimumSize(200, 200)
+
 
 	app.exec_()
 

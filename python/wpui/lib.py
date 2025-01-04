@@ -129,8 +129,8 @@ def widgetChildMap(w:QtWidgets.QWidget, includeObjects=True, onlyNamed=True)->di
 
 class muteQtSignals:
 	"""small context for muting qt signals around a block"""
-	def __init__(self, obj:QtCore.QObject):
-		self.objs = toSeq(obj)
+	def __init__(self, *objs:QtCore.QObject):
+		self.objs = toSeq(objs)
 	def __enter__(self):
 		for i in self.objs:
 			i.blockSignals(True)

@@ -60,18 +60,35 @@ class ConnectedSessWidget(QtWidgets.QWidget):
 
 	def __init__(self, parent=None,
 	             name="", isConnected=False,
+	             port:int=-1
 	             #onClickFn:T.Callable=None
 	             ):
 		super().__init__(parent)
 		vl = QtWidgets.QHBoxLayout()
 		self.isConnected = isConnected
 		self.name = name
+		self.port = port
 		self.label = QtWidgets.QLabel(name, self)
 		self.button = QtWidgets.QPushButton("disconnect" if isConnected else "connect")
+		self.button.setContentsMargins(1, 1, 1, 1)
 		vl.addWidget(self.label)
 		vl.addWidget(self.button)
+		self.label.setIndent(1)
+		self.label.setFixedSize(self.label.sizeHint())
+		textSize = self.button.fontMetrics().size(QtCore.Qt.TextShowMnemonic, self.button.text())
+		self.button.setMinimumSize(textSize)
+		self.label.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding,
+		                         QtWidgets.QSizePolicy.Fixed,
+		                         )
+		self.button.setSizePolicy(QtWidgets.QSizePolicy.Maximum,
+		                          QtWidgets.QSizePolicy.Fixed,
+		                          )
 		self.setLayout(vl)
-		#self.button.clicked.connect(onClickFn)
+		vl.setContentsMargins(0, 0, 0, 0)
+
+		#self.setContentsMargins(5, 5, 5, 5)
+
+
 
 class _SessionCtlWidget(QtWidgets.QWidget):
 	"""widget specifically to control the current dcc session"""
@@ -98,6 +115,12 @@ class SessionWidget(QtWidgets.QGroupBox):
 	I guess the fully correct way would be to make a session Modelled, and
 	have all this stuff update reactively,
 	but come on
+
+	I don't know how, but I forgot you can't create QT widgets from
+	a separate thread to the UI -
+	maybe we can shunt the entire thing to a thread?
+
+	but it feels like we're heading for async stuff sooner than planned
 	"""
 
 	instance = None
@@ -129,7 +152,11 @@ class SessionWidget(QtWidgets.QGroupBox):
 					parent=groupBox,
 					name=str(self.session.connectedBridgeId()),
 					isConnected=True,
+					port=self.session.connectedBridgeId()
 				)
+				#log("connected w", w)
+				w.show()
+				#log("w shown", w)
 				w.button.clicked.connect(
 					lambda sender: self.onConnectBtnPressed(sender, w))
 				#self.connectedVL.addWidget(w)
@@ -138,18 +165,26 @@ class SessionWidget(QtWidgets.QGroupBox):
 
 		def _updateAvailWidgetsFn(groupBox):
 			result = []
-			if not self.session:
-				return []
-			for k, path in self.session.availableBridgeSessions().items():
+			# if not self.session:
+			# 	return []
+			print("availBridges", DCCIdemSession.availableBridgeSessions())
+
+			for k, path in DCCIdemSession.availableBridgeSessions().items():
 				w = ConnectedSessWidget(
 					parent=groupBox,
-					name=str(k),
+					name=path.stem,
 					isConnected=False,
+					port=k
 				)
+				#log("avail w", w, w.isHidden())
 				w.button.clicked.connect(
 					lambda sender: self.onConnectBtnPressed(sender, w))
+
 				#self.availVL.addWidget(w)
+				if not self.session:
+					w.setEnabled(False)
 				result.append(w)
+			#log("avail result", result)
 			return result
 
 		self.connectedGroupBox = GenGroupBox(
@@ -209,12 +244,11 @@ class SessionWidget(QtWidgets.QGroupBox):
 
 			# bootstrap new session for this dcc
 			sessionCls = DCCProcess.idemSessionCls()
-			log("bootstrapping", sessionCls)
 			self.setSession(sessionCls.bootstrap(text))
 
 
-	def sync(self):
-		#print("sync")
+	def sync(self, *args, **kwargs):
+		#log("sync")
 		#self.indicator.setValue(BlinkLight.Status.Success)
 		self.indicator.blink()
 		#print("after set value")
@@ -225,8 +259,9 @@ class SessionWidget(QtWidgets.QGroupBox):
 		else:
 			self.nameLabel.setText("<no session>")
 		self.syncAvailWidgets()
+		#log("after sync avail")
 		#self.indicator.blink()
-		self.indicator.setValue(BlinkLight.Status.Success)
+		#self.indicator.setValue(BlinkLight.Status.Success)
 		#print("blinked")
 
 	def stop(self):
@@ -237,17 +272,24 @@ class SessionWidget(QtWidgets.QGroupBox):
 	# 	"""first ever time using async, sure this will be fine
 	# 	"""
 
-	def syncThreaded(self):
+	def syncThreaded(self, *args, **kwargs):
 		while not self.shouldStop:
 			self.sync()
 			time.sleep(self.delay)
 
 	def syncForever(self, delay=1.0):
-		self.delay = delay
-		self.syncThread = threading.Thread(target=self.syncThreaded,
-		                                   daemon=True)
-		self.syncThread.start()
+		# self.delay = delay
+		# self.syncThread = threading.Thread(target=self.syncThreaded,
+		#                                    daemon=True)
+		# self.syncThread.start()
+
 		#self.syncThreaded()
+
+		self.timer = QtCore.QTimer(parent=self)
+		self.timer.setInterval(1000)
+		self.timer.timeout.connect(self.sync)
+
+		self.timer.start()
 
 	def connectedWidgets(self):
 		#return [self.connectedVL.itemAt(i).widget() for i in range(self.connectedVL.count())]
@@ -265,12 +307,13 @@ class SessionWidget(QtWidgets.QGroupBox):
 			return
 		if sessW in self.availWidgets(): # connect
 			if isinstance(self.session, DCCIdemSession):
-				self.session.updateConnectedBridge(int(sessW.name), sendCmd=True)
+				self.session.updateConnectedBridge(int(sessW.port), sendCmd=True)
 			self.sync()
 
 	def syncAvailWidgets(self):
 		"""					 """
 		self.availGroupBox.sync()
+		#log("after syncAvail gb")
 		self.connectedGroupBox.sync()
 
 	@classmethod
@@ -284,26 +327,56 @@ class SessionWidget(QtWidgets.QGroupBox):
 		self.shouldStop = True
 		if self.syncThread is not None:
 			self.syncThread.join()
+		self.timer.stop()
+		if self.session:
+			self.session.clear()
 		super().closeEvent(event)
 
 	def showEvent(self, event):
 		"""restart syncing"""
 		self.shouldStop = False
-		self.syncForever()
 		super().showEvent(event)
+		self.syncForever()
 
 	def __del__(self):
 		self.shouldStop = True
 		if self.syncThread is not None:
 			self.syncThread.join()
 
-if __name__ == '__main__':
 
+w = None
+def setupApp():
 	app = QtWidgets.QApplication()
+	global w
 	w = SessionWidget.getInstance()
 	w.show()
-
+	w.setMinimumSize(200, 200)
 	app.exec_()
+
+if __name__ == '__main__':
+
+	uiThread = threading.Thread(target=setupApp,
+	                            daemon=False)
+	uiThread.start()
+
+	time.sleep(1)
+	#w.show()
+	#w.syncForever()
+
+
+	# app = QtWidgets.QApplication()
+	# w = SessionWidget.getInstance()
+	# w.show()
+	# w.setMinimumSize(200, 200)
+
+	#app.exec_()
+
+	# uiThread = threading.Thread(target=app.exec_,
+	#                             daemon=True)
+	# uiThread.start()
+
+	# while True:
+	# 	time.sleep(1)
 
 
 
