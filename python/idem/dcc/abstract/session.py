@@ -121,7 +121,7 @@ class DataFileServer:
 
 	@classmethod
 	def bootstrap(cls, sessionName="IDEM", start=True)->cls:
-		"""load up a MayaIdemSession from standing start, set up
+		"""load up an abstract IDEM session from standing start, set up
 		ports, hook up idem camera, sets etc
 		"""
 		if cls.session():
@@ -134,6 +134,7 @@ class DataFileServer:
 		if start:
 			newSession.runThreaded()
 		newSession.log("bootstrapped", sessionName, start)
+		cls._session = newSession
 
 		return newSession
 
@@ -286,9 +287,7 @@ class DataFileServer:
 		"""clear up all data and pipe files for this session"""
 		self.log("CLEAR start", self.loopThread, self.server)
 		self.shouldStopHeartbeat = True
-		# if self.loopThread:
-		# 	self.loopThread.join()
-		#self.server.shutdown()
+
 		if self.sessionFileData() is not None:
 			if self.connectedBridgeId():
 				self.log("disconnecting bridge")
@@ -389,7 +388,12 @@ class DataFileServer:
 			error in the export somehow?
 			but naively I'd rather catch and filter that as a general incoming message
 		"""
-		toPort = toPort if toPort is not None else self.portId()
+		if toPort is None:
+			if isinstance(self, DCCIdemSession):
+				toPort = self.connectedBridgeId()
+			else:
+				toPort = self.portId()
+
 		log(self._sessionFileName(), "send to", toPort, msg)
 
 		sock = socket.create_connection(

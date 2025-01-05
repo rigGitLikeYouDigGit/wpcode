@@ -18,10 +18,10 @@ class Transform(GenTransform):
 
 	def setLocalMatrix(self, mat):
 		mat = to(mat, om.MTransformationMatrix)
-		self.MFn.setTransformation(mat, om.MSpace.kObject)
+		self.MFn.setTransformation(mat)
 	def setWorldMatrix(self, mat):
 		mat = to(mat, om.MTransformationMatrix)
-		self.MFn.setTransformation(mat, om.MSpace.kWorld)
+		self.MFn.setTransformation(mat)
 
 	def localPos(self)->om.MVector:
 		return self.MFn.translation(om.MSpace.kObject)

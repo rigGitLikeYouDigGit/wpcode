@@ -247,7 +247,7 @@ class SessionWidget(QtWidgets.QGroupBox):
 				return
 
 			# bootstrap new session for this dcc
-			sessionCls = DCCProcess.idemSessionCls()
+			sessionCls = DCCProcess.currentDCCProcessCls().idemSessionCls()
 			self.setSession(sessionCls.bootstrap(text))
 
 
@@ -335,6 +335,7 @@ class SessionWidget(QtWidgets.QGroupBox):
 		if self.session:
 			self.session.clear()
 		super().closeEvent(event)
+		self.instance = None
 
 	def showEvent(self, event):
 		"""restart syncing"""

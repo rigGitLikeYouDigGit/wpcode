@@ -9,16 +9,16 @@ from wplib import log
 
 from wplib import to, toArr
 from wpm import cmds, om, WN
-from wpm.w3d.data import CameraData
-from wpm.lib.callback import WpCallback
 
 from idem.dcc.abstract import DCCIdemSession
 from idem.dcc.abstract.command import *
+from wpm.w3d.data import CameraData
+from wpm.lib.callback import WpMayaCallback
 
 class MayaIdemSession(DCCIdemSession):
 	""""""
 
-	cameraCallbackObj : WpCallback
+	cameraCallbackObj : WpMayaCallback
 
 	if T.TYPE_CHECKING:
 		_session :MayaIdemSession = None
@@ -38,16 +38,18 @@ class MayaIdemSession(DCCIdemSession):
 		"""
 		return WN("persp")
 
-	def emitCameraData(self, cb: WpCallback, mobj: om.MObject, userData=None, *args):
+	def emitCameraData(self, cb: WpMayaCallback, mobj: om.MObject, userData=None, *args):
 		"""send serialised camera data with matrix of given MObject
 		"""
+		if not self.connectedBridgeId():
+			return
 		log("emitCameraData", cb, mobj, userData, *args)
 		mfn = om.MFnTransform(mobj)
 		# todo: obvs replace this with proper library functions from plugs
 		mat = om.MFnMatrixData(mfn.findPlug("worldMatrix", 0).elementByLogicalIndex(0).asMObject()).matrix()
 		data = CameraData(matrix=toArr(mat).tolist())
 
-		self.send(self.message(SetCameraCmd(data=data)))
+		self.send(self.message(SetCameraCmd(data=data)), toPort=self.connectedBridgeId())
 		#print("emitted", data)
 
 	def handleMessage(self, handler:SlotRequestHandler, msg:dict):
@@ -55,7 +57,9 @@ class MayaIdemSession(DCCIdemSession):
 		if isinstance(msg, SetCameraCmd):
 			# prevent events triggering infinitely
 			self.cameraCallbackObj.pause()
-			msg["data"].apply(self.getSessionCamera())
+			#msg["data"].apply(self.getSessionCamera())
+			self.log("idem cam", self.getSessionCamera(), type(self.getSessionCamera()))
+			CameraData.apply(msg["data"], self.getSessionCamera())
 			self.cameraCallbackObj.unpause()
 
 	@classmethod
@@ -65,9 +69,13 @@ class MayaIdemSession(DCCIdemSession):
 		"""
 		newSession = super().bootstrap(sessionName)
 
-		cameraCallback = WpCallback(
+		stayAliveFn = lambda *a, **kw : cls.session() is not None
+
+		cameraCallback = WpMayaCallback(
 			fns=[newSession.emitCameraData],
+			stayAliveFn=stayAliveFn
 		)
+		log("attaching to camera", newSession.getSessionCamera(), type(newSession.getSessionCamera()))
 		cameraCallback.attach(
 			om.MNodeMessage.addNodeDirtyCallback,
 			attachPreArgs=(newSession.getSessionCamera().object(),),

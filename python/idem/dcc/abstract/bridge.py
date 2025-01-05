@@ -53,7 +53,7 @@ class IdemBridgeSession(DataFileServer):
 		self.writeSessionFileData(self.liveData)
 
 	def getHeartbeatPorts(self) ->list[int]:
-		self.log("get heartbeat ports", self.linkedSessions)
+		#self.log("get heartbeat ports", self.linkedSessions)
 		return list(self.linkedSessions.keys())
 
 	def onHeartbeatTimeout(self, timeoutPorts:list[int]):
@@ -148,5 +148,18 @@ class IdemBridgeSession(DataFileServer):
 	
 	def clear(self):
 		"""when bridge shuts down, disconnect all connected sessions"""
-		self.send(self.message(DisconnectBridgeCmd, ))
-		super().clear()
+		self.send(self.message(DisconnectBridgeCmd(), ))
+
+		if self.sessionFileDir().is_dir():
+			for i in tuple(self.sessionFileDir().glob(self.uuid + "_*")):
+				i.unlink(missing_ok=True)
+
+		self._session = None
+		if self.server:
+			self.log("try server shutdown")
+			#self.server.server_close()
+			self.server.shutdown()
+			self.log("server closed successfully")
+		if self.loopThread:
+			self.log("loop thread final", self.loopThread, self.loopThread.is_alive())
+

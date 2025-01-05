@@ -61,6 +61,10 @@ class DCCProcess:
 	
 	is there a good reason NOT to just wrap this up in a class, and use inheritance?
 	no
+	
+	cases for an inheritance-style dcc library:
+		- saving and loading / scene management
+		- get main ui window
 	"""
 
 	@classmethod

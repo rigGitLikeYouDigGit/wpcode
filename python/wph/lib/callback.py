@@ -23,10 +23,24 @@ class WpHoudiniCallback(WpCallback):
 
 		self.callbackID = self # houdini allows you to remove a cb object directly
 		self.node = mMessageAddCallbackFn.__self__
-		self.eventTypes = attachPreArgs
+		self.eventTypes = attachPreArgs[0]
 
 	def remove(self):
+		try:
+			callbacks = self.node.eventCallbacks()
+		except hou.ObjectWasDeleted: # node already deleted
+			return
+
+		shouldDel = False
+		for eventTuple, fn in callbacks:
+			if fn is self:
+				shouldDel = True
+				break
+		if not shouldDel:
+			return
+
 		self.node.removeEventCallback(self.eventTypes, self)
+
 
 
 

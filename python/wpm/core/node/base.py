@@ -882,37 +882,10 @@ class WN( # short for WePresentNode
 
 	# region creation
 
-	# @classmethod
-	# def create(cls, type=None, n="", parent=None, dgMod:om.MDGModifier=None, existOk=True)->WN:
-	# 	"""any subsequent wrapper class will create its own node type
-	# 	If modifier object is passed, add operation to it but do not execute yet.
-	# 	Otherwise create and execute a separate modifier each time.
-	# 	:rtype cls"""
-	#
-	# 	# initialise wrapper on existing node
-	# 	if existOk and n:
-	# 		if cmds.objExists(n):
-	# 			return cls(n)
-	#
-	# 	nodeType = type or cls.clsApiType
-	# 	name = n or nodeType
-	#
-	# 	if dgMod:
-	# 		node = cls(dgMod.createNode(nodeType))
-	# 		dgMod.renameNode(node.MObject, name)
-	# 	else:
-	# 		node = cls(om.MFnDependencyNode().create(nodeType, name)) # cheeky
-	#
-	# 	#node.setDefaults()
-	# 	return node
-
-	# endregion
-
-	def getChild(self, lookup)->WN:
-		return self.childMap().get(lookup)
 
 
 	# endregion
+
 
 	def __call__(self, *args, **kwargs)-> PlugTree:
 		"""may allow calling node to look up both plugs and child nodes -
@@ -931,31 +904,57 @@ class WN( # short for WePresentNode
 		return childNode(tokens[1:])
 
 	# region convenience auxProperties
-	@property
-	def shapes(self)->tuple[WN]:
-		if self.isShape() or not self.isDag():
-			return ()
-		return tuple(map(WN, cmds.listRelatives(
-			self,
-			s=1) or ()))
 
-	@property
-	def shape(self)->WN:
-		return firstOrNone(self.shapes or ())
-		return next(iter(self.shapes), None)
-
-	@property
-	def transform(self)->WN.Transform:
-		if not self.isDag():
-			return None
-		if self.isTransform():
-			return self
-		return self.parent
 	#endregion
 
 	# region hierarchy
 	def parent(self)->WN:
-		return self.getParent()
+		"""all dag nodes in maya are at least children of the root 'world' object,
+		which I don't know a good shorthand for -
+		so here we test if their parents' parent has no parents
+		"""
+		if om.MFnDagNode(self.MFn.parent(0)).parentCount() == 0:
+			return None
+		return WN(self.MFn.parent(0))
+
+	def _childTfObjects(self)->list[om.MObject]:
+		return [self.MFn.child(i) for i in range(self.MFn.childCount())
+		        if self.MFn.child(i).hasFn(om.MFn.kTransform)]
+	def children(self)->list[WN]:
+		"""could somehow make the WN wrapping lazy, but it doesn't seem
+		too slow yet
+		exclude shapes here"""
+		return [WN(i) for i in self._childTfObjects()]
+	def childMap(self)->dict[str, WN]:
+		return {i.name() : i for i in self.children()}
+	def child(self, lookup)->WN:
+		"""TODO: maybe add the full Pathable syntax here,
+		would rather save that for access()
+		"""
+		if isinstance(lookup, str):
+			return self.childMap().get(lookup)
+		if isinstance(lookup, int):
+			return WN(self._childTfObjects()[lookup])
+
+	def _shapeObjects(self)->list[om.MObject]:
+		return [self.MFn.child(i) for i in range(self.MFn.childCount())
+		        if not self.MFn.child(i).hasFn(om.MFn.kTransform)]
+	def shapes(self)->list[WN]:
+		return [WN(i) for i in self._shapeObjects()]
+
+	def shape(self)->WN:
+		return firstOrNone(self.shapes() or ())
+
+	def tf(self)->WN.Transform:
+		"""'transform()' sounds too much like a verb
+		tf() isn't a great abbreviation, but more readable as an accessor
+		"""
+		if not self.isDag():
+			return None
+		if self.isTransform():
+			return self
+		return self.parent()
+
 	#endregion
 
 

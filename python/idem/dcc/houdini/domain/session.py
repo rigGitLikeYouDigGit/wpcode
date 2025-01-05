@@ -43,6 +43,8 @@ class HoudiniIdemSession(DCCIdemSession):
 	                   *args, **kwargs):
 		"""send serialised camera data with matrix of given MObject
 		"""
+		if not self.connectedBridgeId():
+			return
 		data = CameraData.gather(node)
 		self.send(self.message(SetCameraCmd(data=data)))
 
@@ -51,7 +53,7 @@ class HoudiniIdemSession(DCCIdemSession):
 		if isinstance(msg, SetCameraCmd):
 			# prevent events triggering infinitely
 			self.cameraCallbackObj.pause()
-			msg["data"].apply(self.getSessionCamera())
+			CameraData.apply(msg["data"], self.getSessionCamera())
 			self.cameraCallbackObj.unpause()
 
 	@classmethod
@@ -67,9 +69,11 @@ class HoudiniIdemSession(DCCIdemSession):
 		log("cameraData cls", CameraData)
 		d = CameraData.gather(node)
 		log("gathered", d)
+		stayAliveFn = lambda *a, **kw : cls.session() is not None
 
 		cameraCallback = WpHoudiniCallback(
 			fns=[newSession.emitCameraData],
+			stayAliveFn=stayAliveFn
 		)
 		cameraCallback.attach(
 			node.addEventCallback,
@@ -78,7 +82,7 @@ class HoudiniIdemSession(DCCIdemSession):
 		)
 		newSession.cameraCallbackObj = cameraCallback
 
-		newSession.runThreaded()
+		#newSession.runThreaded()
 
 		return newSession
 

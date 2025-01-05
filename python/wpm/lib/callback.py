@@ -11,7 +11,7 @@ from wpm import om, cmds, WN
 
 class WpMayaCallback(WpCallback):
 	"""test for a safer way to work with callbacks
-	if you can't tell I had many bad experiences with zombie
+	if you can't tell, I've had many bad experiences with zombie
 	callbacks running until you restart the program,
 	this absolutely will not happen here
 

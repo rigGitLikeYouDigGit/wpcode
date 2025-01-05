@@ -42,6 +42,7 @@ class WpCallback:
 		if self.stayAliveFn is not None:
 			# staying alive
 			if not self.stayAliveFn(self, *args, **kwargs):
+				log("stayAliveFn returned false, removing callback")
 				# not staying alive
 				self.remove()
 				return
