@@ -3,6 +3,7 @@ from __future__ import annotations
 import os, datetime, sys
 import pprint
 import threading, socket, socketserver, traceback, atexit
+import time
 from pathlib import Path
 import orjson
 
@@ -19,18 +20,35 @@ def getPortDataPathMap()->dict[int, Path]:
 	return {int(i.name.split("_")[0]) : i
 	                     for i in DCCIdemSession.sessionFileDir().iterdir()}
 
+PING_CALL = "IDEMPING"
+PING_RESPONSE = "IDEMPONG"
+
 def getActivePortDataPathMap()->dict[int, Path]:
 	"""this is not robust enough since some sockets hang around for unknown
 	lengths of time -
 	instead relying solely on the files in the localsessions folder"""
 	# activePortMap = libsocket.localPortSocketMap()
-	# result = {}
-	# for k, v in getPortDataPathMap().items():
-	# 	if not k in activePortMap:
-	# 		continue
-	# 	if activePortMap[k].type == "TCP" and activePortMap[k].state == "LISTENING":
-	# 		result[k] = v
-	# return result
+	result = {}
+	for k, v in getPortDataPathMap().items():
+		sock = socket.socket()
+		sock.settimeout(0.1)
+		with sock:
+			try:
+				sock.connect(("localhost", k))
+			except ConnectionRefusedError:
+				continue
+			except socket.timeout:
+				continue
+			libsocket.sendMsg(sock, PING_CALL)
+			try:
+				response = libsocket.recvMsg(sock)
+				if response != PING_RESPONSE:
+					continue
+			except socket.timeout :
+				continue
+
+		result[k] = v
+	return result
 	return getPortDataPathMap()
 
 def clearInactiveDataFiles():
@@ -45,18 +63,11 @@ class SlotRequestHandler(socketserver.StreamRequestHandler):
 	def handle(self):
 		"""call back to slots on server
 		first deserialise from bytes with orjson"""
-		log(self.server.socket.getsockname()[1], "handling request")
-		#req = self.rfile.readline()
-		# req = self.rfile.read()
-		# # if req.startswith(libsocket.LEN_PREFIX_CHAR) or req.startswith(libsocket.LEN_PREFIX_CHAR.encode("utf-8")):
-		# # 	req = req[4:]
-		# req = req[4:] # strip the length prefix char from libsocket.sendMsg
-		req = libsocket.recvMsg(self.request)
-		#data : dict = orjson.loads(req)
-		data = req
-
-		if data == "PING" : # basic lookup signal to find out which sockets are active
-			self.sendResponse("PONG")
+		data = libsocket.recvMsg(self.request)
+		if data == PING_CALL : # basic lookup signal to find out which sockets are active
+			self.sendResponse(PING_RESPONSE)
+			return
+		#log(self.server.socket.getsockname()[1], "handling request")
 
 		# if the sender was this request's own server, don't respond to it
 		if data["s"][0] == self.server.socket.getsockname()[1]:
@@ -75,7 +86,8 @@ class SlotRequestHandler(socketserver.StreamRequestHandler):
 
 	def sendResponse(self, msg:dict):
 		"""send the given message dict back along the open socket"""
-		log(self.server.socket.getsockname()[1], "send response", msg)
+		if str(msg) != PING_RESPONSE:
+			log(self.server.socket.getsockname()[1], "send response", msg)
 		libsocket.sendMsg(self.request, msg)
 
 class ReusableThreadingTCPServer(socketserver.ThreadingTCPServer):
@@ -86,7 +98,10 @@ class ReusableThreadingTCPServer(socketserver.ThreadingTCPServer):
 
 class DataFileServer:
 	"""base class for processes running a port server,
-	with a data file in a set folder to declare themselves"""
+	with a data file in a set folder to declare themselves
+
+	we're really abusing threads here
+	"""
 
 	@classmethod
 	def serverCls(cls)->type[socketserver.ThreadingTCPServer]:
@@ -114,7 +129,7 @@ class DataFileServer:
 		log("bootstrap", cls, "listening sockets:")
 		# pprint.pp(libsocket.localPortSocketMap(), sort_dicts=True)
 		# pprint.pp(getActivePortDataPathMap())
-		#clearInactiveDataFiles()
+		clearInactiveDataFiles()
 		newSession = cls(name=sessionName)
 		if start:
 			newSession.runThreaded()
@@ -128,6 +143,9 @@ class DataFileServer:
 		self.name = name
 
 		self.loopThread : threading.Thread = None
+		self.heartbeatThread : threading.Thread = None
+		self.heartbeatT = 0.5 # seconds
+		self.shouldStopHeartbeat = False
 		portId = libsocket.getFreeLocalPortIndex()
 		# self.uuid = str(portId)
 		self.server = self.serverCls()(
@@ -163,6 +181,45 @@ class DataFileServer:
 		if excType in (KeyboardInterrupt, ):
 			self.clear()
 
+	def onHeartbeatTimeout(self, timeoutPorts:list[int]):
+		self.log("connection ", timeoutPorts, "did not respond to heartbeat in time")
+
+	def getHeartbeatPorts(self)->list[int]:
+		"""get list of connected items to check with heartbeat"""
+		raise NotImplementedError
+
+	def heartbeatLoop(self):
+		"""heartbeat timeout should mean the other end of the process is
+		ended, without question - unlink this end of it
+		"""
+		while not self.shouldStopHeartbeat:
+			# ping each one
+			timeoutPorts = []
+			for i in self.getHeartbeatPorts():
+				sock = socket.socket()
+				sock.settimeout(self.heartbeatT)
+				with sock:
+					try:
+						sock.connect(("localhost", i))
+					except (ConnectionRefusedError, socket.timeout):
+						self.log("heartbeat could not connect to ", i)
+						timeoutPorts.append(i)
+						continue
+					libsocket.sendMsg(sock, PING_CALL)
+					try:
+						response = libsocket.recvMsg(sock)
+					except socket.timeout:
+						self.log("heartbeat timedout waiting for response from", i)
+						timeoutPorts.append(i)
+						continue
+					if response != PING_RESPONSE:
+						self.log("heartbeat got wrong ping response message from", i)
+						timeoutPorts.append(i)
+
+			if timeoutPorts:
+				self.onHeartbeatTimeout(timeoutPorts)
+			time.sleep(self.heartbeatT)
+
 
 
 	def log(self, *args):
@@ -192,7 +249,7 @@ class DataFileServer:
 			)
 			assert result, "Got no result from bridge after sending connectToSession CMD"
 		data = self.liveData
-		data["connection"] = bridgeId
+		data["connected"] = bridgeId
 		self.writeSessionFileData(data)
 
 	def disconnectBridge(self, sendCmd=True):
@@ -203,7 +260,7 @@ class DataFileServer:
 				self.message(DisconnectSessionCmd(targetPort=self.portId())),
 				toPort=self.connectedBridgeId()
 			)
-		self.liveData["connection"] = None
+		self.liveData["connected"] = None
 		self.writeSessionFileData(self.liveData)
 
 	@classmethod
@@ -222,11 +279,13 @@ class DataFileServer:
 		return {k : v for k, v in bridgeFiles.items() if k in activeMap}
 
 	def connectedBridgeId(self):
-		return self.sessionFileData().get("connection")
+		#return self.sessionFileData().get("connected")
+		return self.liveData.get("connected")
 
 	def clear(self):
 		"""clear up all data and pipe files for this session"""
 		self.log("CLEAR start", self.loopThread, self.server)
+		self.shouldStopHeartbeat = True
 		# if self.loopThread:
 		# 	self.loopThread.join()
 		#self.server.shutdown()
@@ -247,6 +306,7 @@ class DataFileServer:
 			self.log("server closed successfully")
 		if self.loopThread:
 			self.log("loop thread final", self.loopThread, self.loopThread.is_alive())
+
 
 
 	def __del__(self):
@@ -295,7 +355,9 @@ class DataFileServer:
 		"""execute the below run() method in a child thread
 		"""
 		self.loopThread = threading.Thread(target=self.run, daemon=True)
+		self.heartbeatThread = threading.Thread(target=self.heartbeatLoop, daemon=True)
 		self.loopThread.start()
+		self.heartbeatThread.start()
 
 	def run(self):
 		"""startup method that begins event loop, handles errors
@@ -410,6 +472,21 @@ class DCCIdemSession(DataFileServer):
 			pass
 		return s
 
+	def getHeartbeatPorts(self) ->list[int]:
+		"""return ports to ping on heartbeat -
+		for session, only bridge (if connected)"""
+		if not self.connectedBridgeId():
+			return []
+		return [self.connectedBridgeId()]
+
+	def onHeartbeatTimeout(self, timeoutPorts:list[int]):
+		"""connected bridge has timed out, reset this server"""
+		if not timeoutPorts:
+			return
+		bridgeId = timeoutPorts[0]
+		if not self.connectedBridgeId():
+			return
+		self.disconnectBridge(sendCmd=False)
 
 	def handleMessage(self, handler:SlotRequestHandler, msg:dict):
 		"""handle incoming messages from bridge"""
@@ -418,12 +495,14 @@ class DCCIdemSession(DataFileServer):
 			self.replicatedData = msg["data"]
 			return
 		if isinstance(msg, ConnectToBridgeCmd):
-			self.updateConnectedBridge(msg["s"])
+			self.updateConnectedBridge(msg["s"][0])
 			handler.sendResponse(
 				self.message({"connectedSession" : self.getSessionIdData()}, # should we have a function to make this response?
 				             wantResponse=False)
 			)
 			return
+		if isinstance(msg, DisconnectBridgeCmd): # bridge told this to disconnect
+			self.disconnectBridge(sendCmd=False)
 		#return super().handleMessage(handler, data)
 
 	def getSessionCamera(self):

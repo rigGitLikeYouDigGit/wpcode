@@ -60,11 +60,12 @@ class ConnectedSessWidget(QtWidgets.QWidget):
 
 	def __init__(self, parent=None,
 	             name="", isConnected=False,
-	             port:int=-1
+	             port:int=None
 	             #onClickFn:T.Callable=None
 	             ):
 		super().__init__(parent)
 		vl = QtWidgets.QHBoxLayout()
+		assert port is not None
 		self.isConnected = isConnected
 		self.name = name
 		self.port = port
@@ -167,9 +168,12 @@ class SessionWidget(QtWidgets.QGroupBox):
 			result = []
 			# if not self.session:
 			# 	return []
-			print("availBridges", DCCIdemSession.availableBridgeSessions())
+			#print("availBridges", DCCIdemSession.availableBridgeSessions())
 
 			for k, path in DCCIdemSession.availableBridgeSessions().items():
+				if self.session: #don't show connected bridge as available
+					if k == self.session.connectedBridgeId():
+						continue
 				w = ConnectedSessWidget(
 					parent=groupBox,
 					name=path.stem,

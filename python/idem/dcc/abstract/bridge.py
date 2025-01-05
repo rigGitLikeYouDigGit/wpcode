@@ -7,8 +7,8 @@ import types, typing as T
 import pprint
 from dataclasses import dataclass
 
-from idem.dcc.abstract.session import DataFileServer, ConnectToBridgeCmd, IdemCmd, DisconnectSessionCmd, ConnectToSessionCmd,	ReplicateDataCmd
-from idem.dcc.abstract.session import SlotRequestHandler
+from idem.dcc.abstract.session import DataFileServer, SlotRequestHandler
+from idem.dcc.abstract.command import *
 
 from wplib import log
 
@@ -52,6 +52,14 @@ class IdemBridgeSession(DataFileServer):
 		}
 		self.writeSessionFileData(self.liveData)
 
+	def getHeartbeatPorts(self) ->list[int]:
+		self.log("get heartbeat ports", self.linkedSessions)
+		return list(self.linkedSessions.keys())
+
+	def onHeartbeatTimeout(self, timeoutPorts:list[int]):
+		for i in timeoutPorts:
+			self.disconnectSocket(i, sendCmd=False)
+
 	def connectToSocket(self, portId:int,
 	                    sendCmd=True):
 		"""create a new server listening on the given child socket
@@ -59,15 +67,7 @@ class IdemBridgeSession(DataFileServer):
 		called on BRIDGE to drive CHILD
 
 		"""
-		# server = self.serverCls()(
-		# 	("localhost", portId),
-		# 	SlotRequestHandler
-		# )
-		# server.slotFns = [
-		# 	lambda *args, **kwargs : self.handleMessage(
-		# 		*args, fromPort=portId, **kwargs)
-		#                   ]
-		# thread = threading.Thread(target=server.serve_forever)
+
 		self.linkedSessions[portId] = ChildSessionData(
 			portId, None, serverThread=None)
 
@@ -94,22 +94,21 @@ class IdemBridgeSession(DataFileServer):
 			self.writeSessionFileData(self.liveData)
 			pass
 
-	def disconnectSocket(self, portId:int):
+	def disconnectSocket(self, portId:int, sendCmd=False):
 		"""remove connection to the given port -
 		shutdown listening server
 		halt listening thread
 		remove from connections"""
 
-		#server = self.linkedSessions[portId].server
-		# self.linkedSessions[portId].server.shutdown()
 		self.log("linked sessions", self.linkedSessions)
 		self.linkedSessions.pop(portId)
 		self.liveData["connected"].pop(str(portId), None) # todo:scrap livedata
 		self.writeSessionFileData(self.liveData)
 
-		#self.log("shutting down server", portId)
-		#server.shutdown()
-		#self.log("server shutdown complete", portId)
+		if sendCmd:
+			self.send(self.message(DisconnectBridgeCmd(), wantResponse=False),
+			          toPort=portId)
+
 
 	def send(self, msg:dict, toPort=None, notToPort=None):
 		if toPort is None:
@@ -128,14 +127,14 @@ class IdemBridgeSession(DataFileServer):
 		this bridge session"""
 		self.log("handle :", msg)
 		self.log(type(msg), isinstance(msg, DisconnectSessionCmd))
-		if isinstance(msg, ConnectToSessionCmd):
+		if isinstance(msg, ConnectToSessionCmd): # sent by session
 			# connect to the port that sent this message
 			self.connectToSocket(msg["s"][0], sendCmd=False)
 			handler.sendResponse({"connectedSession" : self.getSessionIdData()})
 			return
-		if isinstance(msg, DisconnectSessionCmd):
+		if isinstance(msg, DisconnectSessionCmd): # sent by session
 			self.log("disconnecting from msg")
-			self.disconnectSocket(msg["s"][0])
+			self.disconnectSocket(msg["s"][0], sendCmd=False)
 			self.log("disconnected session from bridge", msg["s"][0])
 			self.log(self.linkedSessions)
 			return
@@ -146,3 +145,8 @@ class IdemBridgeSession(DataFileServer):
 		# by default echo each command received by bridge to all sessions,
 		# except its own sender
 		self.send(msg, notToPort=msg["s"][0])
+	
+	def clear(self):
+		"""when bridge shuts down, disconnect all connected sessions"""
+		self.send(self.message(DisconnectBridgeCmd, ))
+		super().clear()

@@ -35,6 +35,7 @@ class IdemBridgeWidget(SessionWidget):
 					parent=groupBox,
 					name=DataFileServer.availableDCCSessions()[k].stem,
 					isConnected=True,
+					port=k
 				)
 				w.button.clicked.connect(
 					lambda sender: self.onConnectBtnPressed(sender, w))
@@ -53,6 +54,7 @@ class IdemBridgeWidget(SessionWidget):
 					parent=groupBox,
 					name=DataFileServer.availableDCCSessions()[k].stem,
 					isConnected=False,
+					port=k
 				)
 				w.button.clicked.connect(
 					lambda sender: self.onConnectBtnPressed(sender, w))
@@ -65,9 +67,18 @@ class IdemBridgeWidget(SessionWidget):
 		self.availGroupBox.getWidgetsFn = _updateAvailWidgetsFn
 
 	def onConnectBtnPressed(self, sender, sessW:ConnectedSessWidget):
-		"""connect target session to this bridge"""
-		self.session.connectToSocket(sessW.port)
-		self.sync()
+		"""connect target session to this bridge
+		control from BRIDGE to CHILD"""
+		if sessW.isConnected: # disconnect
+			if sessW in self.connectedWidgets():
+				self.session.disconnectSocket(sessW.port, sendCmd=True)
+			self.sync()
+			return
+		if sessW in self.availWidgets(): # connect
+			self.session.connectToSocket(sessW.port, sendCmd=True)
+			self.sync()
+		# self.session.connectToSocket(sessW.port, sendCmd=True)
+		# self.sync()
 
 
 	instance : IdemBridgeWidget = None
