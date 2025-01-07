@@ -1,0 +1,7 @@
+
+subfolder specifically for raytracing in sop wrangles -
+this is to get realtime lighting feedback as geometry attributes
+also allows easier integration of Loom fields
+
+is it possible to decouple the ray scattering, and the shading of that
+scattering? 

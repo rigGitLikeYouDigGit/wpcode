@@ -961,10 +961,10 @@ class WN( # short for WePresentNode
 	# region visibility
 	def hide(self):
 		#cmds.hide(self())
-		self.transform("visibility").set(0)
+		self.tf().visibility_.set(0)
 
 	def show(self):
-		self.transform("visibility").set(1)
+		self.tf().visibility_.set(1)
 	#endregion
 
 	# region namespace stuff

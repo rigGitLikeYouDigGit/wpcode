@@ -20,8 +20,16 @@ class Transform(GenTransform):
 		mat = to(mat, om.MTransformationMatrix)
 		self.MFn.setTransformation(mat)
 	def setWorldMatrix(self, mat):
-		mat = to(mat, om.MTransformationMatrix)
-		self.MFn.setTransformation(mat)
+		"""inverse of parent * mat for local"""
+		if not self.parent():
+			mat = to(mat, om.MTransformationMatrix)
+			self.MFn.setTransformation(mat)
+			return
+
+		parentMat = om.MFnTransform(self.MFn.parent()).transformationMatrix()
+		if isinstance(mat, om.MMatrix):
+
+
 
 	def localPos(self)->om.MVector:
 		return self.MFn.translation(om.MSpace.kObject)
