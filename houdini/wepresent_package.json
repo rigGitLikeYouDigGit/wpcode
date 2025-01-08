@@ -5,6 +5,9 @@
       {
           "PYTHONPATH" : [ "$WEPRESENT_ROOT/code/python",
             {"method" : "append"} ]
+      },
+      {
+          "WPPKG" : "$WEPRESENT_ROOT/code/houdini/wp_package"
       }
   ]
 }
