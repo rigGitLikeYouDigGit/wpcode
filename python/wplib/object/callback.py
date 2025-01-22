@@ -16,7 +16,7 @@ class WpCallback:
 	def __init__(self,
 	             fns:T.List[T.Callable[[WpCallback, ... ], None]]=None,
 	             maxFPS=2.0,
-	             stayAliveFn=None,
+	             stayAliveFn:T.Callable[[WpCallback, ... ], bool]=None,
 	             #userData:dict=None
 	             ):
 		self.fns = fns or []
@@ -34,6 +34,8 @@ class WpCallback:
 		#self.userData = userData or {}
 
 	def __call__(self, *args, **kwargs):
+		"""point of entry for DCC event call -
+		"""
 		t = time.time()
 		dt = time.time() - self.t
 		if dt < self.step:
@@ -99,6 +101,7 @@ class WpCallback:
 			*attachPreArgs, self, *attachPostArgs
 		)
 		self.callbackID = callbackId
+		return callbackId
 
 	def isAttached(self)->bool:
 		if self.callbackID is None:

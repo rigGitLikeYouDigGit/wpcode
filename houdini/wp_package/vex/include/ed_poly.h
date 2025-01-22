@@ -323,12 +323,12 @@ function int insertpolylinevertex(int primnum; vector pos ){
 #define prevloophedge(geo, hedge)\
     (hedge_prev(geo, hedge_nextequiv(geo, hedge_prev(geo, hedge))))
 
-// #define nextloophedge(geo, hedge)\
-//     (hedge_next(geo, hedge_nextequiv(geo, hedge_next(geo, hedge))))
+#define nextloophedge( geo, hedge)\
+    (hedge_next(geo, hedge_nextequiv(geo, hedge_next(geo, hedge))))
 
-function int nextloophedge(int geo, hedge){
-    return hedge_next(geo, hedge_nextequiv(geo, hedge_next(geo, hedge)));
-}
+// returns 1 if hedge is unshared else 0
+#define hedgeisunshared(geo, hedge )\
+    (hedge == hedge_nextequiv(geo, hedge))
 
 function int[] outgoinghedges(int geo, pt){
     /* return ordered list of all hedges with pt as source.
@@ -364,7 +364,7 @@ function int[] outgoinghedges(int geo, pt){
 }
 
 function int[] adjacenthedgesset(int geo, pt){
-    /* return an unsorted list of ajacent hedges */
+    /* return an unsorted list of adjacent hedges */
     int hedges[];
     foreach(int npt; neighbours(geo, pt)){
         append(hedges, pointedge(geo, pt, npt));
@@ -413,8 +413,6 @@ function int[] adjacenthedges(int geo, pt){
     return hedges;
 }
 
-
-
 struct HedgeRay{
     int index; // hedge index
     int prim; // prim index
@@ -448,16 +446,6 @@ function HedgeRay makehedgeray(int geo, hedge){
 
 }
 
-// consider
-struct HalfEdge {
-    int equivalents[];
-    int prim;
-};
-
-/* is this of any use at all? or are the basic functions enough?
-anything to get more high-level control, but I don't think it
-plays well with the rest of the ethos we have here
-*/
 
 function int[] hedgepoints( int geo; int hedge ){
     // returns points belonging to half edge
@@ -483,11 +471,6 @@ function int[] halfedgeequivalents( int geo; int hedge ){
     }while(n != hedge);
     return edges;
 };
-
-function int hedgeisunshared( int geo; int hedge ){
-    // returns 1 if hedge is unshared else 0
-    return ( hedge == hedge_nextequiv(geo, hedge));
-}
 
 function int[] allhedgeequivalents( int geo; int hedge ){
     // returns input and all equivalents
@@ -557,6 +540,20 @@ function vector[] hedgeray( int geo; int hedge ){
     return array(pos, point(geo, "P", pts[1]) - pos );
 }
 
+function int nextborderhedge(int geo; int hedge){
+    /// we assume that hedge is already on border
+    // - if not this function will hang
+    int testh = hedge;
+    int dstpt = hedge_dstpoint(geo, testh);
+    do{
+        testh = hedge_next(geo, hedge_nextequiv(geo, testh));
+        if(hedgeisunshared(geo, testh)){
+            return testh;
+        }
+    }while(testh != hedge);
+    return -1;
+}
+
 
 // higher topo functions
 
@@ -589,6 +586,7 @@ function int pointissingularity( int geo; int pt){
          }
      }
      // check if point is singularity based on if it's on border
+     // if a point links only 2 polygons on a border, it's fine
      if (onborder){
          return (len(pointprims(geo, pt)) != 2);
      }
@@ -614,12 +612,19 @@ function int edgeloopshouldterminate(int geo; int testhedge){
                  hedge_prev(geo,hedge_nextequiv(geo, testhedge))) == 1)){
                      return 1;
                  }
-
      }
      return 0;
 
 }
 
+function int hedgebetweenpts( int geo, ptA, ptB ){
+    // get a hedge between the given points, doesn't matter
+    // what direction
+    int h = pointhedge(geo, ptA, ptB);
+    if(h != -1){ return h; }
+    h = pointhedge(geo, ptB, ptA);
+    return h;
+}
 
 function int[] edgeloop( int geo; int seedhedge ){
     int outhedges[];
@@ -629,7 +634,8 @@ function int[] edgeloop( int geo; int seedhedge ){
         currenthedge = nextloophedge(geo, currenthedge);
     }while(
         (currenthedge != seedhedge) &&
-        (neighbourcount(geo, hedge_srcpoint(geo, currenthedge)) == 4)
+        //(neighbourcount(geo, hedge_srcpoint(geo, currenthedge)) == 4)
+        edgeloopshouldterminate()
     );
     // backwards
     currenthedge = prevloophedge(geo, seedhedge);
@@ -1188,7 +1194,36 @@ function int[] inserttrivertex(int geo; int tri; int pt){
 
 }
 
+// averaging / compositing functions on element attributes
 
+#define NELEMENTS nELTs
+
+#define FNS(VT, ELT) \
+    function VT[] ELT#_vals(int geo; string atname){ \
+    int nels = npoints(geo); \
+    VT vals[]; \
+    resize(vals, nels); \
+    for(int i = 0; i < nels; i++){ \
+        append(vals, VT(point(geo, atname, i))); \
+    }\
+    return vals; \
+}\
+//
+
+#define VALTYPE(elT)\
+    FNS(vector, elT# )\
+    //
+
+
+// #define compositeattr(vT)\
+//     vt compositeattr(int geo; string eltype; string at; int mode){
+//
+//     }
+//
+//
+// vector compositeattr(int geo; string eltype; string at; int mode){
+//     // get all elements attributes of the given value
+// }
 
 
 
