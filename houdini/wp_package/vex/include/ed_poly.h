@@ -1196,35 +1196,6 @@ function int[] inserttrivertex(int geo; int tri; int pt){
 
 // averaging / compositing functions on element attributes
 
-#define NELEMENTS nELTs
-
-#define FNS(VT, ELT) \
-    function VT[] ELT#_vals(int geo; string atname){ \
-    int nels = npoints(geo); \
-    VT vals[]; \
-    resize(vals, nels); \
-    for(int i = 0; i < nels; i++){ \
-        append(vals, VT(point(geo, atname, i))); \
-    }\
-    return vals; \
-}\
-//
-
-#define VALTYPE(elT)\
-    FNS(vector, elT# )\
-    //
-
-
-// #define compositeattr(vT)\
-//     vt compositeattr(int geo; string eltype; string at; int mode){
-//
-//     }
-//
-//
-// vector compositeattr(int geo; string eltype; string at; int mode){
-//     // get all elements attributes of the given value
-// }
-
 
 
 #endif
