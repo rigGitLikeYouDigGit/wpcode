@@ -5,6 +5,47 @@
 #include "array.h"
 #include "ed_vector.h"
 
+// broad non-manifold safe stuff for prims
+function int[] neighbourprims(int geo, pr){
+    /* for each point, get all prims connected, return as a set
+    */
+    int result[];
+    foreach(int primpt; primpoints(geo, pr)){
+        foreach(int ptprim; pointprims(geo, primpt)){
+            if(find(result, ptprim) < 0){
+                append(result, ptprim);
+                }
+        }
+    }
+    removevalue(result, pr);
+    return result;
+}
+
+function int[] neighbourhedgeprims(int geo, pr){
+    /* return all primitives that share at least one hedge with this prim
+    */
+    int result[];
+    int hedge = primhedge(geo, pr);
+    do{
+        int conprim = hedge_prim(geo,
+            hedge_nextequiv(geo, hedge));
+            // found interesting hedge, need to
+            // exhaustively check all its equivalents
+        int searchhedge = int(hedge);
+        do{
+            int checkprim = hedge_prim(geo, searchhedge);
+            if(find(result, checkprim) < 0){
+                append(result, checkprim);
+            }
+            searchhedge = hedge_nextequiv(geo, searchhedge);
+        }while (searchhedge != hedge);
+
+        hedge = hedge_next(geo, hedge);
+    }while(hedge != primhedge(geo, pr));
+    removevalue(result, pr);
+    return result;
+}
+
 // ---- vertices -----
 
 function int[] orderedpointvertices(int geo; int pt){
@@ -1194,7 +1235,50 @@ function int[] inserttrivertex(int geo; int tri; int pt){
 
 }
 
-// averaging / compositing functions on element attributes
+function float mutualnearpoint(int geoa, pta, geob, ptb; vector posa, posb){
+    // point params are out references
+    // slow and brute force - where practical use a separate wrangle to get distances
+    int srcgeo = geoa;
+    int searchgeo = geob;
+    if(npoints(geoa) > npoints(geob)){
+        srcgeo = geob;
+        searchgeo = geoa;
+    }
+    float d = 10000000.0;
+    int npt = -1;
+    vector nearpos;
+    int srcpt = 0;
+    for(srcpt; srcpt < npoints(srcgeo); srcpt++){
+        vector srcpos = point(srcgeo, "P", srcpt);
+        int nearsearchpt = nearpoint(searchgeo, srcpos);
+        vector searchpos = point(searchgeo, "P", nearsearchpt);
+        if(distance2(srcpos, searchpos) < d){
+            d = distance2(srcpos, searchpos);
+            npt = nearsearchpt;
+            pta = srcpt;
+            posa = srcpos;
+            ptb = nearsearchpt;
+            posb = searchpos;
+            nearpos = searchpos;
+        }
+    }
+    if(srcgeo != geoa){
+        pta = ptb;
+        posa = posb;
+        ptb = npt;
+        posb = nearpos;
+    }
+    return d;
+}
+
+function float mutualnearpointonprim(int geoa, prima, pta, geob, primb, ptb; vector posa, posb ){
+    // prim, point and vector parametres are out references
+    // point ref is -1 if nearest point is on a prim face, and vice versa
+
+    // brute-force search on geo with fewest points to find nearest point,
+    // then check all the prims around them
+
+}
 
 
 

@@ -160,6 +160,10 @@ function void setelsgroup(int mode; int geo; string grp; int els[]; int val){
         setelgroup(mode, geo, grp, el, val);
     }
 }
+function int inelgroup(int mode; int geo; string grp; int elnum){
+    if(mode == PRIMT) return inprimgroup(geo, grp, elnum);
+    return inpointgroup(geo, grp, elnum);
+}
 
 
 
@@ -168,12 +172,25 @@ function string[] groupsfromprim( int geo; int primnum){
     string primgrps[] = detailintrinsic( geo, "primitivegroups");
     string result[] = {};
     foreach( string grp; primgrps){
-        if( inprimgroup(0, grp, primnum)){
+        if( inprimgroup(geo, grp, primnum)){
             append(result, grp);
         }
     }
     return result;
 }
+
+
+function string[] groupsfrompoint( int geo; int ptnum){
+    string pointgrps[] = detailintrinsic( geo, "pointgroups");
+    string result[] = {};
+    foreach( string grp; pointgrps){
+        if( inpointgroup(geo, grp, ptnum)){
+            append(result, grp);
+        }
+    }
+    return result;
+}
+
 
 
 
