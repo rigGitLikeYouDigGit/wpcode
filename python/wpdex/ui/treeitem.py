@@ -122,7 +122,7 @@ class TreeDexView(#QtWidgets.QTreeView,# AtomicWidget
 if __name__ == '__main__':
 
 
-	from wpdex.ui.base import WpDexWindow
+	#from wpdex.ui.base import WpDexWindow
 	d = Tree("root", value=3)
 	d["branchA"] = "branchAValue"
 	d["branchA", "leaf"] = 33

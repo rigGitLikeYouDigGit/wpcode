@@ -654,7 +654,7 @@ class AtomStyledItemDelegate(QtWidgets.QStyledItemDelegate,
 	                 parent:QtWidgets.QTreeView,
 	                 option:QtWidgets.QStyleOptionViewItem,
 	                 index:QtCore.QModelIndex):
-		from wpdex.ui.atomic.expatom import ExpWidget
+		from wpdex.ui.atomic.stringatom import ExpWidget
 		log("delegate createEditor")
 
 		item : AtomStandardItem = index.model().itemFromIndex(index)

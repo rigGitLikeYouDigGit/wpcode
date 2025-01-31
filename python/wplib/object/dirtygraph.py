@@ -38,6 +38,8 @@ node dependencies.
 # computing and errors, it's still dirty
 
 class DirtyNode:
+	"""high-level mixin for user-facing nodes or tasks
+	in a graph"""
 
 	def __init__(self, name:str=""):
 		"""node inits take no argument -
@@ -58,21 +60,10 @@ class DirtyNode:
 		return self._dirtyNodeName
 
 	def __str__(self):
-		return f"<DNode({self._getDirtyNodeName()})>"
+		return f"<{type(self).__name__}({self._getDirtyNodeName()})>"
 
 	def __repr__(self):
 		return self.__str__()
-
-	# def setDirtyGraph(self, graph:DirtyGraph):
-	# 	"""set graph for node -
-	# 	still don't like node knowing about its graph"""
-	# 	self.dirtyGraph = graph
-
-
-	def getDirtyGraph(self)->DirtyGraph:
-		"""FINE"""
-		#return self.dirtyGraph
-		raise NotImplementedError
 
 	def dirtyComputeFn(self):
 		""" OVERRIDE THIS or set with a lambda
@@ -121,11 +112,6 @@ class DirtyNode:
 		#self._cachedValue = Sentinel.FailToFind
 		self._onSetDirty()
 
-	def flagNodeDirtyAndPropagate(self):
-		"""flag node dirty, and propagate dirty to graph
-		wordy"""
-		self.getDirtyGraph().setNodeDirty(self)
-
 	def _onSetClean(self):
 		"""called when node is set clean -
 		usually after computation or reset"""
@@ -148,17 +134,12 @@ class DirtyNode:
 
 class DirtyGraph(nx.DiGraph):
 	"""track dirty status of nodes
-
-	maybe a semi-singleton? a dirty graph can hold the entirety of a program
+	not going crazy with actual evaluation here,
+	only determining the queue order to run nodes
+	when changed -
+	might start using something bigger like Dask
+	if computation itself becomes intensive
 	"""
-
-	# defaultInstance : DirtyGraph = None
-	#
-	# @classmethod
-	# def getDefaultInstance(cls) -> DirtyGraph:
-	# 	if not cls.defaultInstance:
-	# 		cls.defaultInstance = cls()
-	# 	return cls.defaultInstance
 
 	def addNodesAndPrecedents(self, nodesToAdd:set[DirtyNode]):
 		"""adds node, checks over all antecedents,
@@ -203,6 +184,52 @@ class DirtyGraph(nx.DiGraph):
 		return {i for i in ancestors if not
 			any(j.dirtyState for j in self.pred[i])
 		        }
+
+	def getDirtyNodesToEval(self, fromNode:DirtyNode)->T.Iterable[DirtyNode]:
+		"""return a flat sequence of nodes to evaluate in dependency order
+		TODO: separate function to return nested list somehow,
+			to preserve parallelism in nodes
+		if desired, pass out this task list to a separate scheduler
+		"""
+		if not fromNode.dirtyState:
+			return []
+		result = [fromNode]
+		idSet = {id(fromNode)}
+
+		pred = self.pred
+		nextNodes = list(pred[fromNode].keys())
+		while nextNodes:
+			nextNode = nextNodes.pop(-1)
+			if not nextNode.dirtyState:
+				continue
+			if id(nextNode) in idSet: # no duplicates
+				continue
+			result.append(nextNode)
+			nextNodes.extend(pred[nextNode].keys())
+			idSet.add(id(nextNode))
+		return reversed(result)
+
+	def setNodeClean(self, node:DirtyNode):
+		node.setClean()
+
+	def execTasks(self, taskSeq:T.Iterable[DirtyNode]):
+		"""add more complex stuff here if needed
+		TODO: errors? set separate error state on node,
+			maybe allow node to log events during its own evaluation
+		"""
+		for i in taskSeq:
+			i._computeDirtyNodeOuter()
+
+	def getNodeValue(self, node:DirtyNode):
+		if not node.dirtyState:
+			return node._cachedValue
+		tasks = self.getDirtyNodesToEval(node)
+		self.execTasks(tasks)
+		return node._cachedValue
+
+
+
+
 
 if __name__ == '__main__':
 

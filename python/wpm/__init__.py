@@ -17,6 +17,7 @@ lib : anonymous library functions, may depend on objects
 tool : discrete tools, may depend on lib
 
 """
+
 import sys, gc
 def reloadWPM(andWp=True):
 	"""reloads the wpm module and all submodules
@@ -35,19 +36,27 @@ def reloadWPM(andWp=True):
 
 import typing as T
 
-from .core import (
-	cmds, om, oma, omui, omr, # wrapped maya modules
-	getCache, # api cache
-	#WN, createWN, # node wrappers
-	WN,
-	PlugTree,
-	getSceneGlobals, # scene wrappers
-	api
+def isThisMaya():
+	try:
+		from maya import cmds
+		return True
+	except ModuleNotFoundError:
+		return False
 
-)
+if isThisMaya():
+	from .core import (
+		cmds, om, oma, omui, omr, # wrapped maya modules
+		getCache, # api cache
+		#WN, createWN, # node wrappers
+		WN,
+		PlugTree,
+		getSceneGlobals, # scene wrappers
+		api
 
-# use to denote function arguments to accept either static values or plugs
-PLUG_VAL = (PlugTree, object)
+	)
 
-from wplib import log
-from .lib.adaptor import to, arr, toArr
+	# use to denote function arguments to accept either static values or plugs
+	PLUG_VAL = (PlugTree, object)
+
+	from wplib import log
+	from .lib.adaptor import to, arr, toArr
