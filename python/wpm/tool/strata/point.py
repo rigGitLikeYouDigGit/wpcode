@@ -28,5 +28,22 @@ class LLPoint(LLElement):
 		                   graph,
 		                   pos=pos,
 		                   uiPos=uiPos)
+		log("pt", self.name, "parents", self.parents)
+
+
+if __name__ == '__main__':
+	from wplib.serial import serialise, deserialise
+
+	ptA = LLPoint("ptA")
+	assert type(ptA) == LLPoint
+
+	data = serialise(ptA)
+	log("data", data)
+	log(type(data))
+	assert type(data) == dict
+
+	newPt = deserialise(data)
+	assert type(data) == LLPoint
+
 
 

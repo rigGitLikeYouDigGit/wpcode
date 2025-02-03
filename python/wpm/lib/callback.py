@@ -48,11 +48,17 @@ class WpMayaIdleCallback(WpMayaCallback):
 	this object will persist, deregister itself on firing, but RE-register
 	itself based on a timer (could even use a separate maya callback timer to
 	do this, to avoid using a thread
+
+	we can't just use the timer directly because if you try to modify the scene
+	while something else is happening maya hard-crashes, and the idle callback
+	system is the only way I know of to tell if it's safe
+	(if there's an obvious "isBusy" condition we can check for, do let me know)
 	"""
 
 	def __init__(self, fns: T.List[T.Callable[[WpCallback, ...], None]] = None, maxFPS=2.0, stayAliveFn=None):
 		super().__init__(fns, maxFPS, stayAliveFn)
 		self._timerCallbackID : int = None
+		self.userData = None
 
 	def _attachIdle(self):
 		"""attach this specific callback to be called
@@ -70,8 +76,8 @@ class WpMayaIdleCallback(WpMayaCallback):
 
 	def _onTimerEvent(self, dt:float, *args, **kwargs):
 		"""fired by connected timer event to re-register this one"""
-		print("on cb timer event")
-		if self.callbackID is not None:
+		#print("on cb timer event", self.callbackID)
+		if self.callbackID is None:
 			self._attachIdle()
 			
 	def __call__(self, *args, **kwargs):
@@ -100,7 +106,7 @@ class WpMayaIdleCallback(WpMayaCallback):
 		one after we unattach after firing
 		maya makes me feel alive
 		"""
-		self._detachTimerCb()
+		#self._detachTimerCb()
 		### weird jank to check this object is still alive?
 		#ref = weakref.ref(self)
 		# self.ownWeakRef = ref

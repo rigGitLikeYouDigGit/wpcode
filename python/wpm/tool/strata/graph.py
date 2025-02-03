@@ -65,19 +65,20 @@ class LLGraph(DictModelled):
 		g = DirtyGraph()
 		#log("els")
 		#pprint.pp(self.elements)
-		g.add_nodes_from(list(self.elements.values()))
-		# add all nodes
-
-		toCheck = set(self.elements.values())
-		while toCheck:
-			toAdd = toCheck.pop()
-			# add edge between all things directly driving this node, and this node
-			drivers = toAdd["parents"] or {}
-			for k in drivers.keys():
-				g.add_edge(
-					self.getEl(k),
-					toAdd
-				)
+		g.addNodesAndPrecedents(self.elements.values())
+		# g.add_nodes_from(list(self.elements.values()))
+		# # add all nodes
+		#
+		# toCheck = set(self.elements.values())
+		# while toCheck:
+		# 	toAdd = toCheck.pop()
+		# 	# add edge between all things directly driving this node, and this node
+		# 	drivers = toAdd["parents"] or {}
+		# 	for k in drivers.keys():
+		# 		g.add_edge(
+		# 			self.getEl(k),
+		# 			toAdd
+		# 		)
 		return g
 
 

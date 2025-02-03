@@ -21,8 +21,7 @@ lower as jaw?
 
 ignore speed for now - if this is a valid way to deform meshes,
 i'm all about it
-"""
 
-from wpm.tool.leyline.point import LLPoint
-from wpm.tool.leyline.edge import LLEdge
-from wpm.tool.leyline.graph import LLGraph
+
+might change the name to Strata
+"""

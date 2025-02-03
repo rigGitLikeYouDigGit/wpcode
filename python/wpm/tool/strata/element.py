@@ -24,7 +24,7 @@ class LLElement(DictModelled, DirtyNode):
 		DictModelled.__init__(
 			self,
 			name=name,
-			parents=parents,
+			parents=parents or {},
 			**kwargs
 		)
 		self.graph = graph
@@ -33,10 +33,13 @@ class LLElement(DictModelled, DirtyNode):
 		return id(self)
 
 	def getDirtyNodeAntecedents(self) ->tuple[LLElement]:
-		return tuple(self.graph.getEl(k) for k, v in self["parents"])
+		return tuple(self.graph.getEl(k) for k, v in self["parents"].items())
 
 	def addParent(self, parent):
 		self["parents"][self.graph.getId(parent)] = {}
+	def addParents(self, parents):
+		for i in parents:
+			self.addParent(i)
 
 	def removeParent(self, parent):
 		self["parents"].pop(self.graph.getId(parent), None)
