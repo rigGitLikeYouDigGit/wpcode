@@ -334,3 +334,9 @@ python/wpm/core/node/author/__init__.py
 python/wpscratch/testCall.py
 /python/idem/localsessions
 /houdini/wp_package/otls/backup
+maya/devkits/Autodesk_Maya_2023_3_Update_DEVKIT_Windows.zip
+/maya/devkits
+/maya/plugin/strata/strata.dir
+/maya/plugin/strata/x64
+/maya/plugin/strata/CMakeFiles
+/maya/plugin/strata/.vs

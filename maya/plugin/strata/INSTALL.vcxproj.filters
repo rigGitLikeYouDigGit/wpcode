@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="F:\wp\code\maya\plugin\strata\CMakeFiles\5274b81c969b29aa63b05e130be88197\INSTALL_force.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{952BA65D-175E-3D60-887E-39EF8C78DE3F}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
