@@ -2,17 +2,15 @@
 
 #include <vector>
 
-#include "enum.h"
+
 #include <maya/MObject.h>
 #include <maya/MFnEnumAttribute.h>
 #include <maya/MString.h>
-
+#include "wpshared/enum.h"
 namespace ed {
 
 	// registering IDs of plugin nodes
 	const unsigned int pluginPrefix = 101997;
-
-
 
 	// common functions
 	//enum BindState { off, bind, bound, live };

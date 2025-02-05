@@ -24,14 +24,14 @@ thisFilePath = Path(strata.__file__).parent / "plugin" / "__init__.py"
 # 		used as a namespace for plugin node ids"""
 # 		return WP_PLUGIN_NAMESPACE
 
-
+#F:\wp\code\maya\plugin\strata\Debug
 # construct overall plugin object, register any python plugin nodes
 pluginAid = WpPluginAid(
 	"strata",
-	pluginPath=str(thisFilePath),
-	nodeClasses={
-		1 : StrataPoint
-	}
+	pluginPath=str(WP_ROOT_PATH/"code"/"maya"/"plugin"/"strata"/"Debug"/"strata.mll"),
+	# nodeClasses={
+	# 	1 : StrataPoint
+	# }
 )
 
 
@@ -51,16 +51,17 @@ def reloadPluginTest():
 	"""single test to check strata nodes are working"""
 	from maya import cmds
 	cmds.file(newFile=1, f=1)
-	from maya import cmds
-	parentLoc = cmds.spaceLocator(name="parentLoc")[0]
-	cmds.setAttr(parentLoc + ".translate", 2, 3, 4)
+	pluginAid.loadPlugin(forceReload=True)
 	pt = cmds.createNode("strataPoint")
-	cmds.connectAttr(parentLoc + ".worldMatrix[0]", pt + ".parent[0].parentMatrix")
+	# parentLoc = cmds.spaceLocator(name="parentLoc")[0]
+	# cmds.setAttr(parentLoc + ".translate", 2, 3, 4)
 
-	childLoc = cmds.spaceLocator(name="childLoc")[0]
-	cmds.connectAttr(pt + ".outMatrix", childLoc + ".parentOffsetMatrix")
+	# cmds.connectAttr(parentLoc + ".worldMatrix[0]", pt + ".parent[0].parentMatrix")
+	#
+	# childLoc = cmds.spaceLocator(name="childLoc")[0]
+	# cmds.connectAttr(pt + ".outMatrix", childLoc + ".parentOffsetMatrix")
 
-# pluginAid.loadPlugin(forceReload=True)
+
 	# StrataPoint.testNode()
 
 

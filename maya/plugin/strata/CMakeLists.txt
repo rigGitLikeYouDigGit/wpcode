@@ -16,7 +16,9 @@ set(CMAKE_ARCJOVE)
 file(GLOB SOURCE_FILES "src/*.cpp" "src/*.h" "src/lib/*.cpp" "src/lib/*.h" 
 	"src/deformer/*.h" "src/deformer/*.cpp" "src/*/*.cpp" "src/*/*.h")
 
-
+#include_directories($ENV{WP_ROOT}/code/cpp/wpshared)
+#file(GLOB SOURCE_FILES "F:/wp/code/cpp/wpshared")
+include_directories("F:/wp/code/cpp/src")
 include_directories(${MAYA_INCLUDE_DIR})
 
 link_directories(${MAYA_LIBRARY_DIR})

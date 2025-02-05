@@ -4,21 +4,18 @@
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\plugin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\stratapoint.h">
-      <Filter>Header Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\stratapoint.cpp">
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratapoint.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\api.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\macro.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\api.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\enum.h">
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratapoint.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

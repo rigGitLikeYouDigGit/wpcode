@@ -5,11 +5,13 @@ register all plugins
 #include "macro.h"
 
 #include <maya/MFnPlugin.h>
+#include <maya/MObject.h>
 #include <maya/MTypeId.h>
 #include <maya/MString.h>
 #include <maya/MGlobal.h>
 #include <maya/MPxNode.h>
 #include <maya/MPxTransform.h>
+#include <maya/MDrawRegistry.h>
 
 #include "stratapoint.h"
 
@@ -75,19 +77,27 @@ MStatus initializePlugin( MObject obj ){
     MFnPlugin fnPlugin( obj, kAUTHOR, kVERSION, kREQUIRED_API_VERSION);
     MStatus s = MStatus::kSuccess;
 
-    s = fnPlugin.registerNode(
-        StrataPoint::kNODE_NAME, 
-        StrataPoint::kNODE_ID, 
-        StrataPoint::creator, 
-        StrataPoint::initialize, 
-        //MPxTransform::kTransformNode
-        //MPxNode::kTransformNode
-        //MPxNode::Type::kTransformNode
-        MPxNode::Type::kDependNode
-    ); 
+    s = fnPlugin.registerTransform(
+        StrataPoint::kNODE_NAME,
+        StrataPoint::kNODE_ID,
+        StrataPoint::creator,
+        StrataPoint::initialize,
+        StrataPointMatrix::creator,
+        StrataPointMatrix::id,
+        &StrataPoint::drawDbClassification
+    );
     if (MS::kSuccess != s) {
         cerr << 82 << "failed to register node type " + StrataPoint::kNODE_NAME; return MS::kFailure;
     };
+
+    s = MHWRender::MDrawRegistry::registerDrawOverrideCreator(
+        StrataPoint::drawDbClassification,
+        StrataPoint::drawRegistrantId,
+        StrataPointDrawOverride::creator);
+    if (!s) {
+        s.perror("registerDrawOverrideCreator");
+        return s;
+    }
 
     return s;
 }
@@ -97,6 +107,15 @@ MStatus uninitializePlugin( MObject obj ){
     MStatus s;
     s = MS::kSuccess;
     MFnPlugin fnPlugin(obj);
+
+    s = MHWRender::MDrawRegistry::deregisterDrawOverrideCreator(
+        StrataPoint::drawDbClassification,
+        StrataPoint::drawRegistrantId);
+    if (!s) {
+        s.perror("deregisterDrawOverrideCreator");
+        return s;
+    }
+
     DEREGISTER_NODE(StrataPoint);
     DEBUGS("uninitialised strata")
     return s;
