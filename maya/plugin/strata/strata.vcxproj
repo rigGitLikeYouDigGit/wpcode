@@ -313,11 +313,18 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\lib.cpp" />
+    <ClCompile Include="src\libramp.cpp" />
+    <ClCompile Include="src\stratacurve.cpp" />
+    <ClCompile Include="src\stratasurface.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\api.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\macro.h" />
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\plugin.cpp" />
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratapoint.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratapoint.h" />
+    <ClInclude Include="src\libplug.h" />
+    <ClInclude Include="src\stratacurve.h" />
+    <ClInclude Include="src\stratasurface.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="F:\wp\code\maya\plugin\strata\ZERO_CHECK.vcxproj">

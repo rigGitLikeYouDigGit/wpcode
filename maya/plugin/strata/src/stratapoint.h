@@ -32,13 +32,59 @@ public:
 	static  MString     drawDbClassification;
 	static  MString     drawRegistrantId;
 
+	typedef MPxTransform ParentClass;
+
 	// attribute MObjects
-	static MObject aEditMode;
-	static MObject aRadius;
+	static MObject aStEditMode;
+	static MObject aStRadius;
+	
+	static MObject aStDriver;
+	static MObject aStDriverType;
+	static MObject aStDriverWeight; // normalised, default of 1.0
+
+	// forgive me for these essays of attribute names
+	static MObject aStDriverClosestPoint;
+	static MObject aStDriverUseClosestPoint;
+	
+	static MObject aStDriverPointMatrix;
+
+	static MObject aStDriverCurve;
+	static MObject aStDriverRefLengthCurve;
+	// we assume whatever parametre is used on driver curve is used on up, too complicated if not
+	static MObject aStDriverUpCurve; 
+	static MObject aStDriverCurveLength;
+	static MObject aStDriverCurveParam;
+	static MObject aStDriverCurveLengthParamBlend;
+	static MObject aStDriverCurveReverseBlend;
+	static MObject aStDriverCurveNormLengthBlend;
+	
+	// use a generic attribute here,
+	// accept bool from other strata surface, nurbs surface or poly
+	static MObject aStDriverSurface;
+	
+	// normalized weight of this driver
+	static MObject aStDriverNormalizedWeight;
+	// final computed parent matrix for this driver
+	static MObject aStDriverOutMatrix;
+	// final offset for this point, from whatever active source is chosen
+	static MObject aStDriverLocalOffsetMatrix;
+	// should edit mode change the params of this driver in edit mode, or just the local offset
+	static MObject aStDriverUpdateParamsInEditMode;
+	
+	// final matrix of all weighted drivers
+	static MObject aStFinalDriverOutMatrix;
+	// final local offset matrix, from final driver matrix
+	static MObject aStFinalLocalOffsetMatrix;
+
+	static MObject aStUiData;
+	
 
 	static MStatus initialize();
 
 	virtual MStatus compute(const MPlug& plug, MDataBlock& data);
+	MStatus computeDriver(MDataHandle& parentDH, MDataBlock& data);
+
+	virtual MStatus computeLocalTransformation(MPxTransformationMatrix* xform, MDataBlock& data);
 
 
 };
@@ -47,6 +93,8 @@ class StrataPointMatrix : public MPxTransformationMatrix
 {
 
 public:
+	StrataPointMatrix(const MMatrix&);
+
 	static  MTypeId id;
 protected:
 	typedef MPxTransformationMatrix ParentClass;
@@ -65,26 +113,6 @@ class StrataPointDrawOverride : public MHWRender::MPxDrawOverride
 {
 public:
 
-	// callback is used to detect changes in scene, without setting 
-	// "isAlwaysDirty"
-	// a bit complicated but there doesn't seem to be nicer way
-
-	static void onModelEditorChanged(void* clientData) {
-		DEBUGS("onModelEditorChanged");
-		StrataPointDrawOverride* ovr = static_cast<StrataPointDrawOverride*>(clientData);
-		if (!ovr) {
-			DEBUGS("failed to cast");
-		}
-		if (!(ovr->pointNodePtr)) {
-			DEBUGS("missing node pointer");
-		}
-		if (ovr && ovr->pointNodePtr)
-		{
-			MHWRender::MRenderer::setGeometryDrawDirty(ovr->pointNodePtr->thisMObject());
-		}
-	}
-	MCallbackId fModelEditorChangedCbId = 0;
-
 	// need a pointer to the transform, so we can get an MObject for setGeometryDirty
 	// feels strange to hold a pointer in this override class, but apparently it's fine
 	StrataPoint* pointNodePtr;
@@ -98,22 +126,10 @@ public:
 	// redraw when attributes changed, setting geometry dirty seemed to do nothing
 	StrataPointDrawOverride(const MObject& obj) : MHWRender::MPxDrawOverride(
 		obj, NULL, true) {
-		DEBUGS("draw override init");
-		fModelEditorChangedCbId = MEventMessage::addEventCallback(
-			"modelEditorChanged", onModelEditorChanged, this);
-		MStatus status;
-		MFnDependencyNode node(obj, &status);
-		pointNodePtr = status ? dynamic_cast<StrataPoint*>(node.userNode()) : NULL;
 
 	}
 
 	~StrataPointDrawOverride() {
-		pointNodePtr = NULL;
-		if (fModelEditorChangedCbId != 0)
-		{
-			MMessage::removeCallback(fModelEditorChangedCbId);
-			fModelEditorChangedCbId = 0;
-		}
 	};
 	MHWRender::DrawAPI supportedDrawAPIs() const override;
 	bool isBounded(

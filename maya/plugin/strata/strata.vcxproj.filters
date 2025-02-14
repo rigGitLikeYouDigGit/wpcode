@@ -7,6 +7,10 @@
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratapoint.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\lib.cpp" />
+    <ClCompile Include="src\libramp.cpp" />
+    <ClCompile Include="src\stratacurve.cpp" />
+    <ClCompile Include="src\stratasurface.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\api.h">
@@ -18,6 +22,9 @@
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratapoint.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\stratacurve.h" />
+    <ClInclude Include="src\stratasurface.h" />
+    <ClInclude Include="src\libplug.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="F:\wp\code\maya\plugin\strata\CMakeLists.txt" />

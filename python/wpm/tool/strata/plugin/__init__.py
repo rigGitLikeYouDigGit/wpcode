@@ -52,7 +52,11 @@ def reloadPluginTest():
 	from maya import cmds
 	cmds.file(newFile=1, f=1)
 	pluginAid.loadPlugin(forceReload=True)
-	pt = cmds.createNode("strataPoint")
+	#pt = cmds.createNode("strataPoint")
+
+	crv = cmds.createNode("strataCurve")
+
+
 	# parentLoc = cmds.spaceLocator(name="parentLoc")[0]
 	# cmds.setAttr(parentLoc + ".translate", 2, 3, 4)
 

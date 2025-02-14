@@ -14,6 +14,7 @@ register all plugins
 #include <maya/MDrawRegistry.h>
 
 #include "stratapoint.h"
+#include "stratacurve.h"
 
 const char* kAUTHOR = "ed";
 const char* kVERSION = "1.0";
@@ -77,6 +78,7 @@ MStatus initializePlugin( MObject obj ){
     MFnPlugin fnPlugin( obj, kAUTHOR, kVERSION, kREQUIRED_API_VERSION);
     MStatus s = MStatus::kSuccess;
 
+    //// strataPoint node
     s = fnPlugin.registerTransform(
         StrataPoint::kNODE_NAME,
         StrataPoint::kNODE_ID,
@@ -87,9 +89,9 @@ MStatus initializePlugin( MObject obj ){
         &StrataPoint::drawDbClassification
     );
     if (MS::kSuccess != s) {
-        cerr << 82 << "failed to register node type " + StrataPoint::kNODE_NAME; return MS::kFailure;
+        cerr << 82 << "failed to register node type " + StrataPoint::kNODE_NAME; 
+        return MS::kFailure;
     };
-
     s = MHWRender::MDrawRegistry::registerDrawOverrideCreator(
         StrataPoint::drawDbClassification,
         StrataPoint::drawRegistrantId,
@@ -98,6 +100,22 @@ MStatus initializePlugin( MObject obj ){
         s.perror("registerDrawOverrideCreator");
         return s;
     }
+
+    //// strataCurve node
+    s = fnPlugin.registerTransform(
+        StrataCurve::kNODE_NAME,
+        StrataCurve::kNODE_ID,
+        StrataCurve::creator,
+        StrataCurve::initialize,
+        StrataCurveMatrix::creator,
+        StrataCurveMatrix::id
+        //&StrataPoint::drawDbClassification
+    );
+    if (MS::kSuccess != s) {
+        cerr << 82 << "failed to register node type " + StrataCurve::kNODE_NAME;
+        return MS::kFailure;
+    };
+
 
     return s;
 }
@@ -117,6 +135,7 @@ MStatus uninitializePlugin( MObject obj ){
     }
 
     DEREGISTER_NODE(StrataPoint);
+    DEREGISTER_NODE(StrataCurve);
     DEBUGS("uninitialised strata")
     return s;
 
