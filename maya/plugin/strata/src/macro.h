@@ -31,6 +31,12 @@ for(auto const& i: vec){ \
 	COUT << i << " "; \
 } COUT << "length " << vec.size() << std::endl;
 
+// as in "debugVectorInt"
+#define DEBUGMVI(vec) \
+for(auto const& i: vec){ \
+	COUT << i << " "; \
+} COUT << "length " << vec.length() << std::endl;
+
 // as in "debugMVector"
 #define DEBUGMV(vec) \
 COUT << vec[0] << ", " << vec[1] << ", " << vec[2] << std::endl;

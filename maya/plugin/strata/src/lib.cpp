@@ -1,8 +1,5 @@
 
-
-#include <maya/MMatrix.h>
-#include <maya/MQuaternion.h>
-
+#pragma once
 #include "api.h"
 #include "macro.h"
 
@@ -185,7 +182,28 @@ namespace ed {
 		return q;
 	}
 
+	static MDoubleArray uniformKnotsForCVs(int nCVs, int degree) {
+		// for degree = 1, k=2
+		// degree = 2, k=3 etc
+		// degree = 3, k=4
+		// for a cubic curve with 6 CVs, knots should be thus
+		// [ 0, 0, 0, 0, 1, 2, 3, 3, 3, 3 ]
+		// for cubic curve with 4 CVs:
+		// [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]
+		// 
 
+		MDoubleArray arr(nCVs + degree - 1, float(nCVs) - float(degree));
+		float knotVal = 0.0;
+		for (int i = 0; i < (nCVs); i++) {
+			if (i < (degree-1)) {
+				arr[i] = knotVal;
+				continue;
+			}
+			arr[i] = knotVal;
+			knotVal += 1.0;
+		}
+		return arr;
+	}
 
 
 

@@ -3,28 +3,6 @@
 #include <vector>
 #include <algorithm>
 //#include <array>
-#include <maya/MMatrix.h>
-#include <maya/MDrawRegistry.h>
-#include <maya/MPxDrawOverride.h>
-#include <maya/MUserData.h>
-#include <maya/MDrawContext.h>
-#include <maya/MHWGeometryUtilities.h>
-#include <maya/MPointArray.h>
-#include <maya/MGlobal.h>
-#include <maya/MEventMessage.h>
-#include <maya/MDGModifier.h>
-
-#include <maya/MFnDependencyNode.h>
-#include <maya/MFnTransform.h>
-#include <maya/MFnCompoundAttribute.h>
-#include <maya/MFnEnumAttribute.h>
-#include <maya/MFnNumericAttribute.h>
-#include <maya/MFnMatrixAttribute.h>
-#include <maya/MFnGenericAttribute.h>
-#include <maya/MFnTypedAttribute.h>
-#include <maya/MFnMessageAttribute.h>
-#include <maya/MFnNurbsCurve.h>
-#include <maya/MFnNurbsCurveData.h>
 
 
 #include "macro.h"
@@ -277,8 +255,24 @@ MStatus StrataCurve::compute(const MPlug& plug, MDataBlock& data) {
     return s;*/
     MFnNurbsCurveData dataFn;
     MObject dataParentObj = dataFn.create();
-    MObject crvObj = nurbsFn.createWithEditPoints(pointArr, degree, MFnNurbsCurve::kOpen,
-        false, true, true, dataParentObj);
+    /*MObject crvObj = nurbsFn.createWithEditPoints(pointArr, degree, MFnNurbsCurve::kOpen,
+        false, true, true, dataParentObj);*/
+
+    const MDoubleArray knotArr = uniformKnotsForCVs(pointArr.length(), degree);
+
+    DEBUGS("knot degree, vector:");
+    DEBUGS(degree);
+        
+    DEBUGMVI(knotArr);
+
+    MObject crvObj = nurbsFn.create(
+        pointArr,
+        knotArr,
+        degree, 
+        MFnNurbsCurve::kOpen,
+        false,  
+        true, 
+        dataParentObj);
 
     //data.setClean(plug);
     //return s;

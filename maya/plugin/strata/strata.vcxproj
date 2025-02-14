@@ -314,6 +314,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\lib.cpp" />
+    <ClCompile Include="src\libnurbs.cpp" />
     <ClCompile Include="src\libramp.cpp" />
     <ClCompile Include="src\stratacurve.cpp" />
     <ClCompile Include="src\stratasurface.cpp" />
@@ -323,6 +324,8 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratapoint.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratapoint.h" />
     <ClInclude Include="src\libplug.h" />
+    <ClInclude Include="src\MInclude.h" />
+    <ClInclude Include="src\span.h" />
     <ClInclude Include="src\stratacurve.h" />
     <ClInclude Include="src\stratasurface.h" />
   </ItemGroup>

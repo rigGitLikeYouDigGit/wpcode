@@ -3,15 +3,7 @@
 #include <vector>
 #include <string>
 
-
-#include <maya/MObject.h>
-#include <maya/MFnEnumAttribute.h>
-#include <maya/MString.h>
-#include <maya/MPlug.h>
-#include <maya/MDataHandle.h>
-#include <maya/MArrayDataBuilder.h>
-#include <maya/MArrayDataHandle.h>
-#include <maya/MFnNumericAttribute.h>
+#include "MInclude.h"
 
 #include "wpshared/enum.h"
 namespace ed {

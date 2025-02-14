@@ -2,25 +2,7 @@
 #pragma once
 #include <vector>
 //#include <array>
-#include <maya/MMatrix.h>
-#include <maya/MDrawRegistry.h>
-#include <maya/MPxDrawOverride.h>
-#include <maya/MUserData.h>
-#include <maya/MDrawContext.h>
-#include <maya/MHWGeometryUtilities.h>
-#include <maya/MPointArray.h>
-#include <maya/MGlobal.h>
-#include <maya/MEventMessage.h>
 
-#include <maya/MFnDependencyNode.h>
-#include <maya/MFnTransform.h>
-#include <maya/MFnCompoundAttribute.h>
-#include <maya/MFnEnumAttribute.h>
-#include <maya/MFnNumericAttribute.h>
-#include <maya/MFnMatrixAttribute.h>
-#include <maya/MFnGenericAttribute.h>
-#include <maya/MFnTypedAttribute.h>
-#include <maya/MFnMessageAttribute.h>
 
 
 #include "macro.h"
