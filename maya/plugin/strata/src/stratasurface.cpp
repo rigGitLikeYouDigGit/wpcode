@@ -55,23 +55,23 @@ void StrataSurface::postConstructor() {
     // connect this node's outCurve attribute to it.
     // also do the upcurve?
     // nah, naming would get inconsistent, and upcurve not always needed
-    MStatus s(MS::kSuccess);
+    //MStatus s(MS::kSuccess);
 
-    MFnDagNode meshFn;
-    MFnDagNode thisFn(thisMObject());
-    MDGModifier dgMod;
-    MObject meshObj = meshFn.create(
-        "mesh", thisFn.name() + "Shape",
-        thisMObject());
-    meshFn.setObject(meshObj);
+    //MFnDagNode meshFn;
+    //MFnDagNode thisFn(thisMObject());
+    //MDGModifier dgMod;
+    //MObject meshObj = meshFn.create(
+    //    "mesh", thisFn.name() + "Shape",
+    //    thisMObject());
+    //meshFn.setObject(meshObj);
 
 
-    const MString outPlugName("outMesh");
-    MPlug meshOutPlug = thisFn.findPlug(outPlugName, true, &s);
-    MPlug meshCreatePlug = meshFn.findPlug(MString("inMesh"), true, &s);
+    //const MString outPlugName("outMesh");
+    //MPlug meshOutPlug = thisFn.findPlug(outPlugName, true, &s);
+    //MPlug meshCreatePlug = meshFn.findPlug(MString("inMesh"), true, &s);
 
-    dgMod.connect(meshOutPlug, meshCreatePlug);
-    dgMod.doIt();
+    //dgMod.connect(meshOutPlug, meshCreatePlug);
+    //dgMod.doIt();
 }
 
 MStatus StrataSurface::initialize() {
@@ -131,7 +131,9 @@ MStatus StrataSurface::compute(const MPlug& plug, MDataBlock& data) {
     }
     DEBUGS("surface compute");
 
-
+    // flip balancewheel
+    data.outputValue(aBalanceWheel).setBool(!data.outputValue(aBalanceWheel).asBool());
+    data.setClean(aBalanceWheel);
 
     data.setClean(plug);
     return s;

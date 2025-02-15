@@ -2,6 +2,7 @@
 #pragma once
 //#include <maya/MPxNode.h>
 #include <maya/MPxTransform.h>
+#include <maya/MPxLocatorNode.h>
 #include <maya/MFnNumericAttribute.h>
 #include <maya/MUserData.h>
 #include <maya/MDrawContext.h>
@@ -9,16 +10,17 @@
 #include <maya/MEventMessage.h>
 #include <maya/MGlobal.h>
 
-class StrataPoint : public MPxTransform {
+//class StrataPoint : public MPxTransform {
+class StrataPoint : public MPxLocatorNode {
 public:
 	StrataPoint() {}
 	virtual ~StrataPoint() {}
 
 	static void* creator() {
-		StrataPoint* newObj = new StrataPoint;
+		StrataPoint* newObj = new StrataPoint();
 		return newObj;
 	}
-	//virtual void postConstructor();
+	virtual void postConstructor();
 	//virtual MStatus connectionMade(
 	//	const MPlug& plug, const MPlug& otherPlug, bool asSrc);
 	//virtual MStatus connectionBroken(
@@ -33,6 +35,21 @@ public:
 	static  MString     drawRegistrantId;
 
 	typedef MPxTransform ParentClass;
+
+
+	static MStatus initialize();
+
+	virtual MStatus compute(const MPlug& plug, MDataBlock& data);
+	MStatus computeDriver(MDataHandle& parentDH, MDataBlock& data);
+	//MMatrix getMatrix(MStatus* s);
+
+	//virtual MStatus computeLocalTransformation(MPxTransformationMatrix* xform, MDataBlock& data);
+	
+	// creation mechanism to fire once node is added to the dag
+	static MCallbackId creationCbId;
+
+
+
 
 	// attribute MObjects
 	static MObject aStEditMode;
@@ -75,16 +92,11 @@ public:
 	static MObject aStFinalDriverOutMatrix;
 	// final local offset matrix, from final driver matrix
 	static MObject aStFinalLocalOffsetMatrix;
+	// final final matrix plug to feed into offsetParentMatrix of parent transform
+	static MObject aStFinalOutMatrix;
 
 	static MObject aStUiData;
 	
-
-	static MStatus initialize();
-
-	virtual MStatus compute(const MPlug& plug, MDataBlock& data);
-	MStatus computeDriver(MDataHandle& parentDH, MDataBlock& data);
-
-	virtual MStatus computeLocalTransformation(MPxTransformationMatrix* xform, MDataBlock& data);
 
 
 };

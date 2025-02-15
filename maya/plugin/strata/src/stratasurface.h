@@ -1,7 +1,8 @@
 
 #pragma once
-//#include <maya/MPxNode.h>
-#include <maya/MPxTransform.h>
+#include <maya/MPxNode.h>
+//#include <maya/MPxTransform.h>
+#include <maya/MPxSurfaceShape.h>
 #include <maya/MFnNumericAttribute.h>
 #include <maya/MUserData.h>
 #include <maya/MDrawContext.h>
@@ -9,7 +10,7 @@
 #include <maya/MEventMessage.h>
 #include <maya/MGlobal.h>
 
-class StrataSurface : public MPxTransform {
+class StrataSurface : public MPxSurfaceShape {
 	/* Strata surface, combining curves into lofted spans
 	* BUT HOW
 	* this should only govern the topology - NOT apply final offsets
@@ -34,10 +35,9 @@ class StrataSurface : public MPxTransform {
 	* 
 	* 
 	* node structure - 
-	* this node is a transform, automatically creating a polygon mesh below it - this mesh will be
-	* the output mesh.
-	* by default, also listen on this mesh for any modelling activity - if edit mode is active,
-	* backpropagate those changes, but we can't save any deltas on this node yet.
+	* this is a surface shape to generate a ghost-nurbs surface representation of the input.
+	* Use this only to preview the curves, warn of invalid topology, show edge directions, etc
+	* 
 	* 
 	* 
 	*/

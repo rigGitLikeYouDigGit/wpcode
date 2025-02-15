@@ -24,7 +24,6 @@
 
 #include <maya/MMatrix.h>
 #include <maya/MDrawRegistry.h>
-#include <maya/MPxDrawOverride.h>
 #include <maya/MUserData.h>
 #include <maya/MDrawContext.h>
 #include <maya/MHWGeometryUtilities.h>
@@ -53,7 +52,10 @@
 #include <maya/MHWGeometryUtilities.h>
 #include <maya/MPointArray.h>
 #include <maya/MGlobal.h>
+
 #include <maya/MEventMessage.h>
+#include <maya/MDagMessage.h>
+#include <maya/MDGMessage.h>
 
 #include <maya/MFnDependencyNode.h>
 #include <maya/MFnTransform.h>
@@ -64,3 +66,9 @@
 #include <maya/MFnGenericAttribute.h>
 #include <maya/MFnTypedAttribute.h>
 #include <maya/MFnMessageAttribute.h>
+
+
+#include <maya/MPxNode.h>
+#include <maya/MPxDrawOverride.h>
+#include <maya/MPxTransform.h>
+#include <maya/MPxTransformationMatrix.h>

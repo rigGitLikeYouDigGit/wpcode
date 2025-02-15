@@ -28,7 +28,8 @@ thisFilePath = Path(strata.__file__).parent / "plugin" / "__init__.py"
 # construct overall plugin object, register any python plugin nodes
 pluginAid = WpPluginAid(
 	"strata",
-	pluginPath=str(WP_ROOT_PATH/"code"/"maya"/"plugin"/"strata"/"Debug"/"strata.mll"),
+	#pluginPath=str(WP_ROOT_PATH/"code"/"maya"/"plugin"/"strata"/"Debug"/"strata.mll"),
+	pluginPath=str(WP_ROOT_PATH/"code"/"maya"/"plugin"/"output"/"Maya2023"/"plug-ins"/"strata.mll"),
 	# nodeClasses={
 	# 	1 : StrataPoint
 	# }
@@ -47,6 +48,27 @@ def uninitializePlugin(plugin):
 	"""uninitialise the plugin"""
 	pluginAid.uninitialisePlugin(plugin)
 
+def makeStrataPoint(name):
+	"""I tried a little to do all this automatically when the node is created,
+	but since we're forced to use a shape node, it's always gonna be
+	a mess"""
+	from maya import cmds
+	loc = cmds.createNode("strataPoint", n=name + "Shape")
+	tf = cmds.listRelatives(loc, parent=1)[0]
+	tf = cmds.rename(tf, name)
+	cmds.connectAttr(loc + ".stFinalOutMatrix", tf + ".offsetParentMatrix", f=1)
+	return tf
+
+def makeStrataCurve(name, tf1, tf2):
+	from maya import cmds
+	dgNode = cmds.createNode("strataCurve", name= name+"Node")
+	crv = cmds.createNode("nurbsCurve", name=name + "Shape")
+	tf = cmds.rename(cmds.listRelatives(crv, parent=1)[0], name)
+	cmds.connectAttr(dgNode + ".stOutCurve", crv + ".create", f=1)
+	cmds.connectAttr(tf1 + ".worldMatrix[0]", dgNode + ".stStartMatrix")
+	cmds.connectAttr(tf2 + ".worldMatrix[0]", dgNode + ".stEndMatrix")
+	return dgNode, tf
+
 def reloadPluginTest():
 	"""single test to check strata nodes are working"""
 	from maya import cmds
@@ -54,19 +76,26 @@ def reloadPluginTest():
 	pluginAid.loadPlugin(forceReload=True)
 	#pt = cmds.createNode("strataPoint")
 
-	crv = cmds.createNode("strataCurve")
+	# test creating a single face of strataSurface
+	ptA = makeStrataPoint("ptA")
+	cmds.setAttr(ptA + ".translate", -3, 2, -3)
 
-
-	# parentLoc = cmds.spaceLocator(name="parentLoc")[0]
-	# cmds.setAttr(parentLoc + ".translate", 2, 3, 4)
-
-	# cmds.connectAttr(parentLoc + ".worldMatrix[0]", pt + ".parent[0].parentMatrix")
+	ptB = makeStrataPoint("strataPointB")
+	ptC = makeStrataPoint("strataPointC")
+	ptD = makeStrataPoint("strataPointD")
 	#
-	# childLoc = cmds.spaceLocator(name="childLoc")[0]
-	# cmds.connectAttr(pt + ".outMatrix", childLoc + ".parentOffsetMatrix")
 
+	dgNode, crvTf = makeStrataCurve("strataCurveA", ptA, ptB)
 
-	# StrataPoint.testNode()
+	dgNodeB, crvTf = makeStrataCurve("strataCurveB", ptC, ptD)
+	#
+	# # move points
+	cmds.setAttr(ptA + ".translate", -3, 2, -3)
+	cmds.setAttr(ptB + ".translate", 2, 3, -3)
+	#
+	cmds.setAttr(ptC + ".translate", 2, -1, -3)
+	cmds.setAttr(ptD + ".translate", 3, -1, -3)
+
 
 
 

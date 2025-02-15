@@ -61,25 +61,25 @@ void StrataCurve::postConstructor() {
     MFnDagNode thisFn(thisMObject());
     MDGModifier dgMod;
     MPointArray pointArr;
-    pointArr.append(MPoint());
-    pointArr.append(MPoint());
-    MObject crvObj = crvFn.createWithEditPoints(
-        pointArr, 1, MFnNurbsCurve::kOpen, false, true, true,       
-        thisMObject());
-    crvFn.setObject(crvObj);
+    //pointArr.append(MPoint());
+    //pointArr.append(MPoint());
+    //MObject crvObj = crvFn.createWithEditPoints(
+    //    pointArr, 1, MFnNurbsCurve::kOpen, false, true, true,       
+    //    thisMObject());
+    //crvFn.setObject(crvObj);
 
-    thisFn.setName("strataCurve#");
-    crvFn.setName("strataCurveShape#");
+    //thisFn.setName("strataCurve#");
+    //crvFn.setName("strataCurveShape#");
 
-    MPlug crvOutPlug = thisFn.findPlug(MString("stOutCurve"), false, &s);
-    CHECK_MSTATUS(s);
-    //DEBUGS("found crvOut mplug", crvOutPlug.name());
-    MPlug crvCreatePlug = crvFn.findPlug("create", false, &s);
-    CHECK_MSTATUS(s);
-    //DEBUGS("found crvCreate mplug", crvCreatePlug.name());
-    
-    dgMod.connect(crvOutPlug, crvCreatePlug);
-    dgMod.doIt();
+    //MPlug crvOutPlug = thisFn.findPlug(MString("stOutCurve"), false, &s);
+    //CHECK_MSTATUS(s);
+    ////DEBUGS("found crvOut mplug", crvOutPlug.name());
+    //MPlug crvCreatePlug = crvFn.findPlug("create", false, &s);
+    //CHECK_MSTATUS(s);
+    ////DEBUGS("found crvCreate mplug", crvCreatePlug.name());
+    //
+    //dgMod.connect(crvOutPlug, crvCreatePlug);
+    //dgMod.doIt();
 }
 
 MStatus StrataCurve::initialize() {
@@ -215,22 +215,23 @@ MStatus StrataCurve::compute(const MPlug& plug, MDataBlock& data) {
     if (data.isClean(plug)) {
         return s;
     }
-    DEBUGS("curve compute");
+    //DEBUGS("curve compute");
 
     // build a basic curve
     MMatrix startMat = data.inputValue(aStStartMatrix).asMatrix();
 
-    //data.setClean(plug);
-    //return s;
-    //MMatrix startMat = accessMMatrixDH(data.inputValue(aStStartMatrix));
+    MVector startTan = data.inputValue(aStStartTangent).asVector() *data.inputValue(aStStartTangentScale).asFloat();
 
-    //data.setClean(plug);
-    //return s;
+    //DEBUGS("start tan");
+    //DEBUGS(startTan.x << startTan.y << startTan.z);
 
-    MVector startTan = data.inputValue(aStStartTangent).asVector() * data.inputValue(aStStartTangentScale).asFloat();
+    //startTan = startMat * startTan;
+
+    //DEBUGS("start tan mat mult");
+    //DEBUGS(startTan.x << startTan.y << startTan.z);
 
     MMatrix endMat = data.inputValue(aStEndMatrix).asMatrix();
-    MVector endTan = data.inputValue(aStEndTangent).asVector() * data.inputValue(aStEndTangentScale).asFloat();
+    MVector endTan = data.inputValue(aStEndTangent).asVector() *data.inputValue(aStEndTangentScale).asFloat();
 
     //data.setClean(plug);
     //return s;
@@ -243,9 +244,9 @@ MStatus StrataCurve::compute(const MPlug& plug, MDataBlock& data) {
     //);
 
 
-    pointArr[0] = MPoint( startMat.matrix[3] );
-    pointArr[1] = MPoint(startMat * startTan);
-    pointArr[2] = MPoint(endMat * endTan);
+    pointArr[1] = MPoint(startTan) * startMat;
+    pointArr[2] = MPoint(endTan) * endMat;
+    pointArr[0] = MPoint(startMat.matrix[3]);
     pointArr[3] = MPoint(endMat.matrix[3]);
 
     // prevent the degree going beyond the number of spans in the curve
@@ -260,10 +261,9 @@ MStatus StrataCurve::compute(const MPlug& plug, MDataBlock& data) {
 
     const MDoubleArray knotArr = uniformKnotsForCVs(pointArr.length(), degree);
 
-    DEBUGS("knot degree, vector:");
-    DEBUGS(degree);
-        
-    DEBUGMVI(knotArr);
+    //DEBUGS("knot degree, vector:");
+    //DEBUGS(degree);
+    //DEBUGMVI(knotArr);
 
     MObject crvObj = nurbsFn.create(
         pointArr,
@@ -271,7 +271,7 @@ MStatus StrataCurve::compute(const MPlug& plug, MDataBlock& data) {
         degree, 
         MFnNurbsCurve::kOpen,
         false,  
-        true, 
+        false, 
         dataParentObj);
 
     //data.setClean(plug);

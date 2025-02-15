@@ -52,6 +52,7 @@ MObject StrataPoint::aStDriverUpdateParamsInEditMode;
 MObject StrataPoint::aStEditMode;
 MObject StrataPoint::aStFinalDriverOutMatrix;
 MObject StrataPoint::aStFinalLocalOffsetMatrix;
+MObject StrataPoint::aStFinalOutMatrix;
 MObject StrataPoint::aStRadius;
 MObject StrataPoint::aStUiData;
 
@@ -139,8 +140,13 @@ MStatus StrataPoint::initialize() {
     mFn.setWritable(false);
     mFn.setDefault(MMatrix());
 
+    aStFinalOutMatrix = mFn.create("stFinalOutMatrix", "stFinalOutMatrix", MFnMatrixAttribute::kDouble);
+    mFn.setWritable(false);
+    mFn.setDefault(MMatrix());
+
     aStEditMode = nFn.create("stEditMode", "stEditMode", MFnNumericData::kBoolean, 0);
 	nFn.setChannelBox(1);
+    nFn.setAffectsWorldSpace(true);
 
 	// radius only affects visuals for now
     aStRadius = nFn.create("stRadius", "stRadius", MFnNumericData::kFloat, 0.1);
@@ -161,14 +167,14 @@ MStatus StrataPoint::initialize() {
     };
 
     std::vector<MObject>drivenObjs = {
-        aStFinalDriverOutMatrix, aStFinalLocalOffsetMatrix
+        aStFinalDriverOutMatrix, aStFinalLocalOffsetMatrix, aStFinalOutMatrix
     };
 
 	std::vector<MObject> driverObjs = {
         aStDriver, aStEditMode, aStRadius, aStUiData
     };
-	/*addAttributes<StrataPoint>(driverObjs);
-    addAttributes<StrataPoint>(drivenObjs);*/
+	addAttributes<StrataPoint>(driverObjs);
+    addAttributes<StrataPoint>(drivenObjs);
 
     setAttributesAffect<StrataPoint>(driverObjs, drivenObjs);
     
@@ -222,43 +228,148 @@ MStatus combineDriverInfluences(StrataPoint& node,
 
 MStatus StrataPoint::compute(const MPlug& plug, MDataBlock& data) {
     MStatus s = MS::kSuccess;
+    
+
+
+    //if ((plug.attribute() == MPxTransform::matrix)
+    //    || (plug.attribute() == MPxTransform::inverseMatrix)
+    //    || (plug.attribute() == MPxTransform::worldMatrix)
+    //    || (plug.attribute() == MPxTransform::worldInverseMatrix)
+    //    || (plug.attribute() == MPxTransform::parentMatrix)
+    //    || (plug.attribute() == MPxTransform::parentInverseMatrix))
+    //{
+    //    StrataPointMatrix xform(MMatrix::identity);
+    //    computeLocalTransformation(&xform, data);
+    //}
+
+    //DEBUGS("point compute");
+
+    //s = MPxTransform::compute(plug, data);
+    //MCHECK(s, "stratapoint parent compute failed");
+
+
+    //MHWRender::MRenderer::setGeometryDrawDirty(thisMObject(), false);
 
     if (data.isClean(plug)) {
         return s;
     }
-    DEBUGS("point compute");
-
-    //MHWRender::MRenderer::setGeometryDrawDirty(thisMObject(), false);
-
 
     data.setClean(plug);
 
     return s;
 }
 
+void StrataPoint::postConstructor() {
+    // check that this node's parent transform is named properly,
+    // connect up its offsetParentMatrix attribute
+
+    // this method fires before this shape node gets a parent,
+    // so add a dag callback to check when it does get a parent added
+
+    // TOO COMPLICATED just make the creation function in python
+    
+    // remove the default locator attributes from channelbox
+    MFnAttribute aFn;
+    MFnDagNode thisFn(thisMObject());
+
+    //MObject scaleObj = thisFn.attribute("localScale");
+    //if (scaleObj.isNull()) {
+    //    DEBUGS("COULD NOT GET SCALE OBJ")
+    //}
+    //aFn.setObject(scaleObj);
+    //DEBUGS(aFn.name());
+    //thisFn.removeAttribute(scaleObj); ////// CRASHES :(
+
+    /*
+    for (auto i : "XYZ") {
+        aFn.setObject(thisFn.attribute("localPosition" + i));
+        aFn.setChannelBox(false);
+        aFn.setKeyable(false);
+        aFn.setObject(thisFn.attribute("localScale" + i));
+        aFn.setChannelBox(false);
+        aFn.setKeyable(false);
+    }
+    aFn.setObject(thisFn.attribute("localPosition"));
+    aFn.setChannelBox(false);
+    aFn.setKeyable(false);
+    aFn.setObject(thisFn.attribute("localScale"));
+    aFn.setChannelBox(false);
+    aFn.setKeyable(false);
+
+    for (auto i : "xyz") {
+        aFn.setObject(thisFn.attribute("lp" + i));
+        aFn.setChannelBox(false);
+        aFn.setKeyable(false);
+        aFn.setObject(thisFn.attribute("ls" + i));
+        aFn.setChannelBox(false);
+        aFn.setKeyable(false);
+    }
+    aFn.setObject(thisFn.attribute("lp"));
+    aFn.setChannelBox(false);
+    aFn.setKeyable(false);
+    aFn.setObject(thisFn.attribute("ls"));
+    aFn.setChannelBox(false);
+    aFn.setKeyable(false);*/
+
+
+
+    return;
+
+    MStatus s(MS::kSuccess);
+    MFnDagNode parentFn;
+    
+    MDGModifier dgMod;
+
+    //DEBUGS("Point postConstructor() - has parent:");
+    //DEBUGS(thisFn.parentCount());
+    //DEBUGS(thisFn.dagPath().fullPathName());
+    //if (thisFn.parentCount() == 0) {
+    //    DEBUGS("NO PARENT");
+    //    //MCallbackId creationCbId = MDagMessage::addParentAddedCallback()
+    //    return;
+    //}
+
+    parentFn.setObject(thisFn.parent(0));
+
+    MPlug matOutPlug = thisFn.findPlug(aStFinalOutMatrix, false, &s);
+    CHECK_MSTATUS(s); // , "could not get final out plug to connect point shape");
+    MPlug matInPlug = parentFn.findPlug("offsetParentMatrix", false, &s);
+    CHECK_MSTATUS(s);
+
+    dgMod.connect(matOutPlug, matInPlug);
+    dgMod.doIt();
+
+
+}
+
 StrataPointMatrix::StrataPointMatrix(const MMatrix& mat) : MPxTransformationMatrix(mat) {
 }
 
+//MMatrix StrataPoint::asMatrix()
+//MMatrix StrataPoint::getMatrix(MStatus* s) {
+//    DEBUGS("call getMatrix");
+//    return MPxTransform::getMatrix(s);
+//}
 
-MStatus StrataPoint::computeLocalTransformation(MPxTransformationMatrix* xform, MDataBlock& data) {
-    /* rockingTransform example in the dev kit delegates more functionality to the custom
-    behaviour of the transformation matrix itself, but it seems needlessly complex to me - 
-    here we just layer the local offsets on top of each other
-    */
-    MS s = MS::kSuccess;
-    s = MPxTransform::computeLocalTransformation(xform, data);
-    CHECK_MSTATUS(s);
-    // insert the two custom matrices before the vanilla behaviour - 
-    // HOPEFULLY this lets them come after the normal dag node parent transformation,
-    // but before the normal TRS attributes are combined
-    MMatrix finalParentMat = data.outputValue(aStFinalDriverOutMatrix).asMatrix();
-    MMatrix finalLocalMat = data.outputValue(aStFinalLocalOffsetMatrix).asMatrix();
-    const MMatrix endMat = finalParentMat * finalLocalMat * xform->asMatrix();
-    *xform = endMat;
-    DEBUGS("computed local transformation")
-    return s;
-
-}
+//MStatus StrataPoint::computeLocalTransformation(MPxTransformationMatrix* xform, MDataBlock& data) {
+//    /* rockingTransform example in the dev kit delegates more functionality to the custom
+//    behaviour of the transformation matrix itself, but it seems needlessly complex to me - 
+//    here we just layer the local offsets on top of each other
+//    */
+//    MS s = MS::kSuccess;
+//    s = MPxTransform::computeLocalTransformation(xform, data);
+//    CHECK_MSTATUS(s);
+//    // insert the two custom matrices before the vanilla behaviour - 
+//    // HOPEFULLY this lets them come after the normal dag node parent transformation,
+//    // but before the normal TRS attributes are combined
+//    MMatrix finalParentMat = data.outputValue(aStFinalDriverOutMatrix).asMatrix();
+//    MMatrix finalLocalMat = data.outputValue(aStFinalLocalOffsetMatrix).asMatrix();
+//    const MMatrix endMat = finalParentMat * finalLocalMat * xform->asMatrix();
+//    xform->copyValues(&MPxTransformationMatrix(endMat));
+//    DEBUGS("computed local transformation")
+//    return s;
+//
+//}
 
 MHWRender::DrawAPI StrataPointDrawOverride::supportedDrawAPIs() const
 {
@@ -323,7 +434,14 @@ MUserData* StrataPointDrawOverride::prepareForDraw(
     // get correct color and depth priority based on the state of object, e.g. active or dormant
     MObject node = objPath.node();
     data->fColor = MHWRender::MGeometryUtilities::wireframeColor(objPath);
-    MVector worldPos = MFnTransform(objPath).getTranslation(MSpace::kWorld, &s);
+    MFnDagNode thisFn(objPath);
+    if (thisFn.parentCount() == 0) {
+        return data;
+    }
+    MDagPath tfPath(objPath);
+    tfPath.pop(1);
+    MFnTransform transformFn(tfPath);
+    MVector worldPos = transformFn.getTranslation(MSpace::kWorld, &s);
     CHECK_MSTATUS(s);
     data->pos = worldPos;
 

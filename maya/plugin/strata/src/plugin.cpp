@@ -15,6 +15,7 @@ register all plugins
 
 #include "stratapoint.h"
 #include "stratacurve.h"
+#include "stratasurface.h"
 
 const char* kAUTHOR = "ed";
 const char* kVERSION = "1.0";
@@ -79,13 +80,12 @@ MStatus initializePlugin( MObject obj ){
     MStatus s = MStatus::kSuccess;
 
     //// strataPoint node
-    s = fnPlugin.registerTransform(
+    s = fnPlugin.registerNode(
         StrataPoint::kNODE_NAME,
         StrataPoint::kNODE_ID,
         StrataPoint::creator,
         StrataPoint::initialize,
-        StrataPointMatrix::creator,
-        StrataPointMatrix::id,
+        MPxNode::kLocatorNode,
         &StrataPoint::drawDbClassification
     );
     if (MS::kSuccess != s) {
@@ -102,13 +102,21 @@ MStatus initializePlugin( MObject obj ){
     }
 
     //// strataCurve node
-    s = fnPlugin.registerTransform(
+    //s = fnPlugin.registerTransform(
+    //    StrataCurve::kNODE_NAME,
+    //    StrataCurve::kNODE_ID,
+    //    StrataCurve::creator,
+    //    StrataCurve::initialize,
+    //    StrataCurveMatrix::creator,
+    //    StrataCurveMatrix::id
+    //    //&StrataPoint::drawDbClassification
+    //);
+    s = fnPlugin.registerNode(
         StrataCurve::kNODE_NAME,
         StrataCurve::kNODE_ID,
         StrataCurve::creator,
         StrataCurve::initialize,
-        StrataCurveMatrix::creator,
-        StrataCurveMatrix::id
+        MPxNode::kDependNode
         //&StrataPoint::drawDbClassification
     );
     if (MS::kSuccess != s) {
@@ -116,7 +124,18 @@ MStatus initializePlugin( MObject obj ){
         return MS::kFailure;
     };
 
-
+    // strataSurface
+    s = fnPlugin.registerShape(
+        StrataSurface::kNODE_NAME,
+        StrataSurface::kNODE_ID,
+        StrataSurface::creator,
+        StrataSurface::initialize,
+        nullptr
+    );
+    if (MS::kSuccess != s) {
+        cerr << 82 << "failed to register node type " + StrataSurface::kNODE_NAME;
+        return MS::kFailure;
+    };
     return s;
 }
 
@@ -136,6 +155,7 @@ MStatus uninitializePlugin( MObject obj ){
 
     DEREGISTER_NODE(StrataPoint);
     DEREGISTER_NODE(StrataCurve);
+    DEREGISTER_NODE(StrataSurface);
     DEBUGS("uninitialised strata")
     return s;
 

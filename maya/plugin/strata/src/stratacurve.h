@@ -6,10 +6,13 @@
 #include <maya/MUserData.h>
 #include <maya/MDrawContext.h>
 #include <maya/MPxDrawOverride.h>
+#include <maya/MPxSurfaceShape.h>
 #include <maya/MEventMessage.h>
 #include <maya/MGlobal.h>
 
-class StrataCurve : public MPxTransform {
+//class StrataCurve : public MPxTransform {
+//class StrataCurve : public MPxSurfaceShape {
+class StrataCurve : public MPxNode {
 	/* curve component of Strata, connecting points to form faces.
 	* In Maya, this is a transform node that runs the various Strata functions and outputs
 	* a resulting curve to its own shape - this can be passed through other maya rig
@@ -18,6 +21,11 @@ class StrataCurve : public MPxTransform {
 	* the curve shape frequently, outside of manual edits
 	* 
 	* IN FUTURE maybe rewrite this with a plugin shape, but I don't think it needs it
+	* 
+	* going with basic MPxNode here, which makes it more annoying to select in channelbox,
+	* but for now it's fine, we can solve that in UI.
+	* MPxSurfaceShape is a LOT of work, and the StrataSurface will need it anyway - no need to
+	* copy %90 of NurbsCurve here too
 	*/
 
 
