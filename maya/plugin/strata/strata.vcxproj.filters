@@ -12,6 +12,8 @@
     <ClCompile Include="src\stratacurve.cpp" />
     <ClCompile Include="src\stratasurface.cpp" />
     <ClCompile Include="src\libnurbs.cpp" />
+    <ClCompile Include="src\manifold.cpp" />
+    <ClCompile Include="src\containers.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\api.h">
@@ -28,6 +30,7 @@
     <ClInclude Include="src\libplug.h" />
     <ClInclude Include="src\span.h" />
     <ClInclude Include="src\MInclude.h" />
+    <ClInclude Include="src\containers.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="F:\wp\code\maya\plugin\strata\CMakeLists.txt" />

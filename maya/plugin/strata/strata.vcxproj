@@ -313,9 +313,11 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\containers.cpp" />
     <ClCompile Include="src\lib.cpp" />
     <ClCompile Include="src\libnurbs.cpp" />
     <ClCompile Include="src\libramp.cpp" />
+    <ClCompile Include="src\manifold.cpp" />
     <ClCompile Include="src\stratacurve.cpp" />
     <ClCompile Include="src\stratasurface.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\api.h" />
@@ -323,6 +325,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\plugin.cpp" />
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratapoint.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratapoint.h" />
+    <ClInclude Include="src\containers.h" />
     <ClInclude Include="src\libplug.h" />
     <ClInclude Include="src\MInclude.h" />
     <ClInclude Include="src\span.h" />

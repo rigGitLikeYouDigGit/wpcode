@@ -13,9 +13,9 @@ register all plugins
 #include <maya/MPxTransform.h>
 #include <maya/MDrawRegistry.h>
 
-#include "stratapoint.h"
-#include "stratacurve.h"
-#include "stratasurface.h"
+#include "stratapointnode.h"
+#include "stratacurvenode.h"
+#include "stratasurfacenode.h"
 
 const char* kAUTHOR = "ed";
 const char* kVERSION = "1.0";
