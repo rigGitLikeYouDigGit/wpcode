@@ -3,6 +3,9 @@
 
 #include <memory>
 #include <map>
+#include <unordered_set>
+#include <set>
+#include <unordered_map>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -46,47 +49,153 @@ using ints not pointers in topo types for easier copying, serialising if it come
 
 
 using vectors for everything, I don't care for now
+
+// do we actually need separate types for elements? not for most things
+
 */
 
 using namespace ed;
 
 // don't need full int here but MAYBE in the long run, we'll need to make an enum attribute in maya for it
-BETTER_ENUM(SElType, int, point, edge, face);
+BETTER_ENUM(SElType, uShort, point, edge, face);
 
 struct StrataElement {
 	std::string name;
 	uShort elIndex;
 	uShort globalIndex;
-	SElType elType = SElType::point;
+	std::vector<uShort> drivers; // topological drivers, not parent spaces
+	std::vector<uShort> edges; // edges that draw from this element
+	std::vector<uShort> points; // points that draw from this element
+	std::vector<uShort> faces; // faces that use this edge as a rib or boundary
+	SElType::_enumerated elType = SElType::point;
+
+	bool isActive = true; // should this element (face) be rendered/meshed?
+	bool isValid = true; // does this element have an error in its history?
+	std::string errorMsg;
 
 	StrataElement(std::string elName) {
 		name = elName;
 	};
+
+	// neighbours do not include child / driven elements
+	// topology functions only return raw ints from these structs - 
+	// manifold is needed to get rich pointers
+
+	// ...should these return std::set instead? uggggh
+
+	inline SmallList<uShort, 32> otherNeighbourPoints(StrataManifold& manifold) {
+	}
+	inline SmallList<uShort, 32> otherNeighbourEdges(StrataManifold& manifold) {
+	}
+	inline SmallList<uShort, 32> otherNeighbourFaces(StrataManifold& manifold, bool requireSharedEdge=true) {
+	}
+
+	/// topological sets - after Keenan Crane
+	// star is the set of all edges directly touching this element in it
+	// for faces this might include intersectors, not sure yet
+	inline SmallList<uShort, 32> edgeStar(StrataManifold& manifold) {
+	}
+	// link is the set of all edges exactly one edge away from this element
+	inline SmallList<uShort, 32> edgeLink(StrataManifold& manifold) {
+	}
+	// do the same for other element types
+	
+
+	inline std::vector<uShort> intersectingElements(StrataManifold& manifold) {
+		/* this likely will be a very wide function - 
+		if we want to define elements and expressions in a more topological way,
+		we need a general sense of intersection between elements - 
+
+		2 edges that cross are intersecting, regardless of which one is driven
+		an edge that helps define a face intersects that face - 
+			and the expression (face n edge) gives the sub-edge touching only the face.
+
+		maintain an order here if possible - list edge intersections in the direction of this edge,
+			list face intersections in the face's winding order, etc
+		*/
+	}
 };
 
 struct SPoint : StrataElement {
-	SmallList<uShort, 32> edges;
+	uShort driver;
 	SElType elType = SElType::point;
 
 	//SPoint() = default;
 	SPoint(std::string elName) : StrataElement(elName) {
 	}
+
+	inline SmallList<uShort, 32> otherNeighbourPoints(StrataManifold& manifold) {
+		// return list of pointers to neighbours of the same element type
+		// return all points connected to edges here
+		SmallList<uShort, 32> result;
+		for (uShort edgeId : edges) {
+			StrataElement* edgePtr = manifold.getEl(edgeId);
+			for (uShort ptId : edgePtr->points) {
+				if (ptId == globalIndex) { continue; }
+				result.push_back(ptId);
+			}
+		}
+		return result;
+	}
+	inline SmallList<uShort, 32> otherNeighbourEdges(StrataManifold& manifold) {
+		// return list of pointers to neighbours of the same element type
+		// return all points connected to edges here
+		SmallList<uShort, 32> result;
+		for (uShort edgeId : edges) {
+			result.push_back(edgeId);
+		}
+		return result;
+	}
+
+	inline SmallList<uShort, 32> edgeStar(StrataManifold& manifold) {
+		return otherNeighbourEdges(manifold);
+	}
+
+	inline SmallList<uShort, 32> otherNeighbourFaces(StrataManifold& manifold) {
+		// return list of pointers to neighbours of the same element type
+		// return all points connected to edges here
+		SmallList<uShort, 32> result;
+		std::set<uShort> foundFaces;
+		for (uShort edgeId : edges) {
+			StrataElement* edge = manifold.getEl(edgeId);
+			foundFaces.insert(edge->faces.begin(), edge->faces.end());
+		}
+		for (uShort faceId : foundFaces) {
+			result.push_back(faceId);
+		}
+		return result;
+	}
+
+
+
 };
 
 struct SEdge : StrataElement{
-	SmallList<uShort, 128> drivers; // can hold points and/or edges
-	SmallList<uShort, 32> faces; // faces that use this edge as a rib or boundary
 	SElType elType = SElType::edge;
-
 	SEdge(std::string elName) : StrataElement(elName) {
 	}
+
+	inline SmallList<uShort, 32> otherNeighbourPoints(StrataManifold& manifold) {
+		// return list of pointers to neighbours of the same element type
+		// return end points of this edge only, for now
+		SmallList<uShort, 32> result(2);
+
+		if (manifold.getEl(drivers[0])->elType == SElType::point) {
+			result.push_back(drivers[0]);
+		}
+		if (manifold.getEl(drivers[1])->elType == SElType::point) {
+			result.push_back(drivers[1]);
+		}
+		return result;
+	}
+
+	
 };
 
 struct SFace : StrataElement{
-	std::string name;
-	SmallList<uShort, 32> edges;
 	SElType elType = SElType::face;
-
+	SFace(std::string elName) : StrataElement(elName) {
+	}
 };
 
 struct SPointData {
@@ -115,10 +224,10 @@ struct StrataManifold {
 	std::vector<SFace> faces;
 
 	uShort globalIndex = 0; // ticks up any time an element is added
-	std::map<uShort, STid> globalIndexElTypeMap; // this just feels ridiculous
-	std::map<std::string, uShort> nameGlobalIndexMap; // everyone point and laugh 
+	std::unordered_map<uShort, STid> globalIndexElTypeMap; // this just feels ridiculous
+	std::unordered_map<std::string, uShort> nameGlobalIndexMap; // everyone point and laugh 
 
-	inline StrataElement* elFromGlobalIndex(uShort globalId){
+	inline StrataElement* getEl(uShort globalId){
 		STid elId = globalIndexElTypeMap[globalId];
 		switch (elId.elType) {
 			case SElType::point:
@@ -137,6 +246,24 @@ struct StrataManifold {
 	std::map<std::string, uShort> pointNameIdMap;
 	std::map<std::string, uShort> edgeNameIdMap;
 	std::map<std::string, uShort> faceNameIdMap;
+
+	SmallList<StrataElement*> getEls(SmallList<uShort>& globalIds) {
+		SmallList<StrataElement*, globalIds.MAXSIZE> result;
+		result.reserve(globalIds.size());
+		for (uShort gId : globalIds) {
+			result.push_back(getEl(gId));
+		}
+		return result;
+	}
+
+	std::vector<StrataElement*> getEls(std::vector<uShort>& globalIds) {
+		std::vector<StrataElement*> result;
+		result.reserve(globalIds.size());
+		for (uShort gId : globalIds) {
+			result.push_back(getEl(gId));
+		}
+		return result;
+	}
 
 
 	SPoint* addPoint(SPoint& el, SPointData elData) {

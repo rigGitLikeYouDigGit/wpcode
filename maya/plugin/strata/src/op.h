@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <memory>
 #include <algorithm>
@@ -6,6 +6,49 @@
 #include "manifold.h"
 
 typedef StrataOpGraph;
+
+/*TODO
+
+for adding points, try and generate descriptive names (that might also double as
+history paths) based on the topology of each one - 
+
+so for points named A, B, C, D,
+prefix each p:
+pA, pB, pC, pD
+
+each edge prefix e:
+e(pA, pB), e(pB, pC) - to uniquely identify an edge, we only consider its endpoints (??????)
+
+each face prefix f:
+
+f( 
+	e(pA, pB), 
+	e(pB, pC), 
+	e(pC, pD), 
+	e(pD, pA) 
+)
+order of edges matters, direction does not - 
+each face works out its own orientation,
+and we will conform all orientations in a single pass later
+
+
+LATER later, try and create faces only based on intersections between edges:
+f( 
+	e(
+		p( e(pA, pB) ∩ e(pF, pG) )1, 
+		pC
+	),
+	...
+)
+	eg an edge, FROM the INTERSECTION POINT of 2 other edges, TO another normal point
+	add the 1? since at the limit, 2 rings on a complex surface might intersect at any number of points?  
+
+
+but there's no key to type ∩ ...
+
+...do we literally just write n, u etc?
+
+*/
 
 struct StrataOp {
 	// maybe later we try and split topological and smooth operations
@@ -95,10 +138,10 @@ struct AddEdgesOp : StrataOp {
 	// do we assume that each single input will be an array of points? 
 	
 	std::vector<std::string> names;
-	std::vector<std::vector<uShort>> indices;
+	std::vector<std::vector<uShort>> driverGlobalIds;
 
 	virtual StrataManifold* evalTopo(StrataManifold& manifold) {
-		manifold.points.reserve(names.size());
+		manifold.edges.reserve(names.size());
 		for (size_t i = 0; i < names.size(); i++) {
 			SEdge el(names[i]);
 			SEdgeData elData;
@@ -106,10 +149,78 @@ struct AddEdgesOp : StrataOp {
 			SEdge* resultEl = manifold.addEdge(el, elData);
 			result.push_back(resultEl->globalIndex);
 
+			
+
 			// update driver indices for this edge
-			std::copy(indices[i].begin(), indices[i].end(), resultEl->drivers.begin());
+			std::copy(driverGlobalIds[i].begin(), driverGlobalIds[i].end(), resultEl->drivers.begin());
+			// add this edge to output edges of each driver
+			for (uShort driverGlobalId : driverGlobalIds[i]) {
+				StrataElement* driverPtr = manifold.elFromGlobalIndex(driverGlobalId);
+
+				// check all drivers are points (for now)
+				if (uShort(driverPtr->elType) != uShort(SElType::point)) {
+					resultEl->isValid = false;
+					resultEl->errorMsg = "driver " + driverPtr->name + " is not a point, not allowed in addEdgesOp";
+				}
+				// check if any of the drivers are already marked invalid
+				if (!driverPtr->isValid) { // an invalid source invalidates all elements after it, like a NaN
+					resultEl->isValid = false;
+					resultEl->errorMsg = "driver " + driverPtr->name + " is already invalid";
+				}
+				driverPtr->edges.push_back(resultEl->globalIndex);
+			}
 		}
 		return &manifold;
 	}
 };
+
+struct AddFacesOp : StrataOp {
+	// explicitly add faces, explicitly supply border edges for each
+	std::vector<std::string> names;
+	std::vector<std::vector<uShort>> driverGlobalIds;
+
+	virtual StrataManifold* evalTopo(StrataManifold& manifold) {
+		manifold.faces.reserve(names.size());
+		for (size_t i = 0; i < names.size(); i++) {
+
+			// check that all these elements are edges (for now)
+			bool areEdges = true;
+
+			// how do we check that all these edges are contiguous?
+
+			SFace el(names[i]);
+			SFaceData elData;
+			//elData.matrix = matrices[i];
+			SFace* resultEl = manifold.addFace(el, elData);
+			result.push_back(resultEl->globalIndex);
+
+			// update driver indices for this edge
+			std::copy(driverGlobalIds[i].begin(), driverGlobalIds[i].end(), resultEl->drivers.begin());
+
+			// add this edge to output edges of each driver
+			for (uShort driverGlobalId : driverGlobalIds[i]) {
+				StrataElement* driverPtr = manifold.elFromGlobalIndex(driverGlobalId);
+
+				// check all drivers are edges
+				if (uShort(driverPtr->elType) != uShort(SElType::edge)) {
+					el.isValid = false;
+					el.errorMsg = "driver " + driverPtr->name + " is not an edge, not allowed in addFacesOp";
+				}
+				// check if any of the drivers are already marked invalid
+				if (!driverPtr->isValid) { // an invalid source invalidates all elements after it, like a NaN
+					el.isValid = false;
+					el.errorMsg = "driver " + driverPtr->name + " is already invalid";
+				}
+
+				driverPtr->faces.push_back(resultEl->globalIndex);
+			}
+
+		}
+		return &manifold;
+	}
+
+};
+
+
+
 

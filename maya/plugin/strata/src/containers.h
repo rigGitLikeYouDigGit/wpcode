@@ -95,6 +95,9 @@ namespace ed {
 
 		T* end() { return &data()[size()]; }
 
+		static const unsigned int MAXSIZE = N;
+
+
 	private:
 		enum { fixed_cap = N };
 		struct ListData
