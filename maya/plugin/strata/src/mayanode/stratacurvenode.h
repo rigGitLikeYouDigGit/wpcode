@@ -1,7 +1,6 @@
 
 #pragma once
 //#include <maya/MPxNode.h>
-#include <maya/MPxTransform.h>
 #include <maya/MFnNumericAttribute.h>
 #include <maya/MUserData.h>
 #include <maya/MDrawContext.h>
@@ -51,8 +50,6 @@ public:
 	static  MString     drawDbClassification;
 	static  MString     drawRegistrantId;
 
-	typedef MPxTransform ParentClass;
-
 	static MStatus initialize();
 
 	virtual MStatus compute(const MPlug& plug, MDataBlock& data);
@@ -95,14 +92,5 @@ public:
 
 };
 
-class StrataCurveMatrix : public MPxTransformationMatrix
-{
 
-public:
-	StrataCurveMatrix(const MMatrix&);
-
-	static  MTypeId id;
-protected:
-	typedef MPxTransformationMatrix ParentClass;
-};
 

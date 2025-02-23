@@ -26,10 +26,10 @@
 #include <maya/MFnNurbsCurve.h>
 
 
-#include "macro.h"
-#include "api.h"
+#include "../macro.h"
+#include "../api.h"
 #include "stratasurfacenode.h"
-#include "lib.cpp"
+#include "../lib.cpp"
 
 
 using namespace ed;

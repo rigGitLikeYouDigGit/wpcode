@@ -70,5 +70,3 @@
 
 #include <maya/MPxNode.h>
 #include <maya/MPxDrawOverride.h>
-#include <maya/MPxTransform.h>
-#include <maya/MPxTransformationMatrix.h>

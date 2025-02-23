@@ -6,6 +6,7 @@
 #define _CONTAINERS_LIB
 
 #include <cstdlib>
+#include <cstdint>
 #include <cstring>
 #include <cassert>
 #include <vector>
@@ -18,8 +19,8 @@
 
 namespace ed {
 	
-	typedef unsigned short uShort;
-	#define USNULL uShort(1 << 16)
+	typedef uint16_t uShort;
+	//#define USNULL uShort(1 << 16)
 	typedef unsigned int uint;
 
 	// used for returning small arrays from functions
@@ -32,7 +33,7 @@ namespace ed {
 	// Stores a random-access sequence of elements similar to vector, but avoids
 	// heap allocations for small lists. T must be trivially constructible and
 	// destructible.
-	template <class T, unsigned int N=256>
+	template <class T, unsigned int N=16>
 	class SmallList
 	{
 	public:
@@ -114,7 +115,7 @@ namespace ed {
 	/// Provides an indexed free list with constant-time removals from anywhere
 	/// in the list without invalidating indices. T must be trivially constructible
 	/// and destructible.
-	template <class T, unsigned int N = 256>
+	template <class T, unsigned int N = 16>
 	class FreeList
 	{
 	public:

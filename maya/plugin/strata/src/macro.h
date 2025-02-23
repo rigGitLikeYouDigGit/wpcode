@@ -44,9 +44,12 @@ COUT << vec[0] << ", " << vec[1] << ", " << vec[2] << std::endl;
 #define DEBUGVF(vec) \
 copy( vec.begin(), vec.end(), ostream_iterator<float>(MStreamUtils::stdOutStream, " "));
 
-
 // maths macros
 #define EPS 0.000001
+
+//#define INT(x) static_cast<int>(x) ///// size_t is hands down the most dumb bit of the language
+//// oh um well y-you see ACKSHULLLY on some architectures the MACKSIM-M-MUM SIZE of a container might EXCEED-
+/// brother just kindly shut up and go away yeah
 
 #define EQ(a, b) \
 	(abs(a - b) < EPS)\

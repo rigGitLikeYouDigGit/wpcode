@@ -1,7 +1,6 @@
 
 #pragma once
 //#include <maya/MPxNode.h>
-#include <maya/MPxTransform.h>
 #include <maya/MPxLocatorNode.h>
 #include <maya/MFnNumericAttribute.h>
 #include <maya/MUserData.h>
@@ -10,7 +9,6 @@
 #include <maya/MEventMessage.h>
 #include <maya/MGlobal.h>
 
-//class StrataPoint : public MPxTransform {
 class StrataPoint : public MPxLocatorNode {
 public:
 	StrataPoint() {}
@@ -33,8 +31,6 @@ public:
 
 	static  MString     drawDbClassification;
 	static  MString     drawRegistrantId;
-
-	typedef MPxTransform ParentClass;
 
 
 	static MStatus initialize();
@@ -104,16 +100,6 @@ public:
 
 };
 
-class StrataPointMatrix : public MPxTransformationMatrix
-{
-
-public:
-	StrataPointMatrix(const MMatrix&);
-
-	static  MTypeId id;
-protected:
-	typedef MPxTransformationMatrix ParentClass;
-};
 
 //draw override stuff copied directly from the footprint example
 class StrataPointUserData : public MUserData

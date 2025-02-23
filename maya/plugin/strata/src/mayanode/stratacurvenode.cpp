@@ -5,16 +5,14 @@
 //#include <array>
 
 
-#include "macro.h"
-#include "api.h"
-#include "libplug.h"
+#include "../macro.h"
+#include "../api.h"
+#include "../libplug.h"
 #include "stratacurvenode.h"
-#include "lib.cpp"
+#include "../lib.cpp"
 
 
 using namespace ed;
-
-MTypeId StrataCurveMatrix::id(0x00122C1E);
 
 
 MTypeId StrataCurve::kNODE_ID(0x00122C1F);
@@ -291,27 +289,3 @@ MStatus StrataCurve::compute(const MPlug& plug, MDataBlock& data) {
     data.setClean(plug);
     return s;
 }
-
-StrataCurveMatrix::StrataCurveMatrix(const MMatrix& mat) : MPxTransformationMatrix(mat) {
-}
-
-
-//MStatus StrataCurve::computeLocalTransformation(MPxTransformationMatrix* xform, MDataBlock& data) {
-//    /* rockingTransform example in the dev kit delegates more functionality to the custom
-//    behaviour of the transformation matrix itself, but it seems needlessly complex to me -
-//    here we just layer the local offsets on top of each other
-//    */
-//    MS s = MS::kSuccess;
-//    s = MPxTransform::computeLocalTransformation(xform, data);
-//    CHECK_MSTATUS(s);
-//    // insert the two custom matrices before the vanilla behaviour - 
-//    // HOPEFULLY this lets them come after the normal dag node parent transformation,
-//    // but before the normal TRS attributes are combined
-//    MMatrix finalParentMat = data.outputValue(aStFinalDriverOutMatrix).asMatrix();
-//    MMatrix finalLocalMat = data.outputValue(aStFinalLocalOffsetMatrix).asMatrix();
-//    const MMatrix endMat = finalParentMat * finalLocalMat * xform->asMatrix();
-//    *xform = endMat;
-//    DEBUGS("computed local transformation")
-//        return s;
-//
-//}

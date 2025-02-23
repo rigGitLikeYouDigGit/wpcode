@@ -5,15 +5,14 @@
 
 
 
-#include "macro.h"
-#include "api.h"
+#include "../macro.h"
+#include "../api.h"
 #include "stratapointnode.h"
-#include "lib.cpp"
+#include "../lib.cpp"
 
 
 using namespace ed;
 
-MTypeId StrataPointMatrix::id(0x00122C1D);
 
 
 MTypeId StrataPoint::kNODE_ID(0x00122C1C);
@@ -359,9 +358,6 @@ void StrataPoint::postConstructor() {
     dgMod.doIt();
 
 
-}
-
-StrataPointMatrix::StrataPointMatrix(const MMatrix& mat) : MPxTransformationMatrix(mat) {
 }
 
 //MMatrix StrataPoint::asMatrix()
