@@ -4,12 +4,16 @@
 //#include <array>
 
 
-
+#include "../MInclude.h"
 #include "../macro.h"
 #include "../api.h"
 #include "stratapointnode.h"
 #include "../lib.cpp"
 
+
+/* skip all the driver stuff for now, 
+just get a point wired into the AddPointsOp
+*/
 
 using namespace ed;
 
@@ -162,6 +166,7 @@ MStatus StrataPointNode::initialize() {
 
     // semantic unique name for point in strata
     aStName = tFn.create("stName", "stName", MFnData::kString);
+    tFn.setDefault(MFnStringData().create(""));
     // should the semantic name be linked to the name of the node in maya?
     aStLinkNameToNode = nFn.create("stLinkNameToNode", "stLinkNameToNode", MFnNumericData::kBoolean, true);
     nFn.setChannelBox(1);
@@ -247,23 +252,6 @@ MStatus combineDriverInfluences(StrataPointNode& node,
 MStatus StrataPointNode::compute(const MPlug& plug, MDataBlock& data) {
     MStatus s = MS::kSuccess;
     
-
-
-    //if ((plug.attribute() == MPxTransform::matrix)
-    //    || (plug.attribute() == MPxTransform::inverseMatrix)
-    //    || (plug.attribute() == MPxTransform::worldMatrix)
-    //    || (plug.attribute() == MPxTransform::worldInverseMatrix)
-    //    || (plug.attribute() == MPxTransform::parentMatrix)
-    //    || (plug.attribute() == MPxTransform::parentInverseMatrix))
-    //{
-    //    StrataPointNodeMatrix xform(MMatrix::identity);
-    //    computeLocalTransformation(&xform, data);
-    //}
-
-    //DEBUGS("point compute");
-
-    //s = MPxTransform::compute(plug, data);
-    //MCHECK(s, "stratapoint parent compute failed");
 
 
     //MHWRender::MRenderer::setGeometryDrawDirty(thisMObject(), false);
@@ -360,31 +348,6 @@ void StrataPointNode::postConstructor() {
 
 }
 
-//MMatrix StrataPointNode::asMatrix()
-//MMatrix StrataPointNode::getMatrix(MStatus* s) {
-//    DEBUGS("call getMatrix");
-//    return MPxTransform::getMatrix(s);
-//}
-
-//MStatus StrataPointNode::computeLocalTransformation(MPxTransformationMatrix* xform, MDataBlock& data) {
-//    /* rockingTransform example in the dev kit delegates more functionality to the custom
-//    behaviour of the transformation matrix itself, but it seems needlessly complex to me - 
-//    here we just layer the local offsets on top of each other
-//    */
-//    MS s = MS::kSuccess;
-//    s = MPxTransform::computeLocalTransformation(xform, data);
-//    CHECK_MSTATUS(s);
-//    // insert the two custom matrices before the vanilla behaviour - 
-//    // HOPEFULLY this lets them come after the normal dag node parent transformation,
-//    // but before the normal TRS attributes are combined
-//    MMatrix finalParentMat = data.outputValue(aStFinalDriverOutMatrix).asMatrix();
-//    MMatrix finalLocalMat = data.outputValue(aStFinalLocalOffsetMatrix).asMatrix();
-//    const MMatrix endMat = finalParentMat * finalLocalMat * xform->asMatrix();
-//    xform->copyValues(&MPxTransformationMatrix(endMat));
-//    DEBUGS("computed local transformation")
-//    return s;
-//
-//}
 
 MHWRender::DrawAPI StrataPointNodeDrawOverride::supportedDrawAPIs() const
 {

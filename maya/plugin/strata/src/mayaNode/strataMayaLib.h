@@ -136,9 +136,11 @@ struct StrataOpMixin {
 	// ok I have a great idea
 	// just don't delete the graph while the graph is running
 	std::weak_ptr<ed::StrataOpGraph> opGraphPtr;
-	ed::StrataOp* opPtr = nullptr;
 
 	typedef ed::StrataOp strataOpType; // redefine for explicit linking maya node type to strata Op
+
+	strataOpType* opPtr = nullptr;
+
 	/* CAN WE have a single node shell class, to dynamically create any op type?
 	- we can have a pointer of the base StrataOp* type
 	- don't have to downcast necessarily, just call overridden functions?
@@ -155,16 +157,36 @@ struct StrataOpMixin {
 		opIndexPlug.setInt(opIndex);
 	}
 
-	ed::StrataOp createNewOp() {
+	strataOpType createNewOp() {
 		// return a full op instance for this node - 
 		// override in a dynamic node with the main if/branch logic, everything
 		// after this should only deal with the base
-		return ed::StrataOp();
+		return strataOpType();
+	}
+
+	void syncOp(ed::StrataOp* op, MDataBlock& data) {
+		/* update op from maya node datablock - 
+		this should be good enough, updating raw from MObject and plugs
+		seems asking for trouble
+		
+		also set topoDirty / dataDirty flags here
+
+		can't run this on newly created op directly, need to wait for compute
+		*/
+		
+		
+	}
+
+	void opNodePostConstructor() {
+		/* ensure graph pointer is reset*/
+		opGraphPtr.reset();
 	}
 
 	void onGraphConnected(std::shared_ptr<ed::StrataOpGraph> newGraphPtr) {
 		/*add this op node to graph,
 		* populate this node's pointers
+		* DO NOT DO THIS, REMOVE FUNCTION - 
+		* graph node handles graph topology centrally
 		*/
 		opGraphPtr = newGraphPtr;
 		ed::StrataOp newOp = createNewOp();

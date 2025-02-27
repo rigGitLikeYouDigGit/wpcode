@@ -160,6 +160,10 @@ MStatus StrataGraphNode::connectionBroken(const MPlug& plug,
 	/* if a connection is removed from the graph plug,
 	remove the corresponding node's op
 	and reorder everything
+
+	//// TODO:
+	set the REMOVED NODE'S INDEX to -1
+	in the midpoint of this function somewhere
 	*/
 	if (plug.attribute() != aStGraph) { // only care about the graph plug
 		return MPxNode::connectionBroken(plug, otherPlug, asSrc);
@@ -195,6 +199,16 @@ MStatus StrataGraphNode::connectionBroken(const MPlug& plug,
 			//continue;
 		}
 		indexMObjHandleMap.erase(i); // remove this index entry from hash map
+
+		// the actual removed node needs index set to -1, and removed from map
+		if (i == disconnectIndex) {
+			MPlug outPlug = depFn.findPlug("stOutput", false, &s);
+			if (s != MS::kSuccess) {
+				DEBUGS("cannot find stOutput plug for REMOVED node", );
+			}
+			setMayaNodeIndexMod.newPlugValueInt(outPlug, -1);
+			continue;
+		}
 		nodesToShuffle.push_back(&nodeMObj);
 
 		// get new op, add to graph vector
@@ -263,11 +277,11 @@ MStatus StrataGraphNode::connectionBroken(const MPlug& plug,
 
 MStatus StrataGraphNode::getConnectedStrataOpGraph(
 	MObject& thisNodeObj, MObject& graphIncomingConnectionAttr,
-	ed::StrataOpGraph*& graphPtr
+	std::weak_ptr<ed::StrataOpGraph>& graphPtr
 ) {
 	/* find the plug for an incoming graph connection, assume that a StrataGraphNode
 	is connected, try to get its contained graph.
-	If impossible, return nullptr
+	If impossible, reset weak pointer
 	ABSOLUTELY CHECK MSTATUS here, or face crashes
 	*/
 	using namespace ed;
@@ -277,15 +291,17 @@ MStatus StrataGraphNode::getConnectedStrataOpGraph(
 	MObject drivingNodeObj;
 	s = getDrivingNode(incomingConnectionPlug, drivingNodeObj);
 	if (s == MS::kFailure) {
-		graphPtr = nullptr;
+		//graphPtr = nullptr;
+		graphPtr.reset();
 		MCHECK(s, "Error getting driving node in getConnectedStrataOpGraph(), RETURNING NULL GRAPH POINTER");
 	}
 	StrataGraphNode* nodeStructPtr;
 	s = castToUserNode<StrataGraphNode>(drivingNodeObj, nodeStructPtr);
 	if (s == MS::kFailure) {
-		graphPtr = nullptr;
+		graphPtr.reset();
 		MCHECK(s, "Error casting driver node to StrataGraphNode in getConnectedStrataOpGraph(), RETURNING NULL GRAPH POINTER");
 	}
-	graphPtr = &(nodeStructPtr->opGraph);
+	// set maya node's weak pointer to master graph node's shared pointer
+	graphPtr = nodeStructPtr->opGraph;
 	return s;
 }

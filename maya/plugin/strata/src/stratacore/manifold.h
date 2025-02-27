@@ -197,6 +197,53 @@ namespace ed {
 		//STid(SElType et, int index) : elType(et), elIndex(index) {}
 
 	};
+	
+	/// ATTRIBUTES
+	// surely there's a different, correct way to do this?
+	// damn I wish I was clever
+
+	struct StrataAttr {
+		// maybe attributes should track their own names?
+	};
+	template<typename VT>
+	struct DenseStrataAttr : StrataAttr{
+		typedef VT VT;
+		std::vector<VT> vals;
+	};
+
+	template<typename VT>
+	struct SparseStrataAttr : StrataAttr{
+		typedef VT VT;
+		std::unordered_map<int, VT> vals;
+	};
+
+	template<typename VT>
+	struct StrataArrayAttr : StrataAttr {
+		typedef VT VT;
+		std::vector<std::vector<VT>> vals;
+	};
+
+	template<typename VT>
+	struct SparseStrataArrayAttr : StrataAttr{ // is there a good way to prevent the multiplying here?
+		typedef VT VT;
+		std::unordered_map<int, std::vector< VT > > vals;
+	};
+
+	struct StrataGroup { // maybe groups can track their own element types?
+		std::vector<int> contents;
+		StrataGroup() {};
+		StrataGroup(int size) {
+			contents.reserve(size);
+			// why can you reserve an unsorted set but not a sorted one?
+			///// :)))))) thank you c++
+		};
+		
+		// we allocate new memory for set operations - cringe
+		// need a decent span-like container, and decent set behaviour for it
+		inline std::unordered_set<int> asSet() {
+			return std::unordered_set<int>(contents.begin(), contents.end());
+		}
+	};
 
 	struct StrataManifold {
 		// using vectors here for now
@@ -213,6 +260,32 @@ namespace ed {
 		std::vector<SEdgeData> edgeDatas;
 		std::vector<SFaceData> faceDatas;
 
+		// ATTRIBUTES 
+		// unsure if wrapping this is useful - for now EVERYTHING explicit
+		std::unordered_map<std::string, StrataAttr> attrs;
+		std::unordered_map<std::string, StrataGroup> groups;
+
+		StrataAttr* getAttr(std::string& name) {
+			// convenience to get a pointer, handle casting yourself at point of use
+			// check pointer is valid
+			if (!attrs.count(name)) {
+				return nullptr;
+			}
+			return &(attrs[name]);
+		}
+
+		StrataGroup* getGroup(std::string& name, bool create=false, int size=4) {
+			// can't create attrs as easily as groups, so only this gets the default flag
+			if (!groups.count(name)) {
+				if (!create) {
+					return nullptr;
+				}
+				// create new group if it doesn't exist
+				groups[name] = StrataGroup(size);
+			}
+			return &(groups[name]);
+		}
+
 		void clear() {
 			// is it better to just make a new object?
 
@@ -226,6 +299,23 @@ namespace ed {
 			edgeDatas.clear();
 			faceDatas.clear();
 
+			attrs.clear();
+			groups.clear();
+
+			initAttrs();
+		}
+
+		void initAttrs() {
+			/* set up core attrs we always expect to find and be populated - 
+			currently only path.
+			do we put name here too?*/
+			StrataArrayAttr<int> path;
+			attrs["path"] = path;
+		}
+
+		StrataManifold() {
+			// only run init when no copy source is given
+			initAttrs();
 		}
 
 

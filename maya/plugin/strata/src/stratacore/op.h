@@ -138,42 +138,12 @@ namespace ed {
 			*/
 			return &(ExpNode());
 		}
-		virtual StrataManifold* evalTopo(StrataManifold& manifold) {}
-		virtual StrataManifold* evalData(StrataManifold& manifold) {}
+		virtual void evalTopo(StrataManifold& manifold) {}
+		virtual void evalData(StrataManifold& manifold) {}
 
 		inline void reset() {
+			/* to reset node state, clear cached manifold result*/
 			result.clear();
-		}
-
-	};
-
-
-
-	struct AddPointsOp : StrataOp {
-		// add one or more points to the graph
-		std::vector<MMatrix> matrices;
-		std::vector<std::string> names;
-
-		SmallList<int, 256> result; // add a maximum of 256 points per op?
-
-		virtual StrataManifold* evalTopo(StrataManifold& manifold) {
-			manifold.points.reserve(matrices.size());
-			for (size_t i = 0; i < matrices.size(); i++) {
-				SPoint el(names[i]);
-				SPointData elData;
-				elData.matrix = matrices[i];
-				SPoint* resultpt = manifold.addPoint(el, elData);
-				result.push_back(resultpt->globalIndex);
-			}
-			return &manifold;
-		}
-
-		virtual StrataManifold* evalData(StrataManifold& manifold) {
-			// update the matrix of each point
-			for (size_t i = 0; i < matrices.size(); i++) {
-				manifold.pointDatas[result[static_cast<int>(i)]].matrix = matrices[static_cast<int>(i)];
-			}
-			return &manifold;
 		}
 
 	};
@@ -186,7 +156,7 @@ namespace ed {
 		std::vector<std::string> names;
 		std::vector<std::vector<int>> driverGlobalIds;
 
-		virtual StrataManifold* evalTopo(StrataManifold& manifold) {
+		virtual void evalTopo(StrataManifold& manifold) {
 			manifold.edges.reserve(names.size());
 			for (size_t i = 0; i < names.size(); i++) {
 				SEdge el(names[i]);
@@ -216,7 +186,7 @@ namespace ed {
 					driverPtr->edges.push_back(resultEl->globalIndex);
 				}
 			}
-			return &manifold;
+			//return &manifold;
 		}
 	};
 
@@ -225,7 +195,7 @@ namespace ed {
 		std::vector<std::string> names;
 		std::vector<std::vector<int>> driverGlobalIds;
 
-		virtual StrataManifold* evalTopo(StrataManifold& manifold) {
+		virtual void evalTopo(StrataManifold& manifold) {
 			manifold.faces.reserve(names.size());
 			for (size_t i = 0; i < names.size(); i++) {
 
@@ -269,7 +239,7 @@ namespace ed {
 				}
 
 			}
-			return &manifold;
+			//return &manifold;
 		}
 
 	};

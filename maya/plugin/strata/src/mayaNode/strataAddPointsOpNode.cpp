@@ -9,8 +9,9 @@
 #include "../api.h"
 #include "strataAddPointsOpNode.h"
 #include "strataGraphNode.h"
+#include "strataPointNode.h"
 #include "../lib.cpp"
-
+#include "../strataop/strataAddPointsOp.h"
 
 using namespace ed;
 
@@ -21,6 +22,13 @@ MString StrataAddPointsOpNode::kNODE_NAME("strataAddPointsOp");
 
 MString StrataAddPointsOpNode::drawDbClassification("drawdb/geometry/strataAddPointsOp");
 MString StrataAddPointsOpNode::drawRegistrantId("StrataAddPointsOpNodePlugin");
+
+MObject StrataAddPointsOpNode::aStPoint;
+MObject StrataAddPointsOpNode::aStPointLocalMatrix;
+MObject StrataAddPointsOpNode::aStPointHomeMatrix;
+MObject StrataAddPointsOpNode::aStPointName;
+MObject StrataAddPointsOpNode::aStResult;
+
 
 DEFINE_STRATA_STATIC_MOBJECTS(StrataAddPointsOpNode)
 
@@ -35,15 +43,33 @@ MStatus StrataAddPointsOpNode::initialize() {
     MFnMessageAttribute msgFn;
     MFnTypedAttribute tFn;
 
+    aStPoint = cFn.create("stPoint", "stPoint");
+    cFn.setArray(true);
+    cFn.setUsesArrayDataBuilder(true);
+    cFn.setReadable(false);
+
+    aStPointName = tFn.create("stPointName", "stPointName", MFnData::kString);
+    cFn.addChild(aStPointName);
+    aStPointLocalMatrix = mFn.create("stPointLocalMatrix", "stPointLocalMatrix");
+    cFn.addChild(aStPointLocalMatrix);
+    aStPointHomeMatrix = mFn.create("stPointHomeMatrix", "stPointHomeMatrix");
+    cFn.addChild(aStPointHomeMatrix);
+
+    aStResult = nFn.create("stResult", "stResult", MFnNumericData::kInt, -1);
+
     // driver array
-    std::vector<MObject> drivers;
-    std::vector<MObject> driven;
+    std::vector<MObject> drivers{ 
+        aStPoint//, // unsure if setting compound parent in attributeAffects is enough
+    };
+    std::vector<MObject> driven{ 
+        aStResult
+    };
+
     s = addStrataAttrs<StrataAddPointsOpNode>(drivers, driven);
     MCHECK(s, "could not add Strata attrs");
     addAttributes<StrataAddPointsOpNode>(drivers);
     addAttributes<StrataAddPointsOpNode>(driven);
     setAttributesAffect<StrataAddPointsOpNode>(drivers, driven);
-    
 
     CHECK_MSTATUS_AND_RETURN_IT(s);
     return s;
@@ -57,13 +83,17 @@ MStatus StrataAddPointsOpNode::compute(const MPlug& plug, MDataBlock& data) {
         return s;
     }
 
-    data.setClean(plug);
+    if (opGraphPtr.expired()) {
+        data.setClean(plug);
+        return s;
+    }
 
-    return s;
+
+    
 }
 
 void StrataAddPointsOpNode::postConstructor() {
-
+    opNodePostConstructor();
 }
 
 MStatus StrataAddPointsOpNode::legalConnection(
@@ -79,5 +109,8 @@ MStatus StrataAddPointsOpNode::legalConnection(
     the docs and argument names around plug connection direction are riddles
     */
 
+    
+
+    return MS::kUnknownParameter;
 }
 

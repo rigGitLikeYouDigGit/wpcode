@@ -102,7 +102,7 @@ public:
 	// convenience method for other nodes to get the connected graph node
 	static MStatus getConnectedStrataOpGraph(
 		MObject& thisNodeObj, MObject& graphIncomingConnectionAttr,
-		ed::StrataOpGraph*& graphPtr
+		std::weak_ptr<ed::StrataOpGraph>& opGraphPtr
 	);
 };
 

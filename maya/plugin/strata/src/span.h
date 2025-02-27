@@ -1,5 +1,13 @@
 
+/*
+This is an implementation of C++20's std::span
+http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/n4820.pdf
+*/
 
+//          Copyright Tristan Brindle 2018.
+// Distributed under the Boost Software License, Version 1.0.
+//    (See accompanying file ../../LICENSE_1_0.txt or copy at
+//          https://www.boost.org/LICENSE_1_0.txt)
 
 #ifndef TCB_SPAN_HPP_INCLUDED
 #define TCB_SPAN_HPP_INCLUDED
@@ -24,7 +32,7 @@
 // Various feature test macros
 
 #ifndef TCB_SPAN_NAMESPACE_NAME
-#define TCB_SPAN_NAMESPACE_NAME tcb
+#define TCB_SPAN_NAMESPACE_NAME ed
 #endif
 
 #if __cplusplus >= 201703L || (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L)
