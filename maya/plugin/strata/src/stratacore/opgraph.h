@@ -13,6 +13,10 @@ namespace ed {
 	// how does that work with inheriting values and geometry? - if an element op doesn't OVERRIDE the value, that
 	// just means the previous one will be used - I think that's the definition of inheritance, right?
 	struct StrataOpGraph {
+		/* for building graph, use some kind of lock or mutex to modify vectors
+		safely from separate maya nodes - after that, graph can be eval'd in parallel safely
+		*/
+
 
 		std::string name; // still not sure how name should be handled
 
@@ -37,6 +41,15 @@ namespace ed {
 			opNameIndexMap[newOp->name] = newIndex;
 			graphChanged = true;
 			return newOp;
+		}
+
+		void rebuildFromOps() {
+			/* rebuild graph tables and caches from current ops in vector*/
+			opNameIndexMap.clear();
+			opNameIndexMap.reserve(ops.size());
+			for (size_t i = 0; i < ops.size(); i++) {
+				opNameIndexMap[ops[i].name] = static_cast<int>(i);
+			}
 		}
 
 		inline StrataOp* getOp(const int opIndex) {

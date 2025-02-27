@@ -15,54 +15,54 @@ using namespace ed;
 
 
 
-MTypeId StrataPoint::kNODE_ID(0x00122C1C);
-MString StrataPoint::kNODE_NAME("strataPoint");
+MTypeId StrataPointNode::kNODE_ID(0x00122CA1);
+MString StrataPointNode::kNODE_NAME("strataPoint");
 
-MString StrataPoint::drawDbClassification("drawdb/geometry/stratapoint");
-MString StrataPoint::drawRegistrantId("StrataPointPlugin");
+MString StrataPointNode::drawDbClassification("drawdb/geometry/stratapoint");
+MString StrataPointNode::drawRegistrantId("StrataPointNodePlugin");
 
 //MObject MPxTransform::offsetParentMatrix;
 
-MObject StrataPoint::aStDriver;
-MObject StrataPoint::aStDriverType;
-MObject StrataPoint::aStDriverWeight;
+MObject StrataPointNode::aStDriver;
+MObject StrataPointNode::aStDriverType;
+MObject StrataPointNode::aStDriverWeight;
 
-MObject StrataPoint::aStDriverClosestPoint;
-MObject StrataPoint::aStDriverUseClosestPoint;
+MObject StrataPointNode::aStDriverClosestPoint;
+MObject StrataPointNode::aStDriverUseClosestPoint;
 
-MObject StrataPoint::aStDriverPointMatrix;
+MObject StrataPointNode::aStDriverPointMatrix;
 
-MObject StrataPoint::aStDriverCurve;
-MObject StrataPoint::aStDriverUpCurve;
-MObject StrataPoint::aStDriverRefLengthCurve;
-MObject StrataPoint::aStDriverCurveLength;
-MObject StrataPoint::aStDriverCurveParam;
-MObject StrataPoint::aStDriverCurveLengthParamBlend;
-MObject StrataPoint::aStDriverCurveReverseBlend;
-MObject StrataPoint::aStDriverCurveNormLengthBlend;
+MObject StrataPointNode::aStDriverCurve;
+MObject StrataPointNode::aStDriverUpCurve;
+MObject StrataPointNode::aStDriverRefLengthCurve;
+MObject StrataPointNode::aStDriverCurveLength;
+MObject StrataPointNode::aStDriverCurveParam;
+MObject StrataPointNode::aStDriverCurveLengthParamBlend;
+MObject StrataPointNode::aStDriverCurveReverseBlend;
+MObject StrataPointNode::aStDriverCurveNormLengthBlend;
 
-MObject StrataPoint::aStDriverSurface;
+MObject StrataPointNode::aStDriverSurface;
 
-MObject StrataPoint::aStDriverNormalizedWeight;
-MObject StrataPoint::aStDriverLocalOffsetMatrix;
-MObject StrataPoint::aStDriverOutMatrix;
-MObject StrataPoint::aStDriverUpdateParamsInEditMode;
+MObject StrataPointNode::aStDriverNormalizedWeight;
+MObject StrataPointNode::aStDriverLocalOffsetMatrix;
+MObject StrataPointNode::aStDriverOutMatrix;
+MObject StrataPointNode::aStDriverUpdateParamsInEditMode;
 
-MObject StrataPoint::aStEditMode;
-MObject StrataPoint::aStFinalDriverOutMatrix;
-MObject StrataPoint::aStFinalLocalOffsetMatrix;
-MObject StrataPoint::aStFinalOutMatrix;
+MObject StrataPointNode::aStEditMode;
+MObject StrataPointNode::aStFinalDriverOutMatrix;
+MObject StrataPointNode::aStFinalLocalOffsetMatrix;
+MObject StrataPointNode::aStFinalOutMatrix;
 
- MObject StrataPoint::aStName;
- MObject StrataPoint::aStLinkNameToNode;
- MObject StrataPoint::aBalanceWheel;
+ MObject StrataPointNode::aStName;
+ MObject StrataPointNode::aStLinkNameToNode;
+ MObject StrataPointNode::aBalanceWheel;
 
-MObject StrataPoint::aStRadius;
-MObject StrataPoint::aStUiData;
+MObject StrataPointNode::aStRadius;
+MObject StrataPointNode::aStUiData;
 
 
 
-MStatus StrataPoint::initialize() {
+MStatus StrataPointNode::initialize() {
 	MStatus s = MS::kSuccess;
 	MFnNumericAttribute nFn;
     MFnCompoundAttribute cFn;
@@ -191,17 +191,17 @@ MStatus StrataPoint::initialize() {
         aStDriver, aStEditMode, aStRadius, aStUiData,
         aStName, aStLinkNameToNode
     };
-	addAttributes<StrataPoint>(driverObjs);
-    addAttributes<StrataPoint>(drivenObjs);
+	addAttributes<StrataPointNode>(driverObjs);
+    addAttributes<StrataPointNode>(drivenObjs);
 
-    setAttributesAffect<StrataPoint>(driverObjs, drivenObjs);
+    setAttributesAffect<StrataPointNode>(driverObjs, drivenObjs);
     
 
 	CHECK_MSTATUS_AND_RETURN_IT(s);
 	return s;
 }
 
-MStatus StrataPoint::computeDriver(MDataHandle& parentDH, MDataBlock& data) {
+MStatus StrataPointNode::computeDriver(MDataHandle& parentDH, MDataBlock& data) {
     // compute matrices for a single driver entry
     MStatus s(MS::kSuccess);
     
@@ -224,13 +224,13 @@ MStatus StrataPoint::computeDriver(MDataHandle& parentDH, MDataBlock& data) {
     return MS::kSuccess;
 }
 
-MStatus combineDriverInfluences(StrataPoint& node,
+MStatus combineDriverInfluences(StrataPointNode& node,
     MDataBlock& data) {
     // assuming that all drivers have been computed in the data block,
     // combine all the offset matrices using their weights
     MStatus s(MS::kSuccess);
 
-    MArrayDataHandle driversHdl = data.inputArrayValue(StrataPoint::aStDriver);
+    MArrayDataHandle driversHdl = data.inputArrayValue(StrataPointNode::aStDriver);
     float weightTotal = 0.0;
     for (uint i = 0; i < driversHdl.elementCount(); i++) {
         jumpToElement(driversHdl, i);
@@ -244,7 +244,7 @@ MStatus combineDriverInfluences(StrataPoint& node,
     return s;
 }
 
-MStatus StrataPoint::compute(const MPlug& plug, MDataBlock& data) {
+MStatus StrataPointNode::compute(const MPlug& plug, MDataBlock& data) {
     MStatus s = MS::kSuccess;
     
 
@@ -256,7 +256,7 @@ MStatus StrataPoint::compute(const MPlug& plug, MDataBlock& data) {
     //    || (plug.attribute() == MPxTransform::parentMatrix)
     //    || (plug.attribute() == MPxTransform::parentInverseMatrix))
     //{
-    //    StrataPointMatrix xform(MMatrix::identity);
+    //    StrataPointNodeMatrix xform(MMatrix::identity);
     //    computeLocalTransformation(&xform, data);
     //}
 
@@ -277,7 +277,7 @@ MStatus StrataPoint::compute(const MPlug& plug, MDataBlock& data) {
     return s;
 }
 
-void StrataPoint::postConstructor() {
+void StrataPointNode::postConstructor() {
     // check that this node's parent transform is named properly,
     // connect up its offsetParentMatrix attribute
 
@@ -360,13 +360,13 @@ void StrataPoint::postConstructor() {
 
 }
 
-//MMatrix StrataPoint::asMatrix()
-//MMatrix StrataPoint::getMatrix(MStatus* s) {
+//MMatrix StrataPointNode::asMatrix()
+//MMatrix StrataPointNode::getMatrix(MStatus* s) {
 //    DEBUGS("call getMatrix");
 //    return MPxTransform::getMatrix(s);
 //}
 
-//MStatus StrataPoint::computeLocalTransformation(MPxTransformationMatrix* xform, MDataBlock& data) {
+//MStatus StrataPointNode::computeLocalTransformation(MPxTransformationMatrix* xform, MDataBlock& data) {
 //    /* rockingTransform example in the dev kit delegates more functionality to the custom
 //    behaviour of the transformation matrix itself, but it seems needlessly complex to me - 
 //    here we just layer the local offsets on top of each other
@@ -386,18 +386,18 @@ void StrataPoint::postConstructor() {
 //
 //}
 
-MHWRender::DrawAPI StrataPointDrawOverride::supportedDrawAPIs() const
+MHWRender::DrawAPI StrataPointNodeDrawOverride::supportedDrawAPIs() const
 {
 	// this plugin supports both GL and DX
 	return (MHWRender::kOpenGL | MHWRender::kDirectX11 | MHWRender::kOpenGLCoreProfile);
 }
-bool StrataPointDrawOverride::isBounded(const MDagPath& /*objPath*/,
+bool StrataPointNodeDrawOverride::isBounded(const MDagPath& /*objPath*/,
 	const MDagPath& /*cameraPath*/) const
 {
 	return true;
 }
 
-float StrataPointDrawOverride::getMultiplier(const MDagPath& objPath) const
+float StrataPointNodeDrawOverride::getMultiplier(const MDagPath& objPath) const
 {
 	// Retrieve value of the size attribute from the node
 	// don't bother converting to distance and back, units are units
@@ -405,7 +405,7 @@ float StrataPointDrawOverride::getMultiplier(const MDagPath& objPath) const
 	MObject footprintNode = objPath.node(&status);
 	if (status)
 	{
-		MPlug plug(footprintNode, StrataPoint::aStRadius);
+		MPlug plug(footprintNode, StrataPointNode::aStRadius);
 		if (!plug.isNull())
 		{
 			return plug.asFloat();
@@ -414,7 +414,7 @@ float StrataPointDrawOverride::getMultiplier(const MDagPath& objPath) const
 	return 1.0f;
 }
 
-MBoundingBox StrataPointDrawOverride::boundingBox(
+MBoundingBox StrataPointNodeDrawOverride::boundingBox(
 	const MDagPath& objPath,
 	const MDagPath& cameraPath) const
 {
@@ -425,7 +425,7 @@ MBoundingBox StrataPointDrawOverride::boundingBox(
 
 
 // Called by Maya each time the object needs to be drawn.
-MUserData* StrataPointDrawOverride::prepareForDraw(
+MUserData* StrataPointNodeDrawOverride::prepareForDraw(
     const MDagPath& objPath,
     const MDagPath& cameraPath,
     const MHWRender::MFrameContext& frameContext,
@@ -437,10 +437,10 @@ MUserData* StrataPointDrawOverride::prepareForDraw(
     // e.g. in this sample, we compute and cache the data for usage later when we create the 
     // MUIDrawManager to draw footprint in method addUIDrawables().
     //DEBUGS("prepare for draw")
-    StrataPointUserData* data = dynamic_cast<StrataPointUserData*>(oldData);
+    StrataPointNodeUserData* data = dynamic_cast<StrataPointNodeUserData*>(oldData);
     if (!data)
     {
-        data = new StrataPointUserData();
+        data = new StrataPointNodeUserData();
     }
     MStatus s = MS::kSuccess;
 
@@ -482,7 +482,7 @@ MUserData* StrataPointDrawOverride::prepareForDraw(
                 float(worldPos[0]), float(worldPos[1]), float(worldPos[2]));
         }
         
-        MPlug radiusPlug = MFnDependencyNode(node).findPlug(StrataPoint::aStRadius, s);
+        MPlug radiusPlug = MFnDependencyNode(node).findPlug(StrataPointNode::aStRadius, s);
         CHECK_MSTATUS(s);
         data->size = radiusPlug.asFloat();
     }
@@ -512,7 +512,7 @@ MUserData* StrataPointDrawOverride::prepareForDraw(
 // addUIDrawables() provides access to the MUIDrawManager, which can be used
 // to queue up operations for drawing simple UI elements such as lines, circles and
 // text. To enable addUIDrawables(), override hasUIDrawables() and make it return true.
-void StrataPointDrawOverride::addUIDrawables(
+void StrataPointNodeDrawOverride::addUIDrawables(
     const MDagPath& objPath,
     MHWRender::MUIDrawManager& drawManager,
     const MHWRender::MFrameContext& frameContext,
@@ -521,7 +521,7 @@ void StrataPointDrawOverride::addUIDrawables(
     // Get data cached by prepareForDraw() for each drawable instance, then MUIDrawManager 
     // can draw simple UI by these data.
     //DEBUGS("addUIDrawables");
-    StrataPointUserData* pLocatorData = (StrataPointUserData*)data;
+    StrataPointNodeUserData* pLocatorData = (StrataPointNodeUserData*)data;
     if (!pLocatorData)
     {
         DEBUGS("no prev user data")

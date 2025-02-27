@@ -14,9 +14,11 @@ register all plugins
 #include <maya/MDrawRegistry.h>
 
 
-#include "mayanode/stratagraphnode.cpp"
+#include "mayaNode/strataGraphNode.h"
+//#include "mayaNode/strataOpNodeBase.h"
+#include "mayaNode/strataPointNode.h"
+#include "mayaNode/strataAddPointsOpNode.h"
 
-//#include "mayanode/stratapointnode.h"
 //#include "mayanode/stratacurvenode.h"
 //#include "mayanode/stratasurfacenode.h"
 
@@ -89,28 +91,39 @@ MStatus initializePlugin( MObject obj ){
         return MS::kFailure;
     };
 
+    //REGISTER_NODE(StrataOpNodeBase);
 
-    ////// strataPoint node
-    //s = fnPlugin.registerNode(
-    //    StrataPoint::kNODE_NAME,
-    //    StrataPoint::kNODE_ID,
-    //    StrataPoint::creator,
-    //    StrataPoint::initialize,
-    //    MPxNode::kLocatorNode,
-    //    &StrataPoint::drawDbClassification
-    //);
     //if (MS::kSuccess != s) {
-    //    cerr << 82 << "failed to register node type " + StrataPoint::kNODE_NAME; 
+    //    cerr << 82 << "failed to register node type " + StrataOpNodeBase::kNODE_NAME;
     //    return MS::kFailure;
     //};
-    //s = MHWRender::MDrawRegistry::registerDrawOverrideCreator(
-    //    StrataPoint::drawDbClassification,
-    //    StrataPoint::drawRegistrantId,
-    //    StrataPointDrawOverride::creator);
-    //if (!s) {
-    //    s.perror("registerDrawOverrideCreator");
-    //    return s;
-    //}
+
+
+    ////// strataPoint node
+    s = fnPlugin.registerNode(
+        StrataPointNode::kNODE_NAME,
+        StrataPointNode::kNODE_ID,
+        StrataPointNode::creator,
+        StrataPointNode::initialize,
+        MPxNode::kLocatorNode,
+        &StrataPointNode::drawDbClassification
+    );
+    if (MS::kSuccess != s) {
+        cerr << 82 << "failed to register node type " + StrataPointNode::kNODE_NAME;
+        return MS::kFailure;
+    };    
+    s = MHWRender::MDrawRegistry::registerDrawOverrideCreator(
+        StrataPointNode::drawDbClassification,
+        StrataPointNode::drawRegistrantId,
+        StrataPointNodeDrawOverride::creator);
+    if (!s) {
+        s.perror("could not register drawOverrideCreator for StrataPoint");
+        return s;
+    }
+
+    REGISTER_NODE(StrataAddPointsOpNode);
+
+
 
     ////// strataCurve node
     //s = fnPlugin.registerNode(
@@ -148,19 +161,23 @@ MStatus uninitializePlugin( MObject obj ){
     s = MS::kSuccess;
     MFnPlugin fnPlugin(obj);
 
-    /*s = MHWRender::MDrawRegistry::deregisterDrawOverrideCreator(
-        StrataPoint::drawDbClassification,
-        StrataPoint::drawRegistrantId);
+    s = MHWRender::MDrawRegistry::deregisterDrawOverrideCreator(
+        StrataPointNode::drawDbClassification,
+        StrataPointNode::drawRegistrantId);
     if (!s) {
-        s.perror("deregisterDrawOverrideCreator");
+        s.perror("could not deregister drawOverride for StrataPoint");
         return s;
     }
 
+    /*
     DEREGISTER_NODE(StrataPoint);
     DEREGISTER_NODE(StrataCurve);
     DEREGISTER_NODE(StrataSurface);*/
 
     DEREGISTER_NODE(StrataGraphNode);
+    //DEREGISTER_NODE(StrataOpNodeBase);
+    DEREGISTER_NODE(StrataPointNode);
+    DEREGISTER_NODE(StrataAddPointsOpNode);
 
     DEBUGS("uninitialised strata")
     return s;

@@ -83,18 +83,18 @@ def reloadPluginTest():
 	ptB = makeStrataPoint("strataPointB")
 	ptC = makeStrataPoint("strataPointC")
 	ptD = makeStrataPoint("strataPointD")
-	#
-
-	dgNode, crvTf = makeStrataCurve("strataCurveA", ptA, ptB)
-
-	dgNodeB, crvTf = makeStrataCurve("strataCurveB", ptC, ptD)
-	#
 	# # move points
 	cmds.setAttr(ptA + ".translate", -3, 2, -3)
 	cmds.setAttr(ptB + ".translate", 2, 3, -3)
 	#
 	cmds.setAttr(ptC + ".translate", 2, -1, -3)
 	cmds.setAttr(ptD + ".translate", 3, -1, -3)
+
+	return
+	dgNode, crvTf = makeStrataCurve("strataCurveA", ptA, ptB)
+
+	dgNodeB, crvTf = makeStrataCurve("strataCurveB", ptC, ptD)
+	#
 
 
 

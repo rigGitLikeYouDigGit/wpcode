@@ -9,13 +9,13 @@
 #include <maya/MEventMessage.h>
 #include <maya/MGlobal.h>
 
-class StrataPoint : public MPxLocatorNode {
+class StrataPointNode : public MPxLocatorNode {
 public:
-	StrataPoint() {}
-	virtual ~StrataPoint() {}
+	StrataPointNode() {}
+	virtual ~StrataPointNode() {}
 
 	static void* creator() {
-		StrataPoint* newObj = new StrataPoint();
+		StrataPointNode* newObj = new StrataPointNode();
 		return newObj;
 	}
 	virtual void postConstructor();
@@ -24,8 +24,7 @@ public:
 	//virtual MStatus connectionBroken(
 	//	const MPlug& plug, const MPlug& otherPlug, bool asSrc);
 
-	/*static MTypeId kNODE_ID = MTypeId(0x00122C1C);
-	static MString kNODE_NAME = MString("curveFrame");*/
+
 	static MTypeId kNODE_ID;// = const MTypeId(0x00122C1C);
 	static MString kNODE_NAME;// = MString("curveFrame");
 
@@ -37,9 +36,6 @@ public:
 
 	virtual MStatus compute(const MPlug& plug, MDataBlock& data);
 	MStatus computeDriver(MDataHandle& parentDH, MDataBlock& data);
-	//MMatrix getMatrix(MStatus* s);
-
-	//virtual MStatus computeLocalTransformation(MPxTransformationMatrix* xform, MDataBlock& data);
 	
 	// creation mechanism to fire once node is added to the dag
 	static MCallbackId creationCbId;
@@ -102,7 +98,7 @@ public:
 
 
 //draw override stuff copied directly from the footprint example
-class StrataPointUserData : public MUserData
+class StrataPointNodeUserData : public MUserData
 {
 public:
 	MColor       fColor{ 1.f, 0.f, 0.f, 1.f };
@@ -110,27 +106,27 @@ public:
 	float size;
 	MVector pos{ 0, 0, 0 };
 };
-class StrataPointDrawOverride : public MHWRender::MPxDrawOverride
+class StrataPointNodeDrawOverride : public MHWRender::MPxDrawOverride
 {
 public:
 
 	// need a pointer to the transform, so we can get an MObject for setGeometryDirty
 	// feels strange to hold a pointer in this override class, but apparently it's fine
-	StrataPoint* pointNodePtr;
+	StrataPointNode* pointNodePtr;
 
 	static MHWRender::MPxDrawOverride* creator(const MObject& obj) {
-		StrataPointDrawOverride* ptr = new StrataPointDrawOverride(
+		StrataPointNodeDrawOverride* ptr = new StrataPointNodeDrawOverride(
 			obj);
 		return ptr;
 	}
 	// setting alwaysDirty to true here, because I couldn't find another easy way to have it 
 	// redraw when attributes changed, setting geometry dirty seemed to do nothing
-	StrataPointDrawOverride(const MObject& obj) : MHWRender::MPxDrawOverride(
+	StrataPointNodeDrawOverride(const MObject& obj) : MHWRender::MPxDrawOverride(
 		obj, NULL, true) {
 
 	}
 
-	~StrataPointDrawOverride() {
+	~StrataPointNodeDrawOverride() {
 	};
 	MHWRender::DrawAPI supportedDrawAPIs() const override;
 	bool isBounded(

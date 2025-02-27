@@ -4,6 +4,7 @@
 #include <string>
 
 #include "MInclude.h"
+#include "macro.h"
 
 #include "wpshared/enum.h"
 namespace ed {
@@ -123,6 +124,54 @@ namespace ed {
 		toExtend.insert(toExtend.end(), toAdd.begin(), toAdd.end());
 	}
 
+	static MStatus getAllConnectedPlugs(
+		MPlug& queryPlug,
+		MPlugArray& result,
+		bool getSources, bool getSinks) {
+		// returns nodes connected to attribute
+		//DEBUGS("api.h getAllConnectedPlugs")
+		MStatus s(MS::kSuccess);
+		if (queryPlug.isArray()) {
+		}
+		else {
+			queryPlug.connectedTo(result, getSources, getSinks, &s);
+		}
+		MCHECK(s, "could not get connected plugs in getAllConnectedPlugs()");
+
+		return s;
+	}
+
+	static MStatus getAllConnectedPlugs(
+		MObject& mainNode, MObject& plugAttr,
+		MPlugArray& result,
+		bool getSources, bool getSinks) {
+		// returns nodes connected to attribute
+		//DEBUGS("api.h getAllConnectedPlugs")
+		MStatus s(MS::kSuccess);
+		MFnDependencyNode dFn(mainNode);
+		MPlug queryPlug(mainNode, plugAttr);
+		if (queryPlug.isNull()) {
+			s = MS::kFailure;
+			MCHECK(s, "could not get query plug in getAllConnectedPlugs()");
+		}
+		return getAllConnectedPlugs(queryPlug, result, getSources, getSinks);
+	}
+
+	static MStatus getDrivingNode(
+		MPlug& fromPlug, MObject& result) {
+		MS s(MS::kSuccess);
+		MPlugArray plugs;
+		s = getAllConnectedPlugs(fromPlug, plugs, true, false);
+		MCHECK(s, "plug error in getDrivingNode(), aborting");
+		if (plugs.length() < 1) {
+			s = MS::kFailure;
+			MCHECK(s, "no connections found in getDrivingNode(), aborting");
+		}
+		result = plugs[0].node(&s);
+		MCHECK(s, "error getting other node from plug in getDrivingNode(), aborting");
+		return s;
+	}
+
 	static std::vector<MPlug> getAllChildPlugs(MPlug& parent) {
 		// return depth-first list of all plugs under parent
 		std::vector<MPlug> result{ parent };
@@ -158,25 +207,33 @@ namespace ed {
 	}
 
 
-	template <typename T>
-	static T* castToUserNode(MObject& nodeObj, MStatus& s) {
+	template <typename UserNodeT>
+	static MStatus castToUserNode(MObject& nodeObj, UserNodeT*& ptr) {
 		// retrieve and cast full user-defined node for given MObject
 		// thanks Matt
-		//s = MS::kSuccess;
+		MS s(MS::kSuccess);
+		if (nodeObj.isNull()) {
+			s = MS::kFailure;
+			MCHECK(s, "object passed to castToUserNode() is null, aborting");
+		}
 		MFnDependencyNode nodeFn(nodeObj);
 
 		// retrieve MPxNode pointer
 		MPxNode* mpxPtr = nodeFn.userNode(&s);
-		MCHECK(s, "failed to extract mpxNode pointer, object is invalid");
+		MCHECK(s, "failed to extract mpxNode pointer in castToUserNode(), aborting");
 
 		// black science
-		T* sinkPtr = dynamic_cast<T*>(mpxPtr);
-		if (sinkPtr == NULL) {
+		UserNodeT* sinkPtr = dynamic_cast<UserNodeT*>(mpxPtr);
+		if ((sinkPtr == NULL) || (sinkPtr == nullptr)) {
 			cerr << "failed dynamic cast to sink instance " << endl;
 			s = MS::kFailure;
+			ptr = nullptr;
 		}
-		MCHECK(s, "failed to cast mpxNode pointer, good luck");
-		return sinkPtr;
+		MCHECK(s, "failed to dynamic_cast cast mpxNode pointer in castToUserNode(), good luck");
+
+		ptr = sinkPtr; // set the reference to this new pointer
+
+		return s;
 	}
 
 }
