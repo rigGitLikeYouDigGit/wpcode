@@ -321,7 +321,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="src\mayaNode\strataOpNodeBase.cpp" />
     <ClCompile Include="src\stratacore\manifold.cpp" />
     <ClInclude Include="src\mayaNode\strataAddPointsOpNode.h" />
-    <ClInclude Include="src\mayaNode\strataAttrMacros.h" />
+    <ClInclude Include="src\mayaNode\strataMayaLib.h" />
     <ClInclude Include="src\mayaNode\strataGraphNode.h" />
     <ClInclude Include="src\stratacore\manifold.h" />
     <ClCompile Include="src\mayaNode\stratacurvenode.cpp" />
@@ -342,7 +342,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="src\mayaNode\strataOpNodeBase.h" />
     <ClInclude Include="src\stratacore\opgraph.h" />
     <ClInclude Include="src\span.h" />
-    <ClInclude Include="src\strataop\strataaddpointsop.h" />
+    <ClInclude Include="src\strataop\strataAddPointsOp.h" />
     <ClInclude Include="src\mayaNode\stratacurvenode.h" />
     <ClInclude Include="src\mayaNode\stratasurfacenode.h" />
   </ItemGroup>

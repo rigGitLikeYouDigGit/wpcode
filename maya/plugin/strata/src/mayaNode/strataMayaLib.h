@@ -77,7 +77,8 @@ MStatus addStrataAttrs(
 	//tFn.setIndexMatters(true);
 
 	// output index of st op node, use as output to all 
-	T::aStOutput = nFn.create("stOutput", "stOutput", MFnNumericData::kInt);
+	// -1 as default so it's obvious when a node hasn't been initialised, connected to graph, etc
+	T::aStOutput = nFn.create("stOutput", "stOutput", MFnNumericData::kInt, -1);
 	nFn.setReadable(true);
 	nFn.setWritable(false);
 
@@ -98,8 +99,9 @@ MStatus addStrataAttrs(
 }
 
 
-
-struct StrataOpMixin {
+/// after all, why not
+/// why shouldn't we inherit a base class from MPxNode
+struct StrataOpMixin : public MPxNode {
 	/* mixin class to be inherited by all maya nodes that 
 	represent a single op in op graph
 
@@ -157,11 +159,14 @@ struct StrataOpMixin {
 		opIndexPlug.setInt(opIndex);
 	}
 
-	strataOpType createNewOp() {
+	//StrataOp* createNewOp() {
+	ed::StrataOp createNewOp(){
 		// return a full op instance for this node - 
 		// override in a dynamic node with the main if/branch logic, everything
 		// after this should only deal with the base
-		return strataOpType();
+		return ed::StrataOp();
+		// pointer passed straight to make_unique, so should be safe?
+		//return new StrataOp;
 	}
 
 	void syncOp(ed::StrataOp* op, MDataBlock& data) {
@@ -173,8 +178,80 @@ struct StrataOpMixin {
 
 		can't run this on newly created op directly, need to wait for compute
 		*/
+	}
+
+	MStatus syncOpInputs(ed::StrataOp* op, const MObject& node) {
+		// check through input plugs on maya node, 
+		// triggered when input connections change
+		op->inputs.clear();
+
+		MFnDependencyNode depFn(node);
+		MPlug inputArrPlug = depFn.findPlug("stInput", true);
+
+		for (unsigned int i = 0; i < inputArrPlug.numConnectedElements(); i++) {
+			int inId = inputArrPlug.connectionByPhysicalIndex(i).asInt();
+			if (inId == -1) {
+				continue;
+			}
+			op->inputs.push_back(inId);
+		}
 		
+
+		// TODO: update input aliases too
+		// later
+
+		// flag graph as dirty
+		opGraphPtr.lock()->nodeInputsChanged(op->index);
+
+		return MS::kSuccess;
+	}
+
+	// shared compute function for all op nodes
+	template <typename T>
+	MStatus strataCompute(const MPlug& plug, MDataBlock& data) {
+		MS s(MS::kSuccess);
+
+		// check if plug is already computed
+		if (data.isClean(plug)) {
+			return s;
+		}
+		// check if graph connection has been lost
+		if (opGraphPtr.expired()) {
+			data.setClean(plug);
+			return s;
+		}
+
+		// check if input data/indices have changed
+		if (!data.isClean(T::aStInput)) {
+
+		}
+
+	}
+
+
+	
+	static bool checkIndexInputConnection(const MPlug& inputArrayPlug,
+		const MPlug& otherPlug,
+		bool 	asSrc
+	)		 {
+		// check that an input to the array only comes from another strata maya node - 
+		// can't just connect a random integer
 		
+		if (otherPlug.node() == inputArrayPlug.node()) { // no feedback loops
+			return false;
+		}
+		if (MFnAttribute(otherPlug.attribute()).name() == "stOutput") {
+			return true;
+		}
+		return false;
+	}
+
+	void onInputConnectionChanged(const MPlug& inputArrayPlug,
+		const MPlug& otherPlug,
+		bool 	asSrc) {
+		/*fire on connection and disconnection to input array - 
+		update topology in graph, and mark graph as changed*/
+
 	}
 
 	void opNodePostConstructor() {
@@ -182,39 +259,6 @@ struct StrataOpMixin {
 		opGraphPtr.reset();
 	}
 
-	void onGraphConnected(std::shared_ptr<ed::StrataOpGraph> newGraphPtr) {
-		/*add this op node to graph,
-		* populate this node's pointers
-		* DO NOT DO THIS, REMOVE FUNCTION - 
-		* graph node handles graph topology centrally
-		*/
-		opGraphPtr = newGraphPtr;
-		ed::StrataOp newOp = createNewOp();
-		
-		// get some kind of lock on modifying graph structure here, don't know if maya
-		// parallelises connectionMade() calls from separate nodes
-		opPtr = opGraphPtr.lock().get()->addOp(newOp);
 
-		// split this function somehow to have sync be separate
-		
-	}
-
-	void syncGraphStructure() {
-
-		/*regen node structure in graph
-		IF this maya node's in the StrataGraph : 
-		remove this maya node, and mark all after it as INVALID, needing rebuild
-		
-		recreate this strata op, re-add it to the graph - 
-		do we clear out all ops after this op in the vector? I think we have to, otherwise
-		we could get duplicate global indices from stale Maya nodes, which wrecks everything
-
-
-		maya node's op index, op pointer etc may become invalid at any time, due to changes in Strata graph
-		beforehand - how to detect this?
-		
-		*/
-
-	}
 
 };

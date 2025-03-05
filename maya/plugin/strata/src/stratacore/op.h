@@ -62,6 +62,9 @@ namespace ed {
 		*
 		* fine to recurse in evaluation here
 		*/
+
+		// call before recompiling expression
+		void clear() {}
 	};
 
 	struct StrataOp {
@@ -82,7 +85,7 @@ namespace ed {
 		// data travelling in the graph is always (?) a manifold, even if it only contains a group of points
 		// first input (i0) is default, and always corresponds to the main incoming manifold data to write to
 		std::vector<int> inputs;
-		std::unordered_map<std::string, int> inputAliases;
+		std::vector<int> inputAliases;
 
 		StrataManifold result; // test caching on all nodes, not sure how expensive that might get
 
@@ -94,11 +97,12 @@ namespace ed {
 		}
 
 		// dirty flags from previous nodes
+		bool connectionsDirty = true; // graph structure needs rebuild (most expensive, redo all graph tables)
 		bool topoDirty = true; // topo needs recompute (more expensive, modifies strata structure)
 		bool dataDirty = true; // data needs recompute
 
 		bool paramsDirty = true; // param expressions have changed, need recompiling (later)
-		ExpNode* rootExpNode = nullptr;
+		ExpNode rootExpNode;
 
 		// for dirty propagation, does each node need to know its descendents?
 		// or can this node just check if it should be dirty when needed?
@@ -114,15 +118,6 @@ namespace ed {
 		StrataOp* getOp(int opIndex);
 		StrataOp* getOp(std::string opName);
 
-		//void signalIOChanged() {
-		//	/*reach back out to graph, set its structure dirty flag.
-		//	* yes I KNOW this is crazy dependency, maybe the graph should be the only thing that
-		//	* tracks IO on nodes?
-		//	* maybe we should do a proper signalling system?
-		//	*/
-		//	graph->graphChanged = true;
-
-		//}
 
 		void signalIOChanged();
 
@@ -133,13 +128,13 @@ namespace ed {
 			}
 		}
 
-		virtual ExpNode* evalParams() {
+		virtual Status evalParams(ExpNode& rootNode, Status& s) {
 			/* run over all node parametre expressions , compile individual ASTs
 			*/
-			return &(ExpNode());
+			return s;
 		}
-		virtual void evalTopo(StrataManifold& manifold) {}
-		virtual void evalData(StrataManifold& manifold) {}
+		virtual Status evalTopo(StrataManifold& manifold, Status& s) { return s; }
+		virtual Status evalData(StrataManifold& manifold, Status& s) { return s; }
 
 		inline void reset() {
 			/* to reset node state, clear cached manifold result*/

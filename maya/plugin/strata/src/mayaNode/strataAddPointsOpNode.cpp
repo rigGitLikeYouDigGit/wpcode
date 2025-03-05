@@ -55,15 +55,16 @@ MStatus StrataAddPointsOpNode::initialize() {
     aStPointHomeMatrix = mFn.create("stPointHomeMatrix", "stPointHomeMatrix");
     cFn.addChild(aStPointHomeMatrix);
 
-    aStResult = nFn.create("stResult", "stResult", MFnNumericData::kInt, -1);
+    //aStResult = nFn.create("stResult", "stResult", MFnNumericData::kInt, -1);
 
     // driver array
     std::vector<MObject> drivers{ 
         aStPoint//, // unsure if setting compound parent in attributeAffects is enough
     };
-    std::vector<MObject> driven{ 
+    /*std::vector<MObject> driven{ 
         aStResult
-    };
+    };*/
+    std::vector<MObject> driven;
 
     s = addStrataAttrs<StrataAddPointsOpNode>(drivers, driven);
     MCHECK(s, "could not add Strata attrs");
@@ -79,17 +80,20 @@ MStatus StrataAddPointsOpNode::initialize() {
 MStatus StrataAddPointsOpNode::compute(const MPlug& plug, MDataBlock& data) {
     MS s(MS::kSuccess);
 
+    // check if plug is already computed
     if (data.isClean(plug)) {
         return s;
     }
-
+    // check if graph connection has been lost
     if (opGraphPtr.expired()) {
         data.setClean(plug);
         return s;
     }
 
 
-    
+
+
+    return s;
 }
 
 void StrataAddPointsOpNode::postConstructor() {
@@ -108,7 +112,12 @@ MStatus StrataAddPointsOpNode::legalConnection(
     asSrc	is this plug a source of the connection
     the docs and argument names around plug connection direction are riddles
     */
-
+    if (plug.attribute() == aStInput) {
+        isLegal = checkIndexInputConnection(
+            plug, otherPlug, asSrc
+        );
+        return MS::kSuccess;
+    }
     
 
     return MS::kUnknownParameter;

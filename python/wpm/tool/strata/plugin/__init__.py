@@ -90,6 +90,10 @@ def reloadPluginTest():
 	cmds.setAttr(ptC + ".translate", 2, -1, -3)
 	cmds.setAttr(ptD + ".translate", 3, -1, -3)
 
+	graphNode = cmds.createNode("strataGraph")
+
+	addPointsNode = cmds.createNode("strataAddPointsOp")
+
 	return
 	dgNode, crvTf = makeStrataCurve("strataCurveA", ptA, ptB)
 

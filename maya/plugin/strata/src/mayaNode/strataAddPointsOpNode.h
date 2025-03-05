@@ -8,7 +8,8 @@
 #include "../strataop/strataAddPointsOp.h"
 
 
-class StrataAddPointsOpNode : public MPxNode, public StrataOpMixin {
+//class StrataAddPointsOpNode : public MPxNode, public StrataOpMixin {
+class StrataAddPointsOpNode : public StrataOpMixin {
 public:
 	StrataAddPointsOpNode() {}
 	virtual ~StrataAddPointsOpNode() {}
@@ -41,7 +42,7 @@ public:
 
 	static MObject aStResult; // return the ordered global indices of newly created points
 	// this is NOT the formal output of the node in Strata, that's the main geometry stream of the node itself
-	// "result" is a node-local group collecting all elements (points) created in this operation
+	// "result" is a node-local group collecting all elements (points) created in this operation 
 
 	typedef ed::StrataAddPointsOp strataOpType;
 
@@ -56,15 +57,15 @@ public:
 	);
 
 
-	MStatus connectionMade(const MPlug& plug,
-		const MPlug& otherPlug,
-		bool 	asSrc
-	);
+	//MStatus connectionMade(const MPlug& plug,
+	//	const MPlug& otherPlug,
+	//	bool 	asSrc
+	//);
 
-	MStatus connectionBroken(const MPlug& plug,
-		const MPlug& otherPlug,
-		bool 	asSrc
-	);
+	//MStatus connectionBroken(const MPlug& plug,
+	//	const MPlug& otherPlug,
+	//	bool 	asSrc
+	//);
 
 
 };

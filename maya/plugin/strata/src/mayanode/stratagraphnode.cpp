@@ -50,7 +50,8 @@ MStatus StrataGraphNode::initialize() {
 
 void StrataGraphNode::postConstructor() {
 	/* initialise new strata op graph with this node's name*/
-	opGraph.reset(&StrataOpGraph());
+	//opGraph.reset(&StrataOpGraph());
+	opGraph.reset(new ed::StrataOpGraph);
 }
 
 MStatus StrataGraphNode::compute(const MPlug& plug, MDataBlock& data) {
@@ -62,10 +63,25 @@ MStatus StrataGraphNode::compute(const MPlug& plug, MDataBlock& data) {
 	}
 
 	// set name
-	opGraph->name = std::string(data.inputValue(aStGraphName).asString().asChar());
+	MDataHandle nameDH = data.inputValue(aStGraphName, &s);
+	if (s != MS::kSuccess) {
+		DEBUGS("COULD NOT GET GRAPH NAME DATA");
+		return s;
+	}
 
+	MString plugVal = nameDH.asString();
+	DEBUGS("plugName len: " + std::to_string(plugVal.length()));
+	DEBUGS("plugName");
+	DEBUGS(plugVal);
+
+	int charLen;
+	const char* nameChar = plugVal.asChar(charLen);
+	std::string strVal(nameChar, charLen);
+	opGraph->name = strVal;
+	DEBUGS("SUCCESSFULLY SET NAME")
 	// set graph bool node
-	data.outputValue(aStGraph).setBool(!data.outputValue(aStGraph).asBool());
+	bool prevState = data.outputValue(aStGraph).asBool();
+	data.outputValue(aStGraph).setBool(!prevState);
 
 	data.setClean(aStGraph);
 	data.setClean(aStGraphName);
@@ -115,7 +131,9 @@ MStatus StrataGraphNode::connectionMade(const MPlug& plug,
 	* reorder and reconnect internal Strata ops if number of nodes
 	* in graph changes 
 	*/
+	DEBUGS("GRAPH connection made")
 	if (plug.attribute() != aStGraph) { // only care about the graph plug
+		DEBUGS("GRAPH connection made not to graph plug, skipping")
 		return MPxNode::connectionMade(plug, otherPlug, asSrc);
 	}
 	MS s(MS::kSuccess);
@@ -136,11 +154,16 @@ MStatus StrataGraphNode::connectionMade(const MPlug& plug,
 
 	// set references to graph on newly connected node
 	mixinPtr->opGraphPtr = opGraph;
+	DEBUGS("set graph pointer on mixin");
+
 	// get new op to add to graph
 	StrataOp newOp = mixinPtr->createNewOp();
+	DEBUGS("got new op from node")
 	// add it and get pointer to its spot in graph vector
 	mixinPtr->opPtr = opGraph->addOp(newOp);
+	DEBUGS("added new op to st graph")
 	int newIndex = mixinPtr->opPtr->index;
+	DEBUGS("new node index to set: " + std::to_string(newIndex));
 	// set the output index plug on the maya node to the index of this new op
 	// sure hope this doesn't kick off undue DG evaluation
 	MFnDependencyNode depFn(otherPlug.node());
@@ -161,9 +184,6 @@ MStatus StrataGraphNode::connectionBroken(const MPlug& plug,
 	remove the corresponding node's op
 	and reorder everything
 
-	//// TODO:
-	set the REMOVED NODE'S INDEX to -1
-	in the midpoint of this function somewhere
 	*/
 	if (plug.attribute() != aStGraph) { // only care about the graph plug
 		return MPxNode::connectionBroken(plug, otherPlug, asSrc);
@@ -204,7 +224,7 @@ MStatus StrataGraphNode::connectionBroken(const MPlug& plug,
 		if (i == disconnectIndex) {
 			MPlug outPlug = depFn.findPlug("stOutput", false, &s);
 			if (s != MS::kSuccess) {
-				DEBUGS("cannot find stOutput plug for REMOVED node", );
+				DEBUGS("cannot find stOutput plug for REMOVED node");
 			}
 			setMayaNodeIndexMod.newPlugValueInt(outPlug, -1);
 			continue;
@@ -218,7 +238,7 @@ MStatus StrataGraphNode::connectionBroken(const MPlug& plug,
 		
 		MPlug outPlug = depFn.findPlug("stOutput", false, &s);
 		if (s != MS::kSuccess) {
-			DEBUGS("cannot find stOutput plug for node", )
+			DEBUGS("cannot find stOutput plug for node");
 		}
 		setMayaNodeIndexMod.newPlugValueInt(
 			outPlug, 
@@ -254,7 +274,7 @@ MStatus StrataGraphNode::connectionBroken(const MPlug& plug,
 			continue;
 		}
 		// iterate over child plugs
-		for (int inputLocalIndex = 0;
+		for (unsigned int inputLocalIndex = 0;
 			inputLocalIndex < strataInputArrPlug.numConnectedElements();
 			inputLocalIndex++) {
 			MPlug driverPlug = strataInputArrPlug.connectionByPhysicalIndex(inputLocalIndex).source();
