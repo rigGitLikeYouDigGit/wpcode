@@ -75,7 +75,7 @@ MStatus StrataPointNode::initialize() {
     MFnGenericAttribute gFn;
     MFnMessageAttribute msgFn;
     MFnTypedAttribute tFn;
-
+    
     // driver array
     aStDriver = cFn.create("stDriver", "stDriver");
     cFn.setArray(true);
@@ -140,6 +140,7 @@ MStatus StrataPointNode::initialize() {
     cFn.addChild(aStDriverUpdateParamsInEditMode);
 
     // final weighted driver matrix for point
+    // FOR NOW this is equivalent to the point's driver-space
     aStFinalDriverOutMatrix = mFn.create("stFinalDriverMatrix", "stFinalDriverMatrix", MFnMatrixAttribute::kDouble);
     mFn.setWritable(false);
     mFn.setDefault(MMatrix());
@@ -148,9 +149,11 @@ MStatus StrataPointNode::initialize() {
     mFn.setWritable(false);
     mFn.setDefault(MMatrix());
 
-    aStFinalOutMatrix = mFn.create("stFinalOutMatrix", "stFinalOutMatrix", MFnMatrixAttribute::kDouble);
-    mFn.setWritable(false);
-    mFn.setDefault(MMatrix());
+    // don't need another matrix attribute, that can just be the world matrix of the shape
+
+    //aStFinalOutMatrix = mFn.create("stFinalOutMatrix", "stFinalOutMatrix", MFnMatrixAttribute::kDouble);
+    //mFn.setWritable(false);
+    //mFn.setDefault(MMatrix());
 
     aStEditMode = nFn.create("stEditMode", "stEditMode", MFnNumericData::kBoolean, 0);
 	nFn.setChannelBox(1);
@@ -166,7 +169,7 @@ MStatus StrataPointNode::initialize() {
 
     // semantic unique name for point in strata
     aStName = tFn.create("stName", "stName", MFnData::kString);
-    tFn.setDefault(MFnStringData().create(""));
+    tFn.setDefault(MFnStringData().create("newStrataPoint"));
     // should the semantic name be linked to the name of the node in maya?
     aStLinkNameToNode = nFn.create("stLinkNameToNode", "stLinkNameToNode", MFnNumericData::kBoolean, true);
     nFn.setChannelBox(1);
@@ -189,7 +192,8 @@ MStatus StrataPointNode::initialize() {
     };
 
     std::vector<MObject>drivenObjs = {
-        aStFinalDriverOutMatrix, aStFinalLocalOffsetMatrix, aStFinalOutMatrix, aBalanceWheel
+        aStFinalDriverOutMatrix, aStFinalLocalOffsetMatrix,// aStFinalOutMatrix, 
+        aBalanceWheel
     };
 
 	std::vector<MObject> driverObjs = {
@@ -252,9 +256,29 @@ MStatus combineDriverInfluences(StrataPointNode& node,
 MStatus StrataPointNode::compute(const MPlug& plug, MDataBlock& data) {
     MStatus s = MS::kSuccess;
     
-
-
     //MHWRender::MRenderer::setGeometryDrawDirty(thisMObject(), false);
+
+    // check name
+    if (data.inputValue(aStLinkNameToNode).asBool()) {
+        // check name of node
+        MFnDagNode depFn(thisMObject());
+        MString nodeName = data.inputValue(aStName).asString();
+        if (nodeName != depFn.name()) {
+            // update value of name
+            MPlug namePlug = depFn.findPlug(aStName, false);
+            // only do it if the plug isn't connected, otherwise get an infinite loop
+            if (!namePlug.isConnected()) {
+                namePlug = depFn.findPlug(aStName, false);
+                // get name of parent (transform) instead
+                if (depFn.parentCount()) {
+                    namePlug.setString(MFnDependencyNode(depFn.parent(0)).name());
+                }
+                else { // orphan shape node should only happen during node creation / deletion
+                    namePlug.setString(nodeName);
+                }
+            }
+        }
+    }
 
     if (data.isClean(plug)) {
         return s;

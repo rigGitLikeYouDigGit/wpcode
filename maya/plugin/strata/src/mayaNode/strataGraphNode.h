@@ -11,6 +11,7 @@
 #include "../stratacore/opgraph.h"
 
 #include "strataMayaLib.h"
+#include "strataOpNodeBase.h"
 
 
 class StrataGraphNode : public MPxNode {
@@ -26,7 +27,9 @@ class StrataGraphNode : public MPxNode {
 
 public:
 	StrataGraphNode() {}
-	virtual ~StrataGraphNode() {}
+	virtual ~StrataGraphNode() {
+		
+	}
 
 
 

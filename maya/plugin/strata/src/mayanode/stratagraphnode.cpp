@@ -145,14 +145,14 @@ MStatus StrataGraphNode::connectionMade(const MPlug& plug,
 	which is a separate PARENT class of the child type.
 	Hopefully this is fine?
 	*/
-	StrataOpMixin* mixinPtr;
+	StrataOpNodeBase* mixinPtr;
 	s = castToUserNode(otherPlug.node(), mixinPtr);
 	if (s != MS::kSuccess) {
 		DEBUGS("StrataGraph node could not cast to mixin class pointer on bool plug connected, aborting");
 		return s;
 	}
 
-	// set references to graph on newly connected node
+	// set references to graph on newly connected node`
 	mixinPtr->opGraphPtr = opGraph;
 	DEBUGS("set graph pointer on mixin");
 
@@ -208,7 +208,7 @@ MStatus StrataGraphNode::connectionBroken(const MPlug& plug,
 	for (int i = disconnectIndex; i < nOps; i++) {
 		//
 		// cast the outgoing node to its MPxNode, then to its StrataMixin
-		StrataOpMixin* mixinPtr;
+		StrataOpNodeBase* mixinPtr;
 		MObject nodeMObj = indexMObjHandleMap[i].object();
 		MFnDependencyNode depFn(nodeMObj);
 

@@ -2,6 +2,8 @@
 
 #include <maya/MObject.h>
 #include "../MInclude.h"
+#include "../stratacore/op.h"
+#include "../stratacore/opgraph.h"
 
 
 /*
@@ -20,47 +22,183 @@ Maybe
 
 */
 
+#define DECLARE_STRATA_STATIC_MEMBERS  \
+static MObject aStGraph; \
+static MObject aStParent;  \
+static MObject aStInput; \
+static MObject aStInputAlias; \
+static MObject aStOpIndex; \
+static MObject aStOutput; \
+static MObject aStManifoldData; \
+static MObject aStParam;\
+static MObject aStParamExp; \
+static MObject aStElData; \
 
-//class StrataOpNodeBase : MPxNode {
-class StrataOpNodeBase {
 
-public:
 
-	/*StrataOpNodeBase() {}
-	virtual ~StrataOpNodeBase() {}
+#define DEFINE_STRATA_STATIC_MOBJECTS(NODETYPE) \
+MObject NODETYPE::aStGraph; \
+MObject NODETYPE::aStParent; \
+\
+MObject NODETYPE::aStInput; \
+MObject NODETYPE::aStInputAlias; \
+\
+MObject NODETYPE::aStOpIndex; \
+MObject NODETYPE::aStOutput; \
+MObject NODETYPE::aStManifoldData; \
+\
+MObject NODETYPE::aStParam; \
+MObject NODETYPE::aStParamExp; \
+\
+MObject NODETYPE::aStElData; \
 
-	static void* creator() {
-		StrataOpNodeBase* newObj = new StrataOpNodeBase();
-		return newObj;
+
+
+
+/// after all, why not
+/// why shouldn't we inherit a base class from MPxNode
+struct StrataOpNodeBase : public MPxNode {
+	/* mixin class to be inherited by all maya nodes that
+	represent a single op in op graph
+
+	was too awkward to make this an actual MPxNode base class
+
+	INHERITING STATIC MOBJECTS -
+	we declare static MObjects in the mixin here, then REDECLARE them
+	in each concrete child -
+	this hopefully lets us do StrataOpMixin::aStGraph on a pointer, and have it
+	get the right MObject?
+	we want the SAME NAMES, but DIFFERENT VALUES
+	except no, because we don't know the child class, so StrataOpMixin::aStGraph will just
+	return the class-level static object OF THIS MIXIN CLASS
+
+	hmmmmmm
+	*/
+
+	/* if this node is connected to its graph, both of these will
+	be populated - if not, both will be null.
+
+	Maya node connection causes new op object to be instantiated and
+	ownership passed to graph -
+	pointers are populated with result
+
+	testing shared_ptrs here JUST IN CASE maya does some weird time travel / object lifetime
+	stuff in multithreading nodes, DG context etc -
+	we still cull pointers on connect/disconnect, but this should catch the case where a node
+	evaluates EXACTLY AS it's disconnected (somehow)
+
+	weak pointers show better - this node doesn't OWN anything, only refers into
+	the graph data store
+	*/
+
+	// ok I have a great idea
+	// just don't delete the graph while the graph is running
+	std::weak_ptr<ed::StrataOpGraph> opGraphPtr;
+
+	typedef ed::StrataOp strataOpType; // redefine for explicit linking maya node type to strata Op
+
+	strataOpType* opPtr = nullptr;
+
+	DECLARE_STRATA_STATIC_MEMBERS;
+
+
+	//template<typename T>
+	//static MStatus addStrataAttrs(
+	//	std::vector<MObject>& driversVec,
+	//	std::vector<MObject>& drivenVec
+	//);
+
+
+	// probably a way to get access to the attr MObjects in this mixin's scope, 
+	// but by contrast I actually understand this way with the template
+	template <typename T>
+	static void setOpIndexOnMayaNode(int opIndex, MObject& thisNode) {
+		// update the maya attribute to this struct's op index
+		MFnDependencyNode thisFn(thisNode);
+		MPlug opIndexPlug = thisFn.findPlug(thisNode, T::aStOutput, false);
+		opIndexPlug.setInt(opIndex);
 	}
 
-	bool isAbstractClass() const {
-		return true;
+	//StrataOp* createNewOp() {
+	ed::StrataOp createNewOp() {
+		// return a full op instance for this node - 
+		// override in a dynamic node with the main if/branch logic, everything
+		// after this should only deal with the base
+		return ed::StrataOp();
+		// pointer passed straight to make_unique, so should be safe?
+		//return new StrataOp;
 	}
 
-	static MStatus initialize();*/
+	void syncOp(ed::StrataOp* op, MDataBlock& data) {
+		/* update op from maya node datablock -
+		this should be good enough, updating raw from MObject and plugs
+		seems asking for trouble
 
-	template<typename T>
-	static MStatus addStrataAttrs();
+		also set topoDirty / dataDirty flags here
 
-	//static MTypeId kNODE_ID;// = const MTypeId(0x00122C1C);
-	//static MString kNODE_NAME;// = MString("curveFrame");
+		can't run this on newly created op directly, need to wait for compute
+		*/
+	}
 
-	static MObject aStGraph; // opgraph connection
-	static MObject aStParent; // int index for parent element
+	MStatus syncOpInputs(ed::StrataOp* op, const MObject& node);
 
-	static MObject aStInput; // array of int node ids, first is always main
-	static MObject aStInputAlias; // string array to use for inputs - indexMatters
+	// shared compute function for all op nodes
+	MStatus compute(const MPlug& plug, MDataBlock& data);
 
-	static MObject aStOpIndex; // index of this op in strata
-	static MObject aStOutput; // out strata manifold, bool plug
-	static MObject aStManifoldData; // use to evaluate manifold elements at this point in graph
+	void onInputConnectionChanged(const MPlug& inputArrayPlug,
+		const MPlug& otherPlug,
+		bool 	asSrc);
 
-	static MObject aStParam; // custom params for node
-	static MObject aStParamExpression; // expression string attribute for each one
+	void postConstructor() {
+		/* ensure graph pointer is reset*/
+		opGraphPtr.reset();
+	}
+
+	static MStatus legalConnection(
+		const MPlug& plug,
+		const MPlug& otherPlug,
+		bool 	asSrc,
+		bool& isLegal
+	);
+
+	virtual MStatus connectionMade(const MPlug& plug,
+		const MPlug& otherPlug,
+		bool 	asSrc
+	);
+
+	virtual MStatus connectionBroken(const MPlug& plug,
+		const MPlug& otherPlug,
+		bool 	asSrc
+	);
+
+	// desperately trying to fix missing symbol errors on templated static methods
+
+	// static function declared and implemented in header - works
+	static MStatus TESTFN() {
+		return MS::kSuccess;
+	};
+
+	// static function declared in header, implemented in compiler - works
+	static MStatus TEST_DECLARED_FN();
+
+	// static template declared and implemented in header - works
+	template <typename T>
+	static MStatus TEST_TEMPLATE_FN() {
+		return MS::kSuccess;
+	};
+
+	// static template declared in header, implemented in compiler - OBVIOUSLY WRONG YOU SUBHUMAN PLEB
+	template <typename T>
+	static MStatus TEST_TEMPLATE_DECLARED_FN();
 
 };
 
+namespace ed {
 
+	template<typename T>
+	MStatus addStrataAttrs(
+		std::vector<MObject>& driversVec,
+		std::vector<MObject>& drivenVec
+	);
 
-
+}

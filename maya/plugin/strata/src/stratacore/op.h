@@ -85,7 +85,12 @@ namespace ed {
 		// data travelling in the graph is always (?) a manifold, even if it only contains a group of points
 		// first input (i0) is default, and always corresponds to the main incoming manifold data to write to
 		std::vector<int> inputs;
-		std::vector<int> inputAliases;
+		std::vector<std::string> inputAliases;
+
+		/*PARAMS - for basic element nodes, a vector of strings is enough.
+		for later nodes, it may not be.
+		work that out when needed.*/
+		std::vector<std::string> params; 
 
 		StrataManifold result; // test caching on all nodes, not sure how expensive that might get
 

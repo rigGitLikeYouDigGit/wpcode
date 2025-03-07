@@ -39,13 +39,17 @@ namespace ed {
 		StrataOp* addOp(StrataOp& op) {
 			/*passes ownership of op object to vector,
 			returns a new pointer to it*/
-			size_t newIndex = ops.size();
+			//DEBUGS("add op");
+			int newIndex = static_cast<int>(ops.size());
+			//DEBUGS("newIndex" + std::to_string(newIndex));
 			ops.push_back(op);
+			//DEBUGS("new ops length" + std::to_string(ops.size()));
 			StrataOp* newOp = &ops[newIndex];
 
 			//ops.push_back(std::unique_ptr<StrataOp>(&op));
 			//StrataOp* newOp = ops[newIndex].get();
 			opNameIndexMap[newOp->name] = newIndex;
+			newOp->index = newIndex;
 			graphChanged = true;
 			return newOp;
 		}

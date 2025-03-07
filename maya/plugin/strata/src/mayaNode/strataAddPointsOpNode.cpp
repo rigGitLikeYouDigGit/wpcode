@@ -10,6 +10,7 @@
 #include "strataAddPointsOpNode.h"
 #include "strataGraphNode.h"
 #include "strataPointNode.h"
+#include "strataOpNodeBase.h"
 #include "../lib.cpp"
 #include "../strataop/strataAddPointsOp.h"
 
@@ -23,15 +24,22 @@ MString StrataAddPointsOpNode::kNODE_NAME("strataAddPointsOp");
 MString StrataAddPointsOpNode::drawDbClassification("drawdb/geometry/strataAddPointsOp");
 MString StrataAddPointsOpNode::drawRegistrantId("StrataAddPointsOpNodePlugin");
 
-MObject StrataAddPointsOpNode::aStPoint;
-MObject StrataAddPointsOpNode::aStPointLocalMatrix;
-MObject StrataAddPointsOpNode::aStPointHomeMatrix;
-MObject StrataAddPointsOpNode::aStPointName;
-MObject StrataAddPointsOpNode::aStResult;
+
+//MObject StrataAddPointsOpNode::aStPoint;
+//MObject StrataAddPointsOpNode::aStPointLocalMatrix;
+//MObject StrataAddPointsOpNode::aStPointHomeMatrix;
+//MObject StrataAddPointsOpNode::aStPointName;
+//MObject StrataAddPointsOpNode::aStResult;
 
 
 DEFINE_STRATA_STATIC_MOBJECTS(StrataAddPointsOpNode)
 
+
+DEFINE_STATIC_NODE_MEMBERS(
+    STRATAADDPOINTSOPNODE_STATIC_MEMBERS, StrataAddPointsOpNode
+)
+
+//StrataAddPointsOpNode::addStrataAttrs;
 
 MStatus StrataAddPointsOpNode::initialize() {
     MStatus s = MS::kSuccess;
@@ -42,32 +50,38 @@ MStatus StrataAddPointsOpNode::initialize() {
     MFnGenericAttribute gFn;
     MFnMessageAttribute msgFn;
     MFnTypedAttribute tFn;
-
-    aStPoint = cFn.create("stPoint", "stPoint");
-    cFn.setArray(true);
-    cFn.setUsesArrayDataBuilder(true);
-    cFn.setReadable(false);
-
-    aStPointName = tFn.create("stPointName", "stPointName", MFnData::kString);
-    cFn.addChild(aStPointName);
-    aStPointLocalMatrix = mFn.create("stPointLocalMatrix", "stPointLocalMatrix");
-    cFn.addChild(aStPointLocalMatrix);
-    aStPointHomeMatrix = mFn.create("stPointHomeMatrix", "stPointHomeMatrix");
-    cFn.addChild(aStPointHomeMatrix);
-
-    //aStResult = nFn.create("stResult", "stResult", MFnNumericData::kInt, -1);
-
-    // driver array
-    std::vector<MObject> drivers{ 
-        aStPoint//, // unsure if setting compound parent in attributeAffects is enough
-    };
-    /*std::vector<MObject> driven{ 
+     
+    // add base strataAttrs first
+    //std::vector<MObject> drivers{
+    //    aStPoint//, // unsure if setting compound parent in attributeAffects is enough
+    //};
+    /*std::vector<MObject> driven{
         aStResult
     };*/
+    std::vector<MObject> drivers;
     std::vector<MObject> driven;
 
     s = addStrataAttrs<StrataAddPointsOpNode>(drivers, driven);
+    // error missing symbol here
+    // why 
+    // why does intellisense not flag it
+
     MCHECK(s, "could not add Strata attrs");
+
+    // add point attributes to data
+    cFn.setObject(aStElData);
+
+    // add matrix attributes
+    aStPointWorldMatrix = mFn.create("stPointWorldMatrix", "stPointWorldMatrix");
+    cFn.addChild(aStPointWorldMatrix);
+
+    aStPointFinalDriverOutMatrix = mFn.create("stPointFinalDriverOutMatrix", "stPointFinalDriverOutMatrix");
+    cFn.addChild(aStPointFinalDriverOutMatrix);
+
+    aStPointFinalLocalOffsetMatrix = mFn.create("stPointFinalLocalOffsetMatrix", "stPointFinalLocalOffsetMatrix");
+    cFn.addChild(aStPointFinalLocalOffsetMatrix);
+       
+    
     addAttributes<StrataAddPointsOpNode>(drivers);
     addAttributes<StrataAddPointsOpNode>(driven);
     setAttributesAffect<StrataAddPointsOpNode>(drivers, driven);
@@ -96,9 +110,6 @@ MStatus StrataAddPointsOpNode::compute(const MPlug& plug, MDataBlock& data) {
     return s;
 }
 
-void StrataAddPointsOpNode::postConstructor() {
-    opNodePostConstructor();
-}
 
 MStatus StrataAddPointsOpNode::legalConnection(
     const MPlug& plug,
@@ -112,11 +123,9 @@ MStatus StrataAddPointsOpNode::legalConnection(
     asSrc	is this plug a source of the connection
     the docs and argument names around plug connection direction are riddles
     */
-    if (plug.attribute() == aStInput) {
-        isLegal = checkIndexInputConnection(
-            plug, otherPlug, asSrc
-        );
-        return MS::kSuccess;
+    MStatus s = StrataOpNodeBase::legalConnection(plug, otherPlug, asSrc, isLegal);
+    if (s == MS::kSuccess) {
+        return s; // already treated 
     }
     
 

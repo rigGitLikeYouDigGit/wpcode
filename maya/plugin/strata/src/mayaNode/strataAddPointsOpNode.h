@@ -2,14 +2,29 @@
 
 
 #include "../MInclude.h"
-#include "strataOpNodeBase.h"
-
 #include "strataMayaLib.h"
+#include "strataOpNodeBase.h"
 #include "../strataop/strataAddPointsOp.h"
 
 
-//class StrataAddPointsOpNode : public MPxNode, public StrataOpMixin {
-class StrataAddPointsOpNode : public StrataOpMixin {
+/// experiment for making declaring / defining attr mobjects less painful
+# define STRATAADDPOINTSOPNODE_STATIC_MEMBERS(prefix, nodeT) \
+prefix MObject nodeT aStPointWorldMatrix;\
+prefix MObject nodeT aStPointFinalDriverOutMatrix;\
+prefix MObject nodeT aStPointFinalLocalOffsetMatrix;\
+
+
+// create lines of the form 'static MObject aStPoint;'
+# define DECLARE_STATIC_NODE_MEMBERS(attrsMacro) \
+	attrsMacro(static, )
+
+// create lines of the form 'MObject StrataAddPointsOpNode::aStPoint;'
+# define DEFINE_STATIC_NODE_MEMBERS(attrsMacro, nodeT) \
+	attrsMacro( , nodeT::)
+
+	
+
+class StrataAddPointsOpNode : public StrataOpNodeBase {
 public:
 	StrataAddPointsOpNode() {}
 	virtual ~StrataAddPointsOpNode() {}
@@ -18,8 +33,14 @@ public:
 		StrataAddPointsOpNode* newObj = new StrataAddPointsOpNode();
 		return newObj;
 	}
-	virtual void postConstructor();
+	//virtual void postConstructor();
 
+	static MStatus legalConnection(
+		const MPlug& plug,
+		const MPlug& otherPlug,
+		bool 	asSrc,
+		bool& isLegal
+	);
 
 	static MTypeId kNODE_ID;// = const MTypeId(0x00122C1C);
 	static MString kNODE_NAME;// = MString("curveFrame");
@@ -32,40 +53,16 @@ public:
 
 	virtual MStatus compute(const MPlug& plug, MDataBlock& data);
 
-	static MObject aStPoint; // compound attr for incoming points
-	// do we just make this a bool attribute and do balancewheel tracking - 
-	// keep it simple for now, connect each fully by attribute?
-	// but we will still need to crawl DG for back-propagation and point fitting
-	static MObject aStPointLocalMatrix; // locally transformed matrix of point
-	static MObject aStPointHomeMatrix; // home or default matrix of point
-	static MObject aStPointName; // matrix of point
+	// override base class static strata objects, so each leaf class still has attributes
+	// initialised separately to the base
+	DECLARE_STRATA_STATIC_MEMBERS;
 
-	static MObject aStResult; // return the ordered global indices of newly created points
-	// this is NOT the formal output of the node in Strata, that's the main geometry stream of the node itself
-	// "result" is a node-local group collecting all elements (points) created in this operation 
+	DECLARE_STATIC_NODE_MEMBERS(
+		STRATAADDPOINTSOPNODE_STATIC_MEMBERS)
+
 
 	typedef ed::StrataAddPointsOp strataOpType;
 
-	DECLARE_STRATA_STATIC_MEMBERS
-
-
-	static MStatus legalConnection(
-		const MPlug& plug,
-		const MPlug& otherPlug,
-		bool 	asSrc,
-		bool& isLegal
-	);
-
-
-	//MStatus connectionMade(const MPlug& plug,
-	//	const MPlug& otherPlug,
-	//	bool 	asSrc
-	//);
-
-	//MStatus connectionBroken(const MPlug& plug,
-	//	const MPlug& otherPlug,
-	//	bool 	asSrc
-	//);
 
 
 };

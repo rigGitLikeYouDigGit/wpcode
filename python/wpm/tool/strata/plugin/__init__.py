@@ -59,6 +59,13 @@ def makeStrataPoint(name):
 	cmds.connectAttr(loc + ".stFinalOutMatrix", tf + ".offsetParentMatrix", f=1)
 	return tf
 
+def connectStrataPoint(pointNode, addPointsNode):
+	from maya import cmds
+	nEntries = cmds.getAttr(addPointsNode + ".stParam", size=1)
+	arrPlug = addPointsNode + ".stParam[{}]".format(nEntries)
+	cmds.connectAttr(pointNode + ".stName", arrPlug + ".stParamExp")
+	cmds.connectAttr(pointNode + ".worldMatrix[0]", arrPlug + ".stParamMat")
+
 def makeStrataCurve(name, tf1, tf2):
 	from maya import cmds
 	dgNode = cmds.createNode("strataCurve", name= name+"Node")
@@ -93,6 +100,11 @@ def reloadPluginTest():
 	graphNode = cmds.createNode("strataGraph")
 
 	addPointsNode = cmds.createNode("strataAddPointsOp")
+	cmds.connectAttr(graphNode + ".stGraph", addPointsNode + ".stGraph")
+	addPointsNode2 = cmds.createNode("strataAddPointsOp")
+	cmds.connectAttr(graphNode + ".stGraph", addPointsNode2 + ".stGraph")
+	addPointsNode3 = cmds.createNode("strataAddPointsOp")
+	cmds.connectAttr(graphNode + ".stGraph", addPointsNode3 + ".stGraph")
 
 	return
 	dgNode, crvTf = makeStrataCurve("strataCurveA", ptA, ptB)
