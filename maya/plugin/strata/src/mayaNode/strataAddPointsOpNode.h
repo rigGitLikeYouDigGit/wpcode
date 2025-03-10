@@ -9,6 +9,8 @@
 
 /// experiment for making declaring / defining attr mobjects less painful
 # define STRATAADDPOINTSOPNODE_STATIC_MEMBERS(prefix, nodeT) \
+prefix MObject nodeT aStPoint;\
+prefix MObject nodeT aStPointName;\
 prefix MObject nodeT aStPointWorldMatrix;\
 prefix MObject nodeT aStPointFinalDriverOutMatrix;\
 prefix MObject nodeT aStPointFinalLocalOffsetMatrix;\

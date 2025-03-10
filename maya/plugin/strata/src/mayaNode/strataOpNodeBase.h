@@ -22,7 +22,19 @@ Maybe
 
 */
 
-#define DECLARE_STRATA_STATIC_MEMBERS  \
+//#define DECLARE_VIRTUAL_STRATA_STATIC_MEMBERS(prefix)  \
+//prefix static MObject aStGraph; \
+//prefix static MObject aStParent;  \
+//prefix static MObject aStInput; \
+//prefix static MObject aStInputAlias; \
+//prefix static MObject aStOpIndex; \
+//prefix static MObject aStOutput; \
+//prefix static MObject aStManifoldData; \
+//prefix static MObject aStParam;\
+//prefix static MObject aStParamExp; \
+//prefix static MObject aStElData; \
+
+#define DECLARE_STRATA_STATIC_MEMBERS \
 static MObject aStGraph; \
 static MObject aStParent;  \
 static MObject aStInput; \
@@ -102,11 +114,10 @@ struct StrataOpNodeBase : public MPxNode {
 	DECLARE_STRATA_STATIC_MEMBERS;
 
 
-	//template<typename T>
-	//static MStatus addStrataAttrs(
-	//	std::vector<MObject>& driversVec,
-	//	std::vector<MObject>& drivenVec
-	//);
+	static MStatus addStrataAttrs(
+		std::vector<MObject>& driversVec,
+		std::vector<MObject>& drivenVec
+	);
 
 
 	// probably a way to get access to the attr MObjects in this mixin's scope, 
@@ -171,34 +182,7 @@ struct StrataOpNodeBase : public MPxNode {
 		bool 	asSrc
 	);
 
-	// desperately trying to fix missing symbol errors on templated static methods
 
-	// static function declared and implemented in header - works
-	static MStatus TESTFN() {
-		return MS::kSuccess;
-	};
-
-	// static function declared in header, implemented in compiler - works
-	static MStatus TEST_DECLARED_FN();
-
-	// static template declared and implemented in header - works
-	template <typename T>
-	static MStatus TEST_TEMPLATE_FN() {
-		return MS::kSuccess;
-	};
-
-	// static template declared in header, implemented in compiler - OBVIOUSLY WRONG YOU SUBHUMAN PLEB
-	template <typename T>
-	static MStatus TEST_TEMPLATE_DECLARED_FN();
 
 };
 
-namespace ed {
-
-	template<typename T>
-	MStatus addStrataAttrs(
-		std::vector<MObject>& driversVec,
-		std::vector<MObject>& drivenVec
-	);
-
-}

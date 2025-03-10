@@ -61,17 +61,21 @@ MStatus StrataAddPointsOpNode::initialize() {
     std::vector<MObject> drivers;
     std::vector<MObject> driven;
 
-    s = addStrataAttrs<StrataAddPointsOpNode>(drivers, driven);
+    s = addStrataAttrs(drivers, driven);
     // error missing symbol here
     // why 
     // why does intellisense not flag it
 
     MCHECK(s, "could not add Strata attrs");
 
-    // add point attributes to data
-    cFn.setObject(aStElData);
+    //// add point attributes to data
+    //cFn.setObject(aStElData);
+
+    cFn.setObject(aStPoint);
 
     // add matrix attributes
+    aStPointWorldMatrix = mFn.create("stPointWorldMatrix", "stPointWorldMatrix");
+    cFn.addChild(aStPointWorldMatrix);
     aStPointWorldMatrix = mFn.create("stPointWorldMatrix", "stPointWorldMatrix");
     cFn.addChild(aStPointWorldMatrix);
 
