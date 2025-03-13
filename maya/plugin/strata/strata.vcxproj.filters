@@ -18,7 +18,7 @@
     <ClCompile Include="src\stratacore\op.cpp" />
     <ClCompile Include="src\stratacore\opgraph.cpp" />
     <ClCompile Include="src\mayaNode\strataOpNodeBase.cpp" />
-    <ClCompile Include="src\mayaNode\strataAddPointsOpNode.cpp" />
+    <ClCompile Include="src\mayaNode\strataElementOpNode.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\api.h">
@@ -36,15 +36,18 @@
     <ClInclude Include="src\span.h" />
     <ClInclude Include="src\MInclude.h" />
     <ClInclude Include="src\containers.h" />
-    <ClInclude Include="src\strataop\strataAddPointsOp.h" />
     <ClInclude Include="src\mayaNode\strataOpNodeBase.h" />
     <ClInclude Include="src\stratacore\opgraph.h" />
     <ClInclude Include="src\stratacore\op.h" />
     <ClInclude Include="src\fnmatch.h" />
     <ClInclude Include="src\stratacore\manifold.h" />
     <ClInclude Include="src\mayaNode\strataGraphNode.h" />
-    <ClInclude Include="src\mayaNode\strataAddPointsOpNode.h" />
+    <ClInclude Include="src\mayaNode\strataElementOpNode.h" />
     <ClInclude Include="src\mayaNode\strataMayaLib.h" />
+    <ClInclude Include="src\strataop\strataElementOp.h" />
+    <ClInclude Include="src\expParse.h" />
+    <ClInclude Include="src\status.h" />
+    <ClInclude Include="src\dirtyGraph.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="F:\wp\code\maya\plugin\strata\CMakeLists.txt" />

@@ -15,6 +15,7 @@
 #include <maya/MMatrix.h>
 
 #include "wpshared/enum.h"
+#include "../status.h"
 #include "../containers.h"
 
 /*
@@ -52,15 +53,17 @@ using vectors for everything, I don't care for now
 
 // do we actually need separate types for elements? not for most things
 
+NO WE DON'T
+
+no SPoints, SEdges - only SElements, with int enum telling their type
+
+
+
+
+
 */
 
 namespace ed {
-
-
-
-	//inline auto seqIndex(auto n) {
-	//	return (n >= 0 ? n : size() + n) % (size() + 1);
-	//}
 
 #define seqIndex(n, limit)\
 	(n >= 0 ? n : limit + n) % (limit + 1)\
@@ -70,94 +73,25 @@ namespace ed {
 
 
 
-
-	struct Status {
-		/* status object emulating MStatus in Maya - 
-		return from node eval functions and check in case graph should halt.
-
-		A value or bool behaviour of 0 means success - anything else is an error
-		so
-
-		Status err = myFn();
-		if (err){
-			handle error
-			}
-
-		*/
-		int val = 0; // zero is safe
-		std::string msg;
-		
-		void addMsg(const std::string& newMsg) {
-			/* add a report to this status, including line and file number*/
-
-			// count number of tabs
-			//int foundIndex = static_cast<int>(msg.rfind("\n"));
-			//std::string pool = msg.substr(foundIndex);
-			//std::string newLine("/n")
-			const char* newLine = "\n";
-			const char* tab = "\t";
-			std::string pool = msg.substr(msg.rfind(newLine));
-			//std::string::difference_type foundCount = std::count(pool.begin(), pool.end(), "\t");
-			//std::string::difference_type foundCount = std::count(pool.begin(), pool.end(), tab);
-			
-			/////// COULD NOT FIGURE OUT how to count tab characters in a string, both these give errors
-			int tabCount = 0;
-			for (auto c : pool) {
-				if (c == tab[0]) {
-					tabCount += 1;
-				}
-			}
-
-			
-			int currentDepth = static_cast<int>(tabCount);
-			msg.append("\n");
-			for (int i = 0; i < currentDepth; i++) {
-				msg.append("\t");
-			}
-			msg.append(__FILE__);
-			msg.append(std::to_string(__LINE__));
-			msg.append(newMsg);
-		}
-
-		explicit operator bool()
-		{
-			return (val ? true : false);
-		}
-	};
-
-	// for check-return status
-#define	CRSTAT(s)\
-	if(s){ return s; }\
-
-#define	CRMSG(s, msg)\
-	if(s){ s.addMsg(msg); return s; }\
-
-	// for check-write
-#define CWSTAT(s)\
-	if(s){ DEBUGS(s.msg);}\
-
-#define CWMSG(s, msg)\
-	if(s){ s.addMsg(msg); DEBUGS(s.msg);}\
-
 //int a = seqIndex(-5, 3);
 
 // don't need full int here but MAYBE in the long run, we'll need to make an enum attribute in maya for it
 	//BETTER_ENUM(SElType, int, point, edge, face);
 
-	enum SElType { point, edge, face};
+	enum SElType { NONE, point, edge, face};
 
 	struct StrataManifold;
 
-	struct StrataElement {
+	struct SElement {
 		std::string name;
-		int elIndex;
-		int globalIndex;
+		int elIndex = -1; // index within this element's type - the 3rd point, the 3rd face etc
+		int globalIndex = -1; // unique global index across all elements
 		std::vector<int> drivers; // topological drivers, not parent spaces
 		std::vector<int> edges; // edges that draw from this element
 		std::vector<int> points; // points that draw from this element
 		std::vector<int> faces; // faces that use this edge as a rib or boundary
 		//SElType::_enumerated elType = SElType::point;
-		SElType elType = SElType::point;
+		SElType elType = SElType::NONE; // not initialised by default
 
 		// todo: bit fields
 		// todo: have all flags indicate a reason an element SHOULDN'T appear?
@@ -165,8 +99,15 @@ namespace ed {
 		bool isInvalid = false; // does this element have an error in its history?
 		std::string errorMsg;
 
-		StrataElement(std::string elName) {
-			name = elName;
+		// face attributes for winding and orientation - 
+		// structural to result manifold, so put it here instead of in data
+		std::vector<bool> edgeOrients; // SURELY vector<bool> is cringe
+		// true for forwards, false for backwards
+		bool flipFace = 0; // if face as a whole should be flipped, after edge winding
+
+		SElement(std::string elName, const SElType t) : name(elName), elType(t) {
+			//name = elName;
+			//elType = t;
 		};
 
 		// neighbours do not include child / driven elements
@@ -202,72 +143,105 @@ namespace ed {
 				list face intersections in the face's winding order, etc
 			*/
 		}
+
+		/*
+		eventually move to iterators for topo operations, if speed isn't an issue
+
+		template<long FROM, long TO>
+class Range {
+public:
+	class iterator {
+		long num = FROM;
+	public:
+		iterator(long _num = 0) : num(_num) {}
+		iterator& operator++() {num = TO >= FROM ? num + 1: num - 1; return *this;}
+		iterator operator++(int) {iterator retval = *this; ++(*this); return retval;}
+		bool operator==(iterator other) const {return num == other.num;}
+		bool operator!=(iterator other) const {return !(*this == other);}
+		long operator*() {return num;}
+		// iterator traits
+		using difference_type = long;
+		using value_type = long;
+		using pointer = const long*;
+		using reference = const long&;
+		using iterator_category = std::forward_iterator_tag;
+	};
+	iterator begin() {return FROM;}
+	iterator end() {return TO >= FROM? TO+1 : TO-1;}
+};
+
+		*/
+
+
+
 	};
 
-	struct SPoint : StrataElement {
-		int driver = -1;
-		SElType elType = SElType::point;
+	//struct SPoint : SElement {
+	//	int driver = -1;
+	//	SElType elType = SElType::point;
 
-		//SPoint() = default;
-		SPoint(std::string elName) : StrataElement(elName) {
-		}
+	//	//SPoint() = default;
+	//	SPoint(std::string elName) : SElement(elName) {
+	//	}
 
-		inline std::vector<int> otherNeighbourPoints(StrataManifold& manifold);
-		inline std::vector<int> otherNeighbourEdges(StrataManifold& manifold);
+	//	inline std::vector<int> otherNeighbourPoints(StrataManifold& manifold);
+	//	inline std::vector<int> otherNeighbourEdges(StrataManifold& manifold);
 
-		inline std::vector<int> edgeStar(StrataManifold& manifold) {
-			return otherNeighbourEdges(manifold);
-		}
+	//	inline std::vector<int> edgeStar(StrataManifold& manifold) {
+	//		return otherNeighbourEdges(manifold);
+	//	}
 
-		inline std::vector<int> otherNeighbourFaces(StrataManifold& manifold);
+	//	inline std::vector<int> otherNeighbourFaces(StrataManifold& manifold);
+	//};
 
+	//struct SEdge : SElement {
+	//	SElType elType = SElType::edge;
+	//	SEdge(std::string elName) : SElement(elName) {
+	//	}
 
+	//	inline std::vector<int> otherNeighbourPoints(StrataManifold& manifold);
 
-	};
+	//	inline std::vector<int> otherNeighbourEdges(StrataManifold& manifold);
 
-	struct SEdge : StrataElement {
-		SElType elType = SElType::edge;
-		SEdge(std::string elName) : StrataElement(elName) {
-		}
+	//};
 
-		inline std::vector<int> otherNeighbourPoints(StrataManifold& manifold);
+	//struct SFace : SElement {
+	//	SElType elType = SElType::face;
 
-		inline std::vector<int> otherNeighbourEdges(StrataManifold& manifold);
+	//	std::vector<bool> edgeOrients; // SURELY vector<bool> is cringe
+	//	// true for forwards, false for backwards
+	//	bool flipFace = 0; // if face as a whole should be flipped, after edge winding
 
-	};
+	//	SFace(std::string elName) : SElement(elName) {
+	//	}
+	//};
 
-	struct SFace : StrataElement {
-		SElType elType = SElType::face;
-
-		std::vector<bool> edgeOrients; // SURELY vector<bool> is cringe
-		// true for forwards, false for backwards
-		bool flipFace = 0; // if face as a whole should be flipped, after edge winding
-
-		SFace(std::string elName) : StrataElement(elName) {
-		}
-	};
-
-	struct SPointData {
+	struct SElData {
 		std::string name;
+		int index;
+	};
+
+	struct SPointData : SElData{
+		
 		MMatrix matrix;
 	};
 
-	struct SEdgeData {
-		std::string name; // probably generated, but still needed for semantics?
+	struct SEdgeData : SElData {
+		
 	};
 
-	struct SFaceData {
-		std::string name; // probably generated, but still needed for semantics?
+	struct SFaceData : SElData {
+		//std::string name; // probably generated, but still needed for semantics?
 	};
 
-	struct STid {
-		//SElType::_enumerated elType;
-		SElType elType;
-		int elIndex;
+	//struct STid {
+	//	//SElType::_enumerated elType;
+	//	SElType elType;
+	//	int elIndex;
 
-		//STid(SElType et, int index) : elType(et), elIndex(index) {}
+	//	//STid(SElType et, int index) : elType(et), elIndex(index) {}
 
-	};
+	//};
 	
 	/// ATTRIBUTES
 	// surely there's a different, correct way to do this?
@@ -319,13 +293,19 @@ namespace ed {
 	struct StrataManifold {
 		// using vectors here for now
 
-		std::vector<SPoint> points;
-		std::vector<SEdge> edges;
-		std::vector<SFace> faces;
+		std::vector<SElement> elements;
+
+		//std::vector<SPoint> points;
+		//std::vector<SEdge> edges;
+		//std::vector<SFace> faces;
 
 		int globalIndex = 0; // ticks up any time an element is added
-		std::unordered_map<int,  STid> globalIndexElTypeMap; // this just feels ridiculous
+		//std::unordered_map<int,  STid> globalIndexElTypeMap; // this just feels ridiculous
 		std::unordered_map<std::string, int> nameGlobalIndexMap; // everyone point and laugh 
+		std::map<int, int> pointIndexGlobalIndexMap;
+		std::map<int, int> edgeIndexGlobalIndexMap;
+		std::map<int, int> faceIndexGlobalIndexMap;
+
 
 		std::vector<SPointData> pointDatas;
 		std::vector<SEdgeData> edgeDatas;
@@ -360,11 +340,12 @@ namespace ed {
 		void clear() {
 			// is it better to just make a new object?
 
-			points.clear();
+			/*points.clear();
 			edges.clear();
-			faces.clear();
+			faces.clear();*/
+			elements.clear();
 			globalIndex = 0;
-			globalIndexElTypeMap.clear();
+			//globalIndexElTypeMap.clear();
 			nameGlobalIndexMap.clear();
 			pointDatas.clear();
 			edgeDatas.clear();
@@ -390,8 +371,9 @@ namespace ed {
 		}
 
 
-		inline StrataElement* getEl(int globalId) {
-			STid elId = globalIndexElTypeMap[globalId];
+		inline SElement* getEl(const int& globalId) {
+			return &elements[globalId];
+			/*STid elId = globalIndexElTypeMap[globalId];
 			switch (elId.elType) {
 			case SElType::point:
 				return &points[elId.elIndex];
@@ -400,12 +382,12 @@ namespace ed {
 			case SElType::face:
 				return &faces[elId.elIndex];
 				;
-			}
+			}*/
 		}
 
 
-		SmallList<StrataElement*> getEls(SmallList<int>& globalIds) {
-			SmallList<StrataElement*, globalIds.MAXSIZE> result;
+		SmallList<SElement*> getEls(SmallList<int>& globalIds) {
+			SmallList<SElement*, globalIds.MAXSIZE> result;
 			result.reserve(globalIds.size());
 			for (int gId : globalIds) {
 				result.push_back(getEl(gId));
@@ -413,8 +395,8 @@ namespace ed {
 			return result;
 		}
 
-		std::vector<StrataElement*> getEls(std::vector<int>& globalIds) {
-			std::vector<StrataElement*> result;
+		std::vector<SElement*> getEls(std::vector<int>& globalIds) {
+			std::vector<SElement*> result;
 			result.reserve(globalIds.size());
 			for (int gId : globalIds) {
 				result.push_back(getEl(gId));
@@ -423,57 +405,67 @@ namespace ed {
 		}
 
 
-		SPoint* addPoint(SPoint& el, SPointData elData) {
+		SElement* addElement(SElement& el, SPointData elData) {
 			// god what a mess
 			// still not sure how unique-pointers and ownership work here, but
 			// it's a hassle to make sure what we return is still a valid object in the main vector
-			int elementIndex = static_cast<int>(points.size());
-			points.push_back(el);
-			SPoint* elP = &points[elementIndex];
-			elP->globalIndex = globalIndex;
-			elP->elIndex = elementIndex;
-			STid elId{ SElType::point, elementIndex };
-			//globalIndexElTypeMap[globalIndex] = elId;
-			//globalIndexElTypeMap.insert(globalIndex, elId);
-			globalIndexElTypeMap.insert(std::make_pair(globalIndex, elId));
-			nameGlobalIndexMap[el.name] = globalIndex;
-			globalIndex += 1;
-			return elP;
-		}
-		SEdge* addEdge(SEdge& el, SEdgeData elData) {
-			int elementIndex = static_cast<int>(edges.size());
-			edges.push_back(el);
-			SEdge* elP = &edges[elementIndex];
-			elP->globalIndex = globalIndex;
-			elP->elIndex = elementIndex;
-			STid elId{ SElType::edge, elementIndex };
-			//globalIndexElTypeMap[globalIndex] = elId;
-			globalIndexElTypeMap.insert(std::make_pair(globalIndex, elId));
-			nameGlobalIndexMap[el.name] = globalIndex;
-			globalIndex += 1;
-			return elP;
-		}
-		SFace* addFace(SFace& el, SFaceData elData) {
-			int elementIndex = static_cast<int>(faces.size());
-			faces.push_back(el);
-			SFace* elP = &faces[elementIndex];
-			elP->globalIndex = globalIndex;
-			elP->elIndex = elementIndex;
-			STid elId{ SElType::face, elementIndex };
-			globalIndexElTypeMap.insert(std::make_pair(globalIndex, elId));
-			nameGlobalIndexMap[el.name] = globalIndex;
-			globalIndex += 1;
-			return elP;
-		}
+			int globalIndex = static_cast<int>(elements.size());
 
-		bool windFaceEdgeOrients(SFace* face) {
+			std::map<int, int>* localGlobalIdMapPtr;
+			//std::map<int, int>& localGlobalIdMapPtr = pointIndexGlobalIndexMap;
+			switch (el.elType) {
+				case SElType::point: localGlobalIdMapPtr = &pointIndexGlobalIndexMap;
+				case SElType::edge: localGlobalIdMapPtr = &edgeIndexGlobalIndexMap;
+				case SElType::face: localGlobalIdMapPtr = &faceIndexGlobalIndexMap;
+				//case SElType::point: localGlobalIdMapPtr = pointIndexGlobalIndexMap;
+				//case SElType::edge: localGlobalIdMapPtr = edgeIndexGlobalIndexMap;
+				//case SElType::face: localGlobalIdMapPtr = faceIndexGlobalIndexMap;
+			}
+			int elementIndex = static_cast<int>(
+				((localGlobalIdMapPtr->rbegin()))->first
+				); // get current max key of element set
+			elements.push_back(el);
+			SElement* elP = &(elements[elementIndex]);
+			elP->globalIndex = globalIndex;
+			elP->elIndex = elementIndex + 1;
+			//localGlobalIdMapPtr->insert(elP->elIndex, elP->globalIndex);
+			nameGlobalIndexMap[el.name] = globalIndex;
+			return elP;
+		}
+		//SEdge* addEdge(SEdge& el, SEdgeData elData) {
+		//	int elementIndex = static_cast<int>(edges.size());
+		//	edges.push_back(el);
+		//	SEdge* elP = &edges[elementIndex];
+		//	elP->globalIndex = globalIndex;
+		//	elP->elIndex = elementIndex;
+		//	STid elId{ SElType::edge, elementIndex };
+		//	//globalIndexElTypeMap[globalIndex] = elId;
+		//	globalIndexElTypeMap.insert(std::make_pair(globalIndex, elId));
+		//	nameGlobalIndexMap[el.name] = globalIndex;
+		//	globalIndex += 1;
+		//	return elP;
+		//}
+		//SFace* addFace(SFace& el, SFaceData elData) {
+		//	int elementIndex = static_cast<int>(faces.size());
+		//	faces.push_back(el);
+		//	SFace* elP = &faces[elementIndex];
+		//	elP->globalIndex = globalIndex;
+		//	elP->elIndex = elementIndex;
+		//	STid elId{ SElType::face, elementIndex };
+		//	globalIndexElTypeMap.insert(std::make_pair(globalIndex, elId));
+		//	nameGlobalIndexMap[el.name] = globalIndex;
+		//	globalIndex += 1;
+		//	return elP;
+		//}
+
+		bool windFaceEdgeOrients(SElement* face) {
 			/* for each driver edge of a face,
 			* check direction of each driver edge, add its
 			* state to the direction vector
 			*/
 			face->edgeOrients.clear();
 
-			std::vector<StrataElement*> visitedDrivers;
+			std::vector<SElement*> visitedDrivers;
 			int prevEnds[2] = { NULL, NULL }; // edges or points
 			// if one of these is an edge, is it guaranteed to show up in 
 			// face's own edges?
@@ -482,7 +474,7 @@ namespace ed {
 			// that's just a point with extra steps, but maybe it could happen?
 
 			for (int driverGId : face->drivers) {
-				StrataElement* driver = getEl(driverGId);
+				SElement* driver = getEl(driverGId);
 				// skip anything not an edge
 				if (driver->elType != SElType::edge) {
 					continue;
@@ -567,7 +559,7 @@ namespace ed {
 			for (size_t i = 0; i < edgeIds.size(); i++) {
 				size_t nextI = seqIndex(i + 1, edgeIds.size());
 				int nextEdgeId = edgeIds[nextI];
-				StrataElement* thisEdge = getEl(edgeIds[i]);
+				SElement* thisEdge = getEl(edgeIds[i]);
 
 				// if next edge is not contained in neighbours, return false
 				if (!seqContains(thisEdge->otherNeighbourEdges(*this), nextEdgeId)) {
@@ -579,7 +571,7 @@ namespace ed {
 		}
 
 
-		/*inline std::vector<StrataElement>* vecForType(SElType t) { // this doesn't work either to mask the type
+		/*inline std::vector<SElement>* vecForType(SElType t) { // this doesn't work either to mask the type
 			if (SElType::point == static_cast<int>(t)) {
 				return &points;
 			}
@@ -596,7 +588,7 @@ namespace ed {
 
 		/*
 		auto elByGlobalIndex(const int globalIndex) {
-			StrataElement* el = globalIndexElMap[globalIndex];
+			SElement* el = globalIndexElMap[globalIndex];
 			switch (el->elType) {
 			case SElType::point:
 				return static_cast<SPoint*>(el);

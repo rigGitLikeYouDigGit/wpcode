@@ -118,6 +118,12 @@ namespace ed {
 		}
 	}
 
+	inline void addChildAttributes(MFnCompoundAttribute& cFn, const std::vector<MObject*>& childAttrs) {
+		for (MObject* obj : childAttrs) {
+			cFn.addChild(*obj);
+		}
+	}
+
 	template < typename T>
 	inline void joinVectors(std::vector<T>& toExtend, std::vector<T>& toAdd) {
 		toExtend.reserve(toExtend.size() + std::distance(toAdd.begin(), toAdd.end()));

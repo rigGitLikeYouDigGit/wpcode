@@ -140,7 +140,7 @@ MStatus StrataGraphNode::connectionMade(const MPlug& plug,
 	// new connection only appends new op, no need to reorder everything
 	/* cast here is actually a bit freaky - 
 	MFnDependencyNode.userNode() gets us an MPxNode pointer 
-	to the child type object (say StrataAddPointsOpNode) - 
+	to the child type object (say StrataElementOpNode) - 
 	we want to cast that to StrataOpMixin, 
 	which is a separate PARENT class of the child type.
 	Hopefully this is fine?

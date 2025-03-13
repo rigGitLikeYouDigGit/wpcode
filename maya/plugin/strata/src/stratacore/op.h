@@ -148,122 +148,122 @@ namespace ed {
 
 	};
 
-	struct AddEdgesOp : StrataOp {
-		// add hardcoded edges to the graph
-		// no support for complex inputs
-		// do we assume that each single input will be an array of points? 
+	//struct AddEdgesOp : StrataOp {
+	//	// add hardcoded edges to the graph
+	//	// no support for complex inputs
+	//	// do we assume that each single input will be an array of points? 
 
-		std::vector<std::string> names;
-		std::vector<std::vector<int>> driverGlobalIds;
+	//	std::vector<std::string> names;
+	//	std::vector<std::vector<int>> driverGlobalIds;
 
-		virtual void evalTopo(StrataManifold& manifold) {
-			manifold.edges.reserve(names.size());
-			for (size_t i = 0; i < names.size(); i++) {
-				SEdge el(names[i]);
-				SEdgeData elData;
-				//elData.matrix = matrices[i];
-				SEdge* resultEl = manifold.addEdge(el, elData);
-				//result.push_back(resultEl->globalIndex);
-
-
-
-				// update driver indices for this edge
-				std::copy(driverGlobalIds[i].begin(), driverGlobalIds[i].end(), resultEl->drivers.begin());
-				// add this edge to output edges of each driver
-				for (int driverGlobalId : driverGlobalIds[i]) {
-					StrataElement* driverPtr = manifold.getEl(driverGlobalId);
-
-					// check all drivers are points (for now)
-					if (int(driverPtr->elType) != int(SElType::point)) {
-						resultEl->isInvalid = true;;
-						resultEl->errorMsg = "driver " + driverPtr->name + " is not a point, not allowed in addEdgesOp";
-					}
-					// check if any of the drivers are already marked invalid
-					if (!driverPtr->isInvalid) { // an invalid source invalidates all elements after it, like a NaN
-						resultEl->isInvalid = true;
-						resultEl->errorMsg = "driver " + driverPtr->name + " is already invalid";
-					}
-					driverPtr->edges.push_back(resultEl->globalIndex);
-				}
-			}
-			//return &manifold;
-		}
-	};
-
-	struct AddFacesOp : StrataOp {
-		// explicitly add faces, explicitly supply border edges for each
-		std::vector<std::string> names;
-		std::vector<std::vector<int>> driverGlobalIds;
-
-		virtual void evalTopo(StrataManifold& manifold) {
-			manifold.faces.reserve(names.size());
-			for (size_t i = 0; i < names.size(); i++) {
-
-				// check that all these elements are edges (for now)
-				bool areEdges = true;
-
-				// how do we check that all these edges are contiguous?
-
-				SFace el(names[i]);
-				SFaceData elData;
-				//elData.matrix = matrices[i];
-				SFace* resultEl = manifold.addFace(el, elData);
-				//result.push_back(resultEl->globalIndex);
+	//	virtual void evalTopo(StrataManifold& manifold) {
+	//		manifold.edges.reserve(names.size());
+	//		for (size_t i = 0; i < names.size(); i++) {
+	//			SEdge el(names[i]);
+	//			SEdgeData elData;
+	//			//elData.matrix = matrices[i];
+	//			SEdge* resultEl = manifold.addEdge(el, elData);
+	//			//result.push_back(resultEl->globalIndex);
 
 
-				// update driver indices for this edge
-				std::copy(driverGlobalIds[i].begin(), driverGlobalIds[i].end(), resultEl->drivers.begin());
 
-				if (!manifold.edgesAreContiguousRing(resultEl->drivers)) {
-					el.isInvalid = true;
-					el.errorMsg = "driver edges for " + resultEl->name + " do not form contiguous ring, \
-					invalid border for face";
-				}
+	//			// update driver indices for this edge
+	//			std::copy(driverGlobalIds[i].begin(), driverGlobalIds[i].end(), resultEl->drivers.begin());
+	//			// add this edge to output edges of each driver
+	//			for (int driverGlobalId : driverGlobalIds[i]) {
+	//				StrataElement* driverPtr = manifold.getEl(driverGlobalId);
 
-				// add this edge to output edges of each driver
-				for (int driverGlobalId : driverGlobalIds[i]) {
-					StrataElement* driverPtr = manifold.getEl(driverGlobalId);
+	//				// check all drivers are points (for now)
+	//				if (int(driverPtr->elType) != int(SElType::point)) {
+	//					resultEl->isInvalid = true;;
+	//					resultEl->errorMsg = "driver " + driverPtr->name + " is not a point, not allowed in addEdgesOp";
+	//				}
+	//				// check if any of the drivers are already marked invalid
+	//				if (!driverPtr->isInvalid) { // an invalid source invalidates all elements after it, like a NaN
+	//					resultEl->isInvalid = true;
+	//					resultEl->errorMsg = "driver " + driverPtr->name + " is already invalid";
+	//				}
+	//				driverPtr->edges.push_back(resultEl->globalIndex);
+	//			}
+	//		}
+	//		//return &manifold;
+	//	}
+	//};
 
-					// check all drivers are edges
-					if (int(driverPtr->elType) != int(SElType::edge)) {
-						el.isInvalid = true;
-						el.errorMsg = "driver " + driverPtr->name + " is not an edge, not allowed in addFacesOp";
-					}
-					// check if any of the drivers are already marked invalid
-					if (!driverPtr->isInvalid) { // an invalid source invalidates all elements after it, like a NaN
-						el.isInvalid = true;
-						el.errorMsg = "driver " + driverPtr->name + " is already invalid";
-					}
+	//struct AddFacesOp : StrataOp {
+	//	// explicitly add faces, explicitly supply border edges for each
+	//	std::vector<std::string> names;
+	//	std::vector<std::vector<int>> driverGlobalIds;
 
-					driverPtr->faces.push_back(resultEl->globalIndex);
-				}
+	//	virtual void evalTopo(StrataManifold& manifold) {
+	//		manifold.faces.reserve(names.size());
+	//		for (size_t i = 0; i < names.size(); i++) {
 
-			}
-			//return &manifold;
-		}
+	//			// check that all these elements are edges (for now)
+	//			bool areEdges = true;
 
-	};
+	//			// how do we check that all these edges are contiguous?
 
-
-	struct LoftFaceOp : StrataOp {
-		/* 2 separate operations - first create 2 new
-		edges at extremities of input edges,
-		then use those as borders
-
-		if you loft 2 rings, add 2 equivalent edges in different directions?
-		or just a single edge, included in the face twice
-		has to be this, since any shape modifications have to affect both "sides" of
-		the face exactly
-		*/
-	};
+	//			SFace el(names[i]);
+	//			SFaceData elData;
+	//			//elData.matrix = matrices[i];
+	//			SFace* resultEl = manifold.addFace(el, elData);
+	//			//result.push_back(resultEl->globalIndex);
 
 
-	struct RailFaceOp : StrataOp {
-		/* add a face covering more than one edge in
-		u and v - face MUST be rectangular (however we
-		work that out)
-		*/
-	};
+	//			// update driver indices for this edge
+	//			std::copy(driverGlobalIds[i].begin(), driverGlobalIds[i].end(), resultEl->drivers.begin());
+
+	//			if (!manifold.edgesAreContiguousRing(resultEl->drivers)) {
+	//				el.isInvalid = true;
+	//				el.errorMsg = "driver edges for " + resultEl->name + " do not form contiguous ring, \
+	//				invalid border for face";
+	//			}
+
+	//			// add this edge to output edges of each driver
+	//			for (int driverGlobalId : driverGlobalIds[i]) {
+	//				StrataElement* driverPtr = manifold.getEl(driverGlobalId);
+
+	//				// check all drivers are edges
+	//				if (int(driverPtr->elType) != int(SElType::edge)) {
+	//					el.isInvalid = true;
+	//					el.errorMsg = "driver " + driverPtr->name + " is not an edge, not allowed in addFacesOp";
+	//				}
+	//				// check if any of the drivers are already marked invalid
+	//				if (!driverPtr->isInvalid) { // an invalid source invalidates all elements after it, like a NaN
+	//					el.isInvalid = true;
+	//					el.errorMsg = "driver " + driverPtr->name + " is already invalid";
+	//				}
+
+	//				driverPtr->faces.push_back(resultEl->globalIndex);
+	//			}
+
+	//		}
+	//		//return &manifold;
+	//	}
+
+	//};
+
+
+	//struct LoftFaceOp : StrataOp {
+	//	/* 2 separate operations - first create 2 new
+	//	edges at extremities of input edges,
+	//	then use those as borders
+
+	//	if you loft 2 rings, add 2 equivalent edges in different directions?
+	//	or just a single edge, included in the face twice
+	//	has to be this, since any shape modifications have to affect both "sides" of
+	//	the face exactly
+	//	*/
+	//};
+
+
+	//struct RailFaceOp : StrataOp {
+	//	/* add a face covering more than one edge in
+	//	u and v - face MUST be rectangular (however we
+	//	work that out)
+	//	*/
+	//};
 
 }
 

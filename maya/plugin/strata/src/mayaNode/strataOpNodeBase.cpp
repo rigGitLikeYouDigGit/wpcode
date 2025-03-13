@@ -51,22 +51,22 @@ MStatus StrataOpNodeBase::addStrataAttrs(
 	// PARAMETRES
 	/* we add the top one first, and assume each one will have a string expression?
 	no idea whatsoever*/
-	aStParam = cFn.create("stParam", "stParam");
-	aStParamExp = tFn.create("stParamExp", "stParamExp", MFnData::kString);
-	tFn.setDefault(MFnStringData().create(""));
-	cFn.addChild(aStParamExp);
+	//aStParam = cFn.create("stParam", "stParam");
+	//aStParamExp = tFn.create("stParamExp", "stParamExp", MFnData::kString);
+	//tFn.setDefault(MFnStringData().create(""));
+	//cFn.addChild(aStParamExp);
 
-	// ELEMENT DATA
-	// specific nodes naturally need to add their own inputs here
-	aStElData = cFn.create("stElData", "stElData");
+	//// ELEMENT DATA
+	//// specific nodes naturally need to add their own inputs here
+	//aStElData = cFn.create("stElData", "stElData");
 
 	//// add attributes
 
 	std::vector<MObject> drivers = {
 		aStGraph,
 		aStInput,
-		aStParam,
-		aStElData
+		//aStParam,
+		//aStElData
 	};
 	driversVec.insert(driversVec.end(), drivers.begin(), drivers.end());
 

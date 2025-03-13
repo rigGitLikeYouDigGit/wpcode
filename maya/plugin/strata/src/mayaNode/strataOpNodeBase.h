@@ -36,33 +36,16 @@ Maybe
 
 #define DECLARE_STRATA_STATIC_MEMBERS \
 static MObject aStGraph; \
-static MObject aStParent;  \
 static MObject aStInput; \
-static MObject aStInputAlias; \
-static MObject aStOpIndex; \
 static MObject aStOutput; \
-static MObject aStManifoldData; \
-static MObject aStParam;\
-static MObject aStParamExp; \
-static MObject aStElData; \
-
 
 
 #define DEFINE_STRATA_STATIC_MOBJECTS(NODETYPE) \
 MObject NODETYPE::aStGraph; \
-MObject NODETYPE::aStParent; \
 \
 MObject NODETYPE::aStInput; \
-MObject NODETYPE::aStInputAlias; \
-\
-MObject NODETYPE::aStOpIndex; \
 MObject NODETYPE::aStOutput; \
-MObject NODETYPE::aStManifoldData; \
-\
-MObject NODETYPE::aStParam; \
-MObject NODETYPE::aStParamExp; \
-\
-MObject NODETYPE::aStElData; \
+
 
 
 

@@ -17,7 +17,7 @@ register all plugins
 #include "mayaNode/strataGraphNode.h"
 //#include "mayaNode/strataOpNodeBase.h"
 #include "mayaNode/strataPointNode.h"
-#include "mayaNode/strataAddPointsOpNode.h"
+#include "mayaNode/strataElementOpNode.h"
 
 //#include "mayanode/stratacurvenode.h"
 //#include "mayanode/stratasurfacenode.h"
@@ -121,7 +121,7 @@ MStatus initializePlugin( MObject obj ){
         return s;
     }
 
-    REGISTER_NODE(StrataAddPointsOpNode);
+    REGISTER_NODE(StrataElementOpNode);
 
 
 
@@ -177,7 +177,7 @@ MStatus uninitializePlugin( MObject obj ){
     DEREGISTER_NODE(StrataGraphNode);
     //DEREGISTER_NODE(StrataOpNodeBase);
     DEREGISTER_NODE(StrataPointNode);
-    DEREGISTER_NODE(StrataAddPointsOpNode);
+    DEREGISTER_NODE(StrataElementOpNode);
 
     DEBUGS("uninitialised strata")
     return s;
