@@ -63,6 +63,7 @@ struct Status {
 	{
 		return (val ? true : false);
 	}
+
 };
 
 // for check-return status
@@ -76,5 +77,11 @@ struct Status {
 #define CWSTAT(s)\
 	if(s){ DEBUGS(s.msg);}\
 
+// check-write-message
 #define CWMSG(s, msg)\
-	if(s){ s.addMsg(msg); DEBUGS(s.msg);}\
+	if(s){ s.addMsg(msg); DEBUGS(s.msg);}
+
+
+// check-write-return
+#define CWRSTAT(s, strMsg)\
+	if(s){ s.addMsg(strMsg); DEBUGS(s.msg); return s;}

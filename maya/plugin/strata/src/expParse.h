@@ -57,11 +57,17 @@ int main()
 namespace ed {
 
 	//typedef ExpOperator;
+
+	//template <typename VT>
 	struct ExpOperator;
 
 	struct ExpValue {
 		/* intermediate and result struct produced by operators - 
 		in this way we allow dynamic typing in expressions
+
+		for array values, is there any value in leaving it as an expression rather than
+		evaluated sets? then somehow eval-ing the whole thing?
+		that's just what we're doing here anyway, I'm dumb
 		*/
 		std::string strVal;
 		float scalarVal;
@@ -70,45 +76,75 @@ namespace ed {
 		std::string varName;
 	};
 
-	static Status templateOpFn(
-		const ExpOperator& op//, 
-		//const std::vector<ExpValue>& args, 
-		//std::vector<ExpValue>& result
+	/*static Status templateOpFn(
+		ExpOperator* op, 
+		ExpValue& value, 
+		Status& s
 	) {
-		return Status();
-	}
-	typedef Status(*OpFnPtr) (const ExpOperator&);
+		return s;
+	}*/
 
 
-	struct ExpOperator {
-		const std::string name;
+	struct ExpOperator : EvalNode<ExpValue> {
+	//template<typename VT>
+	//struct ExpOperator : EvalNode<VT> {
+		//using EvalNode<ExpValue>::EvalNode<ExpValue>; // brother what is this 
+		//using EvalFnT = Status(*)(ExpOperator<VT>*, VT&, Status&);
+		using EvalNode::EvalNode; // brother what is this 
 		const std::string token;
 		int nArgs = 1;
-		OpFnPtr opFnPtr = nullptr; // pointer to op function
 
 	};
+
+	// register individual functions against tokens?
+	// seems easier than registering different types, that's super hard in c++
+	//typedef  ExpOperator<ExpValue>::EvalFnT ExpOpFnT; // doesn't match
+	//typedef  Status(*)(EvalNode<ExpValue>*, ExpValue&, Status&) ExpOpFnT; // not allowed
+	//using ExpOpFnT = Status(*)(EvalNode<ExpValue>*, ExpValue&, Status&);
+	//typedef ExpOpFnT ExpOpFnT; // screw this language man
+
+	typedef Status(*ExpOpFnT)(ExpOperator*, ExpValue&, Status&);
 
 	struct ExpGrammar {
-		std::unordered_map< std::string, ExpOperator> opMap;
+		std::unordered_map< const std::string, 
+			//Status(*)(EvalNode<ExpValue>*, ExpValue&, Status&)
+			ExpOpFnT*
+		> tokenFnMap;
 
-		ExpOperator* addOp(
-			/* tried doing this in the constructor, but the ownership
-			got really messy
-			*/
-			ExpOperator newOp
+		void registerOpFn(const std::string token, 
+			ExpOpFnT &opFn
+			//Status(*)(EvalNode<ExpValue>*, ExpValue&, Status&) opFn
 		) {
-			//opMap[newOp.token] = newOp;
-			opMap.insert(std::make_pair(newOp.token, newOp));
-			return &(opMap[newOp.token]);
+			//tokenFnMap[token] = opFn;
+			//tokenFnMap.insert(token, &opFn);
+			//tokenFnMap.emplace(token, opFn);  // error C2064: term does not evaluate to a function taking 1 arguments
+			////// to hell with all of this man
 		}
-
 	};
 
+
+
+	//extern ExpGrammar mainGrammar;
+	//
+	////Status assignOpFn(EvalNode<ExpValue>* node, ExpValue& value, Status& s) {
+	//Status assignOpFn(ExpOperator* node, ExpValue& value, Status& s) {
+	//	return s;
+	//}
+
+	//static ExpOpFnT fnPtr = &assignOpFn;
+
+	//static void initMainGrammar() {
+	//	
+	//	mainGrammar.registerOpFn("=", &assignOpFn);
+
+	//}
+
+
+	//};
+
 	// build default grammar for strata expressions
-	static ExpGrammar mainGrammar;
-	static ExpOperator* plusOp = mainGrammar.addOp(
-		ExpOperator{"plusOp", "+", 2, &templateOpFn}
-	);
+	
+
 
 
 

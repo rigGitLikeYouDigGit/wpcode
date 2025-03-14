@@ -314,6 +314,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\containers.cpp" />
+    <ClCompile Include="src\expParse.cpp" />
     <ClCompile Include="src\lib.cpp" />
     <ClCompile Include="src\libnurbs.cpp" />
     <ClCompile Include="src\libramp.cpp" />
@@ -322,6 +323,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="src\stratacore\manifold.cpp" />
     <ClInclude Include="src\dirtyGraph.h" />
     <ClInclude Include="src\expParse.h" />
+    <ClInclude Include="src\iterator.h" />
     <ClInclude Include="src\mayaNode\strataElementOpNode.h" />
     <ClInclude Include="src\mayaNode\strataMayaLib.h" />
     <ClInclude Include="src\mayaNode\strataGraphNode.h" />

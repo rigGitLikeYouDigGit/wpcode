@@ -21,9 +21,19 @@ assuming that all nodes have a global unique name
 
 we assume a single node is only valid for and belongs to a single type of graph?
 ignoring values / evaluation for now
+
+
+we can't avoid value templating for a node included in an evaluation graph
+
 */
 
 namespace ed {
+
+	/*template <typename T>
+	inline std::set<T> setIntersect(
+		std::set<T>& b,
+		std::set<T>& b,
+		)*/
 
 	//template<typename VT = int>
 	struct DirtyGraph;
@@ -35,36 +45,41 @@ namespace ed {
 	struct DirtyNode {
 		const int index;
 		const std::string name;
-		const DirtyGraph* graph;
+		DirtyGraph* graphPtr = nullptr;
 		std::vector<int> inputs; // manage connections yourself
 
 		// my python is showing - we use a map here for easier extensibility
 		std::map<const std::string, bool> dirtyMap = { {"main" , true} };
 
+		inline bool anyDirty() {
+			for (auto p : dirtyMap) {
+				if (p.second) { return true; }
+			}
+			return false;
+		}
+
+		//constexpr const std::array<const std::string> dirtyMap() {
+		//	// return list of all individual eval operations in nodes
+		//	return std::array<const std::string>{"main"};
+		//}
+
 		int temp_inDegree = 0;
 		int temp_generation = 0;
 
-		//DirtyNode* depthFirstConnections
-
 		DirtyNode(const int index, const std::string name) : index(index), name(name) {}
 
-		//std::unique_ptr<VT> result;
-
-		virtual void reset() {
-			// free memory owning result object
-			//result.reset();
+		virtual Status postConstructor() {
+			/* called after node added to graph, all connections set up*/
+			return Status();
 		}
 	};
 
-
-	//template<typename VT=int> // leave blank if you don't need complex evaluation
 	struct DirtyGraph {
 		/* abstracted graph behaviour for topological generations,
 		dirty propagation etc
 		losing efficiency with indices and names but it's fine
 
 		most things here just stored in arrays
-
 
 		can we somehow separate the evaluation behaviour from the raw topological graph?
 
@@ -83,9 +98,14 @@ namespace ed {
 		std::unordered_map<int, std::unordered_set<int>> nodeAllDependentsMap;
 
 		template <typename NodeT = DirtyNode>
-		const NodeT* addNode(const std::string& name) {
+		NodeT* addNode(const std::string& name, bool _callPostConstructor=true) {
 			/* create new node object,
-			returns a new pointer to it*/
+			returns a new pointer to it.
+			
+			callPostConstructor true by default - 
+			if a derived graph type calls this, set to false to call post
+			only at the end of the overridden function
+			*/
 
 			const int newIndex = static_cast<int>(nodes.size());
 			//auto il = { newIndex, name };
@@ -98,9 +118,15 @@ namespace ed {
 				)
 			);
 			//std::unique_ptr<NodeT> newNodePtr = nodes[newIndex];
-			const NodeT* newNodePtr = nodes[newIndex].get();
+			NodeT* newNodePtr = nodes[newIndex].get();
 			nameIndexMap[newNodePtr->name] = newIndex;
+			newNodePtr->graphPtr = this;
 			graphChanged = true;
+
+			if (_callPostConstructor) {
+				Status s = newNodePtr->postConstructor();
+				CWMSG(s, "post-constructor on node " + newNodePtr->name + " failed!")
+			}
 			return newNodePtr;
 		}
 
@@ -224,9 +250,11 @@ namespace ed {
 			return result;
 		}
 
-		SmallList<std::unordered_set<int>, 8> nodesInHistory(int opIndex, bool returnGenerations) {
+		//SmallList<std::unordered_set<int>, 8> nodesInHistory(int opIndex, bool returnGenerations) {
+		std::vector<std::unordered_set<int>> nodesInHistory(int opIndex, bool returnGenerations) {
 			/* generation list of nodes in history*/
-			SmallList<std::unordered_set<int>, 8> result;
+			//SmallList<std::unordered_set<int>, 8> result;
+			std::vector<std::unordered_set<int>> result;
 
 			std::unordered_set<int> toCheck = { opIndex };
 			while (toCheck.size()) {
@@ -264,9 +292,11 @@ namespace ed {
 			return result;
 		}
 
-		SmallList<std::unordered_set<int>, 8> nodesInFuture(int opIndex, bool returnGenerations) {
+		//SmallList<std::unordered_set<int>, 8> nodesInFuture(int opIndex, bool returnGenerations) {
+		std::vector<std::unordered_set<int>> nodesInFuture(int opIndex, bool returnGenerations) {
 			/* generation list of nodes in future*/
-			SmallList<std::unordered_set<int>, 8> result;
+			//SmallList<std::unordered_set<int>, 8> result;
+			std::vector<std::unordered_set<int>> result;
 
 			std::unordered_set<int> toCheck = { opIndex };
 			while (toCheck.size()) {
@@ -507,30 +537,257 @@ namespace ed {
 					}
 					if (nextNode->dirtyMap[pair.first] != pair.second) {
 						allMatch = false;
-						nextNode->dirtyMap[pair.first] += pair.second; // if either is dirty, keep that value
+						nextNode->dirtyMap[pair.first] = (nextNode->dirtyMap[pair.first] || pair.second); // if either is dirty, keep that value
 					}
 				}
 				if (allMatch) { // all dirty flags match on this node, skip this tree
 					it.skipTree();
 				}
 			}
+		}
+
+
+		void nodeInputsChanged(int opIndex) {
+			graphChanged = true;
+		}
+		int checkLegalInput(int opIndex, int testDriverOpIndex) {
+			/* if result is 0 all good
+			// if not, error and it's illegal
+			check for feedback loops
+			*/
+			if (opIndex == testDriverOpIndex) { // can't connect to itself
+				return 1;
+			}
+			std::unordered_set<int> futureOps = nodesInFuture(opIndex);
+			if (futureOps.count(testDriverOpIndex)) {
+				// node found in future, illegal feedback loop
+				return 2;
+			}
+			return 0;
 		};
 	};
-	template <typename VT = int>
+
+	template <typename VT>
+	struct EvalGraph;
+
+	template <typename VT>
+	struct EvalNode : DirtyNode {
+		
+		using DirtyNode::DirtyNode;
+
+		//EvalGraph<VT>* graphPtr = nullptr;
+
+		// TODO: try and make dirty flags and function string tags all compile-time
+		//constexpr const std::array<const std::string> evalSteps() {
+		//	// return list of all individual eval operations in nodes
+		//	return std::array<const std::string>{"main"};
+		//}
+
+		//constexpr const std::array<const std::string> evalSteps() {
+		//	// return list of all individual eval operations in nodes
+		//	return std::array<const std::string>{"main"};
+		//}
+
+		//using evalFnT = Status(*)(VT&, Status&);
+		//Status evalFn;
+
+		//template <typename ParamsT>
+		//Status evalParams(ParamsT& input, Status& stat) { return s; }
+
+		//const std::unordered_map<const std::string, 
+
+		/*OK, couldn't make this fully generic, so now we ball - 
+		allow one pre-step for computing params, then the normal eval functions
+		on the value type specified*/
+
+		// typedef function pointers for eval functions
+		//using EvalFnT = Status(*)(VT&, Status&);
+
+		// couldn't work out how to bind instances to functions, so
+		// by default eval functions are static methods
+		//using EvalFnT = Status(EvalNode<VT>::*)(VT&, Status&);
+		using EvalFnT = Status(*)(EvalNode<VT>*, VT&, Status&);
+		typedef EvalFnT EvalFnT;
+
+		static Status evalMain(EvalNode<VT>* node, VT& value, Status& s) { return s; }
+		EvalFnT evalFnPtr = evalMain; // pointer to op function - if passed, easier than defining custom classes for everything?
+
+		// ordered map to define evaluation order of steps
+		std::map<const std::string, EvalFnT&> evalFnMap{
+			{"main" , evalFnPtr}
+		};
+
+
+		virtual Status preEval(const std::string& stepName, Status& s) {
+			// called before each step is run
+			// use this to recompile parametres, if they've changed
+			return s;
+		}
+
+		virtual void preReset() {
+			// before node value is reset in graph
+		}
+		virtual void postReset() {
+			// after node value is reset in graph
+		};
+		EvalGraph<VT>* graphPtr = nullptr;
+		VT* value() { // retrieve whatever node's current value is in graph
+			return &(graphPtr->results[index]);
+		}
+
+	};
+
+	//struct EvalGraph<int>;
+
+	template <typename VT>
 	struct EvalGraph : DirtyGraph {
 		// adding mechanisms for evaluation and caching results
 
+		VT baseValue; // use to copy and reset node result entries
 		std::vector<VT> results;
 
-		template <typename NodeT = DirtyNode>
-		const NodeT* addNode(const std::string& name, VT defaultValue = nullptr) {
-			const NodeT* baseResult = DirtyGraph::addNode(name);
-			if (defaultValue == nullptr) {
+		template <typename NodeT = EvalNode<VT>>
+		NodeT* addNode(const std::string& name, VT defaultValue = nullptr,
+			typename NodeT::EvalFnT evalFnPtr = nullptr) 
+		{
+			NodeT* baseResult = DirtyGraph::addNode<NodeT>(name);
+			if (defaultValue == nullptr) { // if default is given, add it to graph
 				defaultValue = VT();
 			}
 			results.push_back(defaultValue);
+
+			if (evalFnPtr != nullptr) {// if evalFn is given, set it on node
+				baseResult->evalFnPtr = evalFnPtr;
+			}
 			return baseResult;
 		}
+
+
+		Status evalNode(EvalNode<VT>* op, Status& s) {
+			/* encapsulated evaluation for a single op
+			* we guarantee that all an op's input nodes will already
+			* have been evaluated.
+			* 
+			* is it worth adding capability for multiple passes? multiple operations per pass?
+			* 
+			* flag if a certain node requires a certain set of passes to run in the graph up until that point?
+			* 
+			*/
+
+			// reset node state
+			op->preReset();
+			// copy base geo into node's result, if it has inputs
+			if (op->inputs.size()) {
+				results[op->index] = results[op->inputs[0]];
+			}
+			else { // if no inputs, copy graph's baseValue
+				results[op->index] = baseValue;
+			}
+			op->postReset();
+
+			/*TODO: check for errors in evaluation, somehow -
+			that would mean passing out errors to graph eval function
+
+			...we could hypothetically CHECK an MSTATUS...
+			...and hypothetically RETURN_IT...
+			*/
+
+
+			/* for each evalFn, check if we find a dirty flag for its key,
+			* and if dirty, evaluate it
+			* 
+			* we also set that flag clean automatically
+			*/
+			for (auto fnPair : op->evalFnMap) {
+				if (op->dirtyMap.count(fnPair.first)) {
+					if (op->dirtyMap[fnPair.first]) {
+						s = op->preEval(fnPair.first, s);
+						CWRSTAT(s, "error in preEval for stage: " + fnPair.first + " for node: " + op->name + " , halting");
+						//s = fnPair.second(results[op->index], s);
+						s = op->evalFnMap[fnPair.first](op, results[op->index], s);
+						CWRSTAT(s, "error in EVAL for stage: " + fnPair.first + " for node: " + op->name + " , halting");
+					}
+				}
+			}
+
+			// donezo
+			return s;
+		}
+
+		Status evalGraph(Status& s, int upToNodeId = -1) {
+			// TODO: don't eval topo and data all the time obviously
+			// just for now
+
+			/* first input of each node by default should be the manifold stream
+			to write on. if a node has no input, it's an ancestor in the graph-
+			create an empty manifold object for that object
+
+			I don't know if there's an alternative to copying the manifold to every node's output?
+			surely that's ridiculously wasteful.
+			but using a constant reference means we can't have a "breakpoint" in the graph, since the same
+			object will be edited constantly?
+
+			until a node branches, we can work on only one object?
+
+			copy everything for now. make it exist, then make it efficient.
+
+			*/
+
+			// sort topo generations in nodes if graph has changed
+			if (graphChanged) {
+				rebuildGraphStructure(s);
+
+			}
+			CWRSTAT(s, "ERROR rebuilding graph structure ahead of graph eval, halting");
+
+			// if specific node given, 
+			std::unordered_set<int> toEval;
+			if (upToNodeId > -1) {
+				toEval = nodesInHistory(upToNodeId);
+			}
+
+			bool foundEndNode = false;
+			// for now just work in generations
+			// go through generations in sequence
+			for (auto generation : generations) {
+
+				// go through each node in generation
+				// this is the bit that can be parallelised
+				if (upToNodeId > -1) {
+					std::unordered_set<int> baseGeneration(generation);
+					generation.clear();
+					std::set_intersection(
+						baseGeneration.begin(), baseGeneration.end(),
+						toEval.begin(), toEval.end(),
+						std::inserter(generation, generation.begin())
+					);
+					
+				}
+				
+				for (auto& nodeId : generation) {
+					EvalNode<VT>* node = static_cast<EvalNode<VT>*>(getNode(nodeId));
+					// check if anything on node is dirty - if so, continue
+					if (!node->anyDirty()) {
+						continue;
+					}
+					// eval whole node
+					evalNode(node, s);
+					CRMSG(s, "ERROR eval-ing op " + node->name + ", halting Strata graph ");
+
+					// if node's index is given as breakpoint to eval to, end
+					if (node->index == upToNodeId) {
+						foundEndNode = true;
+						break;
+					}
+				}
+				// stop all eval if end node reached
+				if (foundEndNode) {
+					break;
+				}
+			}
+			return s;
+		}
+
 	};
 
 }
@@ -541,137 +798,13 @@ namespace ed {
 
 
 
-		//	void nodeInputsChanged(int opIndex) {
-		//		graphChanged = true;
-		//	}
 
 
 
-		//	int checkLegalInput(int opIndex, int testDriverOpIndex) {
-		//		/* if result is 0 all good
-		//		// if not, error and it's illegal
-		//		check for feedback loops
-		//		*/
-		//		if (opIndex == testDriverOpIndex) { // can't connect to itself
-		//			return 1;
-		//		}
-		//		std::unordered_set<int> futureOps = opsInFuture(opIndex);
-		//		if (futureOps.count(testDriverOpIndex)) {
-		//			// node found in future, illegal feedback loop
-		//			return 2;
-		//		}
-		//		return 0;
-		//	}
 
 
 
-		//	Status evalOp(StrataOp* op, Status& s) {
-		//		/* encapsulated evaluation for a single op
-		//		* we guarantee that all an op's input nodes will already
-		//		* have been evaluated
-		//		*/
 
-		//		// reset node state
-		//		op->reset();
 
-		//		// copy geo into node's result, if it has inputs
-		//		if (op->inputs.size()) {
-		//			StrataOp* mainInput = getOp(op->inputs[0]);
-		//			// copy the manifold result of previous node
-		//			op->result = mainInput->result;
-		//		}
-
-		//		/*TODO: check for errors in evaluation, somehow -
-		//		that would mean passing out errors to graph eval function
-
-		//		...we could hypothetically CHECK an MSTATUS...
-		//		...and hypothetically RETURN_IT...
-		//		*/
-
-		//		// if params have changed, recompile
-		//		if (op->paramsDirty) {
-		//			s = op->evalParams(op->rootExpNode, s);
-		//			CRSTAT(s);
-		//			op->paramsDirty = false;
-		//		}
-
-		//		// eval topology if dirty
-		//		if (op->topoDirty) {
-		//			s = (op->result, s);
-		//			CRSTAT(s);
-		//			op->topoDirty = false;
-		//		}
-
-		//		// eval data if dirty
-		//		if (op->dataDirty) {
-		//			s = op->evalData(op->result, s);
-		//			CRSTAT(s);
-		//			op->dataDirty = false;
-		//		}
-
-		//		// donezo
-		//		return s;
-		//	}
-
-		//	Status evalOpGraph(Status& s, int upToNodeId = -1) {
-		//		// TODO: don't eval topo and data all the time obviously
-		//		// just for now
-
-		//		/* first input of each node by default should be the manifold stream
-		//		to write on. if a node has no input, it's an ancestor in the graph-
-		//		create an empty manifold object for that object
-
-		//		I don't know if there's an alternative to copying the manifold to every node's output?
-		//		surely that's ridiculously wasteful.
-		//		but using a constant reference means we can't have a "breakpoint" in the graph, since the same
-		//		object will be edited constantly?
-
-		//		until a node branches, we can work on only one object?
-
-		//		copy everything for now. make it exist, then make it efficient.
-
-		//		*/
-
-		//		// sort topo generations in nodes if graph has changed
-		//		if (graphChanged) {
-		//			rebuildGraphStructure(s);
-
-		//		}
-		//		CRMSG(s, "ERROR rebuilding graph structure ahead of graph eval, halting Strata graph");
-
-		//		bool foundEndNode = false;
-		//		// for now just work in generations
-		//		// go through generations in sequence
-		//		for (auto& generation : generations) {
-
-		//			// go through each node in generation
-		//			// this is the bit that can be parallelised
-		//			for (auto& nodeId : generation) {
-		//				StrataOp* node = getOp(nodeId);
-		//				// check if anything on node is dirty - if so, continue
-		//				if (!(node->dataDirty + node->topoDirty + node->paramsDirty)) {
-		//					continue;
-		//				}
-		//				// eval whole node
-		//				evalOp(node, s);
-		//				CRMSG(s, "ERROR eval-ing op " + node->name + ", halting Strata graph ");
-
-		//				// mark outputs dirty, ensure they get eval'd in next generation
-		//				for (int dependentId : nodeDependentsMap[node->index]) {
-		//					StrataOp* dependent = getOp(dependentId);
-		//					dependent->topoDirty = true;
-		//				}
-		//				if (node->index == upToNodeId) {
-		//					foundEndNode = true;
-		//					break;
-		//				}
-		//			}
-		//			// stop all eval if end node reached
-		//			if (foundEndNode) {
-		//				break;
-		//			}
-		//		}
-		//		return s;
-		//	}
 
 		//};
