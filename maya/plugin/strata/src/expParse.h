@@ -9,6 +9,13 @@
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
+#include <string>
+#include <iostream>
+#include <map>
+#include <vector>
+#include <typeinfo>
+#include <typeindex>
+#include <cassert>
 
 
 #include "status.h"
@@ -56,10 +63,10 @@ int main()
 */
 namespace ed {
 
-	//typedef ExpOperator;
+	//typedef ExpOpNode;
 
 	//template <typename VT>
-	struct ExpOperator;
+	struct ExpOpNode;
 
 	struct ExpValue {
 		/* intermediate and result struct produced by operators - 
@@ -77,7 +84,7 @@ namespace ed {
 	};
 
 	/*static Status templateOpFn(
-		ExpOperator* op, 
+		ExpOpNode* op, 
 		ExpValue& value, 
 		Status& s
 	) {
@@ -85,37 +92,57 @@ namespace ed {
 	}*/
 
 
-	struct ExpOperator : EvalNode<ExpValue> {
+	struct ExpOpNode : EvalNode<ExpValue> {
 	//template<typename VT>
-	//struct ExpOperator : EvalNode<VT> {
+	//struct ExpOpNode : EvalNode<VT> {
 		//using EvalNode<ExpValue>::EvalNode<ExpValue>; // brother what is this 
-		//using EvalFnT = Status(*)(ExpOperator<VT>*, VT&, Status&);
-		using EvalNode::EvalNode; // brother what is this 
-		const std::string token;
-		int nArgs = 1;
+		//using EvalFnT = Status(*)(ExpOpNode<VT>*, VT&, Status&);
+		///using EvalNode::EvalNode; // brother what is this 
+		/*const std::string token;
+		int nArgs = 1;*/
+
+		/*
+		I GOT A REAL FUNCTION POINTER FOR YOU
+		
+		I POINT
+
+		YOU FUNCTION
+		*/
+
+		typedef Status(*EvalFnT)(ExpOpNode*, ExpValue&, Status&);
+		static Status evalMain(ExpOpNode* node, ExpValue& value, Status& s) { return s; }
+		EvalFnT evalFnPtr = evalMain; // pointer to op function - if passed, easier than defining custom classes for everything?
+
+		// ordered map to define evaluation order of steps
+		std::map<const std::string, EvalFnT&> evalFnMap{
+			{"main" , evalFnPtr}
+		};
+
+
 
 	};
 
-	// register individual functions against tokens?
-	// seems easier than registering different types, that's super hard in c++
-	//typedef  ExpOperator<ExpValue>::EvalFnT ExpOpFnT; // doesn't match
-	//typedef  Status(*)(EvalNode<ExpValue>*, ExpValue&, Status&) ExpOpFnT; // not allowed
-	//using ExpOpFnT = Status(*)(EvalNode<ExpValue>*, ExpValue&, Status&);
-	//typedef ExpOpFnT ExpOpFnT; // screw this language man
+	//// register individual functions against tokens?
+	//// seems easier than registering different types, that's super hard in c++
+	////typedef  ExpOpNode<ExpValue>::EvalFnT ExpOpFnT; // doesn't match
+	////typedef  Status(*)(EvalNode<ExpValue>*, ExpValue&, Status&) ExpOpFnT; // not allowed
+	////using ExpOpFnT = Status(*)(EvalNode<ExpValue>*, ExpValue&, Status&);
+	////typedef ExpOpFnT ExpOpFnT; // screw this language man
 
-	typedef Status(*ExpOpFnT)(ExpOperator*, ExpValue&, Status&);
+	//typedef Status(*ExpOpFnT)(ExpOpNode*, ExpValue&, Status&);
 
 	struct ExpGrammar {
 		std::unordered_map< const std::string, 
 			//Status(*)(EvalNode<ExpValue>*, ExpValue&, Status&)
-			ExpOpFnT*
+			ExpOpNode::EvalFnT
 		> tokenFnMap;
 
 		void registerOpFn(const std::string token, 
-			ExpOpFnT &opFn
+			//ExpOpFnT &opFn
+			ExpOpNode::EvalFnT opFn
 			//Status(*)(EvalNode<ExpValue>*, ExpValue&, Status&) opFn
 		) {
-			//tokenFnMap[token] = opFn;
+			tokenFnMap[token] = opFn;
 			//tokenFnMap.insert(token, &opFn);
 			//tokenFnMap.emplace(token, opFn);  // error C2064: term does not evaluate to a function taking 1 arguments
 			////// to hell with all of this man
@@ -127,7 +154,7 @@ namespace ed {
 	//extern ExpGrammar mainGrammar;
 	//
 	////Status assignOpFn(EvalNode<ExpValue>* node, ExpValue& value, Status& s) {
-	//Status assignOpFn(ExpOperator* node, ExpValue& value, Status& s) {
+	//Status assignOpFn(ExpOpNode* node, ExpValue& value, Status& s) {
 	//	return s;
 	//}
 
@@ -144,8 +171,6 @@ namespace ed {
 
 	// build default grammar for strata expressions
 	
-
-
 
 
 
