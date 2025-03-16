@@ -50,6 +50,7 @@
     <ClInclude Include="src\status.h" />
     <ClInclude Include="src\dirtyGraph.h" />
     <ClInclude Include="src\iterator.h" />
+    <ClInclude Include="src\factory.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="F:\wp\code\maya\plugin\strata\CMakeLists.txt" />

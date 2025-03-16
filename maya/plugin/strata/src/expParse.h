@@ -22,6 +22,8 @@
 
 #include "dirtyGraph.h"
 
+#include "factory.h"
+
 /*
 dead, dead simple way of parsing a string expression into
 a list / tree of operations on tokens
@@ -63,13 +65,19 @@ int main()
 */
 namespace ed {
 
+	struct test {
+		static const std::string tag;
+		//const static std::string name = "ada";
+	};
+
+
 	//typedef ExpOpNode;
 
 	//template <typename VT>
 	struct ExpOpNode;
 
 	struct ExpValue {
-		/* intermediate and result struct produced by operators - 
+		/* intermediate and result struct produced by operators -
 		in this way we allow dynamic typing in expressions
 
 		for array values, is there any value in leaving it as an expression rather than
@@ -83,94 +91,61 @@ namespace ed {
 		std::string varName;
 	};
 
-	/*static Status templateOpFn(
-		ExpOpNode* op, 
-		ExpValue& value, 
-		Status& s
-	) {
-		return s;
-	}*/
-
-
-	struct ExpOpNode : EvalNode<ExpValue> {
-	//template<typename VT>
-	//struct ExpOpNode : EvalNode<VT> {
-		//using EvalNode<ExpValue>::EvalNode<ExpValue>; // brother what is this 
-		//using EvalFnT = Status(*)(ExpOpNode<VT>*, VT&, Status&);
-		///using EvalNode::EvalNode; // brother what is this 
-		/*const std::string token;
-		int nArgs = 1;*/
-
-		/*
-		I GOT A REAL FUNCTION POINTER FOR YOU
-		
-		I POINT
-
-		YOU FUNCTION
-		*/
-
-		typedef Status(*EvalFnT)(ExpOpNode*, ExpValue&, Status&);
-		static Status evalMain(ExpOpNode* node, ExpValue& value, Status& s) { return s; }
-		EvalFnT evalFnPtr = evalMain; // pointer to op function - if passed, easier than defining custom classes for everything?
-
-		// ordered map to define evaluation order of steps
-		std::map<const std::string, EvalFnT&> evalFnMap{
-			{"main" , evalFnPtr}
-		};
-
-
-
+	struct ExpStatus {
+		/*constant state of overall expression - 
+		mainly tracking variables*/
+		std::map<std::string, ExpValue> varMap;
 	};
 
-	//// register individual functions against tokens?
-	//// seems easier than registering different types, that's super hard in c++
-	////typedef  ExpOpNode<ExpValue>::EvalFnT ExpOpFnT; // doesn't match
-	////typedef  Status(*)(EvalNode<ExpValue>*, ExpValue&, Status&) ExpOpFnT; // not allowed
-	////using ExpOpFnT = Status(*)(EvalNode<ExpValue>*, ExpValue&, Status&);
-	////typedef ExpOpFnT ExpOpFnT; // screw this language man
+	struct ExpAtom {
+		/* struct to define an operation as part of an expression
+		*/
+		int startIndex = -1; // where does this atom start (main index of this atom in the expression)
+		std::string srcString = ""; // what text in the expression created this atom (inclusive for function calls)
+		std::string opName = "base"; // class name of the operation
+		std::string fnName; // if this is a named function, or maths operator
 
-	//typedef Status(*ExpOpFnT)(ExpOpNode*, ExpValue&, Status&);
+		////ExpAtom() = default;
 
-	struct ExpGrammar {
-		std::unordered_map< const std::string, 
-			//Status(*)(EvalNode<ExpValue>*, ExpValue&, Status&)
-			ExpOpNode::EvalFnT
-		> tokenFnMap;
-
-		void registerOpFn(const std::string token, 
-			//ExpOpFnT &opFn
-			ExpOpNode::EvalFnT opFn
-			//Status(*)(EvalNode<ExpValue>*, ExpValue&, Status&) opFn
-		) {
-			tokenFnMap[token] = opFn;
-			//tokenFnMap.insert(token, &opFn);
-			//tokenFnMap.emplace(token, opFn);  // error C2064: term does not evaluate to a function taking 1 arguments
-			////// to hell with all of this man
+		virtual Status eval(std::vector<ExpValue>& argList, ExpStatus& expStat, std::vector<ExpValue>& result, Status& s) 
+		{
+			result = argList;
+			return s;
 		}
 	};
 
+	struct AssignAtom : ExpAtom {
+		/* atom to assign result to a variable
+		* arguments should be { variable name , variable value }
+		*/
+		std::string opName = "assign"; // class name of the operation
+		std::string fnName; // if this is a named function, or maths operator
+		virtual Status eval(std::vector<ExpValue>& argList, ExpStatus& expStat, std::vector<ExpValue>& result, Status& s)
+		{
+			if (argList.size() == 2) { // check only name of variable and variable value passed
+				STAT_ERROR(s, "Can only assign single ExpValue to variable, not 0 or multiple");
+			}
+			argList[0].varName = argList[1].strVal;
+			expStat.varMap[argList[0].varName] = argList[0];
+			return s;
+		}
+	};
+
+	struct ExpGrammar{
+		Factory<std::string, ExpAtom> atomFactory;
+
+	};
+
+	static ExpGrammar baseGrammar;
+	//static void buildBaseGrammar();
 
 
-	//extern ExpGrammar mainGrammar;
-	//
-	////Status assignOpFn(EvalNode<ExpValue>* node, ExpValue& value, Status& s) {
-	//Status assignOpFn(ExpOpNode* node, ExpValue& value, Status& s) {
-	//	return s;
-	//}
 
-	//static ExpOpFnT fnPtr = &assignOpFn;
+	struct ExpOpNode : EvalNode<ExpValue> {
 
-	//static void initMainGrammar() {
-	//	
-	//	mainGrammar.registerOpFn("=", &assignOpFn);
+		ExpAtom expAtom;
 
-	//}
-
-
-	//};
-
-	// build default grammar for strata expressions
-	
+	};
 
 
 

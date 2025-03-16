@@ -66,6 +66,12 @@ struct Status {
 
 };
 
+// raise an early error from a function with value and message
+#define STAT_ERROR_VAL(s, errVal, msg)\
+	s.val = errVal; s.addMsg(msg); return s;
+
+#define STAT_ERROR(s, msg) STAT_ERROR_VAL(s, 1, msg)
+
 // for check-return status
 #define	CRSTAT(s)\
 	if(s){ return s; }\
