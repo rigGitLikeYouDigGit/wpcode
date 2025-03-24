@@ -1,6 +1,5 @@
 
 
-#ifndef CONTAINERS_LIB_CPP
 
 
 #include "containers.h"
@@ -16,9 +15,10 @@ SmallList<T, N>::ListData::ListData() : data(buf), num(0), cap(fixed_cap)
 }
 
 template <class T, unsigned int N>
-SmallList<T, N>::SmallList()
+SmallList<T, N>::SmallList(void)
 {
 }
+
 
 template <class T, unsigned int N>
 SmallList<T, N>::SmallList(const SmallList& other)
@@ -39,17 +39,31 @@ SmallList<T, N>::SmallList(const SmallList& other)
 }
 
 template <class T, unsigned int N>
+SmallList<T, N>::SmallList(const int& size)
+{
+	reserve(size);
+}
+
+template <class T, unsigned int N>
 SmallList<T, N>& SmallList<T, N>::operator=(const SmallList<T, N>& other)
 {
 	SmallList(other).swap(*this);
 	return *this;
 }
 
+//template <class T, unsigned int N>
+//SmallList<T>& SmallList<T, N>::operator=(const SmallList<T>& other)
+//{
+//	SmallList(other).swap(*this);
+//	return *this;
+//}
+
 template <class T, unsigned int N>
 SmallList<T, N>::~SmallList()
 {
-	if (ld.data != ld.buf)
+	if (ld.data != ld.buf) {
 		free(ld.data);
+	}
 }
 
 template <class T, unsigned int N>
@@ -228,6 +242,4 @@ void FreeList<T, N>::swap(FreeList& other)
 	other.first_free = temp;
 }
 
-
-#endif // !CONTAINERS_LIB_CPP
 

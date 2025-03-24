@@ -46,6 +46,12 @@ namespace ed {
 		const int index;
 		const std::string name;
 		DirtyGraph* graphPtr = nullptr;
+
+		/*template<typename GraphT=DirtyGraph>
+		virtual GraphT* getGraphPtr() { return ; }*/
+
+		virtual DirtyGraph* getGraphPtr() { return graphPtr; }
+
 		std::vector<int> inputs; // manage connections yourself
 
 		// my python is showing - we use a map here for easier extensibility
@@ -118,7 +124,7 @@ namespace ed {
 				)
 			);
 			//std::unique_ptr<NodeT> newNodePtr = nodes[newIndex];
-			NodeT* newNodePtr = nodes[newIndex].get();
+			NodeT* newNodePtr = static_cast<NodeT*>(nodes[newIndex].get());
 			nameIndexMap[newNodePtr->name] = newIndex;
 			newNodePtr->graphPtr = this;
 			graphChanged = true;
@@ -126,6 +132,7 @@ namespace ed {
 			if (_callPostConstructor) {
 				Status s = newNodePtr->postConstructor();
 				CWMSG(s, "post-constructor on node " + newNodePtr->name + " failed!")
+				
 			}
 			return newNodePtr;
 		}
@@ -214,6 +221,13 @@ namespace ed {
 			return s;
 		}
 
+
+		inline void syncGraphStructure() {
+			if (graphChanged) {
+				Status s;
+				rebuildGraphStructure(s);
+			}
+		}
 
 		inline std::unordered_set<int>* nodeOutputs(const int opIndex) {
 			if (graphChanged) {
@@ -315,6 +329,30 @@ namespace ed {
 			return result;
 		}
 
+		int graphTreeRoot() {
+			/* disgusting braindead function, I'll check for the correct way sometime
+			if -1, graph is not a tree
+			otherwise return the index of the final node in graph
+			*/
+			int result = -1;
+			syncGraphStructure();
+			//std::unordered_set<int> nodesToCheck(nodes.begin(), nodes.end());
+			std::unordered_set<int> nodesToCheck(nodes.size());
+			for (auto& node : nodes) {
+				nodesToCheck.insert(node.get()->index);
+			}
+			while (nodesToCheck.size()) {
+				int testNode = *nodesToCheck.begin();
+				auto testNodesHistory = nodesInHistory(testNode);
+				// does this node include every other node in its history?
+				if (testNodesHistory.size() == (nodes.size() - 1)) { 
+					return testNode;
+				}
+				nodesToCheck.erase(testNode);
+			}
+			return result;
+		}
+
 		struct Iterator {
 			// from internalPointers.com - thanks a ton
 			using iterator_category = std::forward_iterator_tag;
@@ -358,7 +396,8 @@ namespace ed {
 			// second copier lets you pass in stack and set during iteration
 			Iterator(pointer ptr, DirtyGraph* itGraph, bool forwards, bool depthFirst, bool includeSelf,
 				std::stack<DirtyNode*>& nodeStack, std::unordered_set<DirtyNode*>& discoveredSet) :
-				nodePtr(ptr), itGraph(itGraph),
+				nodePtr(ptr), _origNode(ptr),
+				itGraph(itGraph),
 				forwards(forwards), depthFirst(depthFirst), includeSelf(includeSelf),
 				nodeStack{ nodeStack }, discoveredSet{ discoveredSet }
 			{
@@ -630,9 +669,13 @@ namespace ed {
 		virtual void postReset() {
 			// after node value is reset in graph
 		};
-		EvalGraph<VT>* graphPtr = nullptr;
+		//EvalGraph<VT>* graphPtr = nullptr;
+
+		virtual EvalGraph<VT>* getGraphPtr() { return reinterpret_cast<EvalGraph<VT>*>(graphPtr); }
+
 		VT* value() { // retrieve whatever node's current value is in graph
-			return &(graphPtr->results[index]);
+			//return &(graphPtr->results[index]);
+			return &(getGraphPtr()->results[index]);
 		}
 
 	};
@@ -647,13 +690,13 @@ namespace ed {
 		std::vector<VT> results;
 
 		template <typename NodeT = EvalNode<VT>>
-		NodeT* addNode(const std::string& name, VT defaultValue = nullptr,
+		NodeT* addNode(const std::string& name, VT defaultValue = VT(),
 			typename NodeT::EvalFnT evalFnPtr = nullptr) 
 		{
 			NodeT* baseResult = DirtyGraph::addNode<NodeT>(name);
-			if (defaultValue == nullptr) { // if default is given, add it to graph
-				defaultValue = VT();
-			}
+			//if (defaultValue == nullptr) { // if default is given, add it to graph
+			//	defaultValue = VT();
+			//}
 			results.push_back(defaultValue);
 
 			if (evalFnPtr != nullptr) {// if evalFn is given, set it on node
@@ -662,6 +705,11 @@ namespace ed {
 			return baseResult;
 		}
 
+		void clear() {
+			nodes.clear();
+			results.clear();
+			graphChanged = true;
+		}
 
 		Status evalNode(EvalNode<VT>* op, Status& s) {
 			/* encapsulated evaluation for a single op

@@ -12,6 +12,9 @@ StrataOp* StrataOp::getOp(std::string opName) {
 	return &(graph->ops[graph->opNameIndexMap[opName]]);
 }
 
+//ExpGrammar* StrataOp::expGrammar(&baseGrammar);
+//StrataOp::expGrammar = &baseGrammar;
+
 void StrataOp::signalIOChanged() {
 	/*reach back out to graph, set its structure dirty flag.
 	* yes I KNOW this is crazy dependency, maybe the graph should be the only thing that

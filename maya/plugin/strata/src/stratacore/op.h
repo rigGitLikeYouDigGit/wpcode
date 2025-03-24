@@ -6,7 +6,7 @@
 
 #include "../macro.h"
 #include "manifold.h"
-
+#include "../exp/expParse.h"
 
 namespace ed {
 
@@ -93,6 +93,11 @@ namespace ed {
 		std::vector<std::string> params; 
 
 		StrataManifold result; // test caching on all nodes, not sure how expensive that might get
+
+
+		// define grammar for this node's parametres - by default just the normal syntax
+		//static ExpGrammar* expGrammar;
+
 
 		// does this node need all preceding spatial data to be up to date, before
 		// operating on topology?

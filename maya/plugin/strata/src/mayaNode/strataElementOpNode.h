@@ -6,7 +6,7 @@
 #include "strataOpNodeBase.h"
 #include "../strataop/strataElementOp.h"
 
-#include "../expParse.h"
+#include "../exp/expParse.h"
 
 /*
 element node allows either defining AND/OR RETRIEVING strata data for any

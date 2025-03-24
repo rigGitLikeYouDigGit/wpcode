@@ -313,8 +313,11 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\containers.cpp" />
-    <ClCompile Include="src\expParse.cpp" />
+    <ClCompile Include="src\containers.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="src\exp\expLex.cpp" />
+    <ClCompile Include="src\exp\expParse.cpp" />
     <ClCompile Include="src\lib.cpp" />
     <ClCompile Include="src\libnurbs.cpp" />
     <ClCompile Include="src\libramp.cpp" />
@@ -322,12 +325,14 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="src\mayaNode\strataOpNodeBase.cpp" />
     <ClCompile Include="src\stratacore\manifold.cpp" />
     <ClInclude Include="src\dirtyGraph.h" />
-    <ClInclude Include="src\expParse.h" />
+    <ClInclude Include="src\exp\expLex.h" />
+    <ClInclude Include="src\exp\expParse.h" />
     <ClInclude Include="src\factory.h" />
     <ClInclude Include="src\iterator.h" />
     <ClInclude Include="src\mayaNode\strataElementOpNode.h" />
     <ClInclude Include="src\mayaNode\strataMayaLib.h" />
     <ClInclude Include="src\mayaNode\strataGraphNode.h" />
+    <ClInclude Include="src\ndarray.h" />
     <ClInclude Include="src\status.h" />
     <ClInclude Include="src\stratacore\manifold.h" />
     <ClCompile Include="src\mayaNode\stratacurvenode.cpp" />

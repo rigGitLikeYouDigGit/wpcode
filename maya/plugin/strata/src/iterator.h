@@ -12,46 +12,97 @@
 #include "status.h"
 
 /*
-is it really worth having a base class for this, and doing
-either inheritance or nasty templating to 
-apply it to parent objects, logic etc
 
-or do we just copy-paste it
-it's just an iterator
+base class for using pointer iteration more easily - 
+for now pass in functions you want to use to generate next(),
+just like in python
 */
 
-//struct Iterator {
-//	// from internalPointers.com - thanks a ton
-//	using iterator_category = std::forward_iterator_tag;
-//	using difference_type = std::ptrdiff_t;
-//	using value_type = int;
-//	using pointer = int*;  // or also value_type*
-//	using reference = int&;  // or also value_type&
-//
-//	pointer m_ptr;
-//	Iterator(pointer ptr) : m_ptr(ptr) {}
-//
-//
-//	reference operator*() const { return *m_ptr; }
-//	pointer operator->() { return m_ptr; }
-//
-//	// Prefix increment
-//	Iterator& operator++() {
-//		m_ptr++;
-//		return *this;
-//	}
-//
-//	// Postfix increment
-//	Iterator operator++(int) {
-//		Iterator tmp = *this;
-//		++(*this);
-//		return tmp;
-//	}
-//
-//	friend bool operator== (const Iterator& a, const Iterator& b) { return a.m_ptr == b.m_ptr; };
-//	friend bool operator!= (const Iterator& a, const Iterator& b) { return a.m_ptr != b.m_ptr; };
-//
-//	Iterator begin() { return Iterator(&m_data[0]); }
-//	Iterator end() { return Iterator(&m_data[200]); } // 200 is out of bounds
-//};
+namespace ed {
 
+	//template<typename VT>
+	struct ItParams {
+		// parametre struct to inherit from for traversal logic
+		//IteratorBase* parent;
+		//void next();
+		bool returnFirst = true;
+		//virtual void doStep(IteratorBase* it); // cast inside function to right template?
+
+		template <typename ItT>
+		void doStep(ItT* it); // 'virtual is not allowed in a template definition' ok sure man whatever
+		// return nullPtr when finished
+	};
+
+	struct IteratorBase {
+		using iterator_category = std::forward_iterator_tag;
+		using difference_type = std::ptrdiff_t;
+		using value_type = int*;
+		using pointer = int*;  // or also value_type*
+		//using reference = valueType&;  // or also value_type&
+		using reference = int*;  // or also value_type&
+
+
+		pointer current;
+		pointer origin;
+	};
+
+	template <typename VT>
+	struct Iterator : IteratorBase{
+		// from internalPointers.com - thanks a ton
+		using iterator_category = std::forward_iterator_tag;
+		using difference_type = std::ptrdiff_t;
+		using value_type = VT*;
+		using pointer = VT*;  // or also value_type*
+		//using reference = valueType&;  // or also value_type&
+		using reference = VT*;  // or also value_type&
+
+		pointer current;
+		pointer origin;
+
+		std::shared_ptr<ItParams> paramPtr;
+
+		inline void doStep() {
+			// advance pointer by 1
+			paramPtr.get()->doStep<Iterator<VT>>(this);
+		}
+		
+		Iterator(pointer ptr, std::shared_ptr<ItParams> params) :
+		{
+			current = ptr;
+			origin = ptr;
+			paramPtr = params;
+			if (paramPtr.get()->returnFirst) {
+				doStep();
+			}
+		}
+
+		reference operator*() const { return current; }
+		pointer operator->() { return current; }
+
+		// Prefix increment
+		Iterator& operator++() {
+			/* delegate to params for actual behaviour
+			*/
+			doStep();
+			return *this;
+
+		}
+
+		// Postfix increment
+		Iterator operator++(int) {
+			Iterator tmp = *this;
+			++(*this);
+			return tmp;
+		}
+
+		friend bool operator== (const Iterator& a, const Iterator& b) { return a.current == b.current; };
+		friend bool operator!= (const Iterator& a, const Iterator& b) { return a.current != b.current; };
+
+		Iterator begin() {
+			return Iterator(origin, paramPtr);
+		}
+		Iterator end() {
+			return Iterator(nullptr, paramPtr);
+		}
+	};
+}

@@ -67,25 +67,25 @@ struct Status {
 };
 
 // raise an early error from a function with value and message
-#define STAT_ERROR_VAL(s, errVal, msg)\
-	s.val = errVal; s.addMsg(msg); return s;
+#define STAT_ERROR_VAL(s, errVal, strMsg)\
+	s.val = errVal; s.addMsg(strMsg); return s;
 
-#define STAT_ERROR(s, msg) STAT_ERROR_VAL(s, 1, msg)
+#define STAT_ERROR(s, strMsg) STAT_ERROR_VAL(s, 1, strMsg)
 
 // for check-return status
 #define	CRSTAT(s)\
 	if(s){ return s; }\
 
-#define	CRMSG(s, msg)\
-	if(s){ s.addMsg(msg); return s; }\
+#define	CRMSG(s, strMsg)\
+	if(s){ s.addMsg(strMsg); return s; }\
 
 	// for check-write
 #define CWSTAT(s)\
 	if(s){ DEBUGS(s.msg);}\
 
 // check-write-message
-#define CWMSG(s, msg)\
-	if(s){ s.addMsg(msg); DEBUGS(s.msg);}
+#define CWMSG(s, strMsg)\
+	if(s){ s.addMsg(strMsg); DEBUGS(s.msg);}
 
 
 // check-write-return

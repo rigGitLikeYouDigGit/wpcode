@@ -46,6 +46,7 @@ copy( vec.begin(), vec.end(), ostream_iterator<float>(MStreamUtils::stdOutStream
 
 // maths macros
 #define EPS 0.000001
+#define EPS_F 0.000001f
 
 //#define INT(x) static_cast<int>(x) ///// size_t is hands down the most dumb bit of the language
 //// oh um well y-you see ACKSHULLLY on some architectures the MACKSIM-M-MUM SIZE of a container might EXCEED-
@@ -57,5 +58,10 @@ copy( vec.begin(), vec.end(), ostream_iterator<float>(MStreamUtils::stdOutStream
 // to tune of twinkle twinkle little star
 #define PI 3.141592653589
 
+#define seqIndex(n, limit)\
+	(n >= 0 ? n : limit + n) % (limit + 1)\
+
+#define seqContains(seq, v)\
+	(std::find(seq.begin(), seq.end(), v) != seq.end())\
 
 #endif

@@ -40,6 +40,8 @@ namespace ed {
 		// Creates an empty list.
 		SmallList();
 
+		//SmallList(void);
+
 		// Creates a copy of the specified list.
 		SmallList(const SmallList& other);
 

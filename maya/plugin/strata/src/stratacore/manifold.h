@@ -15,6 +15,7 @@
 #include <maya/MMatrix.h>
 
 #include "wpshared/enum.h"
+#include "../macro.h"
 #include "../status.h"
 #include "../containers.h"
 
@@ -65,11 +66,6 @@ no SPoints, SEdges - only SElements, with int enum telling their type
 
 namespace ed {
 
-#define seqIndex(n, limit)\
-	(n >= 0 ? n : limit + n) % (limit + 1)\
-
-#define seqContains(seq, v)\
-	(std::find(seq.begin(), seq.end(), v) != seq.end())\
 
 
 
