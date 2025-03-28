@@ -287,7 +287,18 @@ public:
 	};
 
 	struct StrataManifold {
-		// using vectors here for now
+		/*
+		manifold will have to include more live graph behaviour - 
+		whole point is to set up persistent relationships between elements,
+		so changing an input by default updates the whole mesh.
+
+		it's not insurmountable.
+		consider storing 
+		[ element index starting group] ,
+		[ node index to eval up to ]
+
+		
+		*/
 
 		std::vector<SElement> elements;
 

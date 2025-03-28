@@ -40,7 +40,7 @@
 
 namespace ed {
 
-    namespace exp {
+    namespace expns {
 
 
         class Token {
@@ -97,9 +97,9 @@ namespace ed {
             Token(Kind kind, const char* beg, const char* end) noexcept
                 : m_kind{ kind }, m_lexeme(beg, std::distance(beg, end)) {}
 
-            Kind kind() const noexcept { return m_kind; }
+            Kind getKind() const noexcept { return m_kind; }
 
-            void kind(Kind kind) noexcept { m_kind = kind; }
+            void getKind(Kind kind) noexcept { m_kind = kind; }
 
             bool is(Kind kind) const noexcept { return m_kind == kind; }
 
@@ -167,6 +167,10 @@ namespace ed {
             const char* m_beg = nullptr;
             const char* origChar = nullptr;
         };
+
+        /*const std::string kindStr(Token::Kind kind) {
+            return {} [static_cast<int>(kind)] ;
+        }*/
 
     }
 }

@@ -1,7 +1,7 @@
 
 #include "expLex.h"
 using namespace ed;
-using namespace ed::exp;
+using namespace ed::expns;
 
 
 

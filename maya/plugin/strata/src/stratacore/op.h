@@ -12,6 +12,10 @@ namespace ed {
 
 	struct StrataOpGraph;
 
+	struct StrataParam {
+		expns::Expression
+	};
+
 	/*TODO
 
 	for adding points, try and generate descriptive names (that might also double as
