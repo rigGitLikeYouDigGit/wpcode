@@ -20,6 +20,8 @@ don't literally inherit from maya base node class, just use mpxnode inheritAttri
 for different Strata ops?
 Maybe
 
+stOutput is now an integer attribute for the output node index
+
 */
 
 //#define DECLARE_VIRTUAL_STRATA_STATIC_MEMBERS(prefix)  \
@@ -34,69 +36,66 @@ Maybe
 //prefix static MObject aStParamExp; \
 //prefix static MObject aStElData; \
 
-#define DECLARE_STRATA_STATIC_MEMBERS \
-static MObject aStGraph; \
-static MObject aStInput; \
-static MObject aStOutput; \
+
+# define STRATABASE_STATIC_MEMBERS(prefix, nodeT) \
+prefix MObject nodeT aStInput; \
+prefix MObject nodeT aStOpName; \
+prefix MObject nodeT aStOutput; \
 
 
-#define DEFINE_STRATA_STATIC_MOBJECTS(NODETYPE) \
-MObject NODETYPE::aStGraph; \
-\
-MObject NODETYPE::aStInput; \
-MObject NODETYPE::aStOutput; \
+// create lines of the form 'static MObject aStPoint;'
+# define DECLARE_STATIC_NODE_H_MEMBERS(attrsMacro) \
+attrsMacro(static, )
 
+// create lines of the form 'MObject StrataElementOpNode::aStPoint;'
+# define DEFINE_STATIC_NODE_CPP_MEMBERS(attrsMacro, nodeT) \
+attrsMacro( , nodeT::)
 
 
 
 
 /// after all, why not
 /// why shouldn't we inherit a base class from MPxNode
-struct StrataOpNodeBase : public MPxNode {
+//struct StrataOpNodeBase : public MPxNode {
+struct StrataOpNodeBase {
 	/* mixin class to be inherited by all maya nodes that
 	represent a single op in op graph
 
-	was too awkward to make this an actual MPxNode base class
-
-	INHERITING STATIC MOBJECTS -
-	we declare static MObjects in the mixin here, then REDECLARE them
-	in each concrete child -
-	this hopefully lets us do StrataOpMixin::aStGraph on a pointer, and have it
-	get the right MObject?
-	we want the SAME NAMES, but DIFFERENT VALUES
-	except no, because we don't know the child class, so StrataOpMixin::aStGraph will just
-	return the class-level static object OF THIS MIXIN CLASS
-
-	hmmmmmm
+	can't have this be an MPxNode if we want to have common attributes across DG nodes and maya shapes
 	*/
 
-	/* if this node is connected to its graph, both of these will
-	be populated - if not, both will be null.
-
-	Maya node connection causes new op object to be instantiated and
-	ownership passed to graph -
-	pointers are populated with result
-
-	testing shared_ptrs here JUST IN CASE maya does some weird time travel / object lifetime
-	stuff in multithreading nodes, DG context etc -
-	we still cull pointers on connect/disconnect, but this should catch the case where a node
-	evaluates EXACTLY AS it's disconnected (somehow)
-
-	weak pointers show better - this node doesn't OWN anything, only refers into
-	the graph data store
+	/* each maya node creates a copy of an incoming strata graph, or
+	* an empty graph.
+	* Then the maya node creates one new strata op in the graph.
+	* We have to use one pointer lookup from the incoming graph, but otherwise it's all DG-legal
+	* 
+	* stInput is an int array, and we only look for entry 0 as an input for the graph
+	* 
 	*/
 
-	// ok I have a great idea
-	// just don't delete the graph while the graph is running
-	std::weak_ptr<ed::StrataOpGraph> opGraphPtr;
 
-	typedef ed::StrataOp strataOpType; // redefine for explicit linking maya node type to strata Op
+	std::unique_ptr<ed::StrataOpGraph> opGraphPtr;
+	int strataOpIndex = -1;
 
-	strataOpType* opPtr = nullptr;
+	using StrataOpT = ed::StrataOp;
 
-	DECLARE_STRATA_STATIC_MEMBERS;
+	DECLARE_STATIC_NODE_H_MEMBERS(STRATABASE_STATIC_MEMBERS);
 
+	static const std::string getOpNameFromNode(MObject& nodeObj);
 
+	StrataOpT* getStrataOp() {
+		// return pointer to the current op, in this node's graph
+		ed::DirtyNode* nodePtr = opGraphPtr.get()->getNode(strataOpIndex);
+		if (nodePtr == nullptr) {
+			return nullptr;
+		}
+		return static_cast<StrataOpT*>(nodePtr);
+	}
+
+	MStatus refreshGraphPtr(ed::StrataOpGraph* other);
+
+	ed::StrataOp* createNewNode(MObject& mayaNodeMObject);
+	
 	static MStatus addStrataAttrs(
 		std::vector<MObject>& driversVec,
 		std::vector<MObject>& drivenVec
@@ -113,17 +112,7 @@ struct StrataOpNodeBase : public MPxNode {
 		opIndexPlug.setInt(opIndex);
 	}
 
-	//StrataOp* createNewOp() {
-	ed::StrataOp createNewOp() {
-		// return a full op instance for this node - 
-		// override in a dynamic node with the main if/branch logic, everything
-		// after this should only deal with the base
-		return ed::StrataOp();
-		// pointer passed straight to make_unique, so should be safe?
-		//return new StrataOp;
-	}
-
-	void syncOp(ed::StrataOp* op, MDataBlock& data) {
+	Status syncOp(ed::StrataOp* op, MDataBlock& data) {
 		/* update op from maya node datablock -
 		this should be good enough, updating raw from MObject and plugs
 		seems asking for trouble
@@ -132,6 +121,7 @@ struct StrataOpNodeBase : public MPxNode {
 
 		can't run this on newly created op directly, need to wait for compute
 		*/
+		return Status();
 	}
 
 	MStatus syncOpInputs(ed::StrataOp* op, const MObject& node);
@@ -143,10 +133,7 @@ struct StrataOpNodeBase : public MPxNode {
 		const MPlug& otherPlug,
 		bool 	asSrc);
 
-	void postConstructor() {
-		/* ensure graph pointer is reset*/
-		opGraphPtr.reset();
-	}
+	void postConstructor();
 
 	static MStatus legalConnection(
 		const MPlug& plug,

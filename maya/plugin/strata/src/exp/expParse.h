@@ -23,6 +23,7 @@
 #include "../status.h"
 #include "../macro.h"
 #include "../dirtyGraph.h"
+#include "../stratacore/manifold.h"
 
 #include "../factory.h"
 #include "expLex.h"
@@ -129,17 +130,33 @@ namespace ed {
 			std::string varName;
 
 			// vectors always stored as vec4, matrix always stored as 4x4
-			enum struct Type {
-				Number, String,
-				Vector,
-				Matrix
-			};
+			//enum struct Type {
+			//	Number, String,
+			//	Vector,
+			//	Matrix
+			//};
 
 			//BETTER_ENUM(Type); 
 
 			/* should we only represent vectors through different shapes in arrays?
 			go full numpy with it*/
-			Type t = Type::Number;
+			//Type t = Type::Number;
+
+			// you can take the python scrub out of python
+			// we just use strings for vartypes, makes it easier to declare new types, 
+			// check for matching / valid conversions, operations etc
+
+			struct Type {
+				static constexpr const char* number = "number";
+				static constexpr const char* string = "string";
+
+			};
+
+			std::string t = Type::number;
+
+
+
+
 			//SmallList<int, 4> dims;
 			std::vector<float> numberVals;
 			std::vector<std::string> stringVals;
@@ -194,6 +211,9 @@ namespace ed {
 			// map of which node to pull from for any variable name - 
 			// updated by eval whenever var is modified
 			std::map<std::string, int> varIndexMap;
+
+			// we specialise this for strata - this will never be its own separate library anyway
+			StrataManifold* manifold = nullptr;
 
 			/* status has to be copied out by every node too : (otherwise races ?
 			// not necessarily, only during parsing, otherwise graph shape 
@@ -277,10 +297,18 @@ namespace ed {
 		*/
 
 		struct ExpGraph : EvalGraph<std::vector<ExpValue>> {
-			Expression* exp; // owner expression
+			
+
+			using EvalGraph::EvalGraph;
 
 			using VT = std::vector<ExpValue>;
 
+			ExpGraph() {
+				//EvalGraph<std::vector<ExpValue>>::
+				//	EvalGraph<std::vector<ExpValue>>();
+			}
+
+			Expression* exp = nullptr; // owner expression
 			template <typename ExpOpT, typename NodeT = ExpOpNode>
 			NodeT* addNode(const std::string& name = ""
 			)
@@ -306,11 +334,31 @@ namespace ed {
 
 			ExpOpNode* addResultNode();
 
-			std::vector<ExpValue>* getResult() {
-				// final evaluated result of the expression
-				return &(results)[0];
-			}
+			//Status getResult(std::vector<ExpValue>*& outResult,
+			//	ExpAuxData* ) {
+			//	// final evaluated result of the expression
+			//	Status s;
+			//	if (getResultNode()->anyDirty()) {
+			//		evalGraph(s, getResultNode()->index);
+			//		CWRSTAT(s, "Error evaling Exp graph result");
+			//	}
+			//	outResult = &(results)[0];
+			//	return s;
+			//}
 			ExpOpNode* getResultNode();
+
+			//~ExpGraph() = default;
+			//ExpGraph(ExpGraph const& other) {
+			//	copyOther(other);
+			//}
+			//ExpGraph(DirtyGraph&& other) = default;
+			//ExpGraph& operator=(ExpGraph const& other) {
+			//	copyOther(other);
+			//}
+			//ExpGraph& operator=(ExpGraph&& other) = default;
+
+
+
 		};
 
 
@@ -324,8 +372,13 @@ namespace ed {
 			static Status evalMain(ExpOpNode* node, std::vector<ExpValue>& value, Status& s);
 			EvalFnT evalFnPtr = evalMain; // pointer to op function - if passed, easier than defining custom classes for everything?
 
+			static Status eval(ExpOpNode* node, std::vector<ExpValue>& value, Status& s);
+
+
 			virtual ExpGraph* getGraphPtr() { return reinterpret_cast<ExpGraph*>(graphPtr); }
 
+			//clone_impl()
+			
 			// ordered map to define evaluation order of steps
 			std::map<const std::string, EvalFnT&> evalFnMap{
 				{"main" , evalFnPtr}
@@ -563,7 +616,7 @@ namespace ed {
 					return s;
 				}
 				// check that all incoming arguments have the same type
-				ExpValue::Type firstType = argList[0].t;
+				std::string firstType = argList[0].t;
 				//for (auto& arg : argList) {
 				for (int i = 1; i < argList.size(); i++) {
 					ExpValue arg = argList[i];
@@ -706,19 +759,76 @@ namespace ed {
 			}
 		};
 
+		struct ExpAuxData : EvalAuxData {
+			StrataManifold* manifold;
+			ExpStatus* expStatus;
+
+			std::vector<SElement*> expValuesToElements(std::vector<ExpValue> values, Status& s) {
+				/* resolve all possible values to elements */
+				std::vector<SElement*> result;
+				for (auto& v : values) {
+					for (auto& f : v.numberVals) { // check for integer indices
+						int id = fToInt(f);
+						SElement* ptr = manifold->getEl(id);
+						if (ptr == nullptr) {
+							continue;
+						}
+						if (!seqContains(result, ptr)) { // add unique value found
+							result.push_back(ptr);
+						}
+					}
+					for (auto& s : v.stringVals) { // check for string names
+						// patterns will already have been expanded by top level
+						SElement* ptr = manifold->getEl(s);
+						if (ptr == nullptr) {
+							continue;
+						}
+						if (!seqContains(result, ptr)) { // add unique value found
+							result.push_back(ptr);
+						}
+					}
+				}
+				return result;
+			}
+		};
+
 		struct Expression {
 			/* master container for individual expression*/
 			std::string srcStr;
-			ExpStatus globalExpStatus; // owned status for variables, built up as graph is parsed
+
 			ExpParseStatus parseStatus;
 			Lexer lexer;
 			ExpGraph graph;
 			ExpParser parser;
 			bool needsRecompile = true;
+			///// ok so what if EVERYTHING was in the same graph
+			// interesting but not right now, different value types get super annoying
+			//std::unique_ptr<ExpStatus> globalExpStatusPtr; // owned status for variables, built up as graph is parsed. pointer to allow passing in custom types for different graph types
+			// status doesn't need to be stored by expression
+
+			Expression() : lexer("") {
+			}
+
+			Expression(std::string inSrcStr) : lexer(inSrcStr.c_str()), graph() {
+				srcStr = inSrcStr;
+			}
+			Expression(const char* inSrcStr) : lexer(inSrcStr), graph() {
+				srcStr = inSrcStr;
+			}
+
+			void setSource(const char* inSrcStr) {
+				lexer = Lexer(inSrcStr);
+				srcStr = inSrcStr;
+				needsRecompile = true;
+			}
 
 			Status parse();
 
-			///// ok so what if EVERYTHING was in the same graph
+			Status result(std::vector<ExpValue>*& outResult,
+				//ExpStatus* expStatus,
+				ExpAuxData* auxData
+			);
+
 
 		};
 	}

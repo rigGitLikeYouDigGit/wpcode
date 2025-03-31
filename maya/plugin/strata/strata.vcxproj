@@ -324,6 +324,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="src\mayaNode\strataElementOpNode.cpp" />
     <ClCompile Include="src\mayaNode\strataOpNodeBase.cpp" />
     <ClCompile Include="src\stratacore\manifold.cpp" />
+    <ClCompile Include="src\strataop\elementOp.cpp" />
     <ClInclude Include="src\dirtyGraph.h" />
     <ClInclude Include="src\exp\expLex.h" />
     <ClInclude Include="src\exp\expParse.h" />
@@ -355,7 +356,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="src\span.h" />
     <ClInclude Include="src\mayaNode\stratacurvenode.h" />
     <ClInclude Include="src\mayaNode\stratasurfacenode.h" />
-    <ClInclude Include="src\strataop\strataElementOp.h" />
+    <ClInclude Include="src\strataop\elementOp.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="F:\wp\code\maya\plugin\strata\ZERO_CHECK.vcxproj">

@@ -8,13 +8,11 @@
 #include "manifold.h"
 #include "../exp/expParse.h"
 
+#include "../dirtyGraph.h"
+
 namespace ed {
 
-	struct StrataOpGraph;
 
-	struct StrataParam {
-		expns::Expression
-	};
 
 	/*TODO
 
@@ -59,49 +57,20 @@ namespace ed {
 
 	*/
 
-	struct ExpNode {
-		/* individual node for parametre expressions in nodes -
-		* eval-ing whole expression tree should end up as a list of ints?
-		* paired lists of opId, element gId?
-		*
-		* fine to recurse in evaluation here
-		*/
+	struct StrataAuxData : EvalAuxData {
 
-		// call before recompiling expression
-		void clear() {}
 	};
 
-	struct StrataOp {
+	struct StrataOp : EvalNode<StrataManifold> {
 		// maybe later we try and split topological and smooth operations
-		// in maya nodes we have separate flags for "data dirty" and "topo dirty"
-		std::string name;
-		StrataOpGraph* graph;
-		int index;
+
+		using EvalNode::EvalNode;
+				
+		// dense map of { param string name : param object }
+		std::map<std::string, expns::Expression > paramNameExpMap;
 
 		// parent node, if scope ever happens;
 		int parent = -1;
-
-		// temp values used in traversal
-		int temp_inDegree = 0;
-		int temp_generationId = 0;
-		//int temp_visited = 0;
-
-		// data travelling in the graph is always (?) a manifold, even if it only contains a group of points
-		// first input (i0) is default, and always corresponds to the main incoming manifold data to write to
-		std::vector<int> inputs;
-		std::vector<std::string> inputAliases;
-
-		/*PARAMS - for basic element nodes, a vector of strings is enough.
-		for later nodes, it may not be.
-		work that out when needed.*/
-		std::vector<std::string> params; 
-
-		StrataManifold result; // test caching on all nodes, not sure how expensive that might get
-
-
-		// define grammar for this node's parametres - by default just the normal syntax
-		//static ExpGrammar* expGrammar;
-
 
 		// does this node need all preceding spatial data to be up to date, before
 		// operating on topology?
@@ -116,44 +85,14 @@ namespace ed {
 		bool dataDirty = true; // data needs recompute
 
 		bool paramsDirty = true; // param expressions have changed, need recompiling (later)
-		ExpNode rootExpNode;
-
-		// for dirty propagation, does each node need to know its descendents?
-		// or can this node just check if it should be dirty when needed?
-		// nodes need to know about the graph to make the raw index connections work
-		// painful
-
-		//inline StrataOp* getOp(int opIndex) {
-		//	return &(graph->ops[opIndex]);
-		//}
-		//inline StrataOp* getOp(std::string opName) {
-		//	return &(graph->ops[graph->opNameIndexMap[opName]]);
-		//}
-		StrataOp* getOp(int opIndex);
-		StrataOp* getOp(std::string opName);
-
 
 		void signalIOChanged();
 
-		inline void syncDirty() {
-			for (int id : inputs) {
-				if (getOp(id)->dataDirty) { dataDirty = true; }
-				if (getOp(id)->topoDirty) { topoDirty = true; }
-			}
-		}
+		/*virtual Status evalTopo(StrataManifold& manifold, Status& s) { return s; }
+		virtual Status evalData(StrataManifold& manifold, Status& s) { return s; }*/
 
-		virtual Status evalParams(ExpNode& rootNode, Status& s) {
-			/* run over all node parametre expressions , compile individual ASTs
-			*/
-			return s;
-		}
-		virtual Status evalTopo(StrataManifold& manifold, Status& s) { return s; }
-		virtual Status evalData(StrataManifold& manifold, Status& s) { return s; }
-
-		inline void reset() {
-			/* to reset node state, clear cached manifold result*/
-			result.clear();
-		}
+		virtual Status makeParams() { return Status(); }
+		
 
 	};
 

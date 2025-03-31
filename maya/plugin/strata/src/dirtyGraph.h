@@ -74,6 +74,9 @@ namespace ed {
 
 		DirtyNode(const int index, const std::string name) : index(index), name(name) {}
 
+		auto clone() const { return std::unique_ptr<DirtyNode>(clone_impl()); }
+		virtual DirtyNode* clone_impl() const { return new DirtyNode(*this); };
+
 		virtual Status postConstructor() {
 			/* called after node added to graph, all connections set up*/
 			return Status();
@@ -103,6 +106,35 @@ namespace ed {
 		std::unordered_map<int, std::unordered_set<int>> nodeDirectDependentsMap;
 		std::unordered_map<int, std::unordered_set<int>> nodeAllDependentsMap;
 
+
+
+		///////////////// COPYING ////////
+		//rule of five (apparently?)
+		inline void copyOtherNodesVector(const DirtyGraph& other) {
+			// function to deep-copy all nodes in the given vector from the argument graph
+			nodes.clear();
+			nodes.reserve(other.nodes.size());
+			for (auto& ptr : other.nodes) {
+				nodes.push_back(std::unique_ptr<DirtyNode>(ptr.get()->clone()));
+			}
+		}
+		virtual void copyOther(const DirtyGraph& other) {
+			copyOtherNodesVector(other);
+			nameIndexMap = nameIndexMap;
+		}
+
+		DirtyGraph() {}
+		~DirtyGraph() = default;
+		DirtyGraph(DirtyGraph const& other) {
+			copyOther(other);
+		}
+		DirtyGraph(DirtyGraph&& other) = default;
+		DirtyGraph& operator=(DirtyGraph const& other) {
+			copyOther(other);
+		}
+		DirtyGraph& operator=(DirtyGraph&& other) = default;
+
+
 		template <typename NodeT = DirtyNode>
 		NodeT* addNode(const std::string& name, bool _callPostConstructor=true) {
 			/* create new node object,
@@ -111,12 +143,21 @@ namespace ed {
 			callPostConstructor true by default - 
 			if a derived graph type calls this, set to false to call post
 			only at the end of the overridden function
+
+			should we convert all this to return status code?
 			*/
+			if (nameIndexMap.count(name) != 0) {
+				Status s;
+				CWMSG(s, "Name " + name + " already found in dirty graph, returning nullptr");
+				return nullptr;
+			}
 
 			const int newIndex = static_cast<int>(nodes.size());
-			//auto il = { newIndex, name };
-			//auto ptr = std::make_unique<NodeT>(newIndex, name);
-			//auto ptr = std::make_unique<NodeT>(il);
+			
+			//std::unique_ptr<DirtyNode> nodePtr = std::make_unique<DirtyNode>(newIndex, name);
+			NodeT test(newIndex, name);
+			std::unique_ptr<NodeT> nodePtr = std::make_unique<NodeT>(newIndex, name);
+			nodes.push_back(std::move(nodePtr));
 			nodes.push_back(
 				std::move(
 					std::make_unique<NodeT>(newIndex, name)
@@ -143,6 +184,9 @@ namespace ed {
 			return node;
 		}
 		inline DirtyNode* getNode(const int& index) {
+			if (nodes.size() <= index) {
+				return nullptr;
+			}
 			return nodes[index].get();
 		}
 		inline DirtyNode* getNode(const std::string& nodeName) {
@@ -609,6 +653,16 @@ namespace ed {
 	template <typename VT>
 	struct EvalGraph;
 
+	struct EvalAuxData {
+		/* aux data struct passed alongside graph evaluation - 
+		this is just cheat to get expressions and geometry working
+		with the same framework. No guarantees on ordering/threading, beyond
+		what the structure of the graph provides.
+		Suggestions on the correct way to 
+		structure all this are welcome
+		*/
+	};
+
 	template <typename VT>
 	struct EvalNode : DirtyNode {
 		
@@ -655,6 +709,22 @@ namespace ed {
 		std::map<const std::string, EvalFnT&> evalFnMap{
 			{"main" , evalFnPtr}
 		};
+		// all the stuff above is SO complicated, just using one eval function and
+		// trusting user to check their own logic behind it?
+
+		// do we actually gain anything from multiple passes?
+		// not right now
+		// stop it
+		// get some help
+		// you're tearing me apart lisa
+
+
+		// for strata, node eval should be valid as a member function or as a 
+		// written function in StrataL
+		static Status eval(EvalNode<VT>* node, VT& value, 
+			EvalAuxData* auxData, Status& s) { return s; }
+
+		virtual EvalNode* clone_impl() const { return new EvalNode(*this); };
 
 
 		virtual Status preEval(const std::string& stepName, Status& s) {
@@ -689,15 +759,34 @@ namespace ed {
 		VT baseValue; // use to copy and reset node result entries
 		std::vector<VT> results;
 
+		virtual void copyOther(const EvalGraph& other) {
+			DirtyGraph::copyOther(other);
+			results = other.results;
+		}
+
+		EvalGraph() {
+		};
+
+		//~EvalGraph() = default;
+		/*EvalGraph(EvalGraph const& other) {
+			copyOther(other);
+		}
+		EvalGraph(EvalGraph&& other) = default;
+		EvalGraph& operator=(EvalGraph const& other) {
+			copyOther(other);
+		}
+		EvalGraph& operator=(EvalGraph&& other) = default;*/
+
 		template <typename NodeT = EvalNode<VT>>
 		NodeT* addNode(const std::string& name, VT defaultValue = VT(),
 			typename NodeT::EvalFnT evalFnPtr = nullptr) 
 		{
-			NodeT* baseResult = DirtyGraph::addNode<NodeT>(name);
+			NodeT* baseResult = DirtyGraph::addNode<NodeT>(name, false);
 			//if (defaultValue == nullptr) { // if default is given, add it to graph
 			//	defaultValue = VT();
 			//}
 			results.push_back(defaultValue);
+			baseResult->postConstructor();
 
 			if (evalFnPtr != nullptr) {// if evalFn is given, set it on node
 				baseResult->evalFnPtr = evalFnPtr;
@@ -711,7 +800,8 @@ namespace ed {
 			graphChanged = true;
 		}
 
-		Status evalNode(EvalNode<VT>* op, Status& s) {
+		//template <typename AuxT=int>
+		Status evalNode(EvalNode<VT>* op, EvalAuxData* auxData, Status& s) {
 			/* encapsulated evaluation for a single op
 			* we guarantee that all an op's input nodes will already
 			* have been evaluated.
@@ -720,6 +810,10 @@ namespace ed {
 			* 
 			* flag if a certain node requires a certain set of passes to run in the graph up until that point?
 			* 
+			* brother I we're just gonna use a single eval function and rely on 
+			* user code to undertake the herculaean task
+			* of writing if statements
+			* to only evaluate the bits of the nodes they need
 			*/
 
 			// reset node state
@@ -746,23 +840,19 @@ namespace ed {
 			* 
 			* we also set that flag clean automatically
 			*/
-			for (auto fnPair : op->evalFnMap) {
-				if (op->dirtyMap.count(fnPair.first)) {
-					if (op->dirtyMap[fnPair.first]) {
-						s = op->preEval(fnPair.first, s);
-						CWRSTAT(s, "error in preEval for stage: " + fnPair.first + " for node: " + op->name + " , halting");
-						//s = fnPair.second(results[op->index], s);
-						s = op->evalFnMap[fnPair.first](op, results[op->index], s);
-						CWRSTAT(s, "error in EVAL for stage: " + fnPair.first + " for node: " + op->name + " , halting");
-					}
-				}
-			}
+			//for (auto fnPair : op->evalFnMap) {
+
+			op->preEval("main", s);
+			CWRSTAT(s, "error in preEval for node: " + op->name);
+			op->eval(op, results[op->index], auxData, s);
+			CWRSTAT(s, "error in EVAL for node: " + op->name);
 
 			// donezo
 			return s;
 		}
 
-		Status evalGraph(Status& s, int upToNodeId = -1) {
+		//template< typename AuxT=int>
+		Status evalGraph(Status& s, int upToNodeId = -1, EvalAuxData* auxData=nullptr) {
 			// TODO: don't eval topo and data all the time obviously
 			// just for now
 
@@ -808,7 +898,7 @@ namespace ed {
 						baseGeneration.begin(), baseGeneration.end(),
 						toEval.begin(), toEval.end(),
 						std::inserter(generation, generation.begin())
-					);
+					); // god c++ is so complicated
 					
 				}
 				
@@ -819,7 +909,7 @@ namespace ed {
 						continue;
 					}
 					// eval whole node
-					evalNode(node, s);
+					evalNode(node, auxData, s);
 					CRMSG(s, "ERROR eval-ing op " + node->name + ", halting Strata graph ");
 
 					// if node's index is given as breakpoint to eval to, end

@@ -8,7 +8,9 @@
 
 using namespace ed;
 
-DEFINE_STRATA_STATIC_MOBJECTS(StrataOpNodeBase);
+//DEFINE_STRATA_STATIC_MOBJECTS(StrataOpNodeBase);
+
+DEFINE_STATIC_NODE_CPP_MEMBERS(STRATABASE_STATIC_MEMBERS, StrataOpNodeBase);
 
 MStatus StrataOpNodeBase::addStrataAttrs(
 	std::vector<MObject>& driversVec,
@@ -21,11 +23,11 @@ MStatus StrataOpNodeBase::addStrataAttrs(
 	MFnTypedAttribute tFn;
 
 	// all nodes connected directly to master graph node
-	aStGraph = nFn.create("stGraph", "stGraph", MFnNumericData::kBoolean);
-	nFn.setReadable(false);
-	nFn.setStorable(false);
-	nFn.setChannelBox(false);
-	nFn.setKeyable(false);
+	//aStGraph = nFn.create("stGraph", "stGraph", MFnNumericData::kBoolean);
+	//nFn.setReadable(false);
+	//nFn.setStorable(false);
+	//nFn.setChannelBox(false);
+	//nFn.setKeyable(false);
 
 	aStInput = nFn.create("stInput", "stInput", MFnNumericData::kInt);
 	nFn.setReadable(false);
@@ -35,6 +37,10 @@ MStatus StrataOpNodeBase::addStrataAttrs(
 	nFn.setDefault(-1);
 	// strata inputs use physical order always - there's no reason ever to have an empty entry here
 	nFn.setDisconnectBehavior(MFnAttribute::kDelete);
+
+	aStOpName = tFn.create("stOpName", "stOpName", MFnData::kString);
+	tFn.setDefault(MFnStringData().create(""));
+	
 
 	//T::aStInputAlias = tFn.create("stInputAlias", "stInputAlias", MFnData::kString);
 	//tFn.setReadable(false);
@@ -63,8 +69,9 @@ MStatus StrataOpNodeBase::addStrataAttrs(
 	//// add attributes
 
 	std::vector<MObject> drivers = {
-		aStGraph,
+		//aStGraph,
 		aStInput,
+		aStOpName
 		//aStParam,
 		//aStElData
 	};
@@ -85,12 +92,6 @@ MStatus StrataOpNodeBase::syncOpInputs(ed::StrataOp* op, const MObject& node) {
 	// triggered when input connections change
 	MStatus s(MS::kSuccess);
 
-	if (opPtr == nullptr) {
-		return s;
-	}
-	if (opGraphPtr.expired()) {
-		return s;
-	}
 
 	op->inputs.clear();
 
@@ -110,7 +111,7 @@ MStatus StrataOpNodeBase::syncOpInputs(ed::StrataOp* op, const MObject& node) {
 	// later
 
 	// flag graph as dirty
-	opGraphPtr.lock()->nodeInputsChanged(op->index);
+	opGraphPtr->nodeInputsChanged(op->index);
 
 	return s;
 }
@@ -127,11 +128,11 @@ MStatus StrataOpNodeBase::compute(const MPlug& plug, MDataBlock& data) {
 	if (data.isClean(plug)) {
 		return s;
 	}
-	// check if graph connection has been lost
-	if (opGraphPtr.expired()) {
-		data.setClean(plug);
-		return s;
-	}
+	//// check if graph connection has been lost
+	//if (opGraphPtr.expired()) {
+	//	data.setClean(plug);
+	//	return s;
+	//}
 
 	// check if input data/indices have changed
 	if (!data.isClean(aStInput)) {
@@ -141,8 +142,45 @@ MStatus StrataOpNodeBase::compute(const MPlug& plug, MDataBlock& data) {
 
 }
 
+const std::string StrataOpNodeBase::getOpNameFromNode(MObject& nodeObj) {
+	/* return a default name for strata op -
+	if nothing defined in string field, use name of node itself*/
+	MFnDependencyNode depFn(nodeObj);
+	MStatus s;
+	MPlug opNameFieldPlug = depFn.findPlug(aStOpName, false, &s);
+	if (s.error()) {
+		DEBUGS("error getting op name field for node " + depFn.name());
+		return "";
+	}
+	if (opNameFieldPlug.asString() != "") {
+		return opNameFieldPlug.asString().asChar();
+	}
+	return depFn.name().asChar();
+}
 
+StrataOp* StrataOpNodeBase::createNewNode(MObject& mayaNodeMObject) {
+	return opGraphPtr->addNode<StrataOpT>(
+		getOpNameFromNode(mayaNodeMObject)
+	);
+}
 
+MStatus StrataOpNodeBase::refreshGraphPtr(StrataOpGraph* otherGraph) {
+	/* if other graph is not a nullptr,
+	copy graph, re-add this node's op, make all connections*/
+	MS s;
+	if (otherGraph == nullptr) { // new graph, empty op
+		opGraphPtr = std::make_unique<StrataOpGraph>();
+
+		
+
+	}
+	return s;
+}
+
+void StrataOpNodeBase::postConstructor() {
+	/* ensure graph pointer is reset*/
+	opGraphPtr = std::make_unique<ed::StrataOpGraph>();
+}
 
 MStatus StrataOpNodeBase::legalConnection(
 	const MPlug& plug,
@@ -170,11 +208,18 @@ MStatus StrataOpNodeBase::connectionMade(const MPlug& plug,
 	const MPlug& otherPlug,
 	bool 	asSrc
 ) {
+	/* on connection made from another strata op node, 
+	copy the */
 	MStatus s = MS::kSuccess;
-	if (plug.attribute() == aStInput) {
-		syncOpInputs(opPtr, plug.node());
+	if (plug.attribute() != aStInput) {
 		return s;
 	}
+	
+	StrataOpNodeBase* otherNodePtr;
+	s = castToUserNode<StrataOpNodeBase>(otherPlug.node(), otherNodePtr);
+	MCHECK(s, "ERROR casting incoming strata connection to StrataOpNodeBase");
+	s = refreshGraphPtr(otherNodePtr->opGraphPtr.get());
+	MCHECK(s, "ERROR refreshing graph pointer from incoming node connection");
 	return s;
 }
 
@@ -183,10 +228,10 @@ MStatus StrataOpNodeBase::connectionBroken(const MPlug& plug,
 	bool 	asSrc
 ) {
 	MStatus s = MS::kSuccess;
-	if (plug.attribute() == aStInput) {
-		syncOpInputs(opPtr, plug.node());
+	if (plug.attribute() != aStInput) {
 		return s;
 	}
+	refreshGraphPtr(nullptr);
 	return s;
 }
 

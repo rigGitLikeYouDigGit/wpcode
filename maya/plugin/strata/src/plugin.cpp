@@ -14,7 +14,7 @@ register all plugins
 #include <maya/MDrawRegistry.h>
 
 
-#include "mayaNode/strataGraphNode.h"
+//#include "mayaNode/strataGraphNode.h"
 //#include "mayaNode/strataOpNodeBase.h"
 #include "mayaNode/strataPointNode.h"
 #include "mayaNode/strataElementOpNode.h"
@@ -84,19 +84,14 @@ MStatus initializePlugin( MObject obj ){
     MFnPlugin fnPlugin( obj, kAUTHOR, kVERSION, kREQUIRED_API_VERSION);
     MStatus s = MStatus::kSuccess;
 
-    REGISTER_NODE(StrataGraphNode);
-
-    if (MS::kSuccess != s) {
+    //REGISTER_NODE(StrataGraphNode);
+    /*if (MS::kSuccess != s) {
         cerr << 82 << "failed to register node type " + StrataGraphNode::kNODE_NAME;
         return MS::kFailure;
-    };
+    };*/
 
     //REGISTER_NODE(StrataOpNodeBase);
 
-    //if (MS::kSuccess != s) {
-    //    cerr << 82 << "failed to register node type " + StrataOpNodeBase::kNODE_NAME;
-    //    return MS::kFailure;
-    //};
 
 
     ////// strataPoint node
@@ -174,7 +169,7 @@ MStatus uninitializePlugin( MObject obj ){
     DEREGISTER_NODE(StrataCurve);
     DEREGISTER_NODE(StrataSurface);*/
 
-    DEREGISTER_NODE(StrataGraphNode);
+    //DEREGISTER_NODE(StrataGraphNode);
     //DEREGISTER_NODE(StrataOpNodeBase);
     DEREGISTER_NODE(StrataPointNode);
     DEREGISTER_NODE(StrataElementOpNode);

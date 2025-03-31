@@ -21,6 +21,7 @@
     <ClCompile Include="src\mayaNode\strataElementOpNode.cpp" />
     <ClCompile Include="src\exp\expParse.cpp" />
     <ClCompile Include="src\exp\expLex.cpp" />
+    <ClCompile Include="src\strataop\elementOp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\api.h">
@@ -46,7 +47,7 @@
     <ClInclude Include="src\mayaNode\strataGraphNode.h" />
     <ClInclude Include="src\mayaNode\strataElementOpNode.h" />
     <ClInclude Include="src\mayaNode\strataMayaLib.h" />
-    <ClInclude Include="src\strataop\strataElementOp.h" />
+    <ClInclude Include="src\strataop\elementOp.h" />
     <ClInclude Include="src\exp\expParse.h" />
     <ClInclude Include="src\status.h" />
     <ClInclude Include="src\dirtyGraph.h" />

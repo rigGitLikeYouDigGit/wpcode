@@ -4,7 +4,7 @@
 #include "../MInclude.h"
 #include "strataMayaLib.h"
 #include "strataOpNodeBase.h"
-#include "../strataop/strataElementOp.h"
+#include "../strataop/elementOp.h"
 
 #include "../exp/expParse.h"
 
@@ -177,7 +177,7 @@ prefix MObject nodeT aStFaceDriverName;\
 
 	
 
-class StrataElementOpNode : public StrataOpNodeBase {
+class StrataElementOpNode : public StrataOpNodeBase, public MPxNode {
 public:
 	StrataElementOpNode() {}
 	virtual ~StrataElementOpNode() {}
@@ -188,12 +188,12 @@ public:
 	}
 	//virtual void postConstructor();
 
-	static MStatus legalConnection(
-		const MPlug& plug,
-		const MPlug& otherPlug,
-		bool 	asSrc,
-		bool& isLegal
-	);
+	//static MStatus legalConnection(
+	//	const MPlug& plug,
+	//	const MPlug& otherPlug,
+	//	bool 	asSrc,
+	//	bool& isLegal
+	//);
 
 	static MTypeId kNODE_ID;// = const MTypeId(0x00122C1C);
 	static MString kNODE_NAME;// = MString("curveFrame");
@@ -208,13 +208,13 @@ public:
 
 	// override base class static strata objects, so each leaf class still has attributes
 	// initialised separately to the base
-	DECLARE_STRATA_STATIC_MEMBERS;
+	//DECLARE_STRATA_STATIC_MEMBERS;
 
-	DECLARE_STATIC_NODE_MEMBERS(
-		STRATAADDPOINTSOPNODE_STATIC_MEMBERS)
+	/*DECLARE_STATIC_NODE_MEMBERS(
+		STRATAADDPOINTSOPNODE_STATIC_MEMBERS)*/
 
 
-	typedef ed::StrataElementOp strataOpType;
+	using StrataOpT = ed::StrataElementOp;
 
 
 

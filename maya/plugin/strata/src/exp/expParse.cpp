@@ -9,7 +9,8 @@ const std::string test::tag("hello");
 
 
 
-Status ExpOpNode::evalMain(ExpOpNode* node, std::vector<ExpValue>& value, Status& s) {
+//Status ExpOpNode::evalMain(ExpOpNode* node, std::vector<ExpValue>& value, Status& s) {
+Status ExpOpNode::eval(ExpOpNode* node, std::vector<ExpValue>& value, Status& s) {
 	/* pull in ExpValues from input nodes, join all arguments together - 
 	MAYBE there's a case for naming blocks of arguments but that gets insane - 
 	python kwargs seem a bit excessive for now
@@ -355,14 +356,18 @@ Status Expression::parse() {
 	/* update internal structures, return a status on completion or error
 	* I am glad Djikstra is long dead.
 	* this concentrated cringe would surely kill him
-	* 
-	* if wrapInResultCall, the expression is wrapped as "RESULT(" exp ")" 
+	*
+	* if wrapInResultCall, the expression is wrapped as "RESULT(" exp ")"
 	* this way we don't have to deal with multiple values at the top level?
-	* 
+	*
 	*/
+	Status s;
+	if (srcStr == "") {
+		STAT_ERROR(s, "cannot parse empty source string for expression, halting");
+	}
 
 	std::vector<Token> parsedTokens;
-	Status s = validateAndParseStrings(srcStr, parsedTokens);
+	 s = validateAndParseStrings(srcStr, parsedTokens);
 	if (s) { return s; }
 
 	parseStatus = ExpParseStatus();
@@ -375,5 +380,29 @@ Status Expression::parse() {
 	int outIndex = -1;
 	Status parseS = parser.parseExpression(graph, outIndex);
 	return parseS;
+}
+
+Status Expression::result( 
+	std::vector<ExpValue>*&outResult,
+	//ExpStatus * expStatus,
+	ExpAuxData* auxData
+
+) {
+	// get result of expression at top level
+	Status s;
+	if (srcStr == "") { // no expression string, empty result
+		//STAT_ERROR(s, "cannot parse empty source string for expression, halting");
+		return s;
+	}
+	if(needsRecompile){
+		s = parse();
+		CWRSTAT(s, "could not recompile expression " + srcStr + " to get value, halting");
+		return s;
+	}
+
+	graph.evalGraph(s, graph.getResultNode()->index, auxData);
+	CWRSTAT(s, "error evaluating expression: " + srcStr + " , halting");
+	outResult = &graph.results[graph.getResultNode()->index];
+	return s;
 }
 
