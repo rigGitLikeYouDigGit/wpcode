@@ -97,6 +97,21 @@ namespace ed {
             Token(Kind kind, const char* beg, const char* end) noexcept
                 : m_kind{ kind }, m_lexeme(beg, std::distance(beg, end)) {}
 
+            void copyOther(const Token& other) {
+                m_kind = other.getKind();
+                m_lexeme = other.lexeme();
+            }            
+            ~Token() = default;
+            Token(Token const& other) {
+                copyOther(other);
+            }
+            Token(Token&& other) = default;
+            Token& operator=(Token const& other) {
+                copyOther(other);
+                return *this;
+            }
+            Token& operator=(Token&& other) = default;
+
             Kind getKind() const noexcept { return m_kind; }
 
             void getKind(Kind kind) noexcept { m_kind = kind; }
@@ -145,6 +160,10 @@ namespace ed {
         public:
             Lexer(const char* beg) noexcept : m_beg{ beg }, origChar{ beg } {}
 
+            Lexer() {
+                Lexer("a");
+            }
+
             Token next() noexcept;
 
             int index() {
@@ -153,7 +172,21 @@ namespace ed {
 
             void reset(const char* beg) { m_beg = beg; origChar = beg; }
 
-        private:
+            void copyOther(const Lexer& other) {
+                m_beg = other.m_beg;
+                origChar = other.origChar;
+            }
+            ~Lexer() = default;
+            Lexer(Lexer const& other) {
+                copyOther(other);
+            }
+            Lexer(Lexer&& other) = default;
+            Lexer& operator=(Lexer const& other) {
+                copyOther(other);
+            }
+            Lexer& operator=(Lexer&& other) = default;
+
+        //private:
             Token identifier() noexcept;
             Token number() noexcept;
             Token slash_or_comment() noexcept;

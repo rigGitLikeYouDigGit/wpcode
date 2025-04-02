@@ -13,6 +13,8 @@
 #include <iostream>
 #include <iomanip>
 #include <map>
+#include< fstream >
+#include<istream>
 #include <vector>
 #include <typeinfo>
 #include <typeindex>
@@ -90,6 +92,20 @@ int main()
 namespace ed {
 
 	namespace expns {
+
+#define MAKE_COPY_FNS(classT)\
+		~classT() = default;\
+		classT(classT const& other) {\
+			copyOther(other);\
+		}\
+		classT(classT&& other) = default;\
+		classT& operator=(classT const& other) {\
+			copyOther(other);\
+			return *this;\
+		}\
+		classT& operator=(classT&& other) = default;\
+
+
 		struct test {
 			static const std::string tag;
 			//const static std::string name = "ada";
@@ -162,18 +178,7 @@ namespace ed {
 			std::vector<std::string> stringVals;
 			// store values in flat arraus
 
-			ExpValue() {
-
-			}
-			ExpValue(ExpValue&& other) noexcept {
-				t = other.t;
-				copyValues(other);
-			}
-			ExpValue(const ExpValue& other) {
-				t = other.t;
-				copyValues(other);
-			}
-			void copyValues(const ExpValue& other) {
+			void copyOther(const ExpValue& other) {
 				t = other.t;
 				numberVals = other.numberVals;
 				stringVals = other.stringVals;
@@ -182,10 +187,19 @@ namespace ed {
 				dims.swap(other.dims);*/
 			}
 
+			ExpValue() {}
+			~ExpValue() = default;
+			ExpValue(ExpValue&& other) noexcept {
+				copyOther(other);
+			}
+			ExpValue(const ExpValue& other) {
+				copyOther(other);
+			}
 			ExpValue& operator=(const ExpValue& other) {
-				copyValues(other);
+				copyOther(other);
 				return *this;
 			}
+			ExpValue& operator=(ExpValue&& other) = default;
 
 			Status extend(std::initializer_list<ExpValue> vals) {
 				/* flatten all given values into this one - types must match*/
@@ -261,6 +275,28 @@ namespace ed {
 			int startIndex = -1; // where does this atom start (main index of this atom in the expression)
 			std::string srcString = ""; // what text in the expression created this atom (inclusive for function calls)
 			static constexpr const char* OpName = "base";
+
+			
+			void copyOther(const ExpAtom& other) {
+				startIndex = other.startIndex;
+				srcString = other.srcString;
+			}
+
+			auto clone() const { return std::unique_ptr<ExpAtom>(clone_impl()); }
+			template < typename pT>
+			auto clone() const { return std::unique_ptr<pT>(static_cast<pT*>(clone_impl())); }
+			virtual ExpAtom* clone_impl() const = 0;
+
+			ExpAtom(){}
+			~ExpAtom() = default;
+			ExpAtom(ExpAtom const& other) {
+				copyOther(other);
+			}
+			ExpAtom(ExpAtom&& other) = default;
+			ExpAtom& operator=( ExpAtom const& other) {
+				copyOther(other);
+			}
+			ExpAtom& operator=(ExpAtom&& other) = default;
 
 			// function to run live in op graph
 			virtual Status eval(
@@ -361,7 +397,6 @@ namespace ed {
 
 		};
 
-
 		struct ExpOpNode : EvalNode<std::vector<ExpValue>> {
 			// delegate eval function to expAtom, pulling in ExpValue arguments from input nodes
 			//ExpGraph* graphPtr;
@@ -386,8 +421,15 @@ namespace ed {
 			using EvalNode::EvalNode;
 			//ExpOpNode(const int index, const std::string name) : index(index), name(name) {}
 		};
+
 		struct PrefixParselet : ExpAtom{
-			virtual ~PrefixParselet() = default;
+			PrefixParselet() {}
+			//virtual ~PrefixParselet() = default;
+			virtual PrefixParselet* clone_impl() const override { return new PrefixParselet(*this); };
+
+			MAKE_COPY_FNS(PrefixParselet)
+
+
 			virtual Status parse(
 				ExpGraph& graph,
 				ExpParser& parser,
@@ -396,13 +438,30 @@ namespace ed {
 				Status& s
 			);
 		};
-		struct InfixParselet : ExpAtom{
-		public:
-			virtual ~InfixParselet() = default;
+		struct InfixParselet : ExpAtom 
+		{
+
+			InfixParselet() {}
+			//virtual ~InfixParselet() = default;
 			//virtual Status parse(, Token token) const = 0;
 			virtual int getPrecedence() {
 				return Precedence::SUM;
 			}
+
+			/* for some reson I couldn't get these to work in maps
+			without explicitly defining every single copy function by hand
+			great
+			love it
+			*/
+			//using AtomT = InfixParselet;
+			void copyOther(const InfixParselet& other) {
+				startIndex = other.startIndex;
+				srcString = other.srcString;
+			}
+			virtual InfixParselet* clone_impl() const override { return new InfixParselet(*this); };
+
+			MAKE_COPY_FNS(InfixParselet);
+
 			virtual Status parse(
 				ExpGraph& graph,
 				ExpParser& parser,
@@ -417,9 +476,14 @@ namespace ed {
 		struct ConstantAtom : PrefixParselet {
 			/* atom to represent a constant numeric value or string
 			*/
+			ConstantAtom() {}
 			static constexpr const char* OpName = "constant";
 			float literalVal = 0.0;
 			std::string literalStr;
+
+			virtual ConstantAtom* clone_impl() const override { return new ConstantAtom(*this); };
+
+			MAKE_COPY_FNS(ConstantAtom)
 
 			virtual Status parse(
 				ExpGraph& graph,
@@ -455,8 +519,12 @@ namespace ed {
 		};
 
 		struct NameAtom : PrefixParselet { // inspired by python's system - same use for var names or functions, attributes etc?
+			NameAtom() {}
 			static constexpr const char* OpName = "name";
 			std::string strName;
+
+			MAKE_COPY_FNS(NameAtom)
+
 			// depending on use, this name will either be set or retrieved by the next operation in graph
 			virtual Status eval(std::vector<ExpValue>& argList, ExpStatus* expStat, std::vector<ExpValue>& result, Status& s)
 			{
@@ -487,7 +555,11 @@ namespace ed {
 			/* atom to assign result to a variable
 			* arguments should be { variable name , variable value }
 			*/
+			AssignAtom() {}
 			static constexpr const char* OpName = "assign";
+
+			MAKE_COPY_FNS(AssignAtom)
+
 			virtual Status eval(std::vector<ExpValue>& argList, ExpStatus* expStat, std::vector<ExpValue>& result, Status& s)
 			{
 				if (!(argList.size() == 2)) { // check only name of variable and variable value passed
@@ -496,7 +568,7 @@ namespace ed {
 				//argList[0].varName = argList[1].strVal;
 				ExpValue v;
 				v.varName = argList[0].stringVals[0];
-				v.copyValues(argList[1]);
+				v.copyOther(argList[1]);
 
 				// create variable in expression status / scope
 				expStat->varMap[v.varName] = v;
@@ -520,7 +592,10 @@ namespace ed {
 			* this doesn't add a specific node to the graph, just
 			* controls how nodes are added and evaluated
 			*/
+			GroupAtom() {}
 			static constexpr const char* OpName = "group";
+
+			MAKE_COPY_FNS(GroupAtom)
 
 			virtual Status parse(
 				ExpGraph& graph,
@@ -548,6 +623,8 @@ namespace ed {
 			* first in arg list is name of function to call
 			*/
 			static constexpr const char* OpName = "call";
+			CallAtom() {}
+			MAKE_COPY_FNS(CallAtom);
 
 			virtual Status parse(
 				ExpGraph& graph,
@@ -566,7 +643,7 @@ namespace ed {
 				//argList[0].varName = argList[1].strVal;
 				ExpValue v;
 				v.varName = argList[0].stringVals[0];
-				v.copyValues(argList[1]);
+				v.copyOther(argList[1]);
 
 				// create variable in expression status / scope
 				expStat->varMap[v.varName] = v;
@@ -578,11 +655,14 @@ namespace ed {
 				return Precedence::CALL;
 			}
 		};
-		struct AccessAtom : ExpAtom {
+		struct AccessAtom : InfixParselet {
 			/* access an object attribute by name - eg
 			obj.attribute
 			*/
+			
 			static constexpr const char* OpName = "access";
+			AccessAtom() {}
+			MAKE_COPY_FNS(AccessAtom);
 			virtual Status eval(std::vector<ExpValue>& argList, ExpStatus* expStat, std::vector<ExpValue>& result, Status& s)
 			{
 
@@ -590,12 +670,14 @@ namespace ed {
 			}
 		};
 
-		struct GetItemAtom : ExpAtom {
+		struct GetItemAtom : InfixParselet {
 			/* access an item by square brackets
 			* arg 1 is object to access
 			* other args are dimensions for array access
 			*/
 			static constexpr const char* OpName = "getitem";
+			GetItemAtom() {}
+			MAKE_COPY_FNS(GetItemAtom);
 			virtual Status eval(std::vector<ExpValue>& argList, ExpStatus* expStat, std::vector<ExpValue>& result, Status& s)
 			{
 
@@ -604,12 +686,14 @@ namespace ed {
 		};
 
 
-		struct ResultAtom : ExpAtom {
+		struct ResultAtom : InfixParselet {
 			/*gathers the final value of an expression, where an explicit assign
 			* or return is not found -
 			* this node should always be 0 in the graph
 			*/
 			std::string opName = "result"; // class name of the operation
+			ResultAtom() {}
+			MAKE_COPY_FNS(ResultAtom);
 			virtual Status eval(std::vector<ExpValue>& argList, ExpStatus* expStat, std::vector<ExpValue>& result, Status& s)
 			{
 				if (argList.size() == 0) { // nothing to do
@@ -631,11 +715,13 @@ namespace ed {
 			}
 		};
 
-		struct PlusAtom : ExpAtom {
+		struct PlusAtom : InfixParselet {
 			/* atom to assign result to a variable
 			* arguments should be { variable name , variable value }
 			*/
 			std::string opName = "plus"; // class name of the operation
+			PlusAtom() {}
+			MAKE_COPY_FNS(PlusAtom);
 			virtual Status eval(std::vector<ExpValue>& argList, ExpStatus* expStat, std::vector<ExpValue>& result, Status& s)
 			{
 				if (!(argList.size() == 2)) { // check only name of variable and variable value passed
@@ -644,7 +730,7 @@ namespace ed {
 
 				ExpValue v;
 
-				v.copyValues(argList[1]);
+				v.copyOther(argList[1]);
 
 				// create variable in expression status / scope
 				expStat->varMap[v.varName] = v;
@@ -664,19 +750,54 @@ namespace ed {
 			std::vector<Token> parsedTokens;
 			std::vector<Token> readTokens;
 			std::vector<Token> mRead;
-			std::map<Token::Kind, std::unique_ptr<PrefixParselet>> mPrefixParselets;
-			std::map<Token::Kind, std::unique_ptr<InfixParselet>> mInfixParselets;
-			virtual ~ExpParser() = default;
+			std::unordered_map<Token::Kind, std::unique_ptr<InfixParselet>> mInfixParselets;
+			std::unordered_map<Token::Kind, std::unique_ptr<PrefixParselet>> mPrefixParselets;
+
+
+			//virtual ~ExpParser() = default;
+
+
+			void copyOther(const ExpParser& other) {
+				index = other.index;
+				parsedTokens = other.parsedTokens;
+				readTokens = other.readTokens;
+				mRead = other.mRead;
+				// deep copy of parselet maps
+				// eventually see about making some kind of "clonable" base or interface for this sort of thing
+				mPrefixParselets.clear();
+				mPrefixParselets.reserve(other.mPrefixParselets.size());
+				for (auto& p : other.mPrefixParselets) {
+					//std::unique_ptr<InfixParselet> ptr = p.second.get()->clone();  //NB - cannot implicitly cast up to container of derived, from pointer of base
+					mPrefixParselets.insert(
+						std::make_pair(p.first, 
+							(p.second->clone<PrefixParselet>())
+						)
+					);
+				}
+				for (auto& p : other.mInfixParselets) {
+					//std::unique_ptr<InfixParselet> ptr = p.second.get()->clone();  //NB - cannot implicitly cast up to container of derived, from pointer of base
+					mInfixParselets.insert(
+						std::make_pair(p.first,
+							(p.second->clone<InfixParselet>())
+						)
+					);
+				}
+			}
+
 			ExpParser() {
-				registerParselet(Token::Kind::Identifier, std::make_unique<NameAtom>());
+				//registerParselet(Token::Kind::Identifier, std::make_unique<NameAtom>());
 				//registerParselet(Token::Kind::Call, std::make_unique<NameAtom>());
 			}
+			MAKE_COPY_FNS(ExpParser)
+
 			void registerParselet(Token::Kind token, std::unique_ptr<PrefixParselet> parselet) {
-				mPrefixParselets[token] = std::move(parselet);
+				//mPrefixParselets[token] = std::move(parselet);
+				//mPrefixParselets[static_cast<int>(token)] = std::move(parselet);
 			}
 
 			void registerParselet(Token::Kind token, std::unique_ptr<InfixParselet> parselet) {
-				mInfixParselets[token] = std::move(parselet);
+				//mInfixParselets[token] = std::move(parselet);
+				//mInfixParselets[static_cast<int>(token)] = std::move(parselet);
 			}
 
 			void resetTokens(std::vector<Token>& aParsedTokens) {
@@ -686,7 +807,7 @@ namespace ed {
 				mRead.clear();
 			}
 
-			virtual bool hasNext() const { true; }
+			virtual bool hasNext() const { return true; }
 			virtual Token next() {
 				if (index < parsedTokens.size()) {
 					index += 1;
@@ -752,8 +873,8 @@ namespace ed {
 			}
 
 			int getPrecedence() {
-				auto itParser = mInfixParselets.find(lookAhead(0).getKind());
-				if (itParser != mInfixParselets.end()) return itParser->second->getPrecedence();
+				/*auto itParser = mInfixParselets.find(lookAhead(0).getKind());
+				if (itParser != mInfixParselets.end()) return itParser->second->getPrecedence();*/
 
 				return 0;
 			}
@@ -815,6 +936,17 @@ namespace ed {
 			Expression(const char* inSrcStr) : lexer(inSrcStr), graph() {
 				srcStr = inSrcStr;
 			}
+
+			void copyOther(const Expression& other) {
+
+			}
+
+			~Expression() = default; Expression(Expression const& other) {
+				copyOther(other);
+			} Expression(Expression&& other) = default; Expression& operator=(Expression const& other) {
+				copyOther(other);
+			} Expression& operator=(Expression&& other) = default;;
+
 
 			void setSource(const char* inSrcStr) {
 				lexer = Lexer(inSrcStr);

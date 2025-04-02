@@ -64,11 +64,6 @@ namespace ed {
 			return false;
 		}
 
-		//constexpr const std::array<const std::string> dirtyMap() {
-		//	// return list of all individual eval operations in nodes
-		//	return std::array<const std::string>{"main"};
-		//}
-
 		int temp_inDegree = 0;
 		int temp_generation = 0;
 
@@ -106,8 +101,6 @@ namespace ed {
 		std::unordered_map<int, std::unordered_set<int>> nodeDirectDependentsMap;
 		std::unordered_map<int, std::unordered_set<int>> nodeAllDependentsMap;
 
-
-
 		///////////////// COPYING ////////
 		//rule of five (apparently?)
 		inline void copyOtherNodesVector(const DirtyGraph& other) {
@@ -134,6 +127,14 @@ namespace ed {
 		}
 		DirtyGraph& operator=(DirtyGraph&& other) = default;
 
+		auto clone() const { return std::unique_ptr<DirtyGraph>(clone_impl()); }
+		virtual DirtyGraph* clone_impl() const { return new DirtyGraph(*this); };
+
+		virtual Status postConstructor() {
+			/* called after node added to graph, all connections set up*/
+			return Status();
+		}
+
 
 		template <typename NodeT = DirtyNode>
 		NodeT* addNode(const std::string& name, bool _callPostConstructor=true) {
@@ -158,12 +159,12 @@ namespace ed {
 			NodeT test(newIndex, name);
 			std::unique_ptr<NodeT> nodePtr = std::make_unique<NodeT>(newIndex, name);
 			nodes.push_back(std::move(nodePtr));
-			nodes.push_back(
-				std::move(
-					std::make_unique<NodeT>(newIndex, name)
-					//ptr
-				)
-			);
+			//nodes.push_back(
+			//	std::move(
+			//		std::make_unique<NodeT>(newIndex, name)
+			//		//ptr
+			//	)
+			//);
 			//std::unique_ptr<NodeT> newNodePtr = nodes[newIndex];
 			NodeT* newNodePtr = static_cast<NodeT*>(nodes[newIndex].get());
 			nameIndexMap[newNodePtr->name] = newIndex;
@@ -668,34 +669,6 @@ namespace ed {
 		
 		using DirtyNode::DirtyNode;
 
-		//EvalGraph<VT>* graphPtr = nullptr;
-
-		// TODO: try and make dirty flags and function string tags all compile-time
-		//constexpr const std::array<const std::string> evalSteps() {
-		//	// return list of all individual eval operations in nodes
-		//	return std::array<const std::string>{"main"};
-		//}
-
-		//constexpr const std::array<const std::string> evalSteps() {
-		//	// return list of all individual eval operations in nodes
-		//	return std::array<const std::string>{"main"};
-		//}
-
-		//using evalFnT = Status(*)(VT&, Status&);
-		//Status evalFn;
-
-		//template <typename ParamsT>
-		//Status evalParams(ParamsT& input, Status& stat) { return s; }
-
-		//const std::unordered_map<const std::string, 
-
-		/*OK, couldn't make this fully generic, so now we ball - 
-		allow one pre-step for computing params, then the normal eval functions
-		on the value type specified*/
-
-		// typedef function pointers for eval functions
-		//using EvalFnT = Status(*)(VT&, Status&);
-
 		// couldn't work out how to bind instances to functions, so
 		// by default eval functions are static methods
 		//using EvalFnT = Status(EvalNode<VT>::*)(VT&, Status&);
@@ -766,16 +739,15 @@ namespace ed {
 
 		EvalGraph() {
 		};
-
-		//~EvalGraph() = default;
-		/*EvalGraph(EvalGraph const& other) {
+		~EvalGraph() = default;
+		EvalGraph(EvalGraph const& other) {
 			copyOther(other);
 		}
 		EvalGraph(EvalGraph&& other) = default;
 		EvalGraph& operator=(EvalGraph const& other) {
 			copyOther(other);
 		}
-		EvalGraph& operator=(EvalGraph&& other) = default;*/
+		EvalGraph& operator=(EvalGraph&& other) = default;
 
 		template <typename NodeT = EvalNode<VT>>
 		NodeT* addNode(const std::string& name, VT defaultValue = VT(),
@@ -810,7 +782,7 @@ namespace ed {
 			* 
 			* flag if a certain node requires a certain set of passes to run in the graph up until that point?
 			* 
-			* brother I we're just gonna use a single eval function and rely on 
+			we're just gonna use a single eval function and rely on 
 			* user code to undertake the herculaean task
 			* of writing if statements
 			* to only evaluate the bits of the nodes they need

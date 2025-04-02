@@ -5,7 +5,9 @@ using namespace ed;
 using namespace ed::expns;
 
 Status StrataElementOp::makeParams() {
+	Status s;
 	paramNameExpMap["pNew"] = Expression("");
+	return s;
 }
 
 
