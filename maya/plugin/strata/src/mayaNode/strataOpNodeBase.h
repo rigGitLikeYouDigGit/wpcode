@@ -120,15 +120,25 @@ struct StrataOpNodeBase {
 
 	static const std::string getOpNameFromNode(MObject& nodeObj);
 
-	static inline const int getOpIndexFromNode(const MObject& nodeObj);
+	static inline const int getOpIndexFromNode(MObject& nodeObj);
+	static inline const int getOpIndexFromNode(MDataBlock& data);
+	static MStatus setOpIndexOnNode(MObject& nodeObj, int index);
+	static MStatus setOpIndexOnNode(MDataBlock& data, int index);
 
 	virtual MStatus setFreshGraph(MObject& nodeObj);
+	virtual MStatus setFreshGraph(MObject& nodeObj, MDataBlock& data);
 	MStatus syncIncomingGraphConnections(MObject& nodeObj);
-	MStatus syncIncomingGraphData(MObject& nodeObj);
+	virtual MStatus syncIncomingGraphData(MObject& nodeObj, MDataBlock& data);
 
 	void postConstructor(MObject& nodeObj);
 
 	static int strataAttrsDefined;
+
+	// override to update node parametres
+	// check yourself if params have changed, exps need to be recompiled etc
+	virtual MStatus syncStrataParams(MObject& nodeObj, MDataBlock& data) {
+		return MS::kSuccess;
+	}
 
 	//template<typename NodeT>
 	static MStatus defineStrataAttrs() {
@@ -255,7 +265,7 @@ struct StrataOpNodeBase {
 		return MS::kSuccess;
 	}
 
-	MStatus compute(MObject& nodeObj, const MPlug& plug, MDataBlock& data);
+	virtual MStatus compute(MObject& nodeObj, const MPlug& plug, MDataBlock& data);
 
 	static MStatus legalConnection(
 		//MObject& nodeObj,
@@ -316,7 +326,7 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 		return static_cast<StrataOpT*>(nodePtr);
 	}
 
-	StrataOpT* getStrataOp(const MObject& nodeObj) {
+	StrataOpT* getStrataOp(MObject& nodeObj) {
 		// return pointer to the current op, in this node's graph
 		// a strcmp slower than the templated version
 		ed::DirtyNode* nodePtr = opGraphPtr.get()->getNode(getOpIndexFromNode(nodeObj));
@@ -326,26 +336,37 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 		return static_cast<StrataOpT*>(nodePtr);
 	}
 
-	MStatus createNewOp(MObject& mayaNodeMObject, StrataOpT*& opPtrOut) {
+	MStatus createNewOp(MObject& mayaNodeMObject, MDataBlock& data, StrataOpT*& opPtrOut) {
 		/* create new op, and if we have incoming nodes, make new connections to it
 		*/
+		DEBUGS("createNewOp")
 		MS s(MS::kSuccess);
 		opPtrOut = nullptr;
 		StrataOpT* opPtr = opGraphPtr.get()->addNode<StrataOpT>(
-			getOpNameFromNode(mayaNodeMObject)
+			//getOpNameFromNode(mayaNodeMObject)
+			data.outputValue(aStOpNameOut).asString().asChar()
 		);
 		opPtrOut = opPtr;
+		DEBUGSL("added new op to graph")
+		// set op index on node output
+		s = setOpIndexOnNode(data, opPtr->index);
+		DEBUGS("set op index on node")
 		// check input connections
-		MFnDependencyNode depFn(mayaNodeMObject );
-		MPlug inPlug = depFn.findPlug(aStInput, true, &s);
+		/*MFnDependencyNode depFn(mayaNodeMObject );
+		MPlug inPlug = depFn.findPlug(aStInput, true, &s);*/
 		MCHECK(s, "ERROR creating new op, could not find networked aStInput plug");
-
-
-		// get indices of each input op, set as node inputs
-		for (unsigned int i = 0; i < inPlug.evaluateNumElements(&s); i++) {
-			MCHECK(s, "ERROR in evaluateNumElements for strata input plug");
-			opPtrOut->inputs.push_back(inPlug.elementByPhysicalIndex(i).asInt());
+		MArrayDataHandle arrDh = data.inputArrayValue(aStInput);
+		for (unsigned int i = 0; i < arrDh.elementCount(); i++) {
+			opPtrOut->inputs.push_back(arrDh.inputValue().asInt());
+			arrDh.next();
 		}
+		DEBUGS("pulled op inputs")
+
+		//// get indices of each input op, set as node inputs
+		//for (unsigned int i = 0; i < inPlug.evaluateNumElements(&s); i++) {
+		//	MCHECK(s, "ERROR in evaluateNumElements for strata input plug");
+		//	opPtrOut->inputs.push_back(inPlug.elementByPhysicalIndex(i).asInt());
+		//}
 
 		return s;
 	}
@@ -358,17 +379,6 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 	//template<typename NodeT>
 	//static void testFn();
 	
-
-
-	// probably a way to get access to the attr MObjects in this mixin's scope, 
-	// but by contrast I actually understand this way with the template
-	template <typename T>
-	static void setOpIndexOnMayaNode(int opIndex, MObject& thisNode) {
-		// update the maya attribute to this struct's op index
-		MFnDependencyNode thisFn(thisNode);
-		MPlug opIndexPlug = thisFn.findPlug(thisNode, T::aStOutput, false);
-		opIndexPlug.setInt(opIndex);
-	}
 
 	Status syncOp(StrataOpT* op, MDataBlock& data) {
 		/* update op from maya node datablock -
@@ -385,7 +395,7 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 	MStatus syncOpInputs(StrataOpT* op, const MObject& node);
 
 	// shared compute function for all op nodes
-	MStatus compute(MObject& thisMObj, const MPlug& plug, MDataBlock& data) {
+	virtual MStatus compute(MObject& thisMObj, const MPlug& plug, MDataBlock& data) {
 		return StrataOpNodeBase::compute(
 			thisMObj, plug, data
 		);
@@ -395,13 +405,13 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 		const MPlug& otherPlug,
 		bool 	asSrc);
 
-	virtual MStatus setFreshGraph(MObject& nodeObj) {
+	virtual MStatus setFreshGraph(MObject& nodeObj, MDataBlock& data) {
 		// make new internal graph, and also add this node's op to it
 		DEBUGSL("template setFreshGraph")
 		MS s = StrataOpNodeBase::setFreshGraph(nodeObj);
 		MCHECK(s, "Error setting fresh graph, halting before adding op");
 		thisStrataOpT* opOutPtr;
-		s = createNewOp(nodeObj, opOutPtr);
+		s = createNewOp(nodeObj, data, opOutPtr);
 		MCHECK(s, "Error adding new op to graph");
 		DEBUGSL("created new op, added to graph");
 
@@ -413,7 +423,16 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 		StrataOpNodeBase::postConstructor(nodeObj);
 	}
 
-	MStatus syncIncomingGraphData(MObject& nodeObj);
+	virtual MStatus syncIncomingGraphData(MObject& nodeObj, MDataBlock& data) {
+		/* copy graph, and add new node to it*/
+		MStatus s = StrataOpNodeBase::syncIncomingGraphData(nodeObj, data);
+		DEBUGS("template syncIncoming")
+			MCHECK(s, "Error copying graph data from OpNodeBase, halting");
+		StrataOpT* opPtr;
+		s = createNewOp(nodeObj, data, opPtr);
+		MCHECK(s, "Error adding new op to new graph");
+		return s;
+	};
 
 
 };

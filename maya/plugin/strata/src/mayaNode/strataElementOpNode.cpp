@@ -43,6 +43,7 @@ MStatus StrataElementOpNode::initialize() {
     
 
     aStElement = cFn.create("stElement", "stElement");
+    cFn.setArray(true);
 
     /*expression to generate given elements - leave blank for raw points
     */
@@ -217,7 +218,6 @@ MStatus StrataElementOpNode::compute(const MPlug& plug, MDataBlock& data) {
     // pass to bases
     s = superT::compute(thisMObject(), plug, data);
     MCHECK(s, NODENAME + " ERROR in strata bases compute, halting");
-    
 
     return s;
 }
