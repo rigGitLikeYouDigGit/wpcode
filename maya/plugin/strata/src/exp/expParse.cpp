@@ -10,7 +10,7 @@ const std::string test::tag("hello");
 
 
 //Status ExpOpNode::evalMain(ExpOpNode* node, std::vector<ExpValue>& value, Status& s) {
-Status ExpOpNode::eval(ExpOpNode* node, std::vector<ExpValue>& value, Status& s) {
+Status ExpOpNode::eval(ExpOpNode* node, std::vector<ExpValue>& value, EvalAuxData* auxData, Status& s) {
 	/* pull in ExpValues from input nodes, join all arguments together - 
 	MAYBE there's a case for naming blocks of arguments but that gets insane - 
 	python kwargs seem a bit excessive for now
@@ -18,11 +18,15 @@ Status ExpOpNode::eval(ExpOpNode* node, std::vector<ExpValue>& value, Status& s)
 	pass into atom as arguments*/
 	std::vector<ExpValue> arguments;
 
-
-	ExpGraph* testGraphPtr = reinterpret_cast<ExpGraph*>((node->graphPtr));
-	if (testGraphPtr == nullptr) {
+	
+	if (node->graphPtr == nullptr) {
 		STAT_ERROR(s, "UNABLE TO CAST NODE GRAPHPTR TYPE TO EXPGRAPH*");
 	}
+	//ExpGraph* testGraphPtr = static_cast<ExpGraph*>((node->graphPtr));
+	//ExpGraph* testGraphPtr = reinterpret_cast<ExpGraph*>((node->graphPtr));
+	/*if (testGraphPtr == nullptr) {
+		STAT_ERROR(s, "UNABLE TO CAST NODE GRAPHPTR TYPE TO EXPGRAPH*");
+	}*/
 
 	ExpGraph* graphPtr = node->getGraphPtr();
 	for (int index : node->inputs) {
@@ -33,8 +37,8 @@ Status ExpOpNode::eval(ExpOpNode* node, std::vector<ExpValue>& value, Status& s)
 
 	Status result = node->expAtomPtr->eval(
 		arguments,
-		testGraphPtr->exp,
-		value, 
+		graphPtr->exp,
+		value,
 		s);
 	return s;
 }
@@ -125,65 +129,6 @@ Status validateAndParseStrings(std::string srcStr, std::vector<Token>& parsedTok
 	return s;
 }
 
-
-
-Status parseScope(std::vector<Token> scopeTokens, Expression& exp,
-	std::vector<int>& outNodeIndices) {
-	/* runs over contained contents of brackets - 
-	populate a vector of ints for the resolved, top-level elements of this scope*/
-	Status s;
-	std::vector<int> tokenStack; // build up stack of nodes for operations
-	std::vector<int> scopeStack; // indices of nodes that 
-	for (int i = 0; i < scopeTokens.size(); i++)
-	{
-		Token token = scopeTokens[i];
-		ExpOpNode* newNode = nullptr;
-		switch (token.getKind()) {
-		case Token::Kind::String: // add a literal quoted string
-		{
-			newNode = exp.graph.addNode<ConstantAtom>();
-			ConstantAtom* op = static_cast<ConstantAtom*>(newNode->expAtomPtr.get());
-			op->literalStr = token.lexeme();
-		}
-		case Token::Kind::Number: // add a literal number (stored as float by default)
-		{
-			newNode = exp.graph.addNode<ConstantAtom>();
-			ConstantAtom* op = static_cast<ConstantAtom*>(newNode->expAtomPtr.get());
-			op->literalVal = std::stof(token.lexeme());
-		}
-		case Token::Kind::Dollar:
-			// set up a variable name or pattern
-			continue;
-
-		case Token::Kind::Identifier: {
-			// check if this identifier is a variable, preceded by a dollar
-			if (i && (scopeTokens[i - 1].getKind() == Token::Kind::Dollar)) {
-				continue;
-			}
-			// create a Name op, add it to the stack
-			newNode = exp.graph.addNode<NameAtom>();
-			NameAtom* op = static_cast<NameAtom*>(newNode->expAtomPtr.get());
-			op->strName = token.lexeme();
-			tokenStack.push_back(newNode->index);
-		}
-									/// CALLING FUNCTIONS - on hitting a right-paren, check back in stack to corresponding left
-		case Token::Kind::LeftParen: {
-			//if(parsedTokens[i-1] == )
-		}
-		default:
-			continue;
-		}
-		if (newNode == nullptr) {
-			STAT_ERROR(s, "UNKNOWN TOKEN: " + token.lexeme() + " - halting");
-		}
-		newNode->expAtomPtr.get()->srcString = token.lexeme();
-
-
-
-
-	}
-	return s;
-}
 
 // function to insert this op in graph
 Status ExpAtom::parse(

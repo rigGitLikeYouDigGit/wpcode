@@ -32,6 +32,7 @@ namespace ed {
 		/* add one or more points to the graph
 		could alo use a snippet to do the same thing
 		*/
+		using StrataOp::StrataOp;
 
 		std::map<std::string, SPointData> nameDataMap;
 

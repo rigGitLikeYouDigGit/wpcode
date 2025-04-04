@@ -56,7 +56,7 @@ def makeStrataPoint(name):
 	loc = cmds.createNode("strataPoint", n=name + "Shape")
 	tf = cmds.listRelatives(loc, parent=1)[0]
 	tf = cmds.rename(tf, name)
-	cmds.connectAttr(loc + ".stFinalOutMatrix", tf + ".offsetParentMatrix", f=1)
+	#cmds.connectAttr(loc + ".stFinalOutMatrix", tf + ".offsetParentMatrix", f=1)
 	return tf
 
 def connectStrataPoint(pointNode, addPointsNode):
@@ -97,14 +97,17 @@ def reloadPluginTest():
 	cmds.setAttr(ptC + ".translate", 2, -1, -3)
 	cmds.setAttr(ptD + ".translate", 3, -1, -3)
 
-	graphNode = cmds.createNode("strataGraph")
+	#return
+	elOp = cmds.createNode("strataElementOp")
+	return
+	#graphNode = cmds.createNode("strataGraph")
 
-	addPointsNode = cmds.createNode("strataAddPointsOp")
-	cmds.connectAttr(graphNode + ".stGraph", addPointsNode + ".stGraph")
-	addPointsNode2 = cmds.createNode("strataAddPointsOp")
-	cmds.connectAttr(graphNode + ".stGraph", addPointsNode2 + ".stGraph")
-	addPointsNode3 = cmds.createNode("strataAddPointsOp")
-	cmds.connectAttr(graphNode + ".stGraph", addPointsNode3 + ".stGraph")
+	# addPointsNode = cmds.createNode("strataAddPointsOp")
+	# cmds.connectAttr(graphNode + ".stGraph", addPointsNode + ".stGraph")
+	# addPointsNode2 = cmds.createNode("strataAddPointsOp")
+	# cmds.connectAttr(graphNode + ".stGraph", addPointsNode2 + ".stGraph")
+	# addPointsNode3 = cmds.createNode("strataAddPointsOp")
+	# cmds.connectAttr(graphNode + ".stGraph", addPointsNode3 + ".stGraph")
 
 	return
 	dgNode, crvTf = makeStrataCurve("strataCurveA", ptA, ptB)

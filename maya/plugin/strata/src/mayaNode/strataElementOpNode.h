@@ -3,8 +3,8 @@
 
 #include "../MInclude.h"
 #include "strataMayaLib.h"
-#include "strataOpNodeBase.h"
 #include "../strataop/elementOp.h"
+#include "strataOpNodeBase.h"
 
 #include "../exp/expParse.h"
 
@@ -131,16 +131,20 @@ do we need a blend on every single attribute, to say if it should be overridden?
 probably, right?
 */
 
-# define STRATAADDPOINTSOPNODE_STATIC_MEMBERS(prefix, nodeT) \
+# define STRATAELEMENTOPNODE_STATIC_MEMBERS(prefix, nodeT) \
 prefix MObject nodeT aStElement;\
-prefix MObject nodeT aStType;\
 prefix MObject nodeT aStName;\
 prefix MObject nodeT aStExp;\
 prefix MObject nodeT aStGlobalIndex;\
 prefix MObject nodeT aStElTypeIndex;\
+
+
+/*
+\
+prefix MObject nodeT aStType;\
 prefix MObject nodeT aStFitTransform;\
 prefix MObject nodeT aStFitCurve;\
-\
+
 prefix MObject nodeT aStPointInWorldMatrix;\
 prefix MObject nodeT aStPointOutFinalDriverMatrix;\
 prefix MObject nodeT aStPointOutFinalLocalOffsetMatrix;\
@@ -165,20 +169,19 @@ prefix MObject nodeT aStFaceDriver;\
 prefix MObject nodeT aStFaceDriverIndex;\
 prefix MObject nodeT aStFaceDriverName;\
 
+*/
 
 
-// create lines of the form 'static MObject aStPoint;'
-# define DECLARE_STATIC_NODE_MEMBERS(attrsMacro) \
-	attrsMacro(static, )
+/* got some weird crashes when MPxNode wasn't the first base, so
+it looks like we need to redeclare all the strata overridden methods
+in the final classes - 
+that's fine*/
 
-// create lines of the form 'MObject StrataElementOpNode::aStPoint;'
-# define DEFINE_STATIC_NODE_MEMBERS(attrsMacro, nodeT) \
-	attrsMacro( , nodeT::)
-
-	
-
-class StrataElementOpNode : public StrataOpNodeBase, public MPxNode {
+//class StrataElementOpNode : public StrataOpNodeTemplate<ed::StrataElementOp>, public MPxNode {
+class StrataElementOpNode : public MPxNode, public StrataOpNodeTemplate<ed::StrataElementOp> {
 public:
+	using thisStrataOpT = ed::StrataElementOp;
+	using superT = StrataOpNodeTemplate<ed::StrataElementOp>;
 	StrataElementOpNode() {}
 	virtual ~StrataElementOpNode() {}
 
@@ -186,6 +189,10 @@ public:
 		StrataElementOpNode* newObj = new StrataElementOpNode();
 		return newObj;
 	}
+
+	//DECLARE_STATIC_NODE_H_MEMBERS(STRATABASE_STATIC_MEMBERS);
+	DECLARE_STATIC_NODE_H_MEMBERS(STRATAELEMENTOPNODE_STATIC_MEMBERS);
+
 	//virtual void postConstructor();
 
 	//static MStatus legalConnection(
@@ -213,10 +220,24 @@ public:
 	/*DECLARE_STATIC_NODE_MEMBERS(
 		STRATAADDPOINTSOPNODE_STATIC_MEMBERS)*/
 
+	void postConstructor();
 
-	using StrataOpT = ed::StrataElementOp;
+	static MStatus legalConnection(
+		const MPlug& plug,
+		const MPlug& otherPlug,
+		bool 	asSrc,
+		bool& isLegal
+	);
 
+	virtual MStatus connectionMade(const MPlug& plug,
+		const MPlug& otherPlug,
+		bool 	asSrc
+	);
 
+	virtual MStatus connectionBroken(const MPlug& plug,
+		const MPlug& otherPlug,
+		bool 	asSrc
+	);
 
 };
 

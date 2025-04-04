@@ -22,6 +22,7 @@
     <ClCompile Include="src\exp\expParse.cpp" />
     <ClCompile Include="src\exp\expLex.cpp" />
     <ClCompile Include="src\strataop\elementOp.cpp" />
+    <ClCompile Include="src\dirtyGraph.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\api.h">

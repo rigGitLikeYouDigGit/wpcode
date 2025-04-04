@@ -3,20 +3,19 @@
 #include <vector>
 //#include <array>
 
-
-
 #include "../macro.h"
 #include "../api.h"
+#include "../MInclude.h"
+
 #include "strataElementOpNode.h"
 #include "strataGraphNode.h"
 #include "strataPointNode.h"
 #include "strataOpNodeBase.h"
+//#include "strataOpNodeBase.cpp"
 #include "../lib.cpp"
 #include "../strataop/elementOp.h"
 
 using namespace ed;
-
-
 
 MTypeId StrataElementOpNode::kNODE_ID(0x00122CA2);
 MString StrataElementOpNode::kNODE_NAME("strataElementOp");
@@ -24,24 +23,15 @@ MString StrataElementOpNode::kNODE_NAME("strataElementOp");
 MString StrataElementOpNode::drawDbClassification("drawdb/geometry/strataElementOp");
 MString StrataElementOpNode::drawRegistrantId("StrataElementOpNodePlugin");
 
+//DEFINE_STATIC_NODE_CPP_MEMBERS(STRATABASE_STATIC_MEMBERS, StrataElementOpNode)
+DEFINE_STATIC_NODE_CPP_MEMBERS(STRATAELEMENTOPNODE_STATIC_MEMBERS, StrataElementOpNode)
+//MObject StrataElementOpNode::aStInput; MObject StrataElementOpNode::aStOpName; MObject StrataElementOpNode::aStOutput;
 
-//MObject StrataElementOpNode::aStPoint;
-//MObject StrataElementOpNode::aStPointLocalMatrix;
-//MObject StrataElementOpNode::aStPointHomeMatrix;
-//MObject StrataElementOpNode::aStPointName;
-//MObject StrataElementOpNode::aStResult;
+///MObject StrataElementOpNode::aStElement; MObject StrataElementOpNode::aStType; MObject StrataElementOpNode::aStName; MObject StrataElementOpNode::aStExp; MObject StrataElementOpNode::aStGlobalIndex; MObject StrataElementOpNode::aStElTypeIndex; MObject StrataElementOpNode::aStFitTransform; MObject StrataElementOpNode::aStFitCurve;
 
-
-//DEFINE_STRATA_STATIC_MOBJECTS(StrataElementOpNode)
-//
-//
-//DEFINE_STATIC_NODE_MEMBERS(
-//    STRATAADDPOINTSOPNODE_STATIC_MEMBERS, StrataElementOpNode
-//)
-
-//StrataElementOpNode::addStrataAttrs;
 
 MStatus StrataElementOpNode::initialize() {
+    DEBUGS("Element initialize")
     MStatus s = MS::kSuccess;
     MFnNumericAttribute nFn;
     MFnCompoundAttribute cFn;
@@ -52,20 +42,35 @@ MStatus StrataElementOpNode::initialize() {
     MFnTypedAttribute tFn;
     
 
-    //cFn.setObject(aStElement);
+    aStElement = cFn.create("stElement", "stElement");
 
-    //aStExp = tFn.create("stExp", "stExp", MFnData::kString);
-    //tFn.setDefault(MFnStringData().create(""));
+    /*expression to generate given elements - leave blank for raw points
+    */
+    aStExp = tFn.create("stExp", "stExp", MFnData::kString); 
+    tFn.setDefault(MFnStringData().create(""));
+
+    /* name of new element to create*/
+    aStName = tFn.create("stName", "stName", MFnData::kString);
+    tFn.setDefault(MFnStringData().create(""));
+    /* global index of new element created */
+    aStGlobalIndex = nFn.create("stGlobalIndex", "stGlobalIndex", MFnNumericData::kInt, -1);
+    nFn.setKeyable(false);
+    nFn.setMin(-1);
+    /* component-type-specific index of element created */
+    aStElTypeIndex = nFn.create("stElTypeIndex", "stElTypeIndex", MFnNumericData::kInt, -1);
+    nFn.setKeyable(false);
+    nFn.setMin(-1);
+
+    cFn.addChild(aStExp);
+    cFn.addChild(aStName);
+    cFn.addChild(aStGlobalIndex);
+    cFn.addChild(aStElTypeIndex);
+
     //aStType = eFn.create("stType", "stType", 0);
     //eFn.addField("point", 0);
     //eFn.addField("edge", 1);
     //eFn.addField("face", 2);
-    //aStName = tFn.create("stName", "stName", MFnData::kString);
-    //tFn.setDefault(MFnStringData().create(""));
-    //aStGlobalIndex = nFn.create("stGlobalIndex", "stGlobalIndex", MFnNumericData::kInt, -1);
-    //nFn.setMin(-1);
-    //aStElTypeIndex = nFn.create("stElTypeIndex", "stElTypeIndex", MFnNumericData::kInt, -1);
-    //nFn.setMin(-1);
+
 
     //// point attributes
     //aStPointInWorldMatrix = mFn.create("stPointInWorldMatrix", "stPointInWorldMatrix");
@@ -128,33 +133,91 @@ MStatus StrataElementOpNode::initialize() {
     //    &aStEdgeResolution, &aStEdgeNormaliseParam, &aStEdgeUseLength}
     //);
 
-    std::vector<MObject> drivers;
-    std::vector<MObject> driven;
+    std::vector<MObject> drivers{
+        aStElement,
+        aStName,
+        aStExp
+    };
+    std::vector<MObject> driven{
+        aStGlobalIndex,
+        aStElTypeIndex
+    };
 
-    s = addStrataAttrs(drivers, driven);
+    std::vector<MObject> toAdd{
+        aStElement
+    };
+
+    s = addStrataAttrs(drivers, driven, toAdd);
     MCHECK(s, "could not add Strata attrs");
 
-    addAttributes<StrataElementOpNode>(drivers);
-    addAttributes<StrataElementOpNode>(driven);
+    addAttributes<StrataElementOpNode>(toAdd);
     setAttributesAffect<StrataElementOpNode>(drivers, driven);
 
     CHECK_MSTATUS_AND_RETURN_IT(s);
+    DEBUGS("end element initialize")
     return s;
+}
+
+void StrataElementOpNode::postConstructor() {
+    DEBUGS("element postConstructor");
+    StrataOpNodeTemplate<thisStrataOpT>::postConstructor(thisMObject());
+}
+
+MStatus StrataElementOpNode::legalConnection(
+    const MPlug& plug,
+    const MPlug& otherPlug,
+    bool 	asSrc,
+    bool& isLegal
+) {
+    return StrataOpNodeTemplate<thisStrataOpT>::legalConnection(
+        plug,
+        otherPlug,
+        asSrc,
+        isLegal
+    );
+}
+
+MStatus StrataElementOpNode::connectionMade(
+    const MPlug& plug,
+    const MPlug& otherPlug,
+    bool 	asSrc
+) {
+    return StrataOpNodeTemplate<thisStrataOpT>::connectionMade(
+        thisMObject(),
+        plug,
+        otherPlug,
+        asSrc
+    );
+}
+
+MStatus StrataElementOpNode::connectionBroken(
+    const MPlug& plug,
+    const MPlug& otherPlug,
+    bool 	asSrc
+) {
+    return StrataOpNodeTemplate<thisStrataOpT>::connectionBroken(
+        thisMObject(),
+        plug,
+        otherPlug,
+        asSrc
+    );
 }
 
 
 MStatus StrataElementOpNode::compute(const MPlug& plug, MDataBlock& data) {
+
+    DEBUGS("element compute")
     MS s(MS::kSuccess);
 
     // check if plug is already computed
     if (data.isClean(plug)) {
         return s;
     }
-    // check if graph connection has been lost
-    /*if (opGraphPtr.expired()) {
-        data.setClean(plug);
-        return s;
-    }*/
+
+    // pass to bases
+    s = superT::compute(thisMObject(), plug, data);
+    MCHECK(s, NODENAME + " ERROR in strata bases compute, halting");
+    
 
     return s;
 }

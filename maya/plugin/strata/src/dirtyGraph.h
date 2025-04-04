@@ -43,8 +43,8 @@ namespace ed {
 
 
 	struct DirtyNode {
-		const int index;
-		const std::string name;
+		int index;
+		std::string name;
 		DirtyGraph* graphPtr = nullptr;
 
 		/*template<typename GraphT=DirtyGraph>
@@ -67,7 +67,9 @@ namespace ed {
 		int temp_inDegree = 0;
 		int temp_generation = 0;
 
-		DirtyNode(const int index, const std::string name) : index(index), name(name) {}
+		DirtyNode() {}
+		DirtyNode(int index, std::string name) : index(index), name(name) {}
+		virtual ~DirtyNode(){}
 
 		auto clone() const { return std::unique_ptr<DirtyNode>(clone_impl()); }
 		virtual DirtyNode* clone_impl() const { return new DirtyNode(*this); };
@@ -128,11 +130,30 @@ namespace ed {
 		DirtyGraph& operator=(DirtyGraph&& other) = default;
 
 		auto clone() const { return std::unique_ptr<DirtyGraph>(clone_impl()); }
-		virtual DirtyGraph* clone_impl() const { return new DirtyGraph(*this); };
+		template <typename T>
+		auto clone() const { return std::unique_ptr<T>(static_cast<T*>(clone_impl())); }
+		auto cloneShared() const { return std::shared_ptr<DirtyGraph>(clone_impl()); }
+		template <typename T>
+		auto cloneShared() const { return std::shared_ptr<T>(static_cast<T*>(clone_impl())); }
+		virtual DirtyGraph* clone_impl() const { 
+			auto newPtr = new DirtyGraph(*this);
+			newPtr->copyOther(*this);
+			return newPtr;
+		};
 
-		virtual Status postConstructor() {
-			/* called after node added to graph, all connections set up*/
-			return Status();
+		//virtual Status postConstructor() {
+		//	/* called after node added to graph, all connections set up*/
+		//	return Status();
+		//}
+
+		Status setNodeName(DirtyNode* nodePtr, std::string newName) {
+			// the one concession to mutable state for now in graphs
+			Status s;
+			int index = nameIndexMap[nodePtr->name];
+			nameIndexMap.erase(nodePtr->name);
+			nameIndexMap[newName] = index;
+			nodePtr->name = newName;
+			return s;
 		}
 
 
@@ -156,8 +177,17 @@ namespace ed {
 			const int newIndex = static_cast<int>(nodes.size());
 			
 			//std::unique_ptr<DirtyNode> nodePtr = std::make_unique<DirtyNode>(newIndex, name);
-			NodeT test(newIndex, name);
-			std::unique_ptr<NodeT> nodePtr = std::make_unique<NodeT>(newIndex, name);
+			//DirtyNode testD(newIndex, name);
+			//EvalNode<int> testE(newIndex, name);
+			//StrataOp(newIndex, name);
+			//EvalNode<StrataManifold> testS()
+
+			//NodeT test(newIndex, name);
+			//auto tptr = std::make_unique<NodeT>(newIndex, name);
+			//auto tptr = std::make_unique<NodeT>();
+
+			auto nodePtr = std::make_unique<NodeT>(newIndex, name);
+
 			nodes.push_back(std::move(nodePtr));
 			//nodes.push_back(
 			//	std::move(
@@ -760,9 +790,9 @@ namespace ed {
 			results.push_back(defaultValue);
 			baseResult->postConstructor();
 
-			if (evalFnPtr != nullptr) {// if evalFn is given, set it on node
-				baseResult->evalFnPtr = evalFnPtr;
-			}
+			//if (evalFnPtr != nullptr) {// if evalFn is given, set it on node
+			//	baseResult->evalFnPtr = evalFnPtr;
+			//}
 			return baseResult;
 		}
 

@@ -316,6 +316,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="src\containers.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="src\dirtyGraph.cpp" />
     <ClCompile Include="src\exp\expLex.cpp" />
     <ClCompile Include="src\exp\expParse.cpp" />
     <ClCompile Include="src\lib.cpp" />

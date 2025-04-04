@@ -25,6 +25,15 @@ COUT << info << std::endl;
 #define DEBUGSL(info) \
 COUT << __FILE__ << " " << __LINE__ << " \n" << info << std::endl;
 
+#define NODELOG(msg) \
+	DEBUGSL( (MFnDependencyNode(thisMObject()).name() + ": " + msg) );
+
+#define NODENAME (MFnDependencyNode(thisMObject()).name())
+
+
+#define MNCHECK(stat, msg) \
+	MCHECK(stat, "ERR - " + NODENAME + ": " + msg);
+
 // as in "debugVectorInt"
 #define DEBUGVI(vec) \
 for(auto const& i: vec){ \
@@ -63,5 +72,21 @@ copy( vec.begin(), vec.end(), ostream_iterator<float>(MStreamUtils::stdOutStream
 
 #define seqContains(seq, v)\
 	(std::find(seq.begin(), seq.end(), v) != seq.end())\
+
+
+/* example of the macro to give to the system below
+# define STRATABASE_STATIC_MEMBERS(prefix, nodeT) \
+prefix MObject nodeT aStInput; \
+prefix MObject nodeT aStOpName; \
+prefix MObject nodeT aStOutput; \
+*/
+
+// create lines of the form 'static MObject aStPoint;'
+# define DECLARE_STATIC_NODE_H_MEMBERS(attrsMacro) \
+attrsMacro(static, )
+
+// create lines of the form 'MObject StrataElementOpNode::aStPoint;'
+# define DEFINE_STATIC_NODE_CPP_MEMBERS(attrsMacro, nodeT) \
+attrsMacro( , nodeT::)
 
 #endif
