@@ -12,6 +12,7 @@
 #include <cstddef>  // For std::ptrdiff_t
 
 #include "status.h"
+#include "macro.h"
 
 #include "iterator.h"
 
@@ -175,27 +176,9 @@ namespace ed {
 			}
 
 			const int newIndex = static_cast<int>(nodes.size());
-			
-			//std::unique_ptr<DirtyNode> nodePtr = std::make_unique<DirtyNode>(newIndex, name);
-			//DirtyNode testD(newIndex, name);
-			//EvalNode<int> testE(newIndex, name);
-			//StrataOp(newIndex, name);
-			//EvalNode<StrataManifold> testS()
-
-			//NodeT test(newIndex, name);
-			//auto tptr = std::make_unique<NodeT>(newIndex, name);
-			//auto tptr = std::make_unique<NodeT>();
-
 			auto nodePtr = std::make_unique<NodeT>(newIndex, name);
-
 			nodes.push_back(std::move(nodePtr));
-			//nodes.push_back(
-			//	std::move(
-			//		std::make_unique<NodeT>(newIndex, name)
-			//		//ptr
-			//	)
-			//);
-			//std::unique_ptr<NodeT> newNodePtr = nodes[newIndex];
+
 			NodeT* newNodePtr = static_cast<NodeT*>(nodes[newIndex].get());
 			nameIndexMap[newNodePtr->name] = newIndex;
 			newNodePtr->graphPtr = this;
@@ -215,6 +198,8 @@ namespace ed {
 			return node;
 		}
 		inline DirtyNode* getNode(const int& index) {
+			//DEBUGSL("get node by index " + std::to_string(index));
+			//DEBUGSL("nodes size: " + std::to_string(nodes.size()));
 			if (nodes.size() <= index) {
 				return nullptr;
 			}
@@ -233,7 +218,7 @@ namespace ed {
 			std::unordered_set<int> zeroDegree;
 			nodeDirectDependentsMap.clear();
 			nodeAllDependentsMap.clear();
-
+			DEBUGS("gather nodes no inputs");
 			// first gather all nodes with no inputs
 			for (auto& node : nodes) {
 				node->temp_inDegree = static_cast<int>(node->inputs.size());
@@ -247,15 +232,17 @@ namespace ed {
 					zeroDegree.insert(node->index);
 				}
 			}
+			DEBUGS("gathered seed nodes");
 			/* build generations
 			*
 			*/
 			while (zeroDegree.size()) {
+				DEBUGS("seed outer iter, zdegree:" + std::to_string(zeroDegree.size()) + "result: " + std::to_string(result.size()));
 				result.push_back(zeroDegree); // add all zero degree generation to result
 				zeroDegree.clear();
 
 				// check over all direct children of current generation
-				for (auto& nodeId : result[-1]) {
+				for (auto& nodeId : result[seqIndex(-1, result.size())]) {
 					// can parallelise this
 					DirtyNode* node = getNode(nodeId);
 					// all outputs of this node - decrement their inDegree by 1
@@ -269,6 +256,7 @@ namespace ed {
 					}
 				}
 			}
+			DEBUGS("built generations");
 			// set generation ids on all nodes
 			int i = 0;
 			for (auto& nodeIdSet : result) {
@@ -278,6 +266,8 @@ namespace ed {
 				}
 				i += 1;
 			}
+			generations = result;
+			DEBUGS("set generation ids");
 			//return result;
 			return s;
 		}
@@ -322,6 +312,7 @@ namespace ed {
 		*/
 		std::unordered_set<int> nodesInHistory(int opIndex) {
 			/* flat set of all nodes found in history*/
+			DEBUGSL("nodesInHistory flat " + std::to_string(opIndex));
 			std::unordered_set<int> result;
 
 			std::unordered_set<int> toCheck = { opIndex };
@@ -332,10 +323,13 @@ namespace ed {
 					newToCheck.insert(checkOp->inputs.begin(), checkOp->inputs.end());
 
 					// add the inputs to result this iteration to
-					result.insert(checkOp->inputs.begin(), checkOp->inputs.end());
+					result.insert(checkNodeIndex);
+					//result.insert(checkOp->inputs.begin(), checkOp->inputs.end());
 				}
 				toCheck = newToCheck;
 			}
+			DEBUGSL("nodesInHistory result");
+			DEBUGVI(result);
 			return result;
 		}
 
@@ -724,8 +718,13 @@ namespace ed {
 
 		// for strata, node eval should be valid as a member function or as a 
 		// written function in StrataL
-		static Status eval(EvalNode<VT>* node, VT& value, 
-			EvalAuxData* auxData, Status& s) { return s; }
+		// is there any point in this being static? I have no idea how to get an unknown node to run the right class eval function if it is
+		/*static Status eval(EvalNode<VT>* node, VT& value, 
+			EvalAuxData* auxData, Status& s) { return s; }*/
+		virtual Status eval(VT& value,
+			EvalAuxData* auxData, Status& s) {
+			return s;
+		}
 
 		virtual EvalNode* clone_impl() const { return new EvalNode(*this); };
 
@@ -755,6 +754,15 @@ namespace ed {
 
 	//struct EvalGraph<int>;
 
+	
+	struct NodeData  {
+		/* TEMP maybe - should be possible to declare custom block of
+		common node data for each node, probably template the EvalGraph on
+		this too
+		for now we just use this type*/
+		std::vector<std::unordered_set<int>> elementsAffected; 
+	};
+
 	template <typename VT>
 	struct EvalGraph : DirtyGraph {
 		// adding mechanisms for evaluation and caching results
@@ -762,9 +770,15 @@ namespace ed {
 		VT baseValue; // use to copy and reset node result entries
 		std::vector<VT> results;
 
+		// this set should go in the strataGraph subclass, but this is
+		// easier for now
+		
+		std::vector<NodeData> nodeDatas; 
+
 		virtual void copyOther(const EvalGraph& other) {
 			DirtyGraph::copyOther(other);
 			results = other.results;
+			nodeDatas = other.nodeDatas;
 		}
 
 		EvalGraph() {
@@ -788,6 +802,7 @@ namespace ed {
 			//	defaultValue = VT();
 			//}
 			results.push_back(defaultValue);
+			nodeDatas.push_back(NodeData());
 			baseResult->postConstructor();
 
 			//if (evalFnPtr != nullptr) {// if evalFn is given, set it on node
@@ -799,6 +814,7 @@ namespace ed {
 		void clear() {
 			nodes.clear();
 			results.clear();
+			nodeDatas.clear();
 			graphChanged = true;
 		}
 
@@ -817,7 +833,7 @@ namespace ed {
 			* of writing if statements
 			* to only evaluate the bits of the nodes they need
 			*/
-
+			DEBUGSL("evalNode begin");
 			// reset node state
 			op->preReset();
 			// copy base geo into node's result, if it has inputs
@@ -846,7 +862,8 @@ namespace ed {
 
 			op->preEval("main", s);
 			CWRSTAT(s, "error in preEval for node: " + op->name);
-			op->eval(op, results[op->index], auxData, s);
+			DEBUGS("pre eval nResults, " + std::to_string(results.size()));
+			op->eval( results[op->index], auxData, s);
 			CWRSTAT(s, "error in EVAL for node: " + op->name);
 
 			// donezo
@@ -874,9 +891,11 @@ namespace ed {
 			*/
 
 			// sort topo generations in nodes if graph has changed
+			DEBUGSL("EvalGraph begin eval to node: " + std::to_string(upToNodeId));
 			if (graphChanged) {
+				DEBUGS("rebuilding graph structure")
 				rebuildGraphStructure(s);
-
+				DEBUGS("structure rebuild complete")
 			}
 			CWRSTAT(s, "ERROR rebuilding graph structure ahead of graph eval, halting");
 
@@ -885,15 +904,26 @@ namespace ed {
 			if (upToNodeId > -1) {
 				toEval = nodesInHistory(upToNodeId);
 			}
+			else { // run everything
+				toEval.reserve(nodes.size());
+				for (int n = 0; n < nodes.size(); n++) { // does c++ have a linear space
+					toEval.insert(n);
+				}
+			}
+			DEBUGSL("toEval: ");
+			DEBUGVI(toEval);
+			DEBUGS("nGenerations " + std::to_string(generations.size()));
 
 			bool foundEndNode = false;
 			// for now just work in generations
 			// go through generations in sequence
 			for (auto generation : generations) {
-
+				DEBUGSL("generation");
+				DEBUGVI(generation);
 				// go through each node in generation
 				// this is the bit that can be parallelised
 				if (upToNodeId > -1) {
+					DEBUGS("doing intersection")
 					std::unordered_set<int> baseGeneration(generation);
 					generation.clear();
 					std::set_intersection(
@@ -901,8 +931,10 @@ namespace ed {
 						toEval.begin(), toEval.end(),
 						std::inserter(generation, generation.begin())
 					); // god c++ is so complicated
-					
+					DEBUGS("generation after intersection");
+					DEBUGVI(generation);
 				}
+				
 				
 				for (auto& nodeId : generation) {
 					EvalNode<VT>* node = static_cast<EvalNode<VT>*>(getNode(nodeId));

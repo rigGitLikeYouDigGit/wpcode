@@ -6,10 +6,10 @@ from dataclasses import dataclass
 
 from wplib import log
 
-from wpm import om, cmds, createWN, PlugTree, WN
+from wpm import om, cmds, createWN, WPlug, WN
 from wpm.core import plug
 
-termType = (PlugTree, om.MPlug, tuple, list, float, int, str, bool)
+termType = (WPlug, om.MPlug, tuple, list, float, int, str, bool)
 
 
 
@@ -52,7 +52,7 @@ class NodeOp:
 
 	def __init__(self):
 		self.nodes:list[WN] = []
-		self.outPlugs:list[PlugTree] = [] # main "result" of node
+		self.outPlugs:list[WPlug] = [] # main "result" of node
 		self.dgMod = self.getNewDGModifier()
 		# existDgMod = self.getOuterDGModifier()
 		# if existDgMod:
@@ -117,7 +117,7 @@ class Subtract(NodeOp):
 	"""
 	"""
 
-	def buildNodes(self, plugA:PlugTree, plugB:PlugTree, dgMod:om.MDGModifier):
+	def buildNodes(self, plugA:WPlug, plugB:WPlug, dgMod:om.MDGModifier):
 		"""add plugs to the node"""
 		for i, (a, b) in enumerate(plugLeafPairs(plugA, plugB)):
 			node = WN.create("plusMinusAverage", dgMod=dgMod)

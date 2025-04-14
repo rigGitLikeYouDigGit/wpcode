@@ -4,7 +4,7 @@ import typing as T
 
 from wplib import coerce
 
-from wpm import WN, createWN, cmds, om, PlugTree, PLUG_VAL
+from wpm import WN, createWN, cmds, om, WPlug, PLUG_VAL
 
 
 """ module for rigs relating to tension - pulleys, ropes,

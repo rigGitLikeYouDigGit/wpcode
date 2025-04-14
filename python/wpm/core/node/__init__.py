@@ -57,6 +57,13 @@ class NodeClassRetriever:
 	genPackage = "wpm.core.node.gen"
 
 	def getNodeModule(self, nodeClsName:str):
+		"""return the module to import for the given node type
+		First we look for an author module, and if found, use the class
+		defined there.
+		Then we fall back to the generated node class
+		If we STILL don't find anything, then it's either a plugin node or a misspelling,
+		so we only get the base WN type
+		"""
 		#path = self.getNodeFile(nodeClsName)
 		try:
 			mod = importlib.import_module(
@@ -70,10 +77,13 @@ class NodeClassRetriever:
 			# traceback.print_exc()
 			pass
 
-		mod = importlib.import_module(
-			"." + nodeClsName,
-			package=self.genPackage
-		)
+		try:
+			mod = importlib.import_module(
+				"." + nodeClsName,
+				package=self.genPackage
+			)
+		except ModuleNotFoundError as e:
+			return None
 		#log("loading", nodeClsName, "from GEN")
 		return mod
 
@@ -92,6 +102,10 @@ class NodeClassRetriever:
 		if found:
 			return found
 		mod = self.getNodeModule(nodeClsNameLower)
+		if mod is None: # no class found anywhere
+			log("No generated OR author node class found for " + nodeClsName + ", using base WN type")
+			self.nodeClsCache[nodeClsNameLower] = None
+			return None
 		cls = getattr(mod, nodeClsNameUpper)
 		self.nodeClsCache[nodeClsNameLower] = cls
 		return cls

@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <map>
+#include <array>
 #include <unordered_set>
 #include <set>
 #include <unordered_map>
@@ -11,6 +12,9 @@
 #include <algorithm>
 //#include <cstdint>
 
+#include <Eigen/Dense>
+#include <unsupported/Eigen/MatrixFunctions>
+
 #include <maya/MVector.h>
 #include <maya/MMatrix.h>
 
@@ -18,7 +22,7 @@
 #include "../macro.h"
 #include "../status.h"
 #include "../containers.h"
-
+#include "../api.h"
 /*
 smooth topological manifold, made of points, edges and partial edges
 
@@ -74,9 +78,11 @@ namespace ed {
 // don't need full int here but MAYBE in the long run, we'll need to make an enum attribute in maya for it
 	//BETTER_ENUM(StrataElType, int, point, edge, face);
 
-	enum StrataElType { point, edge, face};
+	enum StrataElType : short{ point, edge, face};
 
 	struct StrataManifold;
+
+	int constexpr stMaxParents = 3;
 
 	struct SElement {
 		// whenever an element is added to manifold, during graph eval, 
@@ -93,6 +99,7 @@ namespace ed {
 		int elIndex = -1; // index within this element's type - the 3rd point, the 3rd face etc
 		int globalIndex = -1; // unique global index across all elements
 		std::vector<int> drivers; // topological drivers, not parent spaces
+		std::vector<int> parents; // weighted parent influences
 		std::vector<int> edges; // edges that draw from this element
 		std::vector<int> points; // points that draw from this element
 		std::vector<int> faces; // faces that use this edge as a rib or boundary, or pass through this point
@@ -150,106 +157,71 @@ namespace ed {
 			*/
 		}
 
-		/*
-		eventually move to iterators for topo operations, if speed isn't an issue
-
-		template<long FROM, long TO>
-class Range {
-public:
-	class iterator {
-		long num = FROM;
-	public:
-		iterator(long _num = 0) : num(_num) {}
-		iterator& operator++() {num = TO >= FROM ? num + 1: num - 1; return *this;}
-		iterator operator++(int) {iterator retval = *this; ++(*this); return retval;}
-		bool operator==(iterator other) const {return num == other.num;}
-		bool operator!=(iterator other) const {return !(*this == other);}
-		long operator*() {return num;}
-		// iterator traits
-		using difference_type = long;
-		using value_type = long;
-		using pointer = const long*;
-		using reference = const long&;
-		using iterator_category = std::forward_iterator_tag;
 	};
-	iterator begin() {return FROM;}
-	iterator end() {return TO >= FROM? TO+1 : TO-1;}
-};
 
+	// data for discrete hard connections between elements
+	struct EdgeDriverData {
+		/* struct for a single driver OF an edge - get tangent, normal and twist
+		vectors for curve frame
+		
+		TODO: tension, param pinning etc?
 		*/
-
-
-
+		int index = -1;
+		float uv[2] = { 0, 0 };
+		float tan[3] = { 1, 0, 0 }; // tangent and normal directions
+		float normal[3] = {0, 0, 1};
+		MMatrix driverMatrix; // matrix to use for final curve? might not need to cache this
+		float twist = 0.0;
 	};
 
-	//struct SPoint : SElement {
-	//	int driver = -1;
-	//	StrataElType elType = StrataElType::point;
 
-	//	//SPoint() = default;
-	//	SPoint(std::string elName) : SElement(elName) {
-	//	}
+	// parent datas always relative in parent space - when applied, recover the original shape of element
+	struct SPointParentData { // parent data FOR a point, driver could be any type
+		float weight = 1.0;
+		float uvn[3] = {0, 0, 0}; // if parent is a point, this is just the literal vector in that point's space
+		// also this need only be an orient matrix
+		float orientMatrix[9] = {
+			1, 0, 0,
+			0, 1, 0,
+			0, 0, 1
+		};
+	};
 
-	//	inline std::vector<int> otherNeighbourPoints(StrataManifold& manifold);
-	//	inline std::vector<int> otherNeighbourEdges(StrataManifold& manifold);
-
-	//	inline std::vector<int> edgeStar(StrataManifold& manifold) {
-	//		return otherNeighbourEdges(manifold);
-	//	}
-
-	//	inline std::vector<int> otherNeighbourFaces(StrataManifold& manifold);
-	//};
-
-	//struct SEdge : SElement {
-	//	StrataElType elType = StrataElType::edge;
-	//	SEdge(std::string elName) : SElement(elName) {
-	//	}
-
-	//	inline std::vector<int> otherNeighbourPoints(StrataManifold& manifold);
-
-	//	inline std::vector<int> otherNeighbourEdges(StrataManifold& manifold);
-
-	//};
-
-	//struct SFace : SElement {
-	//	StrataElType elType = StrataElType::face;
-
-	//	std::vector<bool> edgeOrients; // SURELY vector<bool> is cringe
-	//	// true for forwards, false for backwards
-	//	bool flipFace = 0; // if face as a whole should be flipped, after edge winding
-
-	//	SFace(std::string elName) : SElement(elName) {
-	//	}
-	//};
+	struct SEdgeParentData {
+		std::vector<float> weights;
+		std::vector<std::array<float, 3>> uvns;
+		std::vector<float> twists;
+	};
 
 	struct SElData {
-		// I don't think we need identifying info in these structs - 
-		// probably won't ever have to get back to a point, from knowing its data
-		/*std::string name;
-		int index;*/
 	};
 
-	struct SPointData : SElData{
-		
-		MMatrix matrix;
+	struct SPointData : SElData {
+		std::array<SPointParentData, stMaxParents> parentDatas; // datas for each driver
+		MMatrix finalMatrix = MMatrix::identity; // final evaluated matrix in world space
 	};
 
 	struct SEdgeData : SElData {
-		
+		std::vector<EdgeDriverData> driverDatas;
+		std::array<SEdgeParentData, stMaxParents> parentDatas; // curves in space of each driver
+		int segmentPointCount = 3; // number of sub-points in each segment
+		std::vector<MMatrix> finalMatrices; // final dense list of matrices along curve??
+		//Eigen::MatrixX4 finalMatrices;
+
+
+		inline int densePointCount() {
+			/* point count before resampling - 
+			curve has point at each driver, and (segmentPointCount) points
+			in each span between them*/
+			return static_cast<int>(driverDatas.size() + segmentPointCount * (driverDatas.size() - 1));
+		}
 	};
 
 	struct SFaceData : SElData {
 		//std::string name; // probably generated, but still needed for semantics?
 	};
 
-	//struct STid {
-	//	//StrataElType::_enumerated elType;
-	//	StrataElType elType;
-	//	int elIndex;
 
-	//	//STid(StrataElType et, int index) : elType(et), elIndex(index) {}
-
-	//};
 	
 	/// ATTRIBUTES
 	// surely there's a different, correct way to do this?
@@ -441,6 +413,7 @@ public:
 					int elementIndex = static_cast<int>(pointIndexGlobalIndexMap.size()); // get current max key of element set
 					elP->elIndex = elementIndex;
 					pointIndexGlobalIndexMap[elementIndex] = globalIndex;
+
 				}
 				case StrataElType::edge: {
 					edgeDatas.push_back(SEdgeData());
@@ -601,37 +574,59 @@ public:
 			return &(groups[name]);
 		}
 
-		/*inline std::vector<SElement>* vecForType(StrataElType t) { // this doesn't work either to mask the type
-			if (StrataElType::point == static_cast<int>(t)) {
-				return &points;
-			}
-		}*/
-		/*switch (t) {
-			StrataElType::point:
-				return points;
-			StrataElType::edge:
-				return edges;
-		}*/
-		//}
-
-
-
 		/*
-		auto elByGlobalIndex(const int globalIndex) {
-			SElement* el = globalIndexElMap[globalIndex];
-			switch (el->elType) {
-			case StrataElType::point:
-				return static_cast<SPoint*>(el);
-			case StrataElType::edge:
-				return static_cast<SEdge*>(el);
-			case StrataElType::face:
-				return static_cast<SFace*>(el);
-			}
-		}
-		//// I guess you have to deal with the dynamic type at the point of use,
-		//// every time
-		//// no point doing a cast here and then some kind of type check later
+		spatial functions
 		*/
+
+		Status matrixAt(int globalIndex, float uvn[3], MMatrix &out, Status& s) {
+			/* interpolate a spatial element to get a matrix in world space*/
+			SElement* el = getEl(globalIndex);
+			switch (el->elType) {
+				case (StrataElType::point): {
+					SPointData& data = pointDatas.at(el->elIndex);
+					MVector newPos = data.finalMatrix * MVector(uvn);
+					translateMatrix(data.finalMatrix, newPos, out);
+					return s;
+				}
+				case (StrataElType::edge): {
+					SEdgeData& data = edgeDatas.at(el->elIndex);
+					interpolateMMatrixArray(data.finalMatrices, out, uvn[0]);
+					return s;
+				}
+				default: STAT_ERROR(s, "Cannot eval matrix at UVN for type " + std::to_string(el->elType));
+			}
+			return s;
+		}
+
+
+		std::vector<MMatrix> curveMatricesFromDriverDatas(std::vector<MMatrix> controlPoints, int segmentPointCount) {
+			std::vector<MMatrix> result;
+			result.reserve(controlPoints.size() + segmentPointCount * (controlPoints.size() - 1));
+
+		}
+
+		Status buildEdgeData(SEdgeData& data) {
+			/* construct final dense array for data, assuming all parents and drivers
+			are built*/
+		}
+
+
+
+
+		/////////////
+
+		static inline bool _isNotAlnum(char c)
+		{
+			return !std::isalnum(c);
+		}
+		static Status validateElName(const std::string& elName) {
+			Status s;
+			if (std::find_if(elName.begin(), elName.end(), _isNotAlnum) == elName.end()) {
+				return s;
+			}
+			STAT_ERROR(s, "element name: " + elName + " contains invalid characters, must only be alphanumeric");
+			
+		}
 	};
 
 }

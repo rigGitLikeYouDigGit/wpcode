@@ -98,7 +98,15 @@ def reloadPluginTest():
 	cmds.setAttr(ptD + ".translate", 3, -1, -3)
 
 	#return
-	elOp = cmds.createNode("strataElementOp")
+	#elOp = cmds.createNode("strataElementOp")
+	elOp = WN.createNode("strataElementOp", "newElOp")
+	elOp.stElement_[0].stName_ = "pTopPt"
+	elOp.stElement_[1].stName_ = "pMidPt"
+	# elOp.stElement_[2].stName_ = "pLowPt"
+	# elOp.stElement_[3].stName_ = "eCentre"
+	# elOp.stElement_[3].stExp_ = "pTopPt, pMidPt, pLowPt"
+
+
 	return
 	#graphNode = cmds.createNode("strataGraph")
 

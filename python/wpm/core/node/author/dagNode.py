@@ -6,4 +6,5 @@ from ..gen.dagNode import DagNode as GenDagNode
 
 
 class DagNode(GenDagNode):
+	clsIsDag = True
 	pass

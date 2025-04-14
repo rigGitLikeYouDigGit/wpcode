@@ -138,7 +138,8 @@ class Pathable(#Adaptor
 		self._name = None
 		self.setObj(obj)
 		self.setName(name)
-		self._setParent(parent)
+		if parent is not None:
+			self._setParent(parent)
 
 		self._overrides = {} # we're doing it
 
@@ -459,6 +460,7 @@ class Pathable(#Adaptor
 			a pathable gets a token it can't interpret
 		"""
 		# catch the case of access(obj, [])
+		#log("ACCESS start ", obj, path)
 		if not path: return obj
 		path = cls.toPath(path)
 		toAccess = list(sequence.toSeq(obj))
@@ -466,7 +468,7 @@ class Pathable(#Adaptor
 			if not isinstance(val, (cls, Pathable)):
 				toAccess[i] = cls.getPathAdaptorType()(val) # create new root objects
 		# toAccess = [cls.getPathAdaptorType()(i) if not isinstance(i, Pathable) else i for i in toAccess ]
-		#log("ACCESS", obj, toAccess)
+		#log("ACCESS", toAccess, path)
 
 
 		foundPathables = [] # end results of path access - unstructured
@@ -512,7 +514,6 @@ class Pathable(#Adaptor
 
 		# combine / flatten results
 		results = foundPathables
-		#log("results", results)
 		# check if needed to error
 		if not results:
 			# format of default overrides one/many, since it's provided directly

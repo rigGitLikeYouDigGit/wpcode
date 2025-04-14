@@ -86,7 +86,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>F:\wp\code\cpp\src;C:\Program Files\Autodesk\Maya2023\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>F:\wp\code\cpp\src;C:\Program Files\Autodesk\Maya2023\include;F:\wp\code\maya\plugin\strata\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -103,10 +103,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;CMAKE_INTDIR=\"Debug\";strata_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>F:\wp\code\cpp\src;C:\Program Files\Autodesk\Maya2023\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>F:\wp\code\cpp\src;C:\Program Files\Autodesk\Maya2023\include;F:\wp\code\maya\plugin\strata\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>F:\wp\code\cpp\src;C:\Program Files\Autodesk\Maya2023\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>F:\wp\code\cpp\src;C:\Program Files\Autodesk\Maya2023\include;F:\wp\code\maya\plugin\strata\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -129,7 +129,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>F:\wp\code\cpp\src;C:\Program Files\Autodesk\Maya2023\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>F:\wp\code\cpp\src;C:\Program Files\Autodesk\Maya2023\include;F:\wp\code\maya\plugin\strata\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <ExceptionHandling>Sync</ExceptionHandling>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
@@ -146,10 +146,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR=\"Release\";strata_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>F:\wp\code\cpp\src;C:\Program Files\Autodesk\Maya2023\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>F:\wp\code\cpp\src;C:\Program Files\Autodesk\Maya2023\include;F:\wp\code\maya\plugin\strata\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>F:\wp\code\cpp\src;C:\Program Files\Autodesk\Maya2023\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>F:\wp\code\cpp\src;C:\Program Files\Autodesk\Maya2023\include;F:\wp\code\maya\plugin\strata\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -172,7 +172,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>F:\wp\code\cpp\src;C:\Program Files\Autodesk\Maya2023\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>F:\wp\code\cpp\src;C:\Program Files\Autodesk\Maya2023\include;F:\wp\code\maya\plugin\strata\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <ExceptionHandling>Sync</ExceptionHandling>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
@@ -189,10 +189,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR=\"MinSizeRel\";strata_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>F:\wp\code\cpp\src;C:\Program Files\Autodesk\Maya2023\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>F:\wp\code\cpp\src;C:\Program Files\Autodesk\Maya2023\include;F:\wp\code\maya\plugin\strata\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>F:\wp\code\cpp\src;C:\Program Files\Autodesk\Maya2023\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>F:\wp\code\cpp\src;C:\Program Files\Autodesk\Maya2023\include;F:\wp\code\maya\plugin\strata\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -215,7 +215,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>F:\wp\code\cpp\src;C:\Program Files\Autodesk\Maya2023\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>F:\wp\code\cpp\src;C:\Program Files\Autodesk\Maya2023\include;F:\wp\code\maya\plugin\strata\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -231,10 +231,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR=\"RelWithDebInfo\";strata_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>F:\wp\code\cpp\src;C:\Program Files\Autodesk\Maya2023\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>F:\wp\code\cpp\src;C:\Program Files\Autodesk\Maya2023\include;F:\wp\code\maya\plugin\strata\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>F:\wp\code\cpp\src;C:\Program Files\Autodesk\Maya2023\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>F:\wp\code\cpp\src;C:\Program Files\Autodesk\Maya2023\include;F:\wp\code\maya\plugin\strata\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -313,51 +313,54 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\containers.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="src\dirtyGraph.cpp" />
-    <ClCompile Include="src\exp\expLex.cpp" />
-    <ClCompile Include="src\exp\expParse.cpp" />
-    <ClCompile Include="src\lib.cpp" />
-    <ClCompile Include="src\libnurbs.cpp" />
-    <ClCompile Include="src\libramp.cpp" />
-    <ClCompile Include="src\mayaNode\strataElementOpNode.cpp" />
-    <ClCompile Include="src\mayaNode\strataOpNodeBase.cpp" />
-    <ClCompile Include="src\stratacore\manifold.cpp" />
-    <ClCompile Include="src\strataop\elementOp.cpp" />
-    <ClInclude Include="src\dirtyGraph.h" />
-    <ClInclude Include="src\exp\expLex.h" />
-    <ClInclude Include="src\exp\expParse.h" />
-    <ClInclude Include="src\factory.h" />
-    <ClInclude Include="src\iterator.h" />
-    <ClInclude Include="src\mayaNode\strataElementOpNode.h" />
-    <ClInclude Include="src\mayaNode\strataMayaLib.h" />
-    <ClInclude Include="src\mayaNode\strataGraphNode.h" />
-    <ClInclude Include="src\ndarray.h" />
-    <ClInclude Include="src\status.h" />
-    <ClInclude Include="src\stratacore\manifold.h" />
-    <ClCompile Include="src\mayaNode\stratacurvenode.cpp" />
-    <ClCompile Include="src\mayaNode\strataGraphNode.cpp" />
-    <ClCompile Include="src\mayaNode\stratasurfacenode.cpp" />
-    <ClCompile Include="src\stratacore\op.cpp" />
-    <ClCompile Include="src\stratacore\opgraph.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\MInclude.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\api.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\containers.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\containers.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\dirtyGraph.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\dirtyGraph.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\exp\expLex.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\exp\expLex.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\exp\expParse.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\exp\expParse.h" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\factory.h" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\fnmatch.h" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\iterator.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\lib.cpp" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\libnurbs.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\libplug.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\libramp.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\macro.h" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\matrixRoot.h" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaConvert\manifoldMTypes.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataElementOpNode.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataElementOpNode.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataGraphNode.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataGraphNode.h" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataMayaLib.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataOpNodeBase.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataOpNodeBase.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataPointNode.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataPointNode.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataShapeNode.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataShapeNode.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\mayaNode\stratacurvenode.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaNode\stratacurvenode.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\mayaNode\stratasurfacenode.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaNode\stratasurfacenode.h" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\ndarray.h" />
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\plugin.cpp" />
-    <ClCompile Include="src\mayaNode\strataPointNode.cpp" />
-    <ClInclude Include="src\fnmatch.h" />
-    <ClInclude Include="src\stratacore\op.h" />
-    <ClInclude Include="src\mayaNode\strataPointNode.h" />
-    <ClInclude Include="src\containers.h" />
-    <ClInclude Include="src\libplug.h" />
-    <ClInclude Include="src\MInclude.h" />
-    <ClInclude Include="src\mayaNode\strataOpNodeBase.h" />
-    <ClInclude Include="src\stratacore\opgraph.h" />
-    <ClInclude Include="src\span.h" />
-    <ClInclude Include="src\mayaNode\stratacurvenode.h" />
-    <ClInclude Include="src\mayaNode\stratasurfacenode.h" />
-    <ClInclude Include="src\strataop\elementOp.h" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\span.h" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\status.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratacore\manifold.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\manifold.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratacore\op.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\op.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratacore\opgraph.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\opgraph.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\strataop\elementOp.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\strataop\elementOp.h" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stringLib.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="F:\wp\code\maya\plugin\strata\ZERO_CHECK.vcxproj">

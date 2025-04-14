@@ -27,6 +27,8 @@ COUT << __FILE__ << " " << __LINE__ << " \n" << info << std::endl;
 
 #define NODELOG(msg) \
 	DEBUGSL( (MFnDependencyNode(thisMObject()).name() + ": " + msg) );
+#define NODELOGT(nodeT, msg) \
+	DEBUGSL( (MFnDependencyNode(nodeT::thisMObject()).name() + ": " + msg) );
 
 #define NODENAME (MFnDependencyNode(thisMObject()).name())
 

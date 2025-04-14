@@ -1,5 +1,6 @@
 
 #include "elementOp.h"
+#include "../stringLib.h"
 
 using namespace ed;
 using namespace ed::expns;
@@ -11,21 +12,38 @@ Status StrataElementOp::makeParams() {
 }
 
 
-Status StrataElementOp::eval(StrataOp* node, StrataManifold& value, 
+Status StrataElementOp::eval(StrataManifold& value, 
 	EvalAuxData* auxData, Status& s) 
 {
-	for (auto& p : node->paramNameExpMap) {
+	DEBUGSL("EL OP EVAL");
+	//StrataElementOp* opPtr = static_cast<StrataElementOp*>(node);
+	elementsAdded.clear();
+	elementsAdded.reserve(paramNameExpMap.size());
+	StrataElementOp* opPtr = this;
+	DEBUGS("n params to eval: " + std::to_string(paramNameExpMap.size()));
+	for (auto& p : paramNameExpMap) {
+		if (p.first[0] == '!') {// parent expression
+			continue;
+		}
 		SElement* outPtr;
+		ExpAuxData expAuxData;
+		expAuxData.manifold = &value;
+		std::vector<ExpValue>* resultVals;
+
+		/* first evaluate driver expression*/
+		DEBUGS("eval param: " + p.first + " : " + p.second.srcStr);
 		switch (p.first[0]) { // get the type of element to add by the first letter of the name
-			case 'p': {
-				s = value.addElement(SElement(p.first, StrataElType::point), outPtr ); 
+
+			case 'p': { // a point has no drivers (yet, later allow declaring points as the direct output of topo operations
+				DEBUGS("adding new point");
+				s = value.addElement(SElement(p.first, StrataElType::point), outPtr);
 				CWRSTAT(s, "Error adding new element");
+				break;
 			}
+
 			case 'e': {
 				/* eval expression to get list of driving elements */
-				ExpAuxData expAuxData;
-				std::vector<ExpValue>* resultVals;
-				
+
 				s = p.second.result(resultVals, &expAuxData);
 				CWRSTAT(s, "error getting exp result, halting");
 				std::vector<SElement*> drivers = expAuxData.expValuesToElements(*resultVals, s);
@@ -35,12 +53,19 @@ Status StrataElementOp::eval(StrataOp* node, StrataManifold& value,
 				s = value.addElement(SElement(p.first, StrataElType::edge), outPtr);
 				CWRSTAT(s, "Error adding new edge element: " + p.first + " halting");
 
+				SEdgeData& edgeData = value.edgeDatas.at(outPtr->elIndex);
 				// add drivers to new edge
 				for (auto& i : drivers) {
 					outPtr->drivers.push_back(i->globalIndex);
+					edgeData.driverDatas.push_back(EdgeDriverData());
+					EdgeDriverData& driverData = edgeData.driverDatas.at(edgeData.driverDatas.size()-1);
+					driverData.index = i->globalIndex;
+					driverData.driverMatrix = i.matrixAt()
 					i->edges.push_back(outPtr->globalIndex);
 				}
-				
+				elementsAdded.push_back(outPtr->globalIndex);
+
+				break;
 			}
 			case 'f': {
 				/* eval expression to get list of driving elements */
@@ -61,12 +86,58 @@ Status StrataElementOp::eval(StrataOp* node, StrataManifold& value,
 					outPtr->drivers.push_back(i->globalIndex);
 					i->faces.push_back(outPtr->globalIndex);
 				}
+				elementsAdded.push_back(outPtr->globalIndex);
+				break;
+			}
+			default: {
+				STAT_ERROR(s, "INVALID ELEMENT PREFIX: " + p.first + "; must begin with one of p, e, f");
+			}
+		}
+		/* eval parent expression*/
 
+		if (paramNameExpMap.count(p.first + "!") == 0) {
+			DEBUGS("no parent expression found for element " + p.first + " - continuing");
+			continue;
+		}
+		Expression& parentExp = paramNameExpMap[p.first + "!"];
+		trimEnds(parentExp.srcStr);
+		//return s;
+		// check if expression defines a parent point or driver
+		switch (p.first[0]) { // get the type of element added again
+			case 'p': {
+				if (parentExp.srcStr.empty()) {
+					DEBUGS("expression str not empty, eval ing exp");
+					return s;
+					s = p.second.result(resultVals, &expAuxData);
+					CWRSTAT(s, "Error evaling point exp result, halting");
+
+					std::vector<SElement*> drivers = expAuxData.expValuesToElements(*resultVals, s);
+					CWRSTAT(s, "error converting final exp result to strata drivers, halting");
+					// add drivers to new point (should only be 1 I think?)
+					for (auto& i : drivers) {
+						outPtr->drivers.push_back(i->globalIndex);
+						i->points.push_back(outPtr->globalIndex);
+					}
+				}
+
+				DEBUGS("ended empty exp check");
+				//return s;
+				// check if we have data for this point - if so, set its matrix
+				if (opPtr->namePointDataMap.count(p.first)) {
+					DEBUGS("found point data for " + p.first);
+					DEBUGS("manifold pointDatas length:" + std::to_string(value.pointDatas.size()));
+					DEBUGS("newEl: " + std::to_string(outPtr->elIndex) + ", " + outPtr->name);
+					//return s;
+					value.pointDatas[outPtr->elIndex] = opPtr->namePointDataMap[p.first];
+				}
+				elementsAdded.push_back(outPtr->globalIndex);
+				DEBUGS("finish adding point");
+				break;
 			}
 		}
 		
 	}
-
+	DEBUGSL("EL EVAL COMPLETE");
 
 	return s;
 }

@@ -23,12 +23,13 @@ from .node import (
 )
 #from . import WN
 
-from .plugtree import PlugTree
+from .plugtree import Plug
 
 from .scene import getSceneGlobals, setupGlobals
 from wpm.core.callbackowner import CallbackOwner
 
 from . import plug
+from .plug import getMPlug
 
 """
 
@@ -52,6 +53,11 @@ PLUGS :
 NODES :
 	- got generation working in principle
 	
+
+WN() raw errors
+WN("nodeThatDoesn'tExist") errors?
+WN("myExistingNode") returns best-fitting wrapper instance on that node 
+
 
 """
 

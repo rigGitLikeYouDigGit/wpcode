@@ -398,7 +398,9 @@ class TreeInterface(Pathable,
 		"""return branch for this tree, or None"""
 		try:
 			#return self.traverse(key, traverseParams or self.defaultTraverseParamCls()())
-			return self.access(self, key)
+			result = self.access(self, key, values=False)
+			#log("getBranch result", result)
+			return result
 		except KeyError:
 			return None
 

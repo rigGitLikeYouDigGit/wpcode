@@ -1,5 +1,7 @@
 
 from __future__ import annotations
+
+import fnmatch
 import typing as T, types
 import ast
 from typing import TypedDict, NamedTuple
@@ -25,7 +27,7 @@ from ..patch import cmds, om
 from ..api import getMObject, getMFn, asMFn, getMFnType
 from .. import api, plug
 
-#from ..plugtree import PlugTree
+from ..plugtree import Plug, PlugDescriptor
 from ..namespace import NamespaceTree, getNamespaceTree
 
 
@@ -88,407 +90,6 @@ class RampPlug(object):
 		""":rtype : RampPlug._Point"""
 		return self._Point(self.root, id)
 
-
-
-
-class PlugMeta(type):
-	"""
-	replicate the same dynamic class lookup of the
-	WN node metaclass for plugs
-	"""
-	# register maps for all plugs
-	plugTypeMap : dict[int, T.Type[Plug]] = {}
-
-	# def __getattr__(self, item:str):
-	# 	"""return a class for a specific node type
-	#
-	# 	WN.Transform -> look up Transform node class
-	# 	"""
-	# 	#look for WN.Transform, WN.Mesh etc
-	# 	if item[0].isupper():
-	# 		return self.retriever.getNodeCls(item)
-	# 	raise AttributeError(f"no attribute {item}")
-
-
-	@staticmethod
-	def wrapperClassForMPlug(MPlug: om.MPlug):
-		"""return a wrapper class for the plug -
-		"""
-		return WN.apiTypeClassMap().get(mobj.apiType(), WN)
-	# endregion
-
-
-	def __call__(cls, plug:(om.MPlug, str), **kwargs)->Plug:
-		""" get right plug subclass from MPlug,
-		to get and set data by consistent interface
-		I don't think we care about reusing one Plug object for the
-		same MPlug - this should only handle the type lookup
-		"""
-		# filter to MPlug - in case somehow the incorrect wrapper is used
-		mplug = api.getMPlug(plug)
-		cache = api.getCache()
-		mobj = mplug.attribute()
-		getType = mobj.apiType()
-		leafMFnClass = cache.apiTypeLeafMFnMap[getType]
-
-		print("get class for plug", mplug, type(mplug), mobj.apiTypeStr)
-		print("found mfn", leafMFnClass)
-
-		wrapCls = Plug.adaptorForType(leafMFnClass)
-
-		print("found cls", wrapCls)
-		if leafMFnClass is om.MFnTypedAttribute: # check for data type
-			dataType = om.MFnTypedAttribute(mobj).attrType()
-			dataTypeName = cache.classTypeIdNameMemberMap(om.MFnData)[dataType]
-			print("found data type", dataType, dataTypeName)
-			dataMFnCls = cache.apiTypeMFnDataMap[
-				om.MFnTypedAttribute(mobj).attrType()]
-			print("found data mfn", dataMFnCls)
-			plugCls = Plug.adaptorForType(dataMFnCls)
-			print("found plug cls", plugCls)
-			wrapCls = plugCls
-
-		print("IS ARRAY", mplug, mplug.isArray)
-		#TODO: cache array types as declared, don't re-type them each time
-		if mplug.isArray:
-			wrapCls = type("Array_" + wrapCls.__name__,
-			               (wrapCls, ArrayPlug),
-			               {}
-			               )
-
-		# create instance
-		ins = super(PlugMeta, wrapCls).__call__(mplug, **kwargs)
-		return ins
-
-class ApiType(NamedTuple):
-	int : int
-	str : str
-
-	@classmethod
-	def fromMObj(cls, obj:om.MObject):
-		return cls(obj.apiType(), obj.apiTypeStr())
-	@classmethod
-	def fromConstant(cls, constant:int, holderClass:type[om.MFn]):
-		pass
-
-class MDataHandleFn:
-	"""helpers for MDataHandle getting and setting
-	for different types"""
-
-#class Plug[isArray:T.Literal[False, True]]:
-class Plug(PlugBase,
-           Adaptor,
-           metaclass=PlugMeta):
-	"""base class for plugs
-
-	for setting, take inspiration from normal variable
-	assignment:
-	a = 1
-	b = 2
-	plug.set(3)
-	plug << 4
-
-	this goes completely against the intuition of left-to-right
-	data flow, but maybe it's worth it for consistent syntax
-
-	adaptor set up for MFn attribute classes - we get the lowest-matching
-	MFn class for the plug, and pass that into the adaptor class lookup
-
-	"""
-	adaptorTypeMap = Adaptor.makeNewTypeMap()
-	forTypes = (om.MFnAttribute, )
-
-	# identification constants
-	apiTypeStr : str = None # plug.attribute().apiTypeStr
-	apiType : int = None # plug.attribute().apiType
-
-	subtype = None
-
-	VALUE_T = T.Any # type of value to retrieve from plug
-	# if isArray:
-	# 	VALUE_T = T.List[VALUE_T]
-
-	# region core
-	def __init__(self, MPlug:om.MPlug):
-		self.MPlug = MPlug
-
-	def __repr__(self):
-		return f"<{self.__class__.__name__} ({self.MPlug.name()})>"
-
-	def node(self)->WN:
-		"""return parent node"""
-		return WN(self.MPlug.node())
-
-	def dataObject(self)->om.MObject:
-		"""return data MObject from plug - used
-		to pass into MFnData objects"""
-		return self.MPlug.asMObject()
-
-	def MFnData(self)->om.MFnData:
-		"""return MFnData object from plug"""
-		raise NotImplementedError
-
-	#endregion
-
-	#region structure
-	def plug(self, s:str)->Plug:
-		"""return child plug from string - name is a bit off,
-		but lets us have the same interface as on node, which may
-		be important later"""
-		return self
-
-	def index(self, raw=False)->(int, None):
-		"""return index of plug in parent array"""
-		if not self.MPlug.isElement: return None
-		if not raw:	return self.MPlug.logicalIndex()
-		# physical index is a bit convoluted - there's no direct way to get it,
-		# so we look for the index of the logical index in the list of existing indices.
-		# easy
-		return tuple(self.MPlug.array().getExistingArrayAttributeIndices()).index(
-			self.MPlug.logicalIndex())
-		# as far as I know this should always work, indices might be sparse but they're always sorted
-
-
-	#region value
-	def value(self)->VALUE_T:
-		"""return value from plug - if compound, recurse
-		into it and return list"""
-		raise NotImplementedError
-	def _getValue(self)->VALUE_T:
-		"""internal method to retrieve value from leaf plug"""
-		raise NotImplementedError
-	def valueNP(self)->np.ndarray:
-		"""return value as numpy array"""
-		return np.array(self.value())
-	def valueMPoint(self)->om.MPoint:
-		return om.MPoint(self.value())
-	def valueMVector(self)->om.MVector:
-		return om.MVector(self.value())
-	def valueMMatrix(self)->om.MMatrix:
-		return om.MMatrix(self.value())
-
-	def _setValue(self, value:VALUE_T):
-		"""set value on plug -
-		internal method called by set() """
-		raise NotImplementedError
-	#endregion
-
-
-	# region connection and assignment
-	def set(self, arg:(Plug, str)):
-		"""top-level method to set this plug's value,
-		or connect another live plug to it"""
-
-	def __lshift__(self, other:(Plug, T.Any)):
-		"""connect other plug to this one"""
-		self.set(other)
-
-		pass
-	# def __rlshift__(self, other):
-	# 	pass
-
-	#endregion
-
-if T.TYPE_CHECKING:
-	arrayBase = Plug
-else:
-	arrayBase = object
-
-class ArrayPlug(arrayBase):
-	"""very uncertain about this -
-	dynamically generate classes that
-	work as arrays?
-	we assume this will be the second parent class,
-	look up other values on the first
-
-	type hinting won't work through this, will need to
-	explicitly subclass in generated node files
-	"""
-	@classmethod
-	def checkValid(cls):
-		assert Plug in cls.__bases__
-	@classmethod
-	def plugCls(cls)->type[Plug]:
-		"""return plug class for this array"""
-		return cls.__bases__[0]
-
-	def indices(self)->np.ndarray:
-		return np.array(self.MPlug.getExistingArrayAttributeIndices())
-
-	def child(self, index:int, raw=False)->Plug:
-		"""return child plug from index"""
-		return Plug(self.MPlug.elementByPhysicalIndex(index) if raw else self.MPlug.elementByLogicalIndex(index))
-
-	def value(self) ->VALUE_T:
-		"""return value from plug - if compound, recurse
-		into it and return list"""
-		return SparseList.fromTies(
-			(i, self.child(i, raw=False).value()) for i in self.indices())
-
-
-class CompoundPlug(Plug):
-	"""plug for compound attributes,
-	return a namedtuple by default - allow returning as dict
-	"""
-
-	forTypes = (om.MFnCompoundAttribute, )
-	apiType = om.MFn.kCompoundAttribute
-
-	USE_NAMED_TUPLES = True
-
-	if USE_NAMED_TUPLES:
-		VALUE_T : type[NamedTuple]
-		def _generateTypeTuple(self)->type[NamedTuple]:
-			"""return a named tuple type for this plug -
-			used if the plug type is not statically defined"""
-			return namedtuple(
-				"CompoundValue",
-			    [self.child(i).name() for i in range(self.numChildren())])
-		def value(self) ->NamedTuple:
-			"""it might be too complex to pass through the numpy-ness of
-			the values"""
-			if self.VALUE_T is None:
-				self.VALUE_T = self._generateTypeTuple()
-			return self.VALUE_T(
-				*[Plug(self.MPlug.child(i)).value()
-				  for i in range(self.MPlug.numChildren())])
-	else:
-		VALUE_T = dict
-		def value(self) ->dict:
-			return {self.child(i).name() : Plug(self.MPlug.child(i)).value()
-			        for i in range(self.MPlug.numChildren())}
-
-	def nameIndexMap(self)->dict[str, int]:
-		"""return child plugs as a map"""
-		nameMap = {}
-		for i in range(self.MPlug.numChildren()):
-			mplug : om.MPlug = self.MPlug.child(i)
-			nameMap[mplug.partialName().rsplit(".", 1)[-1]] = i
-			nameMap[mplug.partialName(useAlias=True).rsplit(".", 1)[-1]] = i
-			nameMap[mplug.partialName(useLongNames=True).rsplit(".", 1)[-1]] = i
-		return nameMap
-
-	def child(self, index:(int, str))->Plug:
-		"""return child plug from index"""
-		if isinstance(index, int):
-			return Plug(self.MPlug.child(index))
-
-
-
-
-class NumericPlug(Plug):
-	"""plug for numeric attributes"""
-	forTypes = (om.MFnNumericAttribute, )
-	apiType = om.MFn.kNumericAttribute
-
-	VALUE_T = list[(int, float)]
-
-	def value(self) ->VALUE_T:
-		# mfnData = om.MFnNumericData(
-		# 	self.MPlug.asMDataHandle().data()		)
-		# DON'T DO THIS ^ it crashes maya
-		return om.MFnNumericData(self.MPlug.asMObject()).getData()
-
-class MatrixPlug(Plug):
-	"""
-	still not sure what makes some plugs MatrixAttributes,
-	and some TypedAttributes with Matrix data
-	"""
-	forTypes = (om.MFnMatrixAttribute, om.MFnMatrixData)
-	VALUE_T = om.MMatrix
-	apiType = om.MFn.kMatrixAttribute
-	def MFnData(self) ->om.MFnMatrixData:
-		return om.MFnMatrixData(self.dataObject())
-	def value(self) ->VALUE_T:
-		#return self.MFnData().matrix()
-		return self.MPlug.constructHandle().asMatrix()
-	def valueNP(self)->np.ndarray:
-		return np.array(self.value()).reshape(4, 4)
-	def _setValue(self, value:VALUE_T):
-		"""I don't think it's safe to set the MDataHandle directly
-		"""
-		self.MPlug.setMObject(om.MFnMatrixData().create(
-			om.MMatrix(value)))
-		#self.MPlug.setMObject(om.MFnMatrixData().create(value))
-
-class UnitPlug(Plug):
-	forTypes = (om.MFnUnitAttribute, )
-	apiType = om.MFn.kUnitAttribute
-
-class EnumPlug(Plug):
-	forTypes = (om.MFnEnumAttribute, )
-	apiType = om.MFn.kEnumAttribute
-
-class MessagePlug(Plug):
-	forTypes = (om.MFnMessageAttribute, )
-	apiType = om.MFn.kMessageAttribute
-
-class TypedPlug(Plug):
-	forTypes = (om.MFnTypedAttribute, )
-	apiType = om.MFn.kTypedAttribute
-
-class NurbsCurvePlug(TypedPlug):
-	forTypes = (om.MFnNurbsCurve, om.MFnNurbsCurveData)
-	subtype = om.MFnData.kNurbsCurve
-class MeshPlug(TypedPlug):
-	forTypes = (om.MFnMesh, om.MFnMeshData)
-	subtype = om.MFnData.kMesh
-class NurbsSurfacePlug(TypedPlug):
-	forTypes = (om.MFnNurbsSurface, om.MFnNurbsSurfaceData)
-	subtype = om.MFnData.kNurbsSurface
-class FloatArrayPlug(TypedPlug):
-	forTypes = (om.MFnNumericData, )
-	subtype = om.MFnData.kFloatArray
-class IntArrayPlug(TypedPlug):
-	forTypes = (om.MFnIntArrayData, )
-	subtype = om.MFnData.kIntArray
-class VectorArrayPlug(TypedPlug):
-	forTypes = (om.MFnVectorArrayData, )
-	subtype = om.MFnData.kVectorArray
-class PointArrayPlug(TypedPlug):
-	forTypes = (om.MFnPointArrayData, )
-	subtype = om.MFnData.kPointArray
-class MatrixArrayPlug(TypedPlug):
-	forTypes = (om.MFnMatrixArrayData, )
-	subtype = om.MFnData.kMatrixArray
-# class LatticePlug(TypedPlug):
-# 	forTypes = (om.MFnLatticeData, )
-# 	subtype = om.MFnData.kLattice
-class StringPlug(TypedPlug):
-	forTypes = (om.MFnStringData, )
-	subtype = om.MFnData.kString
-class StringArrayPlug(TypedPlug):
-	forTypes = (om.MFnStringArrayData, )
-	subtype = om.MFnData.kStringArray
-# class FalloffFunctionPlug(TypedPlug):
-# 	forTypes = (om.MFnFalloffFunction,)
-# 	subtype = om.MFnData.kFalloffFunction
-
-
-# class PlugSlice(Plug):
-# 	"""object to represent a slice of a plug tree
-# 	Weird inheritance but maybe it works
-# 	"""
-
-class PlugDescriptor:
-	"""descriptor for plugs -
-	declare whole attr hierarchy in one go"""
-	def __init__(self, name:str):
-		self.name = name
-
-	# TEMP get and set
-	def __get__(self,  instance:(Plug, WN), owner)->Plug:
-		return instance.plug(self.name)
-	# # TEMP
-	def __set__(self, instance:(Plug, WN),
-	            value:(Plug, WN, T.Any )):
-		try:
-
-			instance.plug(self.name) << value.plug()
-			return
-		except AttributeError:
-			pass
-		instance.plug(self.name).set(value)
 
 
 
@@ -571,7 +172,7 @@ class WNMeta(type):
 			return result
 		className = api.nodeTypeFromMObject(mobj)
 		#log("className", className)
-		return cls.retriever.getNodeCls(className)
+		return cls.retriever.getNodeCls(className) or WN
 
 		try:
 			return cls.retriever.getNodeCls(className)
@@ -644,6 +245,9 @@ class WNMeta(type):
 		if isinstance(node, WN):
 			return node
 
+		if new:
+			return WN.create(node, parent_=parent, **kwargs)
+
 		mobj = filterToMObject(node)
 
 		# check if MObject is known
@@ -657,7 +261,7 @@ class WNMeta(type):
 		#log("wrapCls", wrapCls)
 
 		# create instance
-		ins = super(WNMeta, wrapCls).__call__(mobj, **kwargs)
+		ins = super(WNMeta, wrapCls).__call__(mobj, new=new, **kwargs)
 		# add to MObject register
 		WNMeta.objMap[mobj] = ins
 
@@ -671,13 +275,55 @@ if T.TYPE_CHECKING:
 	from .author import Catalogue
 
 
+class FilterSequence(list):
+	"""return an ordered sequence allowing wildcard matching and filtering
+
+	"""
+	def __init__(self, it, getKeyFn=None):
+		super().__init__(it)
+		self.getKeyFn = getKeyFn
+
+	# def _cloneFromOther(self, other:FilterSequence):
+	# 	super().__init__()
+	def _copy(self, it):
+		return type(self)(it, getKeyFn=self.getKeyFn)
+
+	def filter(self, pattern):
+		return self._copy(
+			fnmatch.filter(map(self.getKeyFn, self), pattern)
+		)
+	def __getitem__(self, item):
+		if isinstance(item, str):
+			return self.filter(item)
+		return super().__getitem__(item)
+
+	def __sub__(self, other):
+		""" set subtraction """
+		otherSet = set(other)
+		return self._copy(
+			i for i in self if not i in otherSet
+		)
+	def __mul__(self, other):
+		""" set intersection """
+		otherSet = set(other)
+		return self._copy(
+			i for i in self if i in otherSet
+		)
+
+	def __add__(self, other):
+		""" set union """
+		thisSet = set(self)
+		new = self._copy(self)
+		new.extend(i for i in other if not i in thisSet)
+		return new
+
+
 # i've got no strings, so i have fn
 class WN( # short for WePresentNode
 	Catalogue,
-	StringLike,
+	#StringLike,
          NodeBase,
          #Composite,
-         # metaclass=Singleton,
          CallbackOwner,
          metaclass=WNMeta
          ):
@@ -689,10 +335,30 @@ class WN( # short for WePresentNode
 	Node can be passed directly to the wrapped versions of cmds and OpenMaya
 
 	Don't store any state in this python object for your sanity
+
+
+	myNode = WN()
+
+	myNode("child") -> return a direct child called
+	myNode["plug*End"] -> return plugs of this node matching pattern
+	myNode.translateX_ -> return single plug
+
+
 	"""
 
-	# type constant for link to api for specific subclasses
-	apiTypeInt : int = None
+	# attributes shared by generated classes
+	"""
+	typeName = "transform"
+	apiTypeInt = 110
+	apiTypeStr = "kTransform"
+	MFnCls = om.MFnTransform """
+	typeName = None
+	apiTypeInt = None
+	apiTypeStr = None
+	MFnCls = om.MFnDependencyNode
+
+	clsIsDag = False
+
 
 	apiTypeWNClassMap : dict[int, type[WN]] = {}
 	nodeTypeNameWNClassMap : dict[str, type[WN]] = {}
@@ -700,11 +366,6 @@ class WN( # short for WePresentNode
 		if cls.apiTypeInt is not None:
 			cls.apiTypeWNClassMap[cls.apiTypeInt] = cls
 			cls.nodeTypeNameWNClassMap[cls.__name__] = cls
-
-
-
-	# TODO: put specific MFn types here in generated classes
-	MFnCls = om.MFnDagNode
 
 
 	NODE_DATA_ATTR = "_nodeAuxData"
@@ -719,18 +380,6 @@ class WN( # short for WePresentNode
 
 	nodeArgT: (str, om.MObject, WN) # maybe move this higher
 
-	def plug(self, lookup)->Plug:
-		"""return plugtree directly from lookup
-		returns None if no plug found"""
-		raise NotImplementedError
-		if lookup not in self._namePlugMap:
-			try:
-				mplug = self.MFn.findPlug(lookup, False)
-			except RuntimeError: # invalid plug name
-				return None
-			plugTree = PlugTree(mplug)
-			self._namePlugMap[lookup] = plugTree
-		return self._namePlugMap[lookup]
 	#endregion
 
 
@@ -800,10 +449,87 @@ class WN( # short for WePresentNode
 
 		suffix _ to avoid name clashes with kwargs
 		if dgmod is passed, add actions to it - otherwise immediately
-		execute"""
-		opMod = dgMod_ or om.MDGModifier()
+		execute
+
+		TODO: finesse logic around MDGmod vs MDagmod
+		"""
+		# creating from raw WN class, default to Transform
+		if cls is WN:
+			cls = WN.Transform
+
+		if cls.clsIsDag:
+			opMod = dgMod_ or om.MDagModifier()
+		else:
+			opMod = dgMod_ or om.MDGModifier()
+
+		log("op mod", opMod)
+
 		if parent_ is not None:
-			parent = filterToMObject(parent_)
+			parent_ = filterToMObject(parent_)
+
+		if(isinstance(opMod, om.MDagModifier)):
+			newObj = opMod.createNode(
+				#om.MTypeId(cls.apiTypeInt),
+				#cls.apiTypeStr,
+				cls.typeName,
+				parent_ or om.MObject.kNullObj)
+		else:
+			newObj = opMod.createNode(om.MTypeId(cls.apiTypeInt))
+		opMod.renameNode(newObj, name)
+
+		if(dgMod_ is None):
+			opMod.doIt()
+
+		wrapper = cls(newObj)
+		return wrapper
+
+
+	@classmethod
+	def createNode(cls,
+	           nodeType:str, name:str="", dgMod_:om.MDGModifier=None, parent_:nodeArgT=None, **kwargs)->WN:
+		"""
+		explicitly create a new node of the given type type, incrementing name if necessary
+
+		suffix _ to avoid name clashes with kwargs
+		if dgmod is passed, add actions to it - otherwise immediately
+		execute
+
+		TODO: finesse logic around MDGmod vs MDagmod -
+			might need an extra cache map of typeName to constant?
+		"""
+
+		leafMfn = api.getCache().nodeTypeLeafMFnMap.get(nodeType)
+		if leafMfn is None: # you're on your own, just assume DGMod
+			opMod = dgMod_ or om.MDGModifier()
+		else:
+			if issubclass(leafMfn, om.MFnDagNode):
+				opMod = dgMod_ or om.MDagModifier()
+			else:
+				opMod = dgMod_ or om.MDGModifier()
+
+		name = name or nodeType
+
+
+		log("op mod", opMod)
+
+		if parent_ is not None:
+			parent_ = filterToMObject(parent_)
+
+		if(isinstance(opMod, om.MDagModifier)):
+			newObj = opMod.createNode(
+				#om.MTypeId(cls.apiTypeInt),
+				#cls.apiTypeStr,
+				nodeType,
+				parent_ or om.MObject.kNullObj)
+		else:
+			newObj = opMod.createNode(nodeType)
+		opMod.renameNode(newObj, name)
+
+		if(dgMod_ is None):
+			opMod.doIt()
+
+		wrapper = WN(newObj)
+		return wrapper
 
 
 	def setInitAttrs(self, ):
@@ -818,7 +544,8 @@ class WN( # short for WePresentNode
 			self(attrName).set(val)
 
 
-
+	### WILDCARD FILTER SEQUENCES
+	### MPLUGS
 
 	## refreshing mechanism
 	def __str__(self):
@@ -835,15 +562,15 @@ class WN( # short for WePresentNode
 		# exact forces exact result
 		# non-dags have no extra rules to keep in check
 		# multiple shapes imply more exact naming
-		if exact or (not self.isDag()) or (len(self.shapes) != 1):
+		if exact or (not self.isDag()) or (len(self.shapes()) != 1):
 			self.MFn.setName(value)
 			return
 		if value.endswith("Shape"):
-			self.shape.setName(value, exact=True)
-			self.transform.setName(value.rsplit("Shape")[0], exact=True)
+			self.shape().setName(value, exact=True)
+			self.tf().setName(value.rsplit("Shape")[0], exact=True)
 		else:
-			self.transform.setName(value, exact=True)
-			self.shape.setName(value + "Shape", exact=True)
+			self.transform().setName(value, exact=True)
+			self.shape().setName(value + "Shape", exact=True)
 
 	def address(self)->tuple[str]:
 		"""return sequence of node names up to root """
@@ -883,25 +610,59 @@ class WN( # short for WePresentNode
 	# region creation
 
 
+	def plug(self, lookup)->Plug:
+		"""return plugtree directly from lookup
+		returns None if no plug found"""
+		#if lookup not in self._namePlugMap:
+		try:
+			mplug = self.MFn.findPlug(lookup, False)
+		except RuntimeError: # invalid plug name
+			return None
+		return Plug(mplug)
+		# 	self._namePlugMap[lookup] = plugTree
+		# return self._namePlugMap[lookup]
 
 	# endregion
 
 
-	def __call__(self, *args, **kwargs)-> PlugTree:
+	def __call__(self, *args, **kwargs)->WN:# Plug:
 		"""may allow calling node to look up both plugs and child nodes -
 		we are unlikely to ever have collisions between node and plug names"""
 		if not args and not kwargs: # raw call of node()
 			return self
-
-		tokens = attr.splitPlugTokens(args)
-		# try to return plug
-		plug = self.plug(tokens[0])
-		if plug:
-			return plug(tokens[1:])
-
 		# if no plug found, return child node
+		tokens = plug.splitPlugTokens(args)
 		childNode = self.getChild(tokens[0])
 		return childNode(tokens[1:])
+
+	def __getitem__(self, *item)->(Plug, str):
+		"""look up plug with square brackets when using a string,
+		otherwise delegate back to stringlike"""
+		if isinstance(item[0], str):
+			return self.plug(item[0])
+			#todo: slicing, matching etc
+			pass
+		if len(item) == 1:
+			return super().__getitem__(item[0])
+		raise TypeError("invalid arg type to index into node")
+
+	def __getattribute__(self, item:str)->Plug:
+		"""check if plug has been accessed directly by name -
+		always has a trailing underscore"""
+		if(item[-1] == "_" and item[0] != "_"):
+			if (foundPlug := self.plug(item[:-1])) is not None:
+				return foundPlug
+			raise TypeError("no maya plug found for ", item)
+		return super().__getattribute__(item)
+
+	def __setattr__(self, item:str, val):
+		"""check if plug has been accessed directly by name -
+		always has a trailing underscore"""
+		if(item[-1] == "_" and item[0] != "_"):
+			if (foundPlug := self.plug(item[:-1])) is not None:
+				foundPlug.set(val)
+			raise TypeError("no maya plug found to set ", item)
+		return super().__setattr__(item, val)
 
 	# region convenience auxProperties
 
@@ -1059,7 +820,7 @@ class WN( # short for WePresentNode
 		self(self.NODE_DATA_ATTR).set("{}")
 		#self.set(self.NODE_DATA_ATTR, "{}")
 
-	def auxDataPlug(self)->PlugTree:
+	def auxDataPlug(self)->Plug:
 		return self.plug(self.NODE_DATA_ATTR)
 	def getAuxData(self)->dict:
 		""" returns dict from node data"""

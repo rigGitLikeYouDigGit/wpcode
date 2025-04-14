@@ -22,13 +22,14 @@
 #include <maya/MVectorArray.h>
 #include <maya/MPointArray.h>
 #include <maya/MPlugArray.h>
+#include <maya/MMatrixArray.h>
+#include <maya/MStringArray.h>
 
 #include <maya/MMatrix.h>
 #include <maya/MDrawRegistry.h>
 #include <maya/MUserData.h>
 #include <maya/MDrawContext.h>
 #include <maya/MHWGeometryUtilities.h>
-#include <maya/MPointArray.h>
 #include <maya/MGlobal.h>
 #include <maya/MEventMessage.h>
 #include <maya/MDGModifier.h>
@@ -66,4 +67,6 @@
 #include <maya/MPxNode.h>
 #include <maya/MPxDrawOverride.h>
 #include <maya/MPxLocatorNode.h>
+#include <maya/MPxSurfaceShape.h>
+#include <maya/MPxComponentShape.h>
 

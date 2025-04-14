@@ -6,6 +6,8 @@
 #include "MInclude.h"
 #include "macro.h"
 
+#include <Eigen/Dense>
+
 #include "wpshared/enum.h"
 namespace ed {
 
@@ -242,4 +244,78 @@ namespace ed {
 		return s;
 	}
 
+	inline double* MMatrixFlatData(MMatrix& mat) {
+		//return static_cast<double*>(&mat.matrix);
+		return (double*)(&(mat.matrix));
+	}
+
+	//std::array<std::array<float, 4>, 4> translateMatrix(const double mat[4][4], const float vec[3]) {
+	//	/* return the same matrix translated by vector, multiplied by that same matrix*/
+	//}
+	inline MMatrix translateMatrix(MMatrix mat, const MVector& vec) {
+		/* return the same matrix translated by vector*/
+		mat.matrix[3][0] = vec[0];
+		mat.matrix[3][1] = vec[1];
+		mat.matrix[3][2] = vec[2];
+		return mat;
+	}
+	inline MMatrix translateMatrix(MMatrix mat, const MPoint& vec) {
+		/* return the same matrix translated by vector*/
+		mat.matrix[3][0] = vec[0];
+		mat.matrix[3][1] = vec[1];
+		mat.matrix[3][2] = vec[2];
+		return mat;
+	}
+
+	inline MMatrix translateMatrix(MMatrix mat, const MVector& vec, MMatrix& out) {
+		/* return the same matrix translated by vector*/
+		out.matrix[3][0] = vec[0];
+		out.matrix[3][1] = vec[1];
+		out.matrix[3][2] = vec[2];
+		return out;
+	}
+	inline MMatrix translateMatrix(MMatrix mat, const MPoint& vec, MMatrix& out) {
+		/* return the same matrix translated by vector*/
+		out.matrix[3][0] = vec[0];
+		out.matrix[3][1] = vec[1];
+		out.matrix[3][2] = vec[2];
+		return out;
+	}
+
+	//inline Eigen::Matrix4f toEigen(const MMatrix& mat) {
+	//	//return Eigen::Matrix4f(mat.matrix);
+	//	Eigen::Matrix4f m;
+	//	m <<
+	//		mat[0][0], mat[0][1], mat[0][2], mat[0][3],
+	//		mat[1][0], mat[1][1], mat[1][2], mat[1][3],
+	//		mat[2][0], mat[2][1], mat[2][2], mat[2][3],
+	//		mat[3][0], mat[3][1], mat[3][2], mat[3][3];
+	//	return m;
+	//}
+	inline Eigen::Matrix4d toEigen(const MMatrix& mat) {
+		//return Eigen::Matrix4f(mat.matrix);
+		Eigen::Matrix4d m;
+		m <<
+			mat[0][0], mat[0][1], mat[0][2], mat[0][3],
+			mat[1][0], mat[1][1], mat[1][2], mat[1][3],
+			mat[2][0], mat[2][1], mat[2][2], mat[2][3],
+			mat[3][0], mat[3][1], mat[3][2], mat[3][3];
+		return m;
+	}
+	
+	inline Eigen::Vector3d toEigen(const MVector& v) {
+		return Eigen::Vector3d(v[0], v[1], v[2]);
+	}
+	inline Eigen::Vector3d toEigen(const MPoint& v) {
+		return Eigen::Vector3d(v[0], v[1], v[2]);
+	}
+
+	inline Eigen::Vector4d toEigenV4(const MVector& v) {
+		return Eigen::Vector4d(v[0], v[1], v[2], 0.0);
+	}
+	inline Eigen::Vector4d toEigenV4(const MPoint& v) {
+		return Eigen::Vector4d(v[0], v[1], v[2], v[3]);
+	}
+	
+	 
 }

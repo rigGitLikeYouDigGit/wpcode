@@ -49,14 +49,14 @@ if isThisMaya():
 		getCache, # api cache
 		#WN, createWN, # node wrappers
 		WN,
-		PlugTree,
+		Plug,
 		getSceneGlobals, # scene wrappers
 		api
 
 	)
 
 	# use to denote function arguments to accept either static values or plugs
-	PLUG_VAL = (PlugTree, object)
+	PLUG_VAL = (Plug, object)
 
 	from wplib import log
 	from .lib.adaptor import to, arr, toArr

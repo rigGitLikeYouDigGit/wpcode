@@ -90,7 +90,10 @@ def getMObject(node)->om.MObject:
 		return node
 	elif isinstance(node, str):
 		sel = om.MSelectionList()
-		sel.add(node)
+		try:
+			sel.add(node)
+		except RuntimeError: # if you try and add a node that doesn't exist
+			return None
 		obj = sel.getDependNode(0)
 		if obj.isNull():
 			raise RuntimeError("object for ", node, " is invalid")

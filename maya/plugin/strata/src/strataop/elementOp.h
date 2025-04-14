@@ -34,13 +34,14 @@ namespace ed {
 		*/
 		using StrataOp::StrataOp;
 
-		std::map<std::string, SPointData> nameDataMap;
+		std::map<std::string, SPointData> namePointDataMap;
 
 		virtual Status makeParams();
 
+		std::vector<int> elementsAdded; // temp, used to pass information back out of op compute to maya
 
 		///template <typename AuxT>
-		static Status eval(StrataOp* node, StrataManifold& value, EvalAuxData* auxData, Status& s);
+		virtual Status eval(StrataManifold& value, EvalAuxData* auxData, Status& s);
 
 	};
 

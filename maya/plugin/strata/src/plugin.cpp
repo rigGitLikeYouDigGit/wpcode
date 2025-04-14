@@ -18,6 +18,7 @@ register all plugins
 #include "mayaNode/strataOpNodeBase.h"
 #include "mayaNode/strataPointNode.h"
 #include "mayaNode/strataElementOpNode.h"
+#include "mayaNode/strataShapeNode.h"
 
 //#include "mayanode/stratacurvenode.h"
 //#include "mayanode/stratasurfacenode.h"
@@ -117,6 +118,19 @@ MStatus initializePlugin( MObject obj ){
     }
 
     REGISTER_NODE(StrataElementOpNode);
+    s = fnPlugin.registerNode(StrataElementOpNode::kNODE_NAME, StrataElementOpNode::kNODE_ID, StrataElementOpNode::creator, StrataElementOpNode::initialize); if (MS::kSuccess != s) {
+        cerr << 121 << "cannot register node " << StrataElementOpNode::kNODE_NAME; return MS::kFailure;
+    };;
+    
+    //REGISTER_NODE(StrataShapeNode);
+    fnPlugin.registerShape(
+        StrataShapeNode::kNODE_NAME,
+        StrataShapeNode::kNODE_ID,
+        StrataShapeNode::creator,
+        StrataShapeNode::initialize,
+        StrataShapeUI::creator,
+        &StrataShapeNode::drawDbClassification
+    );
 
 
 
@@ -174,6 +188,8 @@ MStatus uninitializePlugin( MObject obj ){
     DEREGISTER_NODE(StrataPointNode);
 
     DEREGISTER_NODE(StrataElementOpNode);
+
+    DEREGISTER_NODE(StrataShapeNode);
 
     DEBUGS("uninitialised strata")
     return s;

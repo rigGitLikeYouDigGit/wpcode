@@ -5,7 +5,7 @@ import typing as T
 
 import numpy as np
 
-from wpm.core import cmds, om, WN, PlugTree
+from wpm.core import cmds, om, WN, WPlug
 #from wpm.core.node.base import WN, PlugDescriptor, Plug
 from wpm.core.node.base import *
 

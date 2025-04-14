@@ -182,6 +182,12 @@ CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO:STRING=
 // Studio IDE projects all commands are done without /nologo.
 CMAKE_VERBOSE_MAKEFILE:BOOL=OFF
 
+//Path to a file.
+EIGEN3_INCLUDE_DIR:PATH=EIGEN3_INCLUDE_DIR-NOTFOUND
+
+//The directory containing a CMake configuration file for Eigen3.
+Eigen3_DIR:PATH=Eigen3_DIR-NOTFOUND
+
 //Path to a library.
 MAYA_Foundation_LIBRARY:FILEPATH=C:/Program Files/Autodesk/Maya2023/lib/Foundation.lib
 

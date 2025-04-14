@@ -46,7 +46,9 @@ def getMPlug(plug, default=Sentinel.FailToFind)->om.MPlug:
 		return om.MPlug(plug[0], plug[1])
 
 	if not isinstance(plug, str):
-		raise TypeError(f"cannot retrieve MPlug from argument {plug} of type {type(plug)}")
+		if default is Sentinel.FailToFind:
+			raise TypeError(f"cannot retrieve MPlug from argument {plug} of type {type(plug)}")
+		return default
 	try:
 		sel = om.MSelectionList()
 		sel.add(plug)
@@ -65,7 +67,7 @@ class HType: # maybe this should be a proper Enum
 def plugHType(mPlug:om.MPlug)->int:
 	return HType.Array if mPlug.isArray else (HType.Compound if mPlug.isCompound else HType.Leaf)
 
-def plugSubPlugs(mPlug:om.MPlug):
+def plugSubPlugs(mPlug:om.MPlug)->list[om.MPlug]:
 	if mPlug.isArray:
 		return [mPlug.elementByPhysicalIndex(i)
 		        for i in range(mPlug.numElements())]
@@ -83,14 +85,32 @@ def subPlugMap(mPlug)->dict[(int, str), om.MPlug]:
 		return {index : mPlug.elementByLogicalIndex(index)
 		        for index in mPlug.getExistingArrayAttributeIndices()}
 	if mPlug.isCompound:
-		return {mPlug.child(i).name().split(".")[-1] : mPlug.child(i)
+		# return {mPlug.child(i).name().split(".")[-1] : mPlug.child(i)
+		#         for i in range(mPlug.numChildren())}
+		return {mPlug.child(i).partialName(
+			includeNodeName=0,
+			includeNonMandatoryIndices=False,
+			includeInstancedIndices=False,
+			useAlias=False,
+			useFullAttributePath=False,
+			useLongNames=1,
+		                                   ).split(".")[-1] : mPlug.child(i)
 		        for i in range(mPlug.numChildren())}
+		# return {mPlug.child(i).name(): mPlug.child(i)
+		#         for i in range(mPlug.numChildren())}
 	return {}
 
-def parentPlug(mPlug:om.MPlug)->om.MPlug:
-	return mPlug.array() if mPlug.isElement else(
-		mPlug.parent() if mPlug.isChild else None
-	)
+# def plugLeafName(mPlug:om.MPlug)->(int, str):
+# 	if(mPlug.isElement):
+# 		return mPlug.partialName(useLongNames=1)
+#
+# def plugPhysicalIndex(elementPlug:om.MPlug):
+# 	elementPlug.array().evaluateNumElements
+#
+# def parentPlug(mPlug:om.MPlug)->om.MPlug:
+# 	return mPlug.array() if mPlug.isElement else(
+# 		mPlug.parent() if mPlug.isChild else None
+# 	)
 
 class PlugData(NamedTuple):
 	"""test caching structural data to cut down on iteration -
@@ -424,7 +444,7 @@ def _dataFromPlugMObject(obj:om.MObject):
 		return dataFn.string()
 	return dataFn.getData()
 
-def leafPlugValue(plug:om.MPlug,
+def _leafPlugValue(plug:om.MPlug,
                   asDegrees=True):
 
 	# populate plug if needed
@@ -465,9 +485,20 @@ def leafPlugValue(plug:om.MPlug,
 def plugValue(plug:om.MPlug,
               asDegrees=True):
 	"""return a corresponding python data for a plug's value
-	returns nested list of individual values"""
-	if plugHType(plug) == HType.Leaf:
-		return leafPlugValue(plug, asDegrees=asDegrees)
+	returns nested list of individual values
+
+	make dict for compound
+	EXCEPT if it's a compound of 3 or 4 numerics - eg transform.translate, colorRGB etc
+		seems common enough to make exception
+
+	"""
+	hType = plugHType(plug)
+	if hType == HType.Leaf:
+		return _leafPlugValue(plug, asDegrees=asDegrees)
+	elif hType == HType.Compound:
+		valMap = {k : plugValue(v, asDegrees) for k, v in subPlugMap(plug).items()}
+		if len(valMap) in (3, 4) and all(isinstance(i, (int, float)) for i in valMap.values()):
+			return list(valMap.values())
 
 	subPlugs = plugSubPlugs(plug)
 	#if subPlugs:
@@ -482,18 +513,9 @@ def _setDataOnPlugMObject(obj, data):
 	dataFn.set(data)
 
 
-def setLeafPlugValue(plug:om.MPlug, data,
+def _setLeafPlugValue(plug:om.MPlug, data,
                      toRadians=False):
-	# populate plug if needed
-	ensurePlugHasMObject(plug)
-	print("set leaf plug value", plug, data)
-	try:
-		obj = plug.asMObject()
-		oldData = _dataFromPlugMObject(obj)
-		#return data
-	except RuntimeError:  # "unexpected internal failure"
 
-		pass
 	# we now need to check the attribute type of the plug
 	attribute = plug.attribute()
 	attrFn = getMFn(attribute)
@@ -510,6 +532,16 @@ def setLeafPlugValue(plug:om.MPlug, data,
 
 	elif attrFnType is om.MFnTypedAttribute:
 		# for a typed attribute, we need to create a new data MObject
+		# # populate plug if needed
+		# ensurePlugHasMObject(plug)
+		# print("set leaf plug value", plug, data)
+		# try:
+		# 	obj = plug.asMObject()
+		# 	oldData = _dataFromPlugMObject(obj)
+		# # return data
+		# except RuntimeError:  # "unexpected internal failure"
+		#
+		# 	pass
 
 		if attrFn.attrType() == om.MFnData.kString:
 			dataMObject = om.MFnStringData().create(data)
@@ -533,7 +565,7 @@ def setPlugValue(plug:om.MPlug, data:T.Union[T.List, object],
 	plug = getMPlug(plug)
 	subPlugs = plugSubPlugs(plug)
 	if plugHType(plug) == HType.Leaf:
-		return setLeafPlugValue(plug, data)
+		return _setLeafPlugValue(plug, data)
 
 	if errorOnFormatMismatch:
 		assert len(subPlugs) == len(data), "incorrect format passed to setPlugData - \n length of {} \n and {} \n must match".format(subPlugs, data)

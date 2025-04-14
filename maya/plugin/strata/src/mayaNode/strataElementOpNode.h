@@ -134,21 +134,31 @@ probably, right?
 # define STRATAELEMENTOPNODE_STATIC_MEMBERS(prefix, nodeT) \
 prefix MObject nodeT aStElement;\
 prefix MObject nodeT aStName;\
-prefix MObject nodeT aStExp;\
+prefix MObject nodeT aStDriverExp;\
+prefix MObject nodeT aStParentExp;\
 prefix MObject nodeT aStGlobalIndex;\
 prefix MObject nodeT aStElTypeIndex;\
+prefix MObject nodeT aStTypeOut;\
+\
+prefix MObject nodeT aStDriverWeightIn;\
+prefix MObject nodeT aStMatchWorldSpaceIn;\
+\
+prefix MObject nodeT aStPointWorldMatrixIn;\
+prefix MObject nodeT aStPointDriverLocalMatrixIn;\
+prefix MObject nodeT aStPointDriverMatrixOut; \
+prefix MObject nodeT aStPointWeightedDriverMatrixOut; \
+prefix MObject nodeT aStPointWeightedLocalOffsetMatrixOut; \
+prefix MObject nodeT aStPointFinalWorldMatrixOut; \
+\
+prefix MObject nodeT aStEdgeCurveOut;\
 
 
 /*
 \
-prefix MObject nodeT aStType;\
 prefix MObject nodeT aStFitTransform;\
 prefix MObject nodeT aStFitCurve;\
 
-prefix MObject nodeT aStPointInWorldMatrix;\
-prefix MObject nodeT aStPointOutFinalDriverMatrix;\
-prefix MObject nodeT aStPointOutFinalLocalOffsetMatrix;\
-prefix MObject nodeT aStPointOutFinalWorldMatrix;\
+
 \
 prefix MObject nodeT aStEdgeResolution;\
 prefix MObject nodeT aStEdgeNormaliseParam;\
@@ -178,10 +188,12 @@ in the final classes -
 that's fine*/
 
 //class StrataElementOpNode : public StrataOpNodeTemplate<ed::StrataElementOp>, public MPxNode {
+//class StrataElementOpNode;
 class StrataElementOpNode : public MPxNode, public StrataOpNodeTemplate<ed::StrataElementOp> {
 public:
 	using thisStrataOpT = ed::StrataElementOp;
 	using superT = StrataOpNodeTemplate<ed::StrataElementOp>;
+	using thisT = StrataElementOpNode;
 	StrataElementOpNode() {}
 	virtual ~StrataElementOpNode() {}
 
@@ -190,7 +202,7 @@ public:
 		return newObj;
 	}
 
-	//DECLARE_STATIC_NODE_H_MEMBERS(STRATABASE_STATIC_MEMBERS);
+	DECLARE_STATIC_NODE_H_MEMBERS(STRATABASE_STATIC_MEMBERS);
 	DECLARE_STATIC_NODE_H_MEMBERS(STRATAELEMENTOPNODE_STATIC_MEMBERS);
 
 	//virtual void postConstructor();
@@ -211,6 +223,8 @@ public:
 
 	static MStatus initialize();
 
+	virtual MStatus syncStrataParams(MObject& nodeObj, MDataBlock& data);
+
 	virtual MStatus compute(const MPlug& plug, MDataBlock& data);
 
 	// override base class static strata objects, so each leaf class still has attributes
@@ -222,12 +236,12 @@ public:
 
 	void postConstructor();
 
-	static MStatus legalConnection(
+	MStatus legalConnection(
 		const MPlug& plug,
 		const MPlug& otherPlug,
 		bool 	asSrc,
 		bool& isLegal
-	);
+	) const;
 
 	virtual MStatus connectionMade(const MPlug& plug,
 		const MPlug& otherPlug,

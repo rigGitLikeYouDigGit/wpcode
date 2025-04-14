@@ -82,6 +82,25 @@ class APICache:
 
 		self.apiTypeMFnDataMap : dict[int, type[om.MFnData]] = {}
 
+		self.unitAttrPlugMethodMap = {
+			om.MFnUnitAttribute.kDistance: (om.MPlug.asDouble, om.MPlug.setDouble),
+			om.MFnUnitAttribute.kTime: (om.MPlug.asMTime, om.MPlug.setMTime),
+			om.MFnUnitAttribute.kAngle: (om.MPlug.asMAngle, om.MPlug.setMAngle),
+		}
+
+		numericAttrGenMap = {
+			("kLong", "kShort", "kInt", "kBoolean"): (om.MPlug.asInt, om.MPlug.setInt),
+			("kFloat", "kDouble"): (om.MPlug.asDouble, om.MPlug.setDouble)
+		}
+
+		self.numericAttrPlugMethodMap = {}
+		for k, v in numericAttrGenMap.items():
+			for name in k:
+				self.numericAttrPlugMethodMap[
+					getattr(om.MFnNumericData, name)] = v
+
+
+
 
 	def classTypeIdNameMemberMap(self, MFnCls:MFnT)->dict[int, str]:
 		if MFnCls not in self.classConstantNameMaps:
@@ -450,15 +469,7 @@ getFnMap = {
 
 
 
-# unitAttrPlugMethodMap = {
-# 	om.MFnUnitAttribute.kDistance : (om.MPlug.asDouble, om.MPlug.setDouble),
-# 	om.MFnUnitAttribute.kTime : (om.MPlug.asMTime, om.MPlug.setMTime),
-# 	om.MFnUnitAttribute.kAngle : (om.MPlug.asMAngle, om.MPlug.setMAngle),
-# }
-# numericAttrPlugMethodMap = {
-# 	("kLong", "kShort", "kInt", "kBoolean"): (om.MPlug.asInt, om.MPlug.setInt),
-# 	("kFloat", "kDouble") : (om.MPlug.asDouble, om.MPlug.setDouble)
-# }
+
 
 # def _expandClassLookup(baseDict, lookupCls):
 # 	for k, v in dict(baseDict).items():

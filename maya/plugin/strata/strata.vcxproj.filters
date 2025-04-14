@@ -1,61 +1,152 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\containers.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\dirtyGraph.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\exp\expLex.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\exp\expParse.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\lib.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\libnurbs.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\libramp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataElementOpNode.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataGraphNode.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataOpNodeBase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataPointNode.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataShapeNode.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\mayaNode\stratacurvenode.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\mayaNode\stratasurfacenode.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\plugin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\mayaNode\strataPointNode.cpp">
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratacore\manifold.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\lib.cpp" />
-    <ClCompile Include="src\libramp.cpp" />
-    <ClCompile Include="src\mayaNode\stratacurvenode.cpp" />
-    <ClCompile Include="src\mayaNode\stratasurfacenode.cpp" />
-    <ClCompile Include="src\libnurbs.cpp" />
-    <ClCompile Include="src\containers.cpp" />
-    <ClCompile Include="src\mayaNode\strataGraphNode.cpp" />
-    <ClCompile Include="src\stratacore\manifold.cpp" />
-    <ClCompile Include="src\stratacore\op.cpp" />
-    <ClCompile Include="src\stratacore\opgraph.cpp" />
-    <ClCompile Include="src\mayaNode\strataOpNodeBase.cpp" />
-    <ClCompile Include="src\mayaNode\strataElementOpNode.cpp" />
-    <ClCompile Include="src\exp\expParse.cpp" />
-    <ClCompile Include="src\exp\expLex.cpp" />
-    <ClCompile Include="src\strataop\elementOp.cpp" />
-    <ClCompile Include="src\dirtyGraph.cpp" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratacore\op.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratacore\opgraph.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\strataop\elementOp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\MInclude.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\api.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\containers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\dirtyGraph.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\exp\expLex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\exp\expParse.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\factory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\fnmatch.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\iterator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\libplug.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\macro.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\mayaNode\strataPointNode.h">
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\matrixRoot.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\mayaNode\stratacurvenode.h" />
-    <ClInclude Include="src\mayaNode\stratasurfacenode.h" />
-    <ClInclude Include="src\libplug.h" />
-    <ClInclude Include="src\span.h" />
-    <ClInclude Include="src\MInclude.h" />
-    <ClInclude Include="src\containers.h" />
-    <ClInclude Include="src\mayaNode\strataOpNodeBase.h" />
-    <ClInclude Include="src\stratacore\opgraph.h" />
-    <ClInclude Include="src\stratacore\op.h" />
-    <ClInclude Include="src\fnmatch.h" />
-    <ClInclude Include="src\stratacore\manifold.h" />
-    <ClInclude Include="src\mayaNode\strataGraphNode.h" />
-    <ClInclude Include="src\mayaNode\strataElementOpNode.h" />
-    <ClInclude Include="src\mayaNode\strataMayaLib.h" />
-    <ClInclude Include="src\strataop\elementOp.h" />
-    <ClInclude Include="src\exp\expParse.h" />
-    <ClInclude Include="src\status.h" />
-    <ClInclude Include="src\dirtyGraph.h" />
-    <ClInclude Include="src\iterator.h" />
-    <ClInclude Include="src\factory.h" />
-    <ClInclude Include="src\exp\expLex.h" />
-    <ClInclude Include="src\ndarray.h" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaConvert\manifoldMTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataElementOpNode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataGraphNode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataMayaLib.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataOpNodeBase.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataPointNode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataShapeNode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaNode\stratacurvenode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaNode\stratasurfacenode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\ndarray.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\span.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\status.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\manifold.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\op.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\opgraph.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\strataop\elementOp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stringLib.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="F:\wp\code\maya\plugin\strata\CMakeLists.txt" />

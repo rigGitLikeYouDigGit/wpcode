@@ -6,166 +6,78 @@
 
 using namespace ed;
 
-// ---------------------------------------------------------------------------------
-// SmallList Implementation
-// ---------------------------------------------------------------------------------
-template <class T, unsigned int N>
-SmallList<T, N>::ListData::ListData() : data(buf), num(0), cap(fixed_cap)
-{
-}
-
-template <class T, unsigned int N>
-SmallList<T, N>::SmallList(void)
-{
-}
-
-
-template <class T, unsigned int N>
-SmallList<T, N>::SmallList(const SmallList& other)
-{
-	if (other.ld.cap == fixed_cap)
-	{
-		ld = other.ld;
-		ld.data = ld.buf;
-	}
-	else
-	{
-		reserve(other.ld.num);
-		for (int j = 0; j < other.size(); ++j)
-			ld.data[j] = other.ld.data[j];
-		ld.num = other.ld.num;
-		ld.cap = other.ld.cap;
-	}
-}
-
-template <class T, unsigned int N>
-SmallList<T, N>::SmallList(const int& size)
-{
-	reserve(size);
-}
-
-template <class T, unsigned int N>
-SmallList<T, N>& SmallList<T, N>::operator=(const SmallList<T, N>& other)
-{
-	SmallList(other).swap(*this);
-	return *this;
-}
-
+//// ---------------------------------------------------------------------------------
+//// SmallList Implementation
+//// ---------------------------------------------------------------------------------
 //template <class T, unsigned int N>
-//SmallList<T>& SmallList<T, N>::operator=(const SmallList<T>& other)
+//SmallList<T, N>::ListData::ListData()
+//
+//template <class T, unsigned int N>
+//SmallList<T, N>::SmallList(void)
+//
+//
+//template <class T, unsigned int N>
+//SmallList<T, N>::SmallList(const SmallList& other)
+//
+//
+//template <class T, unsigned int N>
+//SmallList<T, N>::SmallList(const int& size)
+//
+//
+//template <class T, unsigned int N>
+//SmallList<T, N>& SmallList<T, N>::operator=(const SmallList<T, N>& other)
 //{
 //	SmallList(other).swap(*this);
 //	return *this;
 //}
+//
+////template <class T, unsigned int N>
+////SmallList<T>& SmallList<T, N>::operator=(const SmallList<T>& other)
+//
+//
+//template <class T, unsigned int N>
+//SmallList<T, N>::~SmallList()
+//
+//template <class T, unsigned int N>
+//int SmallList<T, N>::size() const
+//
+//template <class T, unsigned int N>
+//T& SmallList<T, N>::operator[](int n)
+//
+//
+//template <class T, unsigned int N>
+//const T& SmallList<T, N>::operator[](int n) const
+//
+//
+//template <class T, unsigned int N>
+//int SmallList<T, N>::find_index(const T& element) const
+//
+//
+//template <class T, unsigned int N>
+//void SmallList<T, N>::clear()
+//
+//template <class T, unsigned int N>
+//void SmallList<T, N>::reserve(int n)
+//
+//
+//template <class T, unsigned int N>
+//void SmallList<T, N>::push_back(const T& element)
+//
+//
+//template <class T, unsigned int N>
+//T SmallList<T, N>::pop_back()
+//
+//
+//template <class T, unsigned int N>
+//void SmallList<T, N>::swap(SmallList& other)
+//
+//
+//template <class T, unsigned int N>
+//T* SmallList<T, N>::data()
+//
+//template <class T, unsigned int N>
+//const T* SmallList<T, N>::data() const
 
-template <class T, unsigned int N>
-SmallList<T, N>::~SmallList()
-{
-	if (ld.data != ld.buf) {
-		free(ld.data);
-	}
-}
-
-template <class T, unsigned int N>
-int SmallList<T, N>::size() const
-{
-	return ld.num;
-}
-
-template <class T, unsigned int N>
-T& SmallList<T, N>::operator[](int n)
-{	// allow negative indexing
-	n = (n >= 0 ? n : size() + n) % (size() + 1);
-	assert(n >= 0 && n < ld.num);
-	return ld.data[n];
-}
-
-template <class T, unsigned int N>
-const T& SmallList<T, N>::operator[](int n) const
-{
-	n = (n >= 0 ? n : size() + n) % (size() + 1);
-	assert(n >= 0 && n < ld.num);
-	return ld.data[n];
-}
-
-template <class T, unsigned int N>
-int SmallList<T, N>::find_index(const T& element) const
-{
-	for (int j = 0; j < ld.num; ++j)
-	{
-		if (ld.data[j] == element)
-			return j;
-	}
-	return -1;
-}
-
-template <class T, unsigned int N>
-void SmallList<T, N>::clear()
-{
-	ld.num = 0;
-}
-
-template <class T, unsigned int N>
-void SmallList<T, N>::reserve(int n)
-{
-	enum { type_size = sizeof(T) };
-	if (n > ld.cap)
-	{
-		if (ld.cap == fixed_cap)
-		{
-			ld.data = static_cast<T*>(malloc(n * type_size));
-			memcpy(ld.data, ld.buf, sizeof(ld.buf));
-		}
-		else
-			ld.data = static_cast<T*>(realloc(ld.data, n * type_size));
-		ld.cap = n;
-	}
-}
-
-template <class T, unsigned int N>
-void SmallList<T, N>::push_back(const T& element)
-{
-	if (ld.num >= ld.cap)
-		reserve(ld.cap * 2);
-	ld.data[ld.num++] = element;
-}
-
-template <class T, unsigned int N>
-T SmallList<T, N>::pop_back()
-{
-	return ld.data[--ld.num];
-}
-
-template <class T, unsigned int N>
-void SmallList<T, N>::swap(SmallList& other)
-{
-	ListData& ld1 = ld;
-	ListData& ld2 = other.ld;
-
-	const int use_fixed1 = ld1.data == ld1.buf;
-	const int use_fixed2 = ld2.data == ld2.buf;
-
-	const ListData temp = ld1;
-	ld1 = ld2;
-	ld2 = temp;
-
-	if (use_fixed1)
-		ld2.data = ld2.buf;
-	if (use_fixed2)
-		ld1.data = ld1.buf;
-}
-
-template <class T, unsigned int N>
-T* SmallList<T, N>::data()
-{
-	return ld.data;
-}
-
-template <class T, unsigned int N>
-const T* SmallList<T, N>::data() const
-{
-	return ld.data;
-}
 
 // ---------------------------------------------------------------------------------
 // FreeList Implementation

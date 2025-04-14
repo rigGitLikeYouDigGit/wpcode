@@ -189,7 +189,7 @@ def getBaseNodeData():
 	)
 
 
-def gatherNodeData():
+def gatherNodeData(nodeTypes=None, outputPath=None):
 	"""gather node data from maya
 	"""
 	# get all node types
@@ -228,7 +228,6 @@ def gatherNodeData():
 				print(data)
 
 
-
 	# write to file
 	with open(TARGET_NODE_DATA_PATH, "w") as f:
 		f.write(
@@ -236,6 +235,7 @@ def gatherNodeData():
 		)
 	
 	log("gather done")
+
 """
 script:
 

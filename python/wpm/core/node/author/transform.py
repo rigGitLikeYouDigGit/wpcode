@@ -27,9 +27,8 @@ class Transform(GenTransform):
 			return
 
 		parentMat = om.MFnTransform(self.MFn.parent()).transformationMatrix()
-		if isinstance(mat, om.MMatrix):
-
-
+		mat = to(mat, om.MMatrix)
+		self.setLocalMatrix(parentMat.asMatrixInverse() * mat)
 
 	def localPos(self)->om.MVector:
 		return self.MFn.translation(om.MSpace.kObject)
