@@ -15,6 +15,13 @@ Status StrataElementOp::makeParams() {
 Status StrataElementOp::eval(StrataManifold& value, 
 	EvalAuxData* auxData, Status& s) 
 {
+	/*
+	IF EXISTING DATA FOR ELEMENT FOUND IN MANIFOLD:
+		use that
+	ELSE:
+		use data from op's parametres
+	
+	*/
 	DEBUGSL("EL OP EVAL");
 	//StrataElementOp* opPtr = static_cast<StrataElementOp*>(node);
 	elementsAdded.clear();
@@ -55,12 +62,31 @@ Status StrataElementOp::eval(StrataManifold& value,
 
 				SEdgeData& edgeData = value.edgeDatas.at(outPtr->elIndex);
 				// add drivers to new edge
+
+				/* TODO: drivers still need coords - 
+				how do we specify them in exp, 
+				or how do we pass them in from maya node
+				smooth data should not be in expressions
+				*/
+
 				for (auto& i : drivers) {
 					outPtr->drivers.push_back(i->globalIndex);
 					edgeData.driverDatas.push_back(EdgeDriverData());
 					EdgeDriverData& driverData = edgeData.driverDatas.at(edgeData.driverDatas.size()-1);
 					driverData.index = i->globalIndex;
-					driverData.driverMatrix = i.matrixAt()
+					MMatrix result;
+					float defaultCoords[3] = {0.5, 0.5, 0.5};
+					if (i->elType == StrataElType::point) { // no offsets on points
+						defaultCoords[0] = 0;
+						defaultCoords[1] = 0;
+						defaultCoords[2] = 0;
+					}
+					s = value.matrixAt(
+						i->globalIndex,
+						defaultCoords,
+						result, s);
+					CWRSTAT(s, "error getting default driver matrix");
+					driverData.driverMatrix = result;
 					i->edges.push_back(outPtr->globalIndex);
 				}
 				elementsAdded.push_back(outPtr->globalIndex);
@@ -71,7 +97,7 @@ Status StrataElementOp::eval(StrataManifold& value,
 				/* eval expression to get list of driving elements */
 				ExpAuxData expAuxData;
 				std::vector<ExpValue>* resultVals;
-
+				 
 				s = p.second.result(resultVals, &expAuxData);
 				CWRSTAT(s, "error getting exp result, halting");
 				std::vector<SElement*> drivers = expAuxData.expValuesToElements(*resultVals, s);

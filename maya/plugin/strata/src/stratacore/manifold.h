@@ -23,6 +23,7 @@
 #include "../status.h"
 #include "../containers.h"
 #include "../api.h"
+#include "../lib.cpp"
 /*
 smooth topological manifold, made of points, edges and partial edges
 
@@ -170,6 +171,7 @@ namespace ed {
 		float uv[2] = { 0, 0 };
 		float tan[3] = { 1, 0, 0 }; // tangent and normal directions
 		float normal[3] = {0, 0, 1};
+		float orientWeight = 0.0; // how strongly matrix should contribute to curve tangent, vs auto behaviour
 		MMatrix driverMatrix; // matrix to use for final curve? might not need to cache this
 		float twist = 0.0;
 	};
@@ -600,17 +602,82 @@ namespace ed {
 
 
 		std::vector<MMatrix> curveMatricesFromDriverDatas(std::vector<MMatrix> controlPoints, int segmentPointCount) {
+			/* interpolate rational-root matrices between drivers, and then add drivers and interpolated mats to result*/
 			std::vector<MMatrix> result;
 			result.reserve(controlPoints.size() + segmentPointCount * (controlPoints.size() - 1));
+
+			/* TODO: parallelise segments here if matrix roots are costly*/
+			for (size_t i = 0; i < (controlPoints.size() - 1); i++) {
+				result.push_back(controlPoints[i]);
+				
+				// get relative matrix from this point to the next
+				auto relMat = toEigen(controlPoints[i + 1] * controlPoints[i].inverse());
+
+				// get square root of matrix, for single midpoint; cubic for 2, etc
+				Eigen::MatrixPower<Eigen::Matrix4cd> relMatPower(relMat);
+				auto step = relMatPower(1.0 / float(segmentPointCount + 1));
+
+				// raise that root matrix to the same power as its segment point index
+				for (size_t n = 0; n < segmentPointCount; n++) {
+					result.push_back( controlPoints[i] * toMMatrix<Eigen::Matrix4cd>(step.pow(n + 1)));
+				}
+
+			}
+			result.push_back(controlPoints.back());
+			return result;
+		}
+
+
+		// if IMMUTABLE
+		//  HOW DO WE DO DRIVERS
+		// check for existing data when element op is run?
+
+		/*
+		within single element op
+		add face F
+		add edge E, parent F
+		
+		on next iteration, need to 
+
+
+		data "injection" chances at different stages? ie whenever element added, also put in hook for any incoming data?
+		check for overrides
+		add element / generate element in whichever way 
+		THEN check for overrides?
+		index by element -> parent -> string attribute ?
+		
+
+		data is data, only one
+		reduce complexity by propagating back to node parametres?
+		otherwise could be lost if element vanishes?
+
+		*/
+
+		MStatus weightEdgeDriverMatrix(std::vector<EdgeDriverData>& driverDatas, int targetIndex, MMatrix& out) {
 
 		}
 
 		Status buildEdgeData(SEdgeData& data) {
 			/* construct final dense array for data, assuming all parents and drivers
-			are built*/
+			are built
+			
+			build base curve matrices in worldspace,
+			then get into space of each driver 
+
+			but we can only work in worldspace when curve is freshly added, otherwise 
+			we can only save driver-space versions
+			*/
+			
+
 		}
 
+		Status getIntersection(const SElement& elA, const SElement& elB, MMatrix& matOut, bool& crossFound) {
+			/* return a single point where elements intersect.
+			- What if there are multiple intersections? some kind of iterator over intersections? no idea
+			- should there be some kind of richer Coordinate struct - with element index and UVN to get to point?
+			*/
 
+		}
 
 
 		/////////////

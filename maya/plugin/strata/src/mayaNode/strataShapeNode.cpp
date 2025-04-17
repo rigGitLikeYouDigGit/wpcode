@@ -41,22 +41,42 @@ MStatus StrataShapeNode::initialize() {
     MFnTypedAttribute tFn;
 
 
-    aStData = cFn.create("stData", "stData");
+    aStDataIn = cFn.create("stDataIn", "stDataIn");
     cFn.setArray(true);
-
-    aStExp = tFn.create("stExp", "stExp", MFnData::kString);
+    aStExpIn = tFn.create("stExpIn", "stExpIn", MFnData::kString);
     tFn.setDefault(MFnStringData().create(""));
-    cFn.addChild(aStExp);
+    cFn.addChild(aStExpIn);
+    aStMatrixIn = mFn.create("stMatrixIn", "stMatrixIn");
+    mFn.setDefault(MMatrix::identity);
+    cFn.addChild(aStMatrixIn);
+
+    aStDataOut = cFn.create("stDataOut", "stDataOut");
+    cFn.setArray(true);
+    aStExpOut = tFn.create("stExpOut", "stExpOut", MFnData::kString);
+    tFn.setDefault(MFnStringData().create(""));
+    cFn.addChild(aStExpOut);
+    aStMatrixOut = mFn.create("stMatrixOut", "stMatrixOut");
+    mFn.setDefault(MMatrix::identity);
+    cFn.addChild(aStMatrixOut);
+    aStCurveOut = tFn.create("stCurveOut", "stCurveOut", MFnData::kNurbsCurve);
+    tFn.setDefault(MFnNurbsCurveData().create());
+    cFn.addChild(aStMatrixOut);
 
     std::vector<MObject> drivers{
-        aStData,
-        aStExp
+        aStExpIn,
+        aStMatrixIn,
+
+                aStExpOut
+
     };
     std::vector<MObject> driven{
+        aStMatrixOut,
+        
     };
 
     std::vector<MObject> toAdd{
-        aStData
+        aStDataIn,
+        aStDataOut
     };
 
     s = addStrataAttrs<thisT>(drivers, driven, toAdd);
@@ -73,8 +93,7 @@ MStatus StrataShapeNode::initialize() {
 
 
 void StrataShapeNode::postConstructor() {
-    //DEBUGS("element postConstructor");
-    //superT::postConstructor(thisMObject());
+    /* no post needed*/
 }
 
 MStatus StrataShapeNode::legalConnection(
@@ -138,7 +157,12 @@ MStatus StrataShapeNode::syncStrataParams(MObject& nodeObj, MDataBlock& data) {
 }
 
 MStatus StrataShapeNode::compute(const MPlug& plug, MDataBlock& data) {
+    /* pull in any data overrides set as this node's params,
+    then populate out attributes with data from op graph
 
+    If shape node is hidden, only evaluate ops in history of expOut attributes.
+    If visible, need to eval the whole graph
+    */
     DEBUGS("shape compute")
         MS s(MS::kSuccess);
 
@@ -150,6 +174,8 @@ MStatus StrataShapeNode::compute(const MPlug& plug, MDataBlock& data) {
     // pass to bases
     //s = superT::compute(thisMObject(), plug, data);
     MCHECK(s, NODENAME + " ERROR in strata bases compute, halting");
+
+    data.setClean(plug);
 
     return s;
 }
@@ -176,3 +202,4 @@ MStatus StrataShapeNode::compute(const MPlug& plug, MDataBlock& data) {
 //    return MS::kUnknownParameter;
 //}
 
+//MTypeId StrataShapeGeometryOverride::id = MTypeId(0x8003D);
