@@ -92,6 +92,8 @@ struct StrataOpNodeBase {
 	/* NB this means we'll have to merge multiple incoming graphs when we get to using
 	multiple inputs - probably fine*/
 
+	// index to use for output - cached here for access without maya eval
+	int outputOpIndex = -1;
 
 
 	DECLARE_STATIC_NODE_H_MEMBERS(STRATABASE_STATIC_MEMBERS);
@@ -151,7 +153,12 @@ struct StrataOpNodeBase {
 	template<typename NodeT>
 	static MStatus setOpIndexOnNode(MObject& nodeObj, int index) {
 		MStatus s;
-		MFnDependencyNode(nodeObj).findPlug(NodeT::aStOutput, false).setInt(index);
+		if (nodeObj.isNull()) {
+			//STAT_ERROR(s, "setOpIndex nodeObj is null");
+			return MS::kFailure;
+		}
+		MFnDependencyNode nodeFn(nodeObj);
+		nodeFn.findPlug(NodeT::aStOutput, false).setInt(index);
 		return s;
 	}
 
@@ -160,6 +167,24 @@ struct StrataOpNodeBase {
 		MStatus s;
 		data.outputValue(NodeT::aStOutput).setInt(-1);
 		data.outputValue(NodeT::aStOutput).setInt(index);
+		return s;
+	}
+
+	template<typename NodeT>
+	static MStatus cacheOpIndexOnNodeObject(MObject& nodeObj, int index) {
+		MStatus s;
+		if (nodeObj.isNull()) {
+			DEBUGSL("cacheOpIndex nodeObj is null");
+			return MS::kFailure;
+		}
+		MFnDependencyNode nodeFn(nodeObj);
+		NodeT* userPtr = dynamic_cast<NodeT*>(nodeFn.userNode());
+		if (userPtr == nullptr) {
+			//STAT_ERROR(s, "USERPTR in dynamic cast is null");
+			DEBUGSL("USERPTR in dynamic cast is null");
+			return MS::kFailure;
+		}
+		userPtr->outputOpIndex = index;
 		return s;
 	}
 
@@ -589,23 +614,24 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 		DEBUGSL("added new op to graph")
 		// set op index on node output
 		s = setOpIndexOnNode<NodeT>(data, opPtr->index);
-		DEBUGS("set op index on node")
+		MCHECK(s, "ERROR creating new op, could not set op index on node");
+		s = cacheOpIndexOnNodeObject<NodeT>(mayaNodeMObject, opPtr->index);
+		MCHECK(s, "ERROR creating new op, could not cache op index on node");
+
+		//// set new node as the graph output - caveman solution to subtle situation
+		opGraphPtr.get()->outNodeIndex = opPtr->index;
+
+		//DEBUGS("set op index on node")
 		// check input connections
-		/*MFnDependencyNode depFn(mayaNodeMObject );
-		MPlug inPlug = depFn.findPlug(aStInput, true, &s);*/
-		MCHECK(s, "ERROR creating new op, could not find networked aStInput plug");
+
 		MArrayDataHandle arrDh = data.inputArrayValue(NodeT::aStInput);
 		for (unsigned int i = 0; i < arrDh.elementCount(); i++) {
 			opPtrOut->inputs.push_back(arrDh.inputValue().asInt());
 			arrDh.next();
 		}
-		DEBUGS("pulled op inputs")
+		DEBUGS("pulled op inputs");
 
-		//// get indices of each input op, set as node inputs
-		//for (unsigned int i = 0; i < inPlug.evaluateNumElements(&s); i++) {
-		//	MCHECK(s, "ERROR in evaluateNumElements for strata input plug");
-		//	opPtrOut->inputs.push_back(inPlug.elementByPhysicalIndex(i).asInt());
-		//}
+
 
 		return s;
 	}
@@ -625,8 +651,8 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 		opPtrOut = opPtr;
 		DEBUGSL("added new op to graph")
 			// set op index on node output
-			//s = setOpIndexOnNode(data, opPtr->index);
 			s = setOpIndexOnNode<NodeT>(mayaNodeMObject, opPtr->index);
+			s = cacheOpIndexOnNodeObject<NodeT>(mayaNodeMObject, opPtr->index);
 		DEBUGS("set op index on node")
 			// check input connections
 			/*MFnDependencyNode depFn(mayaNodeMObject );

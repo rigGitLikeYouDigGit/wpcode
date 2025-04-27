@@ -772,6 +772,14 @@ namespace ed {
 
 		// this set should go in the strataGraph subclass, but this is
 		// easier for now
+
+		/* NO IDEA how to handle outputs vs islands in graph - this seems way simpler.
+		single node to eval up to. don't implicitly merge anything.
+
+		this is SEPARATE to nodes being enabled/disabled, all this affects is the critical path
+		in the graph
+		*/
+		int outNodeIndex = -1;
 		
 		std::vector<NodeData> nodeDatas; 
 

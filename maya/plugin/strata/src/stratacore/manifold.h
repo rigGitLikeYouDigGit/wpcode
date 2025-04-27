@@ -600,6 +600,17 @@ namespace ed {
 			return s;
 		}
 
+		Status posAt(int globalIndex, float uvn[3], MVector& out, Status& s) {
+			/* as above, but just return position - 
+			may allow faster sampling in future*/
+			MMatrix matOut;
+			s = matrixAt(globalIndex, uvn, matOut, s);
+			CWRSTAT(s, "error at mat");
+			out.x = matOut[3][0];
+			out.y = matOut[3][1];
+			out.z = matOut[3][2];
+			return s;
+		}
 
 		std::vector<MMatrix> curveMatricesFromDriverDatas(std::vector<MMatrix> controlPoints, int segmentPointCount) {
 			/* interpolate rational-root matrices between drivers, and then add drivers and interpolated mats to result*/
@@ -678,6 +689,52 @@ namespace ed {
 			*/
 
 		}
+
+
+		///////////////////
+		/// collate/flatten final state of manifold for drawing - deformation as dense data
+		static int constexpr CURVE_SHAPE_RES = 20; // how many points to sample each curve?
+		// surely we'll have to break this up for longer edges
+
+		inline Float3Array getWireframeVertexPositionArray(Status& s) {
+			/* return flat float3 array for vector positions on points and curves
+			* 
+			* order as [point positions, dense curve positions]
+			* 
+			* each point has 4 coords - point itself, and then 0.1 units in x, y, z of that point
+			*/
+
+			Float3Array result(pointDatas.size() * 4 + edgeDatas.size() * CURVE_SHAPE_RES);
+			
+			for (size_t i = 0; i < pointDatas.size(); i++) {
+				result[i * 4] = pointDatas[i].finalMatrix * MVector::zero;
+				result[i * 4 + 1] = pointDatas[i].finalMatrix * MVector::xAxis;
+				result[i * 4 + 2] = pointDatas[i].finalMatrix * MVector::yAxis;
+				result[i * 4 + 3] = pointDatas[i].finalMatrix * MVector::zAxis;
+			}
+
+			auto uParams = Eigen::VectorXd::LinSpaced(CURVE_SHAPE_RES, 0.0, 1.0);
+
+			// TODO: spline-interpolate in eigen 
+			for (size_t i = 0; i < edgeDatas.size(); i++) {
+				size_t curveStartIndex = pointDatas.size() * 4 + i * CURVE_SHAPE_RES;
+
+				for (int n; n < CURVE_SHAPE_RES; n++) {
+					/*result[curveStartIndex + n] = matrixAt(edgeIndexGlobalIndexMap[i], {uParams[n], 0.0, 0.0}, 
+					)*/
+					float uvn[3] = { uParams[n], 0.0, 0.0 };
+					MVector posOut;
+					s = posAt(edgeIndexGlobalIndexMap[i], uvn, posOut, s);
+					if (s) {
+						DEBUGSL("error sampling curve " + std::to_string(i) + "at point : " + std::to_string(n));
+						return result;
+					}
+					result[curveStartIndex + n] = posOut;
+				}
+			}
+			return result;
+		}
+
 
 
 		/////////////

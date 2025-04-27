@@ -15,6 +15,8 @@
 #include <maya/MShaderManager.h>
 #include <maya/MSelectionMask.h>
 
+#include <maya/MHWGeometry.h>
+#include <maya/MGeometry.h>
 /*
 shape node to display end result of strata graph.
 also allows interacting with points as if a normal maya shape,
@@ -34,31 +36,17 @@ prefix MObject nodeT aStDataOut;\
 prefix MObject nodeT aStExpOut;\
 prefix MObject nodeT aStMatrixOut;\
 prefix MObject nodeT aStCurveOut;\
+\
+prefix MObject nodeT aStShowPoints;\
+
+
+
+/* todo:
+for visibility, enabled, allow setting expression based overrides
+to show/hide groups and faces more precisely*/
 
 namespace ed {
 
-	/* handy way to work more easily with vertex buffer memory - cast 
-	it to vector of float types like this */
-	struct Float2
-	{
-		Float2() {}
-		Float2(float x, float y)
-			: x(x), y(y) {}
-		float x;
-		float y;
-	};
-	struct Float3
-	{
-		Float3() {}
-		Float3(float x, float y, float z)
-			: x(x), y(y), z(z) {}
-		float x;
-		float y;
-		float z;
-	};
-	typedef std::vector<Float3>       Float3Array;
-	typedef std::vector<Float2>       Float2Array;
-	typedef std::vector<unsigned int> IndexList;
 
 
 }
@@ -90,10 +78,14 @@ public:
 //class StrataShapeNode : public MPxNode, public StrataOpNodeBase {
 class StrataShapeNode : public MPxComponentShape, public StrataOpNodeBase {
 public:
-	//using thisStrataOpT = ed::StrataElementOp;
-	//using superT = StrataOpNodeTemplate<ed::StrataElementOp>;
+	
 	using superT = StrataOpNodeBase;
 	using thisT = StrataShapeNode;
+
+	// cached values used for drawing
+	float pointOpacity = 1.0;
+
+
 	StrataShapeNode() {}
 	virtual ~StrataShapeNode() {}
 
@@ -163,6 +155,15 @@ public:
 	StrataShapeNode* shapeNodePtr = nullptr; 
 	MObjectHandle shapeNodeObjHdl;
 
+	inline ed::StrataManifold* manifold() {
+		/* eval manifold if its final out node is dirty*/
+		Status s;
+		int outIndex = shapeNodePtr->opGraphPtr.get()->outNodeIndex;
+		if (shapeNodePtr->opGraphPtr.get()->getNode(outIndex)->anyDirty()) {
+			s = shapeNodePtr->opGraphPtr.get()->evalGraph(s, outIndex);
+		}
+		return &(shapeNodePtr->opGraphPtr.get()->results)[outIndex];
+	}
 
 	static const char* sActiveWireframeRenderItemName;
 	static const char* sDormantWireframeRenderItemName;
@@ -178,6 +179,8 @@ public:
 		return s;
 	}
 
+	
+
 	static MHWRender::MPxGeometryOverride* Creator(const MObject& obj)
 	{
 		return new StrataShapeGeometryOverride(obj);
@@ -190,8 +193,33 @@ public:
 	void updateDG() override {
 		/* check here if the linked shape node has dirty items*/
 	}
+
+	inline MIndexBufferDescriptor getCurveIndexBufferDescriptor() {
+		/* todo:
+		could probably drop down to uint16 here, unlikely we'll have so many points for edges alone*/
+		return MIndexBufferDescriptor(MIndexBufferDescriptor::kEdgeLine, // may also be kHullEdgeLine
+			"stEdgeIBD",
+			MGeometry::kLineStrip,
+			ed::StrataManifold::CURVE_SHAPE_RES
+		);
+	}
+
+	inline MVertexBufferDescriptor getCurvePositionVertexBufferDescriptor() {
+		return MVertexBufferDescriptor(
+			"stEdgePosVBD",
+			MGeometry::kPosition,
+			MGeometry::kFloat,
+			3
+		);
+	}
+
 	void updateRenderItems(const MDagPath& path, MHWRender::MRenderItemList& renderItems) override {
 		/* largely copied from the geometryOverrideExample2 in the maya devkit
+		* 
+		* we have 3 kinds of render items for now:
+		* all points
+		* each edge
+		* each sub-patch
 		*/
 		if (!path.isValid())
 			return;
@@ -206,26 +234,164 @@ public:
 		auto displayStatus = MHWRender::MGeometryUtilities::displayStatus(path);
 		// Update the wireframe render item used when the object will be selected
 		bool isWireFrameRenderItemEnabled = displayStatus == MHWRender::kLead || displayStatus == MHWRender::kActive;
-		updateWireframeItems(sActiveWireframeRenderItemName,
-			MHWRender::MGeometry::kAll,
-			MHWRender::MRenderItem::sSelectionDepthPriority,
-			wireframeColor,
-			isWireFrameRenderItemEnabled,
-			renderItems,
-			*shaderManager);
-		// Update the wireframe render item used when the object will not be selected
-		isWireFrameRenderItemEnabled = displayStatus == MHWRender::kDormant;
-		updateWireframeItems(sDormantWireframeRenderItemName,
-			MHWRender::MGeometry::kWireframe,
-			MHWRender::MRenderItem::sDormantWireDepthPriority,
-			wireframeColor,
-			isWireFrameRenderItemEnabled,
-			renderItems,
-			*shaderManager);
+
+		MGeometry::DrawMode drawMode = MGeometry::kAll;
+		unsigned int depthPriority = MHWRender::MRenderItem::sSelectionDepthPriority;
+		MColor color = wireframeColor;
+		bool isEnable = true; // isWireFrameRenderItemEnabled
+
+		///////// render item for points
+		const char* pointRenderItemName = "stPtRI";
+		MHWRender::MRenderItem* renderItem = nullptr;
+		// Try to find the active wireframe render item.
+		// If the returning index is smaller than 0, that means 
+		// the render item does't exists yet. So, create it.
+		auto renderItemIndex = renderItems.indexOf(pointRenderItemName);
+		if (renderItemIndex < 0)
+		{
+			// Create the new render item with the given name.
+			// We designate this item as a UI "decoration" and will not be
+			// involved in rendering aspects such as casting shadows
+			renderItem = MHWRender::MRenderItem::Create(pointRenderItemName,
+				MHWRender::MRenderItem::DecorationItem,
+				MHWRender::MGeometry::kLines
+			);
+			// We want this render item to show up when in all mode ( Wireframe, Shaded, Textured and BoundingBox)
+			renderItem->setDrawMode(drawMode);
+			// Set selection priority: on top of everything
+			renderItem->depthPriority(depthPriority);
+			// Get an instance of a 3dSolidShader from the shader manager.
+			MShaderInstance* shader = shaderManager->getStockShader(MShaderManager::k3dSolidShader);
+			if (shader)
+			{
+				renderItem->setShader(shader);
+				// Once assigned, no need to hold on to shader instance
+				shaderManager->releaseShader(shader);
+			}
+			// The item must be added to the persistent list to be considered
+			// for update / rendering
+			renderItems.append(renderItem);
+		}
+		else
+		{
+			renderItem = renderItems.itemAt(renderItemIndex);
+		}
+		if (renderItem)
+		{
+			MHWRender::MShaderInstance* shader = renderItem->getShader();
+			if (shader)
+			{
+				// Set the shader color parameter
+				shader->setParameter("solidColor", &color.r);
+			}
+			//renderItem->enable(isEnable); 
+			renderItem->enable(true);
+		}
+
+
+		//updateWireframeItems(sActiveWireframeRenderItemName,
+		//	MHWRender::MGeometry::kAll,
+		//	MHWRender::MRenderItem::sSelectionDepthPriority,
+		//	wireframeColor,
+		//	isWireFrameRenderItemEnabled,
+		//	renderItems,
+		//	*shaderManager);
+		//// Update the wireframe render item used when the object will not be selected
+		//isWireFrameRenderItemEnabled = displayStatus == MHWRender::kDormant;
+		//updateWireframeItems(sDormantWireframeRenderItemName,
+		//	MHWRender::MGeometry::kWireframe,
+		//	MHWRender::MRenderItem::sDormantWireDepthPriority,
+		//	wireframeColor,
+		//	isWireFrameRenderItemEnabled,
+		//	renderItems,
+		//	*shaderManager);
 	
 	}
+
+	/* lord I do not understand these mystic moon runes*/
+	void updateWireframeItems(const char* renderItemName, MGeometry::DrawMode drawMode,
+		unsigned int depthPriority, MColor color, bool isEnable,
+		MHWRender::MRenderItemList& renderItemList,
+		const MHWRender::MShaderManager& shaderManager)
+	{
+		/* I THINK we also need to add new MGeometry::Points items here to draw unbound strata transforms -
+		or we can just draw 3 basis lines for each
+		*/
+
+
+		MHWRender::MRenderItem* renderItem = nullptr;
+		// Try to find the active wireframe render item.
+		// If the returning index is smaller than 0, that means 
+		// the render item does't exists yet. So, create it.
+		auto renderItemIndex = renderItemList.indexOf(renderItemName);
+		if (renderItemIndex < 0)
+		{
+			// Create the new render item with the given name.
+			// We designate this item as a UI "decoration" and will not be
+			// involved in rendering aspects such as casting shadows
+			// The "topology" for the render item is a line list.
+			renderItem = MHWRender::MRenderItem::Create(renderItemName,
+				MHWRender::MRenderItem::DecorationItem,
+				MHWRender::MGeometry::kLines
+			);
+			// We want this render item to show up when in all mode ( Wireframe, Shaded, Textured and BoundingBox)
+			renderItem->setDrawMode(drawMode);
+			// Set selection priority: on top of everything
+			renderItem->depthPriority(depthPriority);
+			// Get an instance of a 3dSolidShader from the shader manager.
+			// The shader tells the graphics hardware how to draw the geometry. 
+			// The MShaderInstance is a reference to a shader along with the values for the shader parameters.
+			MShaderInstance* shader = shaderManager.getStockShader(MShaderManager::k3dSolidShader);
+			if (shader)
+			{
+				// Assign the shader to the render item. This adds a reference to that
+				// shader.
+				renderItem->setShader(shader);
+				// Once assigned, no need to hold on to shader instance
+				shaderManager.releaseShader(shader);
+			}
+			// The item must be added to the persistent list to be considered
+			// for update / rendering
+			renderItemList.append(renderItem);
+		}
+		else
+		{
+			renderItem = renderItemList.itemAt(renderItemIndex);
+		}
+		if (renderItem)
+		{
+			MHWRender::MShaderInstance* shader = renderItem->getShader();
+			if (shader)
+			{
+				// Set the shader color parameter
+				shader->setParameter("solidColor", &color.r);
+			}
+			//renderItem->enable(isEnable); 
+
+			/* SURELY we can just change colour on selected/dormant
+			render items instead of fully duplicating them, as the example does*/
+			renderItem->enable(true);
+		}
+	}
+
 	void populateGeometry(const MHWRender::MGeometryRequirements& requirements, const MHWRender::MRenderItemList& renderItems, MHWRender::MGeometry& data)
 	{
+		/* we deviate a bit from the example here:
+		all edges are curves, sampled at ed::CURVE_SHAPE_RES intervals
+
+		edge is line strip
+		point is 3 lines
+
+		memcpy is a thrill
+
+		maybe we don't do the full res polygon drawing here?
+		do a separate set of methods to get the proper positions and normals for polygons, should
+		be parallelised per-patch at least
+
+		for positions, order [point positions, dense edge positions]
+		*/
+
+
 		if (!shapeNodePtr)
 			return;
 		const MVertexBufferDescriptorList& vertexBufferDescriptorList = requirements.vertexRequirements();
@@ -243,97 +409,105 @@ public:
 				// Create and fill the vertex position buffer
 				//
 				MHWRender::MVertexBuffer* positionBuffer = data.createVertexBuffer(desc);
-				if (positionBuffer)
-				{
-					StrataShapeNode::Float3Array positions = fMesh->getPositions();
-					void* buffer = positionBuffer->acquire(positions.size(), true /*writeOnly */);
-					if (buffer)
-					{
-						const std::size_t bufferSizeInByte =
-							sizeof(GeometryOverrideExample2_shape::Float3Array::value_type) * positions.size();
-						memcpy(buffer, positions.data(), bufferSizeInByte);
-						// Transfer from CPU to GPU memory.
-						positionBuffer->commit(buffer);
-					}
+				if (!positionBuffer) {
+					DEBUGSL("could not create positionBuffer for vertex data");
+					return;
 				}
+
+				//ed::Float3Array positions = fMesh->getPositions();
+				ed::Float3Array positions = ;
+				void* buffer = positionBuffer->acquire(positions.size(), true /*writeOnly */);
+				if (buffer)
+				{
+					const std::size_t bufferSizeInByte =
+						sizeof(GeometryOverrideExample2_shape::Float3Array::value_type) * positions.size();
+					memcpy(buffer, positions.data(), bufferSizeInByte);
+					// Transfer from CPU to GPU memory.
+					positionBuffer->commit(buffer);
+				}
+
+				
 			}
 			break;
 			case MGeometry::kNormal:
 			{
-				//
-				// Create and fill the vertex normal buffer
-				//
-				MHWRender::MVertexBuffer* normalsBuffer = data.createVertexBuffer(desc);
-				if (normalsBuffer)
-				{
-					GeometryOverrideExample2_shape::Float3Array normals = fMesh->getNormals();
-					void* buffer = normalsBuffer->acquire(normals.size(), true /*writeOnly*/);
-					if (buffer)
-					{
-						const std::size_t bufferSizeInByte =
-							sizeof(GeometryOverrideExample2_shape::Float3Array::value_type) * normals.size();
-						memcpy(buffer, normals.data(), bufferSizeInByte);
-						// Transfer from CPU to GPU memory.
-						normalsBuffer->commit(buffer);
-					}
-				}
+				break;
+				////
+				//// Create and fill the vertex normal buffer
+				////
+				//MHWRender::MVertexBuffer* normalsBuffer = data.createVertexBuffer(desc);
+				//if (normalsBuffer)
+				//{
+				//	GeometryOverrideExample2_shape::Float3Array normals = fMesh->getNormals();
+				//	void* buffer = normalsBuffer->acquire(normals.size(), true /*writeOnly*/);
+				//	if (buffer)
+				//	{
+				//		const std::size_t bufferSizeInByte =
+				//			sizeof(GeometryOverrideExample2_shape::Float3Array::value_type) * normals.size();
+				//		memcpy(buffer, normals.data(), bufferSizeInByte);
+				//		// Transfer from CPU to GPU memory.
+				//		normalsBuffer->commit(buffer);
+				//	}
+				//}
 			}
 			break;
 			case MGeometry::kTangent:
 			{
-				MHWRender::MVertexBuffer* tangentBuffer = data.createVertexBuffer(desc);
-				if (tangentBuffer)
-				{
-					GeometryOverrideExample2_shape::Float3Array tangents = fMesh->getTangents();
-					void* buffer = tangentBuffer->acquire(tangents.size(), true /*writeOnly*/);
-					if (buffer)
-					{
-						const std::size_t bufferSizeInByte =
-							sizeof(GeometryOverrideExample2_shape::Float3Array::value_type) * tangents.size();
-						memcpy(buffer, tangents.data(), bufferSizeInByte);
-						// Transfer from CPU to GPU memory.
-						tangentBuffer->commit(buffer);
-					}
-				}
+				break;
+				//MHWRender::MVertexBuffer* tangentBuffer = data.createVertexBuffer(desc);
+				//if (tangentBuffer)
+				//{
+				//	GeometryOverrideExample2_shape::Float3Array tangents = fMesh->getTangents();
+				//	void* buffer = tangentBuffer->acquire(tangents.size(), true /*writeOnly*/);
+				//	if (buffer)
+				//	{
+				//		const std::size_t bufferSizeInByte =
+				//			sizeof(GeometryOverrideExample2_shape::Float3Array::value_type) * tangents.size();
+				//		memcpy(buffer, tangents.data(), bufferSizeInByte);
+				//		// Transfer from CPU to GPU memory.
+				//		tangentBuffer->commit(buffer);
+				//	}
+				//}
 			}
 			break;
 			case MGeometry::kBitangent:
 			{
-				MHWRender::MVertexBuffer* tangentBuffer = data.createVertexBuffer(desc);
-				if (tangentBuffer)
-				{
-					GeometryOverrideExample2_shape::Float3Array tangents = fMesh->getBiTangents();
-					void* buffer = tangentBuffer->acquire(tangents.size(), true /*writeOnly*/);
-					if (buffer)
-					{
-						const std::size_t bufferSizeInByte =
-							sizeof(GeometryOverrideExample2_shape::Float3Array::value_type) * tangents.size();
-						memcpy(buffer, tangents.data(), bufferSizeInByte);
-						// Transfer from CPU to GPU memory.
-						tangentBuffer->commit(buffer);
-					}
-				}
+				break;
+				//MHWRender::MVertexBuffer* tangentBuffer = data.createVertexBuffer(desc);
+				//if (tangentBuffer)
+				//{
+				//	GeometryOverrideExample2_shape::Float3Array tangents = fMesh->getBiTangents();
+				//	void* buffer = tangentBuffer->acquire(tangents.size(), true /*writeOnly*/);
+				//	if (buffer)
+				//	{
+				//		const std::size_t bufferSizeInByte =
+				//			sizeof(GeometryOverrideExample2_shape::Float3Array::value_type) * tangents.size();
+				//		memcpy(buffer, tangents.data(), bufferSizeInByte);
+				//		// Transfer from CPU to GPU memory.
+				//		tangentBuffer->commit(buffer);
+				//	}
+				//}
 			}
 			break;
 			case MGeometry::kTexture:
 			{
-				//
-				// Create and fill the vertex texture coords buffer
-				//
-				MHWRender::MVertexBuffer* texCoordsBuffer = data.createVertexBuffer(desc);
-				if (texCoordsBuffer)
-				{
-					GeometryOverrideExample2_shape::Float2Array texCoords = fMesh->getTexCoords();
-					void* buffer = texCoordsBuffer->acquire(texCoords.size(), true /*writeOnly*/);
-					if (buffer)
-					{
-						const std::size_t bufferSizeInByte =
-							sizeof(GeometryOverrideExample2_shape::Float2Array::value_type) * texCoords.size();
-						memcpy(buffer, texCoords.data(), bufferSizeInByte);
-						// Transfer from CPU to GPU memory.
-						texCoordsBuffer->commit(buffer);
-					}
-				}
+				////
+				//// Create and fill the vertex texture coords buffer
+				////
+				//MHWRender::MVertexBuffer* texCoordsBuffer = data.createVertexBuffer(desc);
+				//if (texCoordsBuffer)
+				//{
+				//	GeometryOverrideExample2_shape::Float2Array texCoords = fMesh->getTexCoords();
+				//	void* buffer = texCoordsBuffer->acquire(texCoords.size(), true /*writeOnly*/);
+				//	if (buffer)
+				//	{
+				//		const std::size_t bufferSizeInByte =
+				//			sizeof(GeometryOverrideExample2_shape::Float2Array::value_type) * texCoords.size();
+				//		memcpy(buffer, texCoords.data(), bufferSizeInByte);
+				//		// Transfer from CPU to GPU memory.
+				//		texCoordsBuffer->commit(buffer);
+				//	}
+				//}
 			}
 			break;
 			case MGeometry::kColor:
@@ -412,67 +586,6 @@ public:
 	}
 
 
-	/* lord I do not understand these mystic moon runes*/
-	void updateWireframeItems(const char* renderItemName, MGeometry::DrawMode drawMode,
-		unsigned int depthPriority, MColor color, bool isEnable,
-		MHWRender::MRenderItemList& renderItemList,
-		const MHWRender::MShaderManager& shaderManager)
-	{
-		/* I THINK we also need to add new MGeometry::Points items here to draw unbound strata transforms - 
-		or we can just draw 3 basis lines for each
-		*/
-
-
-		MHWRender::MRenderItem* renderItem = nullptr;
-		// Try to find the active wireframe render item.
-		// If the returning index is smaller than 0, that means 
-		// the render item does't exists yet. So, create it.
-		auto renderItemIndex = renderItemList.indexOf(renderItemName);
-		if (renderItemIndex < 0)
-		{
-			// Create the new render item with the given name.
-			// We designate this item as a UI "decoration" and will not be
-			// involved in rendering aspects such as casting shadows
-			// The "topology" for the render item is a line list.
-			renderItem = MHWRender::MRenderItem::Create(renderItemName,
-				MHWRender::MRenderItem::DecorationItem,
-				MHWRender::MGeometry::kLines
-			);
-			// We want this render item to show up when in all mode ( Wireframe, Shaded, Textured and BoundingBox)
-			renderItem->setDrawMode(drawMode);
-			// Set selection priority: on top of everything
-			renderItem->depthPriority(depthPriority);
-			// Get an instance of a 3dSolidShader from the shader manager.
-			// The shader tells the graphics hardware how to draw the geometry. 
-			// The MShaderInstance is a reference to a shader along with the values for the shader parameters.
-			MShaderInstance* shader = shaderManager.getStockShader(MShaderManager::k3dSolidShader);
-			if (shader)
-			{
-				// Assign the shader to the render item. This adds a reference to that
-				// shader.
-				renderItem->setShader(shader);
-				// Once assigned, no need to hold on to shader instance
-				shaderManager.releaseShader(shader);
-			}
-			// The item must be added to the persistent list to be considered
-			// for update / rendering
-			renderItemList.append(renderItem);
-		}
-		else
-		{
-			renderItem = renderItemList.itemAt(renderItemIndex);
-		}
-		if (renderItem)
-		{
-			MHWRender::MShaderInstance* shader = renderItem->getShader();
-			if (shader)
-			{
-				// Set the shader color parameter
-				shader->setParameter("solidColor", &color.r);
-			}
-			renderItem->enable(isEnable);
-		}
-	}
 
 
 private:

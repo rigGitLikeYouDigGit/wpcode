@@ -7,7 +7,37 @@ namespace ed {
 
 	typedef unsigned int uint;
 
-	BETTER_ENUM(STDriverType, int, point, line, face);
+	/* handy way to work more easily with vertex buffer memory - cast
+	it to vector of float types like this */
+	struct Float2
+	{
+		Float2() {}
+		Float2(float x, float y)
+			: x(x), y(y) {}
+		Float2(MVector v)
+			: x(v[0]), y(v[1]) {}
+		Float2(MPoint v)
+			: x(v[0]), y(v[1]) {}
+		float x;
+		float y;
+	};
+	struct Float3
+	{
+		Float3() {}
+		Float3(float x, float y, float z)
+			: x(x), y(y), z(z) {}
+		Float3(MVector v)
+			: x(v[0]), y(v[1]), z(v[2]) {}
+		Float3(MPoint v)
+			: x(v[0]), y(v[1]), z(v[2]) {}
+		float x;
+		float y;
+		float z;
+	};
+	typedef std::vector<Float3>       Float3Array;
+	typedef std::vector<Float2>       Float2Array;
+	typedef std::vector<unsigned int> IndexList;
+
 
 	/* FUNCTIONS TAKE QUATERNIONS OF FORM X-Y-Z-W
 	

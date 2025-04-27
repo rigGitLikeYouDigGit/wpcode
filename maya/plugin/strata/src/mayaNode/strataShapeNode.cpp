@@ -62,11 +62,18 @@ MStatus StrataShapeNode::initialize() {
     tFn.setDefault(MFnNurbsCurveData().create());
     cFn.addChild(aStMatrixOut);
 
+    aStShowPoints = nFn.create("stShowPoints", "stShowPoints", MFnNumericData::kFloat, 1.0);
+    nFn.setChannelBox(true);
+    nFn.setMin(0.0);
+    nFn.setMax(1.0);
+
     std::vector<MObject> drivers{
         aStExpIn,
         aStMatrixIn,
 
-                aStExpOut
+                aStExpOut,
+
+        aStShowPoints
 
     };
     std::vector<MObject> driven{
@@ -76,7 +83,8 @@ MStatus StrataShapeNode::initialize() {
 
     std::vector<MObject> toAdd{
         aStDataIn,
-        aStDataOut
+        aStDataOut,
+        aStShowPoints
     };
 
     s = addStrataAttrs<thisT>(drivers, driven, toAdd);
@@ -171,9 +179,14 @@ MStatus StrataShapeNode::compute(const MPlug& plug, MDataBlock& data) {
         return s;
     }
 
+    /* pull in drawing values to cache*/
+    pointOpacity = data.inputValue(aStShowPoints).asFloat();
+
     // pass to bases
-    //s = superT::compute(thisMObject(), plug, data);
-    MCHECK(s, NODENAME + " ERROR in strata bases compute, halting");
+    /*s = superT::compute(thisMObject(), plug, data);
+    MCHECK(s, NODENAME + " ERROR in strata bases compute, halting");*/
+
+
 
     data.setClean(plug);
 
@@ -203,3 +216,7 @@ MStatus StrataShapeNode::compute(const MPlug& plug, MDataBlock& data) {
 //}
 
 //MTypeId StrataShapeGeometryOverride::id = MTypeId(0x8003D);
+
+
+
+

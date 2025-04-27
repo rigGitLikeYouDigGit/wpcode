@@ -22,6 +22,11 @@ namespace ed {
 	* 
 	* to easily copy entire graphs, holding different classes of op nodes,
 	* need to add functions to copy the unique_ptrs from the originals
+	* 
+	* each version of the graph probably need not fully evaluate - we might not even need to evaluate the 
+	* whole thing until the shape node, and we need to see the final result?
+	* 
+	* 
 	
 	struct Base
 {
