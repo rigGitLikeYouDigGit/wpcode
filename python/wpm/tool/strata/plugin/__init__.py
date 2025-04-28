@@ -53,11 +53,14 @@ def makeStrataPoint(name):
 	but since we're forced to use a shape node, it's always gonna be
 	a mess"""
 	from maya import cmds
-	loc = cmds.createNode("strataPoint", n=name + "Shape")
-	tf = cmds.listRelatives(loc, parent=1)[0]
-	tf = cmds.rename(tf, name)
-	#cmds.connectAttr(loc + ".stFinalOutMatrix", tf + ".offsetParentMatrix", f=1)
-	return tf
+	# loc = cmds.createNode("strataPoint", n=name + "Shape")
+	# tf = cmds.listRelatives(loc, parent=1)[0]
+	# tf = cmds.rename(tf, name)
+	# #cmds.connectAttr(loc + ".stFinalOutMatrix", tf + ".offsetParentMatrix", f=1)
+	# return tf
+
+	loc = WN.createNode("strataPoint", name)
+	return loc
 
 def connectStrataPoint(pointNode, addPointsNode):
 	from maya import cmds
@@ -83,9 +86,13 @@ def reloadPluginTest():
 	pluginAid.loadPlugin(forceReload=True)
 	#pt = cmds.createNode("strataPoint")
 
+	# update node class wrappers
+	pluginAid.updateGeneratedNodeClasses()
+
 	# test creating a single face of strataSurface
 	ptA = makeStrataPoint("ptA")
 	cmds.setAttr(ptA + ".translate", -3, 2, -3)
+	return
 
 	ptB = makeStrataPoint("strataPointB")
 	ptC = makeStrataPoint("strataPointC")

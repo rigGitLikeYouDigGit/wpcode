@@ -6,6 +6,8 @@ import sys, os, traceback
 
 from pathlib import Path
 
+from wpm import log
+
 from maya.api import OpenMaya as om, OpenMayaRender as omr
 from maya import cmds
 
@@ -216,4 +218,28 @@ class MayaPluginAid:
 		"""create all nodes, run all node test functions"""
 		for nodeCls in self.nodeClasses.values():
 			nodeCls.testNode()
+
+	def pluginNodeTypeNames(self):
+		"""return type names of all nodes added by plugin"""
+		nodeClasses = cmds.pluginInfo(self.name, q=1, dependNode=1) or []
+		return nodeClasses
+
+	def updateGeneratedNodeClasses(self):
+		"""refresh generated node wrapper classes under
+		wpm/core/node/gen
+		with all nodes added by this plugin.
+		This of course will not touch any classes under node/author
+		"""
+		import tempfile
+		from wpm.core.node._codegen import gather, generate
+		outputPath = gather.TARGET_NODE_DATA_PATH.parent / "pluginNodeData.json"
+		nodeClassNames = self.pluginNodeTypeNames()
+		if not nodeClassNames:
+			log("no node classes to update wrappers for plugin " + self.name)
+			return
+		gather.gatherNodeData(nodeClassNames, outputPath)
+		generate.genNodes(jsonPath=outputPath)
+		# self._mfnPlugin = om.MFnPlugin(
+		# 	om.MFnPlugin().findPlugin(self.name)
+		# )
 

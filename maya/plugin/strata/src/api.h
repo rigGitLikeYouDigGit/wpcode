@@ -14,6 +14,7 @@ namespace ed {
 	// registering IDs of plugin nodes
 	const unsigned int pluginPrefix = 101997;
 
+
 	// common functions
 	//enum BindState { off, bind, bound, live };
 	BETTER_ENUM(BindState, int, off, bind, bound, live);
@@ -338,6 +339,7 @@ namespace ed {
 		result[3][3] = mat(3, 3);
 		return result;
 	}
+
 
 	 
 }

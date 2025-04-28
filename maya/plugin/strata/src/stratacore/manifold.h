@@ -625,12 +625,15 @@ namespace ed {
 				auto relMat = toEigen(controlPoints[i + 1] * controlPoints[i].inverse());
 
 				// get square root of matrix, for single midpoint; cubic for 2, etc
-				Eigen::MatrixPower<Eigen::Matrix4cd> relMatPower(relMat);
+				//Eigen::MatrixPower<Eigen::Matrix4cd> relMatPower(relMat);
+				Eigen::MatrixPower<Eigen::Matrix4d> relMatPower(relMat);
 				auto step = relMatPower(1.0 / float(segmentPointCount + 1));
 
 				// raise that root matrix to the same power as its segment point index
 				for (size_t n = 0; n < segmentPointCount; n++) {
-					result.push_back( controlPoints[i] * toMMatrix<Eigen::Matrix4cd>(step.pow(n + 1)));
+					//result.push_back( controlPoints[i] * toMMatrix<Eigen::Matrix4cd>(
+					result.push_back( controlPoints[i] * toMMatrix<Eigen::Matrix4d>(
+						step.pow(static_cast<double>(n + 1))));
 				}
 
 			}
@@ -722,9 +725,9 @@ namespace ed {
 				for (int n; n < CURVE_SHAPE_RES; n++) {
 					/*result[curveStartIndex + n] = matrixAt(edgeIndexGlobalIndexMap[i], {uParams[n], 0.0, 0.0}, 
 					)*/
-					float uvn[3] = { uParams[n], 0.0, 0.0 };
+					float uvn[3] = { static_cast<float>(uParams[n]), 0.0, 0.0 };
 					MVector posOut;
-					s = posAt(edgeIndexGlobalIndexMap[i], uvn, posOut, s);
+					s = posAt(edgeIndexGlobalIndexMap[static_cast<int>(i)], uvn, posOut, s);
 					if (s) {
 						DEBUGSL("error sampling curve " + std::to_string(i) + "at point : " + std::to_string(n));
 						return result;
@@ -735,7 +738,36 @@ namespace ed {
 			return result;
 		}
 
+		inline Float3Array getWireframePointVertexPositionArray(Status& s) {
+			/* return flat float3 array for gnomon positions only on points
+			* each point has 4 coords - point itself, and then 0.1 units in x, y, z of that point
+			*/
 
+			Float3Array result(pointDatas.size() * 4);
+
+			for (size_t i = 0; i < pointDatas.size(); i++) {
+				result[i * 4] = pointDatas[i].finalMatrix * MVector::zero;
+				result[i * 4 + 1] = pointDatas[i].finalMatrix * MVector::xAxis;
+				result[i * 4 + 2] = pointDatas[i].finalMatrix * MVector::yAxis;
+				result[i * 4 + 3] = pointDatas[i].finalMatrix * MVector::zAxis;
+			}
+			return result;
+		}
+		inline IndexList getWireframePointIndexArray(Status& s) {
+			/* return index array for point gnomons
+			* intended to emit as separate lines, so half is duplication
+			*/
+			IndexList result(pointDatas.size() * 3 * 2);
+			for (int i = 0; i < static_cast<int>(pointDatas.size()); i++) {
+				result[i * 4] = i * 4;
+				result[i * 4 + 1] = i * 4 + 1;
+				result[i * 4 + 2] = i * 4;
+				result[i * 4 + 3] = i * 4 + 2;
+				result[i * 4 + 4] = i * 4;
+				result[i * 4 + 5] = i * 4 + 3;
+			}
+			return result;
+		}
 
 		/////////////
 

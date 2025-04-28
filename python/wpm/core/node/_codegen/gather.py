@@ -64,6 +64,7 @@ class NodeData:
 	typeName:str
 	apiTypeConstant:int
 	apiTypeStr : str # MFnTransform
+	typeIdInt : int
 	mfnStr : str
 	bases: tuple[str] = ()
 	isAbstract:bool = False
@@ -119,6 +120,7 @@ def getNodeData(nodeTypeName:str):
 		apiTypeConstant=apiTypeConstant,
 		apiTypeStr=apiTypeStr,
 		mfnStr=mfnStr,
+		typeIdInt=mclass.typeId.id(),
 		#attrs=mclass.attributeList()
 		attrDatas=attrDatas,
 		bases=tuple(baseClasses),
@@ -181,6 +183,7 @@ def getBaseNodeData():
 		typeName="_BASE_",
 		apiTypeConstant=0,
 		apiTypeStr="kBase",
+		typeIdInt=-1,
 		mfnStr="MFnBase",
 		attrDatas=[ messageData, cachingData, frozenData,
 		            isHistoricallyInterestingData, nodeStateData ],
@@ -194,7 +197,9 @@ def gatherNodeData(nodeTypes=None, outputPath=None):
 	"""
 	# get all node types
 
-	nodeTypes = cmds.allNodeTypes(includeAbstract=1)
+	nodeTypes = nodeTypes or cmds.allNodeTypes(includeAbstract=1)
+	outputPath = outputPath or TARGET_NODE_DATA_PATH
+
 	# this adds " (abstract)" to the end of abstract node types :)
 	abstractMap = {x.replace(" (abstract)", ""): " (abstract)" in x for x in nodeTypes}
 	nodeTypes = [x.replace(" (abstract)", "") for x in nodeTypes]
@@ -229,7 +234,7 @@ def gatherNodeData(nodeTypes=None, outputPath=None):
 
 
 	# write to file
-	with open(TARGET_NODE_DATA_PATH, "w") as f:
+	with open(outputPath, "w") as f:
 		f.write(
 			orjson.dumps(nodeData, option=orjson.OPT_INDENT_2).decode("utf-8")
 		)

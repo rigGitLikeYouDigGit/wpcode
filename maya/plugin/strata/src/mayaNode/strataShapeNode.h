@@ -8,15 +8,6 @@
 
 #include "../exp/expParse.h"
 
-#include <maya/MPxSurfaceShapeUI.h>
-#include <maya/MPxGeometryOverride.h>
-#include <maya/MDrawContext.h>
-#include <maya/MDrawRegistry.h>
-#include <maya/MShaderManager.h>
-#include <maya/MSelectionMask.h>
-
-#include <maya/MHWGeometry.h>
-#include <maya/MGeometry.h>
 /*
 shape node to display end result of strata graph.
 also allows interacting with points as if a normal maya shape,
@@ -165,9 +156,12 @@ public:
 		return &(shapeNodePtr->opGraphPtr.get()->results)[outIndex];
 	}
 
-	static const char* sActiveWireframeRenderItemName;
+	/*static const char* sActiveWireframeRenderItemName;
 	static const char* sDormantWireframeRenderItemName;
-	static const char* sShadedRenderItemName;
+	static const char* sShadedRenderItemName;*/
+
+	static constexpr char* sStPointRenderItemName = "stPRI";
+	static constexpr char* sStEdgeRenderItemName = "stERI";
 
 	inline Status getShapeMObj(MObject& result){
 		Status s;
@@ -241,18 +235,17 @@ public:
 		bool isEnable = true; // isWireFrameRenderItemEnabled
 
 		///////// render item for points
-		const char* pointRenderItemName = "stPtRI";
 		MHWRender::MRenderItem* renderItem = nullptr;
 		// Try to find the active wireframe render item.
 		// If the returning index is smaller than 0, that means 
 		// the render item does't exists yet. So, create it.
-		auto renderItemIndex = renderItems.indexOf(pointRenderItemName);
+		auto renderItemIndex = renderItems.indexOf(sStPointRenderItemName);
 		if (renderItemIndex < 0)
 		{
 			// Create the new render item with the given name.
 			// We designate this item as a UI "decoration" and will not be
 			// involved in rendering aspects such as casting shadows
-			renderItem = MHWRender::MRenderItem::Create(pointRenderItemName,
+			renderItem = MHWRender::MRenderItem::Create(sStPointRenderItemName,
 				MHWRender::MRenderItem::DecorationItem,
 				MHWRender::MGeometry::kLines
 			);
@@ -286,92 +279,7 @@ public:
 			}
 			//renderItem->enable(isEnable); 
 			renderItem->enable(true);
-		}
-
-
-		//updateWireframeItems(sActiveWireframeRenderItemName,
-		//	MHWRender::MGeometry::kAll,
-		//	MHWRender::MRenderItem::sSelectionDepthPriority,
-		//	wireframeColor,
-		//	isWireFrameRenderItemEnabled,
-		//	renderItems,
-		//	*shaderManager);
-		//// Update the wireframe render item used when the object will not be selected
-		//isWireFrameRenderItemEnabled = displayStatus == MHWRender::kDormant;
-		//updateWireframeItems(sDormantWireframeRenderItemName,
-		//	MHWRender::MGeometry::kWireframe,
-		//	MHWRender::MRenderItem::sDormantWireDepthPriority,
-		//	wireframeColor,
-		//	isWireFrameRenderItemEnabled,
-		//	renderItems,
-		//	*shaderManager);
-	
-	}
-
-	/* lord I do not understand these mystic moon runes*/
-	void updateWireframeItems(const char* renderItemName, MGeometry::DrawMode drawMode,
-		unsigned int depthPriority, MColor color, bool isEnable,
-		MHWRender::MRenderItemList& renderItemList,
-		const MHWRender::MShaderManager& shaderManager)
-	{
-		/* I THINK we also need to add new MGeometry::Points items here to draw unbound strata transforms -
-		or we can just draw 3 basis lines for each
-		*/
-
-
-		MHWRender::MRenderItem* renderItem = nullptr;
-		// Try to find the active wireframe render item.
-		// If the returning index is smaller than 0, that means 
-		// the render item does't exists yet. So, create it.
-		auto renderItemIndex = renderItemList.indexOf(renderItemName);
-		if (renderItemIndex < 0)
-		{
-			// Create the new render item with the given name.
-			// We designate this item as a UI "decoration" and will not be
-			// involved in rendering aspects such as casting shadows
-			// The "topology" for the render item is a line list.
-			renderItem = MHWRender::MRenderItem::Create(renderItemName,
-				MHWRender::MRenderItem::DecorationItem,
-				MHWRender::MGeometry::kLines
-			);
-			// We want this render item to show up when in all mode ( Wireframe, Shaded, Textured and BoundingBox)
-			renderItem->setDrawMode(drawMode);
-			// Set selection priority: on top of everything
-			renderItem->depthPriority(depthPriority);
-			// Get an instance of a 3dSolidShader from the shader manager.
-			// The shader tells the graphics hardware how to draw the geometry. 
-			// The MShaderInstance is a reference to a shader along with the values for the shader parameters.
-			MShaderInstance* shader = shaderManager.getStockShader(MShaderManager::k3dSolidShader);
-			if (shader)
-			{
-				// Assign the shader to the render item. This adds a reference to that
-				// shader.
-				renderItem->setShader(shader);
-				// Once assigned, no need to hold on to shader instance
-				shaderManager.releaseShader(shader);
-			}
-			// The item must be added to the persistent list to be considered
-			// for update / rendering
-			renderItemList.append(renderItem);
-		}
-		else
-		{
-			renderItem = renderItemList.itemAt(renderItemIndex);
-		}
-		if (renderItem)
-		{
-			MHWRender::MShaderInstance* shader = renderItem->getShader();
-			if (shader)
-			{
-				// Set the shader color parameter
-				shader->setParameter("solidColor", &color.r);
-			}
-			//renderItem->enable(isEnable); 
-
-			/* SURELY we can just change colour on selected/dormant
-			render items instead of fully duplicating them, as the example does*/
-			renderItem->enable(true);
-		}
+		}	
 	}
 
 	void populateGeometry(const MHWRender::MGeometryRequirements& requirements, const MHWRender::MRenderItemList& renderItems, MHWRender::MGeometry& data)
@@ -389,11 +297,25 @@ public:
 		be parallelised per-patch at least
 
 		for positions, order [point positions, dense edge positions]
+
+		mgeometryrequirements:
+		union of all vertex requirements from all shaders assigned to the object
+
+		How exactly are we meant to know which buffers and requirements here correspond to
+		which items are created in updateRenderItems
+
+		names are set on RENDER ITEMS before this
 		*/
 
-
+		DEBUGSL("PopulateGeometry");
 		if (!shapeNodePtr)
 			return;
+		ed::StrataManifold* manifoldPtr = manifold();
+		if (!manifoldPtr) { 
+			DEBUGSL("no manifold pointer, returning");
+			return;  }
+		Status s;
+		MS ms(MS::kSuccess);
 		const MVertexBufferDescriptorList& vertexBufferDescriptorList = requirements.vertexRequirements();
 		for (int i = 0; i < vertexBufferDescriptorList.length(); i++)
 		{
@@ -401,31 +323,45 @@ public:
 			if (!vertexBufferDescriptorList.getDescriptor(i, desc))
 				continue;
 			std::cout << desc.semanticName().asChar() << std::endl;
+			
+			DEBUGSL( "VertexBufferDescriptor in list: " + desc.name());
+
 			switch (desc.semantic())
 			{
 			case MGeometry::kPosition:
 			{
-				//
 				// Create and fill the vertex position buffer
-				//
 				MHWRender::MVertexBuffer* positionBuffer = data.createVertexBuffer(desc);
 				if (!positionBuffer) {
 					DEBUGSL("could not create positionBuffer for vertex data");
 					return;
 				}
 
-				//ed::Float3Array positions = fMesh->getPositions();
-				ed::Float3Array positions = ;
-				void* buffer = positionBuffer->acquire(positions.size(), true /*writeOnly */);
-				if (buffer)
-				{
-					const std::size_t bufferSizeInByte =
-						sizeof(GeometryOverrideExample2_shape::Float3Array::value_type) * positions.size();
-					memcpy(buffer, positions.data(), bufferSizeInByte);
-					// Transfer from CPU to GPU memory.
-					positionBuffer->commit(buffer);
-				}
+				// check if this is for point positions
+				if (desc.name() == sStPointRenderItemName) {
 
+					ed::Float3Array positions = manifoldPtr->getWireframePointVertexPositionArray(s);
+					if (s) {
+						DEBUGSL("ERROR getting position vertex buffer for manifold points");
+						return;
+					}
+					void* buffer = positionBuffer->acquire(static_cast<unsigned int>(positions.size()), true /*writeOnly */);
+					if (buffer)
+					{
+						const std::size_t bufferSizeInByte =
+							sizeof(ed::Float3Array::value_type) * positions.size();
+						memcpy(buffer, positions.data(), bufferSizeInByte);
+						// Transfer from CPU to GPU memory.
+						positionBuffer->commit(buffer);
+					}
+					else {
+						DEBUGSL("could not acquire point position buffer")
+					}
+
+				}
+				else {
+					DEBUGSL("unknown desc name: " + desc.name() + " requested position vertex buffer");
+				}
 				
 			}
 			break;
@@ -519,6 +455,20 @@ public:
 				break;
 			}
 		}
+
+
+
+		const MIndexBufferDescriptorList& indexBufferDescriptorList = requirements.indexingRequirements();
+		for (int i = 0; i < indexBufferDescriptorList.length(); i++) {
+
+			MIndexBufferDescriptor desc{};
+			if (!indexBufferDescriptorList.getDescriptor(i, desc))
+				continue;
+
+			DEBUGSL("IndexBufferDescriptor in list: " + desc.name());
+
+		}
+
 		//   Update indexing data for all appropriate render items
 		const int numItems = renderItems.length();
 		for (int i = 0; i < numItems; i++)
@@ -526,49 +476,35 @@ public:
 			const MHWRender::MRenderItem* item = renderItems.itemAt(i);
 			if (!item)
 				continue;
-			if (item->primitive() == MHWRender::MGeometry::kTriangles)
-			{
-				//
-				// Create and fill the index buffer used to render triangles
-				//
+
+			DEBUGSL("RenderItem name: " + item->name());
+
+			if (item->name() == sStPointRenderItemName) {
+				// make index buffer to render point gnomons
 				MHWRender::MIndexBuffer* indexBuffer = data.createIndexBuffer(MHWRender::MGeometry::kUnsignedInt32);
-				if (indexBuffer)
-				{
-					GeometryOverrideExample2_shape::IndexList indices = fMesh->getShadedIndices();
-					void* buffer = indexBuffer->acquire(indices.size(), true /*writeOnly*/);
-					if (buffer)
-					{
-						const std::size_t bufferSizeInByte =
-							sizeof(GeometryOverrideExample2_shape::IndexList::value_type) * indices.size();
-						memcpy(buffer, indices.data(), bufferSizeInByte);
-						// Transfer from CPU to GPU memory.
-						indexBuffer->commit(buffer);
-						// Associate index buffer with render item
-						item->associateWithIndexBuffer(indexBuffer);
-					}
+				if (indexBuffer == nullptr) {
+					DEBUGSL("invalid semantic used to create index buffer, aborting");
+					return;
 				}
-			}
-			else if (item->primitive() == MHWRender::MGeometry::kLines)
-			{
-				//
-				// Create and fill the index buffer used to render lines (Wireframe)
-				//
-				MHWRender::MIndexBuffer* indexBuffer = data.createIndexBuffer(MHWRender::MGeometry::kUnsignedInt32);
-				if (indexBuffer)
-				{
-					GeometryOverrideExample2_shape::IndexList indices = fMesh->getWireFrameIndices();
-					void* buffer = indexBuffer->acquire(indices.size(), true /*writeOnly*/);
-					if (buffer)
-					{
-						const std::size_t bufferSizeInByte =
-							sizeof(GeometryOverrideExample2_shape::IndexList::value_type) * indices.size();
-						memcpy(buffer, indices.data(), bufferSizeInByte);
-						// Transfer from CPU to GPU memory.
-						indexBuffer->commit(buffer);
-						// Associate index buffer with render item
-						item->associateWithIndexBuffer(indexBuffer);
-					}
+				ed::IndexList indices = manifoldPtr->getWireframePointIndexArray(s);
+				if (s) {
+					DEBUGSL("ERROR getting wireframe point index array, aborting");
+					return;
 				}
+
+				void* buffer = indexBuffer->acquire(static_cast<unsigned int>(indices.size()), true /*writeOnly*/);
+				if (!buffer) {
+					DEBUGSL("could not acquire index buffer for points");
+					continue;
+				}
+				
+				const std::size_t bufferSizeInByte =
+					sizeof(ed::IndexList::value_type) * indices.size();
+				memcpy(buffer, indices.data(), bufferSizeInByte);
+				// Transfer from CPU to GPU memory.
+				indexBuffer->commit(buffer);
+				// Associate index buffer with render item
+				item->associateWithIndexBuffer(indexBuffer);
 			}
 		}
 	}

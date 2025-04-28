@@ -1,0 +1,4497 @@
+{
+  "0": {
+    "_BASE_": {
+      "typeName": "_BASE_",
+      "apiTypeConstant": 0,
+      "apiTypeStr": "kBase",
+      "typeIdInt": -1,
+      "mfnStr": "MFnBase",
+      "bases": [],
+      "isAbstract": true,
+      "attrDatas": [
+        {
+          "name": "message",
+          "type": 580,
+          "typeName": "om.MFnMessageAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "msg",
+          "parentName": ""
+        },
+        {
+          "name": "caching",
+          "type": 566,
+          "typeName": "om.MFnNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "cch",
+          "parentName": ""
+        },
+        {
+          "name": "frozen",
+          "type": 566,
+          "typeName": "om.MFnNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "frz",
+          "parentName": ""
+        },
+        {
+          "name": "isHistoricallyInteresting",
+          "type": 566,
+          "typeName": "om.MFnNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "hst",
+          "parentName": ""
+        },
+        {
+          "name": "nodeState",
+          "type": 572,
+          "typeName": "om.MFnEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "nst",
+          "parentName": ""
+        }
+      ]
+    }
+  },
+  "2": {
+    "strataElementOp": {
+      "typeName": "strataElementOp",
+      "apiTypeConstant": 0,
+      "apiTypeStr": "kBase",
+      "typeIdInt": 1191074,
+      "mfnStr": "MFnBase",
+      "bases": [
+        "_BASE_",
+        "THdependNode"
+      ],
+      "isAbstract": false,
+      "attrDatas": [
+        {
+          "name": "binMembership",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "bnm",
+          "parentName": ""
+        },
+        {
+          "name": "caching",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "cch",
+          "parentName": ""
+        },
+        {
+          "name": "frozen",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "fzn",
+          "parentName": ""
+        },
+        {
+          "name": "isHistoricallyInteresting",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ihi",
+          "parentName": ""
+        },
+        {
+          "name": "message",
+          "type": 580,
+          "typeName": "kMessageAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "msg",
+          "parentName": ""
+        },
+        {
+          "name": "nodeState",
+          "type": 572,
+          "typeName": "kEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "nds",
+          "parentName": ""
+        },
+        {
+          "name": "stDriverWeightIn",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stInDriverWeightIn",
+          "parentName": "stElement"
+        },
+        {
+          "name": "stEdgeCurveOut",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stEdgeCurveOut",
+          "parentName": "stElement"
+        },
+        {
+          "name": "stElTypeIndex",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "stElTypeIndex",
+          "parentName": "stElement"
+        },
+        {
+          "name": "stElement",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stElement",
+          "parentName": ""
+        },
+        {
+          "name": "stExp",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stExp",
+          "parentName": "stElement"
+        },
+        {
+          "name": "stGlobalIndex",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "stGlobalIndex",
+          "parentName": "stElement"
+        },
+        {
+          "name": "stGraph",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": false,
+          "shortName": "stGraph",
+          "parentName": ""
+        },
+        {
+          "name": "stInput",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": false,
+          "shortName": "stInput",
+          "parentName": ""
+        },
+        {
+          "name": "stName",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stName",
+          "parentName": "stElement"
+        },
+        {
+          "name": "stOpName",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stOpName",
+          "parentName": ""
+        },
+        {
+          "name": "stOpNameOut",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "stOpNameOut",
+          "parentName": ""
+        },
+        {
+          "name": "stOutput",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "stOutput",
+          "parentName": ""
+        },
+        {
+          "name": "stPointFinalWorldMatrixOut",
+          "type": 578,
+          "typeName": "kMatrixAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "stPointFinalWorldMatrixOut",
+          "parentName": "stElement"
+        },
+        {
+          "name": "stPointLocalMatrixIn",
+          "type": 578,
+          "typeName": "kMatrixAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stPointLocalMatrixIn",
+          "parentName": "stElement"
+        },
+        {
+          "name": "stPointWorldMatrixIn",
+          "type": 578,
+          "typeName": "kMatrixAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stPointWorldMatrixIn",
+          "parentName": "stElement"
+        },
+        {
+          "name": "stTypeOut",
+          "type": 572,
+          "typeName": "kEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stTypeOut",
+          "parentName": "stElement"
+        }
+      ]
+    }
+  },
+  "8": {
+    "strataPoint": {
+      "typeName": "strataPoint",
+      "apiTypeConstant": 0,
+      "apiTypeStr": "kBase",
+      "typeIdInt": 1191073,
+      "mfnStr": "MFnBase",
+      "bases": [
+        "_BASE_",
+        "containerBase",
+        "entity",
+        "dagNode",
+        "shape",
+        "geometryShape",
+        "locator",
+        "THlocatorShape"
+      ],
+      "isAbstract": false,
+      "attrDatas": [
+        {
+          "name": "antialiasingLevel",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gal",
+          "parentName": ""
+        },
+        {
+          "name": "asBackground",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "asbg",
+          "parentName": ""
+        },
+        {
+          "name": "balanceWheel",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "balanceWheel",
+          "parentName": ""
+        },
+        {
+          "name": "binMembership",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "bnm",
+          "parentName": ""
+        },
+        {
+          "name": "blackBox",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "bbx",
+          "parentName": ""
+        },
+        {
+          "name": "borderConnections",
+          "type": 580,
+          "typeName": "kMessageAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "boc",
+          "parentName": ""
+        },
+        {
+          "name": "boundingBox",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bb",
+          "parentName": ""
+        },
+        {
+          "name": "boundingBoxCenterX",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bcx",
+          "parentName": "center"
+        },
+        {
+          "name": "boundingBoxCenterY",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bcy",
+          "parentName": "center"
+        },
+        {
+          "name": "boundingBoxCenterZ",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bcz",
+          "parentName": "center"
+        },
+        {
+          "name": "boundingBoxMax",
+          "type": 566,
+          "typeName": "kAttribute3Double",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bbmx",
+          "parentName": "boundingBox"
+        },
+        {
+          "name": "boundingBoxMaxX",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bbxx",
+          "parentName": "boundingBoxMax"
+        },
+        {
+          "name": "boundingBoxMaxY",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bbxy",
+          "parentName": "boundingBoxMax"
+        },
+        {
+          "name": "boundingBoxMaxZ",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bbxz",
+          "parentName": "boundingBoxMax"
+        },
+        {
+          "name": "boundingBoxMin",
+          "type": 566,
+          "typeName": "kAttribute3Double",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bbmn",
+          "parentName": "boundingBox"
+        },
+        {
+          "name": "boundingBoxMinX",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bbnx",
+          "parentName": "boundingBoxMin"
+        },
+        {
+          "name": "boundingBoxMinY",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bbny",
+          "parentName": "boundingBoxMin"
+        },
+        {
+          "name": "boundingBoxMinZ",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bbnz",
+          "parentName": "boundingBoxMin"
+        },
+        {
+          "name": "boundingBoxSize",
+          "type": 566,
+          "typeName": "kAttribute3Double",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bbsi",
+          "parentName": "boundingBox"
+        },
+        {
+          "name": "boundingBoxSizeX",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bbsx",
+          "parentName": "boundingBoxSize"
+        },
+        {
+          "name": "boundingBoxSizeY",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bbsy",
+          "parentName": "boundingBoxSize"
+        },
+        {
+          "name": "boundingBoxSizeZ",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bbsz",
+          "parentName": "boundingBoxSize"
+        },
+        {
+          "name": "caching",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "cch",
+          "parentName": ""
+        },
+        {
+          "name": "castsShadows",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "csh",
+          "parentName": ""
+        },
+        {
+          "name": "center",
+          "type": 566,
+          "typeName": "kAttribute3Double",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "c",
+          "parentName": ""
+        },
+        {
+          "name": "compInstObjGroups",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ciog",
+          "parentName": ""
+        },
+        {
+          "name": "compObjectGroupId",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "cgid",
+          "parentName": "compObjectGroups"
+        },
+        {
+          "name": "compObjectGroups",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "cog",
+          "parentName": "compInstObjGroups"
+        },
+        {
+          "name": "compObjectGrpCompList",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "cgcl",
+          "parentName": "compObjectGroups"
+        },
+        {
+          "name": "componentTagContents",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gtagcmp",
+          "parentName": "componentTags"
+        },
+        {
+          "name": "componentTagName",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gtagnm",
+          "parentName": "componentTags"
+        },
+        {
+          "name": "componentTags",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gtag",
+          "parentName": ""
+        },
+        {
+          "name": "containerType",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ctyp",
+          "parentName": ""
+        },
+        {
+          "name": "creationDate",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "cdat",
+          "parentName": ""
+        },
+        {
+          "name": "creator",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ctor",
+          "parentName": ""
+        },
+        {
+          "name": "customTreatment",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ctrt",
+          "parentName": ""
+        },
+        {
+          "name": "depthJitter",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "dej",
+          "parentName": ""
+        },
+        {
+          "name": "drawOverride",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "do",
+          "parentName": ""
+        },
+        {
+          "name": "frozen",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "fzn",
+          "parentName": ""
+        },
+        {
+          "name": "geometryAntialiasingOverride",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gao",
+          "parentName": ""
+        },
+        {
+          "name": "ghostColorPost",
+          "type": 566,
+          "typeName": "kAttribute3Float",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gac",
+          "parentName": ""
+        },
+        {
+          "name": "ghostColorPostB",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gab",
+          "parentName": "ghostColorPost"
+        },
+        {
+          "name": "ghostColorPostG",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gag",
+          "parentName": "ghostColorPost"
+        },
+        {
+          "name": "ghostColorPostR",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gar",
+          "parentName": "ghostColorPost"
+        },
+        {
+          "name": "ghostColorPre",
+          "type": 566,
+          "typeName": "kAttribute3Float",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gcp",
+          "parentName": ""
+        },
+        {
+          "name": "ghostColorPreB",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gpb",
+          "parentName": "ghostColorPre"
+        },
+        {
+          "name": "ghostColorPreG",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gpg",
+          "parentName": "ghostColorPre"
+        },
+        {
+          "name": "ghostColorPreR",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "grr",
+          "parentName": "ghostColorPre"
+        },
+        {
+          "name": "ghostCustomSteps",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gcs",
+          "parentName": ""
+        },
+        {
+          "name": "ghostDriver",
+          "type": 580,
+          "typeName": "kMessageAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gdr",
+          "parentName": ""
+        },
+        {
+          "name": "ghostFarOpacity",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gfro",
+          "parentName": "ghostOpacityRange"
+        },
+        {
+          "name": "ghostFrames",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gf",
+          "parentName": ""
+        },
+        {
+          "name": "ghostNearOpacity",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gnro",
+          "parentName": "ghostOpacityRange"
+        },
+        {
+          "name": "ghostOpacityRange",
+          "type": 566,
+          "typeName": "kAttribute2Float",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "golr",
+          "parentName": ""
+        },
+        {
+          "name": "ghostPostFrames",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gpof",
+          "parentName": "ghostCustomSteps"
+        },
+        {
+          "name": "ghostPreFrames",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gprf",
+          "parentName": "ghostCustomSteps"
+        },
+        {
+          "name": "ghostUseDriver",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gud",
+          "parentName": ""
+        },
+        {
+          "name": "ghosting",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gh",
+          "parentName": ""
+        },
+        {
+          "name": "ghostingMode",
+          "type": 572,
+          "typeName": "kEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gm",
+          "parentName": ""
+        },
+        {
+          "name": "ghostsStep",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gstp",
+          "parentName": "ghostCustomSteps"
+        },
+        {
+          "name": "hardwareFogMultiplier",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "hfm",
+          "parentName": ""
+        },
+        {
+          "name": "hiddenInOutliner",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "hio",
+          "parentName": ""
+        },
+        {
+          "name": "hideOnPlayback",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "hpb",
+          "parentName": "drawOverride"
+        },
+        {
+          "name": "hyperLayout",
+          "type": 580,
+          "typeName": "kMessageAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "hl",
+          "parentName": ""
+        },
+        {
+          "name": "iconName",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "icn",
+          "parentName": ""
+        },
+        {
+          "name": "identification",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "rlid",
+          "parentName": "renderInfo"
+        },
+        {
+          "name": "ignoreSelfShadowing",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "iss",
+          "parentName": ""
+        },
+        {
+          "name": "instMaterialAssign",
+          "type": 580,
+          "typeName": "kMessageAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "imtla",
+          "parentName": ""
+        },
+        {
+          "name": "instObjGroups",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "iog",
+          "parentName": ""
+        },
+        {
+          "name": "intermediateObject",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "io",
+          "parentName": ""
+        },
+        {
+          "name": "inverseMatrix",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "im",
+          "parentName": ""
+        },
+        {
+          "name": "isCollapsed",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "isc",
+          "parentName": ""
+        },
+        {
+          "name": "isHierarchicalConnection",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ish",
+          "parentName": ""
+        },
+        {
+          "name": "isHierarchicalNode",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ihn",
+          "parentName": "publishedNodeInfo"
+        },
+        {
+          "name": "isHistoricallyInteresting",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ihi",
+          "parentName": ""
+        },
+        {
+          "name": "layerOverrideColor",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "lovc",
+          "parentName": "renderInfo"
+        },
+        {
+          "name": "layerRenderable",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "rndr",
+          "parentName": "renderInfo"
+        },
+        {
+          "name": "localPosition",
+          "type": 566,
+          "typeName": "kAttribute3Double",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "lp",
+          "parentName": ""
+        },
+        {
+          "name": "localPositionX",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "lpx",
+          "parentName": "localPosition"
+        },
+        {
+          "name": "localPositionY",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "lpy",
+          "parentName": "localPosition"
+        },
+        {
+          "name": "localPositionZ",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "lpz",
+          "parentName": "localPosition"
+        },
+        {
+          "name": "localScale",
+          "type": 566,
+          "typeName": "kAttribute3Double",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "los",
+          "parentName": ""
+        },
+        {
+          "name": "localScaleX",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "lsx",
+          "parentName": "localScale"
+        },
+        {
+          "name": "localScaleY",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "lsy",
+          "parentName": "localScale"
+        },
+        {
+          "name": "localScaleZ",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "lsz",
+          "parentName": "localScale"
+        },
+        {
+          "name": "lodVisibility",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "lodv",
+          "parentName": ""
+        },
+        {
+          "name": "matrix",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "m",
+          "parentName": ""
+        },
+        {
+          "name": "maxShadingSamples",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "msa",
+          "parentName": ""
+        },
+        {
+          "name": "maxVisibilitySamples",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "mvs",
+          "parentName": ""
+        },
+        {
+          "name": "maxVisibilitySamplesOverride",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "vbo",
+          "parentName": ""
+        },
+        {
+          "name": "message",
+          "type": 580,
+          "typeName": "kMessageAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "msg",
+          "parentName": ""
+        },
+        {
+          "name": "motionBlur",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "mb",
+          "parentName": ""
+        },
+        {
+          "name": "nodeState",
+          "type": 572,
+          "typeName": "kEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "nds",
+          "parentName": ""
+        },
+        {
+          "name": "objectColor",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "oc",
+          "parentName": ""
+        },
+        {
+          "name": "objectColorB",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "obcb",
+          "parentName": "objectColorRGB"
+        },
+        {
+          "name": "objectColorG",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "obcg",
+          "parentName": "objectColorRGB"
+        },
+        {
+          "name": "objectColorR",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "obcr",
+          "parentName": "objectColorRGB"
+        },
+        {
+          "name": "objectColorRGB",
+          "type": 566,
+          "typeName": "kAttribute3Float",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "obcc",
+          "parentName": ""
+        },
+        {
+          "name": "objectGroupId",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gid",
+          "parentName": "objectGroups"
+        },
+        {
+          "name": "objectGroups",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "og",
+          "parentName": "instObjGroups"
+        },
+        {
+          "name": "objectGrpColor",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gco",
+          "parentName": "objectGroups"
+        },
+        {
+          "name": "objectGrpCompList",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gcl",
+          "parentName": "objectGroups"
+        },
+        {
+          "name": "outlinerColor",
+          "type": 566,
+          "typeName": "kAttribute3Float",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "oclr",
+          "parentName": ""
+        },
+        {
+          "name": "outlinerColorB",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "oclrb",
+          "parentName": "outlinerColor"
+        },
+        {
+          "name": "outlinerColorG",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "oclrg",
+          "parentName": "outlinerColor"
+        },
+        {
+          "name": "outlinerColorR",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "oclrr",
+          "parentName": "outlinerColor"
+        },
+        {
+          "name": "overrideColor",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovc",
+          "parentName": "drawOverride"
+        },
+        {
+          "name": "overrideColorA",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovca",
+          "parentName": "drawOverride"
+        },
+        {
+          "name": "overrideColorB",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovcb",
+          "parentName": "overrideColorRGB"
+        },
+        {
+          "name": "overrideColorG",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovcg",
+          "parentName": "overrideColorRGB"
+        },
+        {
+          "name": "overrideColorR",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovcr",
+          "parentName": "overrideColorRGB"
+        },
+        {
+          "name": "overrideColorRGB",
+          "type": 566,
+          "typeName": "kAttribute3Float",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovrgb",
+          "parentName": "drawOverride"
+        },
+        {
+          "name": "overrideDisplayType",
+          "type": 572,
+          "typeName": "kEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovdt",
+          "parentName": "drawOverride"
+        },
+        {
+          "name": "overrideEnabled",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ove",
+          "parentName": "drawOverride"
+        },
+        {
+          "name": "overrideLevelOfDetail",
+          "type": 572,
+          "typeName": "kEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovlod",
+          "parentName": "drawOverride"
+        },
+        {
+          "name": "overridePlayback",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovp",
+          "parentName": "drawOverride"
+        },
+        {
+          "name": "overrideRGBColors",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovrgbf",
+          "parentName": "drawOverride"
+        },
+        {
+          "name": "overrideShading",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovs",
+          "parentName": "drawOverride"
+        },
+        {
+          "name": "overrideTexturing",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovt",
+          "parentName": "drawOverride"
+        },
+        {
+          "name": "overrideVisibility",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovv",
+          "parentName": "drawOverride"
+        },
+        {
+          "name": "parentInverseMatrix",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": true,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "pim",
+          "parentName": ""
+        },
+        {
+          "name": "parentMatrix",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": true,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "pm",
+          "parentName": ""
+        },
+        {
+          "name": "pickTexture",
+          "type": 580,
+          "typeName": "kMessageAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "pte",
+          "parentName": ""
+        },
+        {
+          "name": "primaryVisibility",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "vis",
+          "parentName": ""
+        },
+        {
+          "name": "publishedNode",
+          "type": 580,
+          "typeName": "kMessageAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "pnod",
+          "parentName": "publishedNodeInfo"
+        },
+        {
+          "name": "publishedNodeInfo",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "pni",
+          "parentName": ""
+        },
+        {
+          "name": "publishedNodeType",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "pntp",
+          "parentName": "publishedNodeInfo"
+        },
+        {
+          "name": "receiveShadows",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "rcsh",
+          "parentName": ""
+        },
+        {
+          "name": "referenceObject",
+          "type": 580,
+          "typeName": "kMessageAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "rob",
+          "parentName": ""
+        },
+        {
+          "name": "renderInfo",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ri",
+          "parentName": ""
+        },
+        {
+          "name": "renderLayerColor",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "rlc",
+          "parentName": "renderLayerInfo"
+        },
+        {
+          "name": "renderLayerId",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "rli",
+          "parentName": "renderLayerInfo"
+        },
+        {
+          "name": "renderLayerInfo",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "rlio",
+          "parentName": ""
+        },
+        {
+          "name": "renderLayerRenderable",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "rlr",
+          "parentName": "renderLayerInfo"
+        },
+        {
+          "name": "renderType",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "rt",
+          "parentName": ""
+        },
+        {
+          "name": "renderVolume",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "rv",
+          "parentName": ""
+        },
+        {
+          "name": "rmbCommand",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "rmc",
+          "parentName": ""
+        },
+        {
+          "name": "selectionChildHighlighting",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "sech",
+          "parentName": ""
+        },
+        {
+          "name": "shadingSamples",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ssa",
+          "parentName": ""
+        },
+        {
+          "name": "shadingSamplesOverride",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "sso",
+          "parentName": ""
+        },
+        {
+          "name": "stDriver",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stDriver",
+          "parentName": ""
+        },
+        {
+          "name": "stDriverClosestPoint",
+          "type": 566,
+          "typeName": "kAttribute3Float",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stDriverClosestPoint",
+          "parentName": "stDriver"
+        },
+        {
+          "name": "stDriverClosestPoint0",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stDriverClosestPoint0",
+          "parentName": "stDriverClosestPoint"
+        },
+        {
+          "name": "stDriverClosestPoint1",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stDriverClosestPoint1",
+          "parentName": "stDriverClosestPoint"
+        },
+        {
+          "name": "stDriverClosestPoint2",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stDriverClosestPoint2",
+          "parentName": "stDriverClosestPoint"
+        },
+        {
+          "name": "stDriverCurve",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stDriverCurve",
+          "parentName": "stDriver"
+        },
+        {
+          "name": "stDriverCurveLength",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stDriverCurveLength",
+          "parentName": "stDriver"
+        },
+        {
+          "name": "stDriverCurveLengthParamBlend",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stDriverCurveLengthParamBlend",
+          "parentName": "stDriver"
+        },
+        {
+          "name": "stDriverCurveParam",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stDriverCurveParam",
+          "parentName": "stDriver"
+        },
+        {
+          "name": "stDriverCurveReverseBlend",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stDriverCurveReverseBlend",
+          "parentName": "stDriver"
+        },
+        {
+          "name": "stDriverLocalOffsetMatrix",
+          "type": 578,
+          "typeName": "kMatrixAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stDriverLocalOffsetMatrix",
+          "parentName": "stDriver"
+        },
+        {
+          "name": "stDriverOutMatrix",
+          "type": 578,
+          "typeName": "kMatrixAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stDriverOutMatrix",
+          "parentName": "stDriver"
+        },
+        {
+          "name": "stDriverPointMatrix",
+          "type": 578,
+          "typeName": "kMatrixAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stDriverPointMatrix",
+          "parentName": "stDriver"
+        },
+        {
+          "name": "stDriverRefLengthCurve",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stDriverRefLengthCurve",
+          "parentName": "stDriver"
+        },
+        {
+          "name": "stDriverSurface",
+          "type": 576,
+          "typeName": "kGenericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stDriverSurface",
+          "parentName": "stDriver"
+        },
+        {
+          "name": "stDriverType",
+          "type": 572,
+          "typeName": "kEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stDriverType",
+          "parentName": "stDriver"
+        },
+        {
+          "name": "stDriverUpCurve",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stDriverUpCurve",
+          "parentName": "stDriver"
+        },
+        {
+          "name": "stDriverUpdateParamsInEditMode",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stDriverUpdateParamsInEditMode",
+          "parentName": "stDriver"
+        },
+        {
+          "name": "stDriverUseClosestPoint",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stDriverUseClosestPoint",
+          "parentName": "stDriver"
+        },
+        {
+          "name": "stDriverWeight",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stDriverWeight",
+          "parentName": "stDriver"
+        },
+        {
+          "name": "stEditMode",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stEditMode",
+          "parentName": ""
+        },
+        {
+          "name": "stFinalDriverMatrix",
+          "type": 578,
+          "typeName": "kMatrixAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "stFinalDriverMatrix",
+          "parentName": ""
+        },
+        {
+          "name": "stFinalLocalMatrix",
+          "type": 578,
+          "typeName": "kMatrixAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "stFinalLocalMatrix",
+          "parentName": ""
+        },
+        {
+          "name": "stLinkNameToNode",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stLinkNameToNode",
+          "parentName": ""
+        },
+        {
+          "name": "stName",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stName",
+          "parentName": ""
+        },
+        {
+          "name": "stRadius",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stRadius",
+          "parentName": ""
+        },
+        {
+          "name": "stUiData",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stUiData",
+          "parentName": ""
+        },
+        {
+          "name": "template",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "tmp",
+          "parentName": ""
+        },
+        {
+          "name": "templateName",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "tna",
+          "parentName": ""
+        },
+        {
+          "name": "templatePath",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "tpt",
+          "parentName": ""
+        },
+        {
+          "name": "templateVersion",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "tpv",
+          "parentName": ""
+        },
+        {
+          "name": "uiTreatment",
+          "type": 572,
+          "typeName": "kEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "uit",
+          "parentName": ""
+        },
+        {
+          "name": "underWorldObject",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "uwo",
+          "parentName": ""
+        },
+        {
+          "name": "useObjectColor",
+          "type": 572,
+          "typeName": "kEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "uoc",
+          "parentName": ""
+        },
+        {
+          "name": "useOutlinerColor",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "uocol",
+          "parentName": ""
+        },
+        {
+          "name": "viewMode",
+          "type": 572,
+          "typeName": "kEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "vwm",
+          "parentName": ""
+        },
+        {
+          "name": "viewName",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "vwn",
+          "parentName": ""
+        },
+        {
+          "name": "visibility",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "v",
+          "parentName": ""
+        },
+        {
+          "name": "visibleFraction",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "vf",
+          "parentName": ""
+        },
+        {
+          "name": "visibleInReflections",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "vir",
+          "parentName": ""
+        },
+        {
+          "name": "visibleInRefractions",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "vif",
+          "parentName": ""
+        },
+        {
+          "name": "volumeSamples",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "vss",
+          "parentName": ""
+        },
+        {
+          "name": "volumeSamplesOverride",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "vso",
+          "parentName": ""
+        },
+        {
+          "name": "wireColorB",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "wfcb",
+          "parentName": "wireColorRGB"
+        },
+        {
+          "name": "wireColorG",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "wfcg",
+          "parentName": "wireColorRGB"
+        },
+        {
+          "name": "wireColorR",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "wfcr",
+          "parentName": "wireColorRGB"
+        },
+        {
+          "name": "wireColorRGB",
+          "type": 566,
+          "typeName": "kAttribute3Float",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "wfcc",
+          "parentName": ""
+        },
+        {
+          "name": "worldInverseMatrix",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": true,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "wim",
+          "parentName": ""
+        },
+        {
+          "name": "worldMatrix",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": true,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "wm",
+          "parentName": ""
+        },
+        {
+          "name": "worldPosition",
+          "type": 566,
+          "typeName": "kAttribute3Double",
+          "isArray": true,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "wp",
+          "parentName": ""
+        },
+        {
+          "name": "worldPositionX",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "wpx",
+          "parentName": "worldPosition"
+        },
+        {
+          "name": "worldPositionY",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "wpy",
+          "parentName": "worldPosition"
+        },
+        {
+          "name": "worldPositionZ",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "wpz",
+          "parentName": "worldPosition"
+        }
+      ]
+    }
+  },
+  "10": {
+    "strataShape": {
+      "typeName": "strataShape",
+      "apiTypeConstant": 0,
+      "apiTypeStr": "kBase",
+      "typeIdInt": 1191075,
+      "mfnStr": "MFnBase",
+      "bases": [
+        "_BASE_",
+        "containerBase",
+        "entity",
+        "dagNode",
+        "shape",
+        "geometryShape",
+        "deformableShape",
+        "controlPoint",
+        "surfaceShape",
+        "THsurfaceShape"
+      ],
+      "isAbstract": false,
+      "attrDatas": [
+        {
+          "name": "antialiasingLevel",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gal",
+          "parentName": ""
+        },
+        {
+          "name": "asBackground",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "asbg",
+          "parentName": ""
+        },
+        {
+          "name": "binMembership",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "bnm",
+          "parentName": ""
+        },
+        {
+          "name": "blackBox",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "bbx",
+          "parentName": ""
+        },
+        {
+          "name": "blindDataNodes",
+          "type": 580,
+          "typeName": "kMessageAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": false,
+          "shortName": "bn",
+          "parentName": ""
+        },
+        {
+          "name": "borderConnections",
+          "type": 580,
+          "typeName": "kMessageAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "boc",
+          "parentName": ""
+        },
+        {
+          "name": "boundingBox",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bb",
+          "parentName": ""
+        },
+        {
+          "name": "boundingBoxCenterX",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bcx",
+          "parentName": "center"
+        },
+        {
+          "name": "boundingBoxCenterY",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bcy",
+          "parentName": "center"
+        },
+        {
+          "name": "boundingBoxCenterZ",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bcz",
+          "parentName": "center"
+        },
+        {
+          "name": "boundingBoxMax",
+          "type": 566,
+          "typeName": "kAttribute3Double",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bbmx",
+          "parentName": "boundingBox"
+        },
+        {
+          "name": "boundingBoxMaxX",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bbxx",
+          "parentName": "boundingBoxMax"
+        },
+        {
+          "name": "boundingBoxMaxY",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bbxy",
+          "parentName": "boundingBoxMax"
+        },
+        {
+          "name": "boundingBoxMaxZ",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bbxz",
+          "parentName": "boundingBoxMax"
+        },
+        {
+          "name": "boundingBoxMin",
+          "type": 566,
+          "typeName": "kAttribute3Double",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bbmn",
+          "parentName": "boundingBox"
+        },
+        {
+          "name": "boundingBoxMinX",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bbnx",
+          "parentName": "boundingBoxMin"
+        },
+        {
+          "name": "boundingBoxMinY",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bbny",
+          "parentName": "boundingBoxMin"
+        },
+        {
+          "name": "boundingBoxMinZ",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bbnz",
+          "parentName": "boundingBoxMin"
+        },
+        {
+          "name": "boundingBoxScale",
+          "type": 566,
+          "typeName": "kAttribute3Float",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "bbs",
+          "parentName": ""
+        },
+        {
+          "name": "boundingBoxScaleX",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "bscx",
+          "parentName": "boundingBoxScale"
+        },
+        {
+          "name": "boundingBoxScaleY",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "bscy",
+          "parentName": "boundingBoxScale"
+        },
+        {
+          "name": "boundingBoxScaleZ",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "bscz",
+          "parentName": "boundingBoxScale"
+        },
+        {
+          "name": "boundingBoxSize",
+          "type": 566,
+          "typeName": "kAttribute3Double",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bbsi",
+          "parentName": "boundingBox"
+        },
+        {
+          "name": "boundingBoxSizeX",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bbsx",
+          "parentName": "boundingBoxSize"
+        },
+        {
+          "name": "boundingBoxSizeY",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bbsy",
+          "parentName": "boundingBoxSize"
+        },
+        {
+          "name": "boundingBoxSizeZ",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "bbsz",
+          "parentName": "boundingBoxSize"
+        },
+        {
+          "name": "caching",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "cch",
+          "parentName": ""
+        },
+        {
+          "name": "castsShadows",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "csh",
+          "parentName": ""
+        },
+        {
+          "name": "center",
+          "type": 566,
+          "typeName": "kAttribute3Double",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "c",
+          "parentName": ""
+        },
+        {
+          "name": "clamped",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "clam",
+          "parentName": "colorSet"
+        },
+        {
+          "name": "collisionDepthVelocityIncrement",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "cdvi",
+          "parentName": ""
+        },
+        {
+          "name": "collisionDepthVelocityIncrement_FloatValue",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "cdvifv",
+          "parentName": "collisionDepthVelocityIncrement"
+        },
+        {
+          "name": "collisionDepthVelocityIncrement_Interp",
+          "type": 572,
+          "typeName": "kEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "cdvii",
+          "parentName": "collisionDepthVelocityIncrement"
+        },
+        {
+          "name": "collisionDepthVelocityIncrement_Position",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "cdvip",
+          "parentName": "collisionDepthVelocityIncrement"
+        },
+        {
+          "name": "collisionDepthVelocityMultiplier",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "cdvm",
+          "parentName": ""
+        },
+        {
+          "name": "collisionDepthVelocityMultiplier_FloatValue",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "cdvmfv",
+          "parentName": "collisionDepthVelocityMultiplier"
+        },
+        {
+          "name": "collisionDepthVelocityMultiplier_Interp",
+          "type": 572,
+          "typeName": "kEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "cdvmi",
+          "parentName": "collisionDepthVelocityMultiplier"
+        },
+        {
+          "name": "collisionDepthVelocityMultiplier_Position",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "cdvmp",
+          "parentName": "collisionDepthVelocityMultiplier"
+        },
+        {
+          "name": "collisionOffsetVelocityIncrement",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "covi",
+          "parentName": ""
+        },
+        {
+          "name": "collisionOffsetVelocityIncrement_FloatValue",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "covifv",
+          "parentName": "collisionOffsetVelocityIncrement"
+        },
+        {
+          "name": "collisionOffsetVelocityIncrement_Interp",
+          "type": 572,
+          "typeName": "kEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "covii",
+          "parentName": "collisionOffsetVelocityIncrement"
+        },
+        {
+          "name": "collisionOffsetVelocityIncrement_Position",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "covip",
+          "parentName": "collisionOffsetVelocityIncrement"
+        },
+        {
+          "name": "collisionOffsetVelocityMultiplier",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "covm",
+          "parentName": ""
+        },
+        {
+          "name": "collisionOffsetVelocityMultiplier_FloatValue",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "covmfv",
+          "parentName": "collisionOffsetVelocityMultiplier"
+        },
+        {
+          "name": "collisionOffsetVelocityMultiplier_Interp",
+          "type": 572,
+          "typeName": "kEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "covmi",
+          "parentName": "collisionOffsetVelocityMultiplier"
+        },
+        {
+          "name": "collisionOffsetVelocityMultiplier_Position",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "covmp",
+          "parentName": "collisionOffsetVelocityMultiplier"
+        },
+        {
+          "name": "colorName",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "clsn",
+          "parentName": "colorSet"
+        },
+        {
+          "name": "colorSet",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "clst",
+          "parentName": ""
+        },
+        {
+          "name": "colorSetPoints",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "clsp",
+          "parentName": "colorSet"
+        },
+        {
+          "name": "colorSetPointsA",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "clpa",
+          "parentName": "colorSetPoints"
+        },
+        {
+          "name": "colorSetPointsB",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "clpb",
+          "parentName": "colorSetPoints"
+        },
+        {
+          "name": "colorSetPointsG",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "clpg",
+          "parentName": "colorSetPoints"
+        },
+        {
+          "name": "colorSetPointsR",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "clpr",
+          "parentName": "colorSetPoints"
+        },
+        {
+          "name": "compInstObjGroups",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ciog",
+          "parentName": ""
+        },
+        {
+          "name": "compObjectGroupId",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "cgid",
+          "parentName": "compObjectGroups"
+        },
+        {
+          "name": "compObjectGroups",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "cog",
+          "parentName": "compInstObjGroups"
+        },
+        {
+          "name": "compObjectGrpCompList",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "cgcl",
+          "parentName": "compObjectGroups"
+        },
+        {
+          "name": "componentTagContents",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gtagcmp",
+          "parentName": "componentTags"
+        },
+        {
+          "name": "componentTagName",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gtagnm",
+          "parentName": "componentTags"
+        },
+        {
+          "name": "componentTags",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gtag",
+          "parentName": ""
+        },
+        {
+          "name": "containerType",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ctyp",
+          "parentName": ""
+        },
+        {
+          "name": "controlPoints",
+          "type": 566,
+          "typeName": "kAttribute3Double",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "cp",
+          "parentName": ""
+        },
+        {
+          "name": "creationDate",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "cdat",
+          "parentName": ""
+        },
+        {
+          "name": "creator",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ctor",
+          "parentName": ""
+        },
+        {
+          "name": "currentColorSet",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ccls",
+          "parentName": ""
+        },
+        {
+          "name": "currentUVSet",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "cuvs",
+          "parentName": ""
+        },
+        {
+          "name": "customTreatment",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ctrt",
+          "parentName": ""
+        },
+        {
+          "name": "depthJitter",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "dej",
+          "parentName": ""
+        },
+        {
+          "name": "displayColorChannel",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "dcc",
+          "parentName": ""
+        },
+        {
+          "name": "displayColors",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "dcol",
+          "parentName": ""
+        },
+        {
+          "name": "displayHWEnvironment",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "dhe",
+          "parentName": ""
+        },
+        {
+          "name": "displayImmediate",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "di",
+          "parentName": ""
+        },
+        {
+          "name": "doubleSided",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ds",
+          "parentName": ""
+        },
+        {
+          "name": "drawOverride",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "do",
+          "parentName": ""
+        },
+        {
+          "name": "extraSampleRate",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "xsr",
+          "parentName": ""
+        },
+        {
+          "name": "featureDisplacement",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "fbda",
+          "parentName": ""
+        },
+        {
+          "name": "frozen",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "fzn",
+          "parentName": ""
+        },
+        {
+          "name": "geometryAntialiasingOverride",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gao",
+          "parentName": ""
+        },
+        {
+          "name": "ghostColorPost",
+          "type": 566,
+          "typeName": "kAttribute3Float",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gac",
+          "parentName": ""
+        },
+        {
+          "name": "ghostColorPostB",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gab",
+          "parentName": "ghostColorPost"
+        },
+        {
+          "name": "ghostColorPostG",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gag",
+          "parentName": "ghostColorPost"
+        },
+        {
+          "name": "ghostColorPostR",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gar",
+          "parentName": "ghostColorPost"
+        },
+        {
+          "name": "ghostColorPre",
+          "type": 566,
+          "typeName": "kAttribute3Float",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gcp",
+          "parentName": ""
+        },
+        {
+          "name": "ghostColorPreB",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gpb",
+          "parentName": "ghostColorPre"
+        },
+        {
+          "name": "ghostColorPreG",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gpg",
+          "parentName": "ghostColorPre"
+        },
+        {
+          "name": "ghostColorPreR",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "grr",
+          "parentName": "ghostColorPre"
+        },
+        {
+          "name": "ghostCustomSteps",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gcs",
+          "parentName": ""
+        },
+        {
+          "name": "ghostDriver",
+          "type": 580,
+          "typeName": "kMessageAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gdr",
+          "parentName": ""
+        },
+        {
+          "name": "ghostFarOpacity",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gfro",
+          "parentName": "ghostOpacityRange"
+        },
+        {
+          "name": "ghostFrames",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gf",
+          "parentName": ""
+        },
+        {
+          "name": "ghostNearOpacity",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gnro",
+          "parentName": "ghostOpacityRange"
+        },
+        {
+          "name": "ghostOpacityRange",
+          "type": 566,
+          "typeName": "kAttribute2Float",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "golr",
+          "parentName": ""
+        },
+        {
+          "name": "ghostPostFrames",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gpof",
+          "parentName": "ghostCustomSteps"
+        },
+        {
+          "name": "ghostPreFrames",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gprf",
+          "parentName": "ghostCustomSteps"
+        },
+        {
+          "name": "ghostUseDriver",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gud",
+          "parentName": ""
+        },
+        {
+          "name": "ghosting",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gh",
+          "parentName": ""
+        },
+        {
+          "name": "ghostingMode",
+          "type": 572,
+          "typeName": "kEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gm",
+          "parentName": ""
+        },
+        {
+          "name": "ghostsStep",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gstp",
+          "parentName": "ghostCustomSteps"
+        },
+        {
+          "name": "hardwareFogMultiplier",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "hfm",
+          "parentName": ""
+        },
+        {
+          "name": "hiddenInOutliner",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "hio",
+          "parentName": ""
+        },
+        {
+          "name": "hideOnPlayback",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "hpb",
+          "parentName": "drawOverride"
+        },
+        {
+          "name": "holdOut",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "hot",
+          "parentName": ""
+        },
+        {
+          "name": "hyperLayout",
+          "type": 580,
+          "typeName": "kMessageAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "hl",
+          "parentName": ""
+        },
+        {
+          "name": "iconName",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "icn",
+          "parentName": ""
+        },
+        {
+          "name": "identification",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "rlid",
+          "parentName": "renderInfo"
+        },
+        {
+          "name": "ignoreHwShader",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ih",
+          "parentName": ""
+        },
+        {
+          "name": "ignoreSelfShadowing",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "iss",
+          "parentName": ""
+        },
+        {
+          "name": "initialSampleRate",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "dsr",
+          "parentName": ""
+        },
+        {
+          "name": "instMaterialAssign",
+          "type": 580,
+          "typeName": "kMessageAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "imtla",
+          "parentName": ""
+        },
+        {
+          "name": "instObjGroups",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "iog",
+          "parentName": ""
+        },
+        {
+          "name": "intermediateObject",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "io",
+          "parentName": ""
+        },
+        {
+          "name": "inverseMatrix",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "im",
+          "parentName": ""
+        },
+        {
+          "name": "isCollapsed",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "isc",
+          "parentName": ""
+        },
+        {
+          "name": "isHierarchicalConnection",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ish",
+          "parentName": ""
+        },
+        {
+          "name": "isHierarchicalNode",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ihn",
+          "parentName": "publishedNodeInfo"
+        },
+        {
+          "name": "isHistoricallyInteresting",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ihi",
+          "parentName": ""
+        },
+        {
+          "name": "layerOverrideColor",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "lovc",
+          "parentName": "renderInfo"
+        },
+        {
+          "name": "layerRenderable",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "rndr",
+          "parentName": "renderInfo"
+        },
+        {
+          "name": "lodVisibility",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "lodv",
+          "parentName": ""
+        },
+        {
+          "name": "matrix",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "m",
+          "parentName": ""
+        },
+        {
+          "name": "maxShadingSamples",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "msa",
+          "parentName": ""
+        },
+        {
+          "name": "maxVisibilitySamples",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "mvs",
+          "parentName": ""
+        },
+        {
+          "name": "maxVisibilitySamplesOverride",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "vbo",
+          "parentName": ""
+        },
+        {
+          "name": "message",
+          "type": 580,
+          "typeName": "kMessageAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "msg",
+          "parentName": ""
+        },
+        {
+          "name": "motionBlur",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "mb",
+          "parentName": ""
+        },
+        {
+          "name": "nodeState",
+          "type": 572,
+          "typeName": "kEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "nds",
+          "parentName": ""
+        },
+        {
+          "name": "normalThreshold",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "nat",
+          "parentName": ""
+        },
+        {
+          "name": "objectColor",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "oc",
+          "parentName": ""
+        },
+        {
+          "name": "objectColorB",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "obcb",
+          "parentName": "objectColorRGB"
+        },
+        {
+          "name": "objectColorG",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "obcg",
+          "parentName": "objectColorRGB"
+        },
+        {
+          "name": "objectColorR",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "obcr",
+          "parentName": "objectColorRGB"
+        },
+        {
+          "name": "objectColorRGB",
+          "type": 566,
+          "typeName": "kAttribute3Float",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "obcc",
+          "parentName": ""
+        },
+        {
+          "name": "objectGroupId",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gid",
+          "parentName": "objectGroups"
+        },
+        {
+          "name": "objectGroups",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "og",
+          "parentName": "instObjGroups"
+        },
+        {
+          "name": "objectGrpColor",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gco",
+          "parentName": "objectGroups"
+        },
+        {
+          "name": "objectGrpCompList",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "gcl",
+          "parentName": "objectGroups"
+        },
+        {
+          "name": "opposite",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "op",
+          "parentName": ""
+        },
+        {
+          "name": "outlinerColor",
+          "type": 566,
+          "typeName": "kAttribute3Float",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "oclr",
+          "parentName": ""
+        },
+        {
+          "name": "outlinerColorB",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "oclrb",
+          "parentName": "outlinerColor"
+        },
+        {
+          "name": "outlinerColorG",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "oclrg",
+          "parentName": "outlinerColor"
+        },
+        {
+          "name": "outlinerColorR",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "oclrr",
+          "parentName": "outlinerColor"
+        },
+        {
+          "name": "overrideColor",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovc",
+          "parentName": "drawOverride"
+        },
+        {
+          "name": "overrideColorA",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovca",
+          "parentName": "drawOverride"
+        },
+        {
+          "name": "overrideColorB",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovcb",
+          "parentName": "overrideColorRGB"
+        },
+        {
+          "name": "overrideColorG",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovcg",
+          "parentName": "overrideColorRGB"
+        },
+        {
+          "name": "overrideColorR",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovcr",
+          "parentName": "overrideColorRGB"
+        },
+        {
+          "name": "overrideColorRGB",
+          "type": 566,
+          "typeName": "kAttribute3Float",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovrgb",
+          "parentName": "drawOverride"
+        },
+        {
+          "name": "overrideDisplayType",
+          "type": 572,
+          "typeName": "kEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovdt",
+          "parentName": "drawOverride"
+        },
+        {
+          "name": "overrideEnabled",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ove",
+          "parentName": "drawOverride"
+        },
+        {
+          "name": "overrideLevelOfDetail",
+          "type": 572,
+          "typeName": "kEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovlod",
+          "parentName": "drawOverride"
+        },
+        {
+          "name": "overridePlayback",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovp",
+          "parentName": "drawOverride"
+        },
+        {
+          "name": "overrideRGBColors",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovrgbf",
+          "parentName": "drawOverride"
+        },
+        {
+          "name": "overrideShading",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovs",
+          "parentName": "drawOverride"
+        },
+        {
+          "name": "overrideTexturing",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovt",
+          "parentName": "drawOverride"
+        },
+        {
+          "name": "overrideVisibility",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ovv",
+          "parentName": "drawOverride"
+        },
+        {
+          "name": "parentInverseMatrix",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": true,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "pim",
+          "parentName": ""
+        },
+        {
+          "name": "parentMatrix",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": true,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "pm",
+          "parentName": ""
+        },
+        {
+          "name": "pickTexture",
+          "type": 580,
+          "typeName": "kMessageAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "pte",
+          "parentName": ""
+        },
+        {
+          "name": "primaryVisibility",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "vis",
+          "parentName": ""
+        },
+        {
+          "name": "publishedNode",
+          "type": 580,
+          "typeName": "kMessageAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "pnod",
+          "parentName": "publishedNodeInfo"
+        },
+        {
+          "name": "publishedNodeInfo",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "pni",
+          "parentName": ""
+        },
+        {
+          "name": "publishedNodeType",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "pntp",
+          "parentName": "publishedNodeInfo"
+        },
+        {
+          "name": "receiveShadows",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "rcsh",
+          "parentName": ""
+        },
+        {
+          "name": "referenceObject",
+          "type": 580,
+          "typeName": "kMessageAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "rob",
+          "parentName": ""
+        },
+        {
+          "name": "relativeTweak",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "rtw",
+          "parentName": ""
+        },
+        {
+          "name": "renderInfo",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ri",
+          "parentName": ""
+        },
+        {
+          "name": "renderLayerColor",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "rlc",
+          "parentName": "renderLayerInfo"
+        },
+        {
+          "name": "renderLayerId",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "rli",
+          "parentName": "renderLayerInfo"
+        },
+        {
+          "name": "renderLayerInfo",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "rlio",
+          "parentName": ""
+        },
+        {
+          "name": "renderLayerRenderable",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "rlr",
+          "parentName": "renderLayerInfo"
+        },
+        {
+          "name": "renderType",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "rt",
+          "parentName": ""
+        },
+        {
+          "name": "renderVolume",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "rv",
+          "parentName": ""
+        },
+        {
+          "name": "representation",
+          "type": 572,
+          "typeName": "kEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "rprt",
+          "parentName": "colorSet"
+        },
+        {
+          "name": "rmbCommand",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "rmc",
+          "parentName": ""
+        },
+        {
+          "name": "selectionChildHighlighting",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "sech",
+          "parentName": ""
+        },
+        {
+          "name": "shadingSamples",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ssa",
+          "parentName": ""
+        },
+        {
+          "name": "shadingSamplesOverride",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "sso",
+          "parentName": ""
+        },
+        {
+          "name": "smoothShading",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "smo",
+          "parentName": ""
+        },
+        {
+          "name": "stData",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stData",
+          "parentName": ""
+        },
+        {
+          "name": "stExp",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stExp",
+          "parentName": "stData"
+        },
+        {
+          "name": "stGraph",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": false,
+          "shortName": "stGraph",
+          "parentName": ""
+        },
+        {
+          "name": "stInput",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": false,
+          "shortName": "stInput",
+          "parentName": ""
+        },
+        {
+          "name": "stOpName",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stOpName",
+          "parentName": ""
+        },
+        {
+          "name": "stOpNameOut",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "stOpNameOut",
+          "parentName": ""
+        },
+        {
+          "name": "stOutput",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "stOutput",
+          "parentName": ""
+        },
+        {
+          "name": "template",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "tmp",
+          "parentName": ""
+        },
+        {
+          "name": "templateName",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "tna",
+          "parentName": ""
+        },
+        {
+          "name": "templatePath",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "tpt",
+          "parentName": ""
+        },
+        {
+          "name": "templateVersion",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "tpv",
+          "parentName": ""
+        },
+        {
+          "name": "textureThreshold",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "fth",
+          "parentName": ""
+        },
+        {
+          "name": "tweak",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "tw",
+          "parentName": ""
+        },
+        {
+          "name": "tweakLocation",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": false,
+          "shortName": "twl",
+          "parentName": ""
+        },
+        {
+          "name": "uiTreatment",
+          "type": 572,
+          "typeName": "kEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "uit",
+          "parentName": ""
+        },
+        {
+          "name": "useObjectColor",
+          "type": 572,
+          "typeName": "kEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "uoc",
+          "parentName": ""
+        },
+        {
+          "name": "useOutlinerColor",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "uocol",
+          "parentName": ""
+        },
+        {
+          "name": "uvPivot",
+          "type": 566,
+          "typeName": "kAttribute2Double",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "pv",
+          "parentName": ""
+        },
+        {
+          "name": "uvPivotX",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "pvx",
+          "parentName": "uvPivot"
+        },
+        {
+          "name": "uvPivotY",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "pvy",
+          "parentName": "uvPivot"
+        },
+        {
+          "name": "uvSet",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "uvst",
+          "parentName": ""
+        },
+        {
+          "name": "uvSetName",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "uvsn",
+          "parentName": "uvSet"
+        },
+        {
+          "name": "uvSetPoints",
+          "type": 566,
+          "typeName": "kAttribute2Float",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "uvsp",
+          "parentName": "uvSet"
+        },
+        {
+          "name": "uvSetPointsU",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "uvpu",
+          "parentName": "uvSetPoints"
+        },
+        {
+          "name": "uvSetPointsV",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "uvpv",
+          "parentName": "uvSetPoints"
+        },
+        {
+          "name": "uvSetTweakLocation",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": false,
+          "shortName": "uvtw",
+          "parentName": "uvSet"
+        },
+        {
+          "name": "viewMode",
+          "type": 572,
+          "typeName": "kEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "vwm",
+          "parentName": ""
+        },
+        {
+          "name": "viewName",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "vwn",
+          "parentName": ""
+        },
+        {
+          "name": "visibility",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "v",
+          "parentName": ""
+        },
+        {
+          "name": "visibleFraction",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "vf",
+          "parentName": ""
+        },
+        {
+          "name": "visibleInReflections",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "vir",
+          "parentName": ""
+        },
+        {
+          "name": "visibleInRefractions",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "vif",
+          "parentName": ""
+        },
+        {
+          "name": "volumeSamples",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "vss",
+          "parentName": ""
+        },
+        {
+          "name": "volumeSamplesOverride",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "vso",
+          "parentName": ""
+        },
+        {
+          "name": "weights",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "wt",
+          "parentName": ""
+        },
+        {
+          "name": "wireColorB",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "wfcb",
+          "parentName": "wireColorRGB"
+        },
+        {
+          "name": "wireColorG",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "wfcg",
+          "parentName": "wireColorRGB"
+        },
+        {
+          "name": "wireColorR",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "wfcr",
+          "parentName": "wireColorRGB"
+        },
+        {
+          "name": "wireColorRGB",
+          "type": 566,
+          "typeName": "kAttribute3Float",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "wfcc",
+          "parentName": ""
+        },
+        {
+          "name": "worldInverseMatrix",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": true,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "wim",
+          "parentName": ""
+        },
+        {
+          "name": "worldMatrix",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": true,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "wm",
+          "parentName": ""
+        },
+        {
+          "name": "xValue",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "xv",
+          "parentName": "controlPoints"
+        },
+        {
+          "name": "yValue",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "yv",
+          "parentName": "controlPoints"
+        },
+        {
+          "name": "zValue",
+          "type": 573,
+          "typeName": "kDoubleLinearAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "zv",
+          "parentName": "controlPoints"
+        }
+      ]
+    }
+  }
+}

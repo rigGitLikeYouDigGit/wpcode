@@ -91,6 +91,35 @@ class RampPlug(object):
 		return self._Point(self.root, id)
 
 
+class DGDagModifier(om.MDagModifier):
+	"""ಠ_ಠ
+	this actually works quite well
+	"""
+	def __init__(self):
+		super().__init__()
+		self._dgMod = om.MDGModifier()
+	def createNode(self, nodeTypeNameOrId, parent=om.MObject.kNullObj):
+		try:
+			return super().createNode(nodeTypeNameOrId, parent)
+		except TypeError:
+			pass
+		try:
+			return self._dgMod.createNode(nodeTypeNameOrId)
+		except:
+			log("proper type error raised when trying to create with combined modifiers")
+			raise
+	def deleteNode(self, node:om.MObject):
+		super().deleteNode(node, False) # do NOT include empty dag parents by default
+
+	def doIt(self, *args, **kwargs):
+		super().doIt()
+		self._dgMod.doIt()
+	def undoIt(self, *args, **kwargs):
+		super().undoIt()
+		self._dgMod.undoIt()
+
+
+
 
 
 # nodes
@@ -166,12 +195,16 @@ class WNMeta(type):
 		"""return a wrapper class for the given mobject
 		bit more involved if we don't know the string type
 		"""
+		mfn = om.MFnDependencyNode(mobj)
+		if result := WN.typeIdIntWNClassMap.get(mfn.typeId.id()):
+			return result
 		apiType = mobj.apiType()
 		if result := WN.apiTypeWNClassMap.get(apiType):
 			#log("result", result)
 			return result
-		className = api.nodeTypeFromMObject(mobj)
+		#className = api.nodeTypeFromMObject(mobj)
 		#log("className", className)
+		className = mfn.typeName
 		return cls.retriever.getNodeCls(className) or WN
 
 		try:
@@ -355,17 +388,32 @@ class WN( # short for WePresentNode
 	typeName = None
 	apiTypeInt = None
 	apiTypeStr = None
+	typeIdInt : int = None # master, if node class has a typeId, obviously use that
+	@classmethod
+	def typeId(cls)->om.MTypeId:
+		return om.MTypeId(int)
 	MFnCls = om.MFnDependencyNode
 
 	clsIsDag = False
 
 
 	apiTypeWNClassMap : dict[int, type[WN]] = {}
-	nodeTypeNameWNClassMap : dict[str, type[WN]] = {}
+	#nodeTypeNameWNClassMap : dict[str, type[WN]] = {} # replace with MNodeClass
+	typeIdIntWNClassMap : dict[int, type[WN]] = {}
 	def __init_subclass__(cls, **kwargs):
+		"""happily, if you subclass a generated Node class and
+		don't redefine any of the type constants here, your subclass
+		will still be preferred for that type.
+
+		And I *think* it's guaranteed that only leaf / real node classes
+		will even have MTypeIds anyway, so we shouldn't need to worry
+		about intermediate parent classes taking priority when they're defined.
+		"""
 		if cls.apiTypeInt is not None:
 			cls.apiTypeWNClassMap[cls.apiTypeInt] = cls
-			cls.nodeTypeNameWNClassMap[cls.__name__] = cls
+			#cls.nodeTypeNameWNClassMap[cls.__name__] = cls
+		if cls.typeId is not None:
+			cls.typeIdWNClassMap[cls.typeIdInt] = cls
 
 
 	NODE_DATA_ATTR = "_nodeAuxData"
@@ -382,7 +430,10 @@ class WN( # short for WePresentNode
 
 	#endregion
 
-
+	@classmethod
+	def wrapperExistsForNodeType(cls, nodeType:(int, str)):
+		if(isinstance(nodeType, str)):
+			return
 	def __init__(self, node:om.MObject, **kwargs):
 		"""init here is never called directly, always filtered to an MObject
 		through metaclass
@@ -494,35 +545,35 @@ class WN( # short for WePresentNode
 		if dgmod is passed, add actions to it - otherwise immediately
 		execute
 
-		TODO: finesse logic around MDGmod vs MDagmod -
-			might need an extra cache map of typeName to constant?
+		OK important technology:
+			DGModifier raises TypeError if you pass it any dag node type
+			DagModifier raises TypeError if you pass it a non-dag node type
+		so there isn't any good way to only use one or the other as a default argument.
+		we use the strange combined type DGDagModifier from above
+
+		TODO: semantics around what node gets returned when you do (EG):
+			WN.createNode("mesh", "myHappyMesh")
+		we should return the WN-wrapped mesh shape node, named "myHappyMeshShape",
+		under a new transform (under the world) named "myHappyMesh"
+
+		check if the typeId returned by the modifier matches the node type created
 		"""
 
-		leafMfn = api.getCache().nodeTypeLeafMFnMap.get(nodeType)
-		if leafMfn is None: # you're on your own, just assume DGMod
-			opMod = dgMod_ or om.MDGModifier()
-		else:
-			if issubclass(leafMfn, om.MFnDagNode):
-				opMod = dgMod_ or om.MDagModifier()
-			else:
-				opMod = dgMod_ or om.MDGModifier()
+		# check that desired node type is valid
+		nc = om.MNodeClass(nodeType)
+		if(nc.typeId.id() == 0): # invalid type
+			raise TypeError("cannot create node of unknown type: " + nodeType)
 
-		name = name or nodeType
-
-
-		log("op mod", opMod)
+		opMod = dgMod_ or DGDagModifier()
+		name = name or nodeType + str(1)
 
 		if parent_ is not None:
 			parent_ = filterToMObject(parent_)
 
-		if(isinstance(opMod, om.MDagModifier)):
-			newObj = opMod.createNode(
-				#om.MTypeId(cls.apiTypeInt),
-				#cls.apiTypeStr,
-				nodeType,
-				parent_ or om.MObject.kNullObj)
-		else:
-			newObj = opMod.createNode(nodeType)
+		newObj = opMod.createNode(
+			nc.typeId,
+			parent_ or om.MObject.kNullObj)
+
 		opMod.renameNode(newObj, name)
 
 		if(dgMod_ is None):

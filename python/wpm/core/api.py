@@ -166,6 +166,7 @@ def getMPlug(plug:(str, om.MPlug, PlugBase))->om.MPlug:
 def nodeTypeFromMObject(mobj:om.MObject)->str:
 	"""return a nodeTypeName string that can be passed to cmds.createNode
 	"""
+	return om.MFnDependencyNode(mobj).typeName
 	# trying something quite simple here -
 	typeName = mobj.apiTypeStr[1].lower() + mobj.apiTypeStr[2:]
 	return typeName

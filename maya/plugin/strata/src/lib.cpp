@@ -7,17 +7,19 @@ namespace ed {
 
 	typedef unsigned int uint;
 
+	BETTER_ENUM(STDriverType, int, point, line, face); // used in maya enum attr
+
 	/* handy way to work more easily with vertex buffer memory - cast
 	it to vector of float types like this */
 	struct Float2
 	{
 		Float2() {}
 		Float2(float x, float y)
-			: x(x), y(y) {}
+			: x(static_cast<float>(x)), y(static_cast<float>(y)) {}
 		Float2(MVector v)
-			: x(v[0]), y(v[1]) {}
+			: x(static_cast<float>(v[0])), y(static_cast<float>(v[1])) {}
 		Float2(MPoint v)
-			: x(v[0]), y(v[1]) {}
+			: x(static_cast<float>(v[0])), y(static_cast<float>(v[1])) {}
 		float x;
 		float y;
 	};
@@ -25,11 +27,11 @@ namespace ed {
 	{
 		Float3() {}
 		Float3(float x, float y, float z)
-			: x(x), y(y), z(z) {}
+			: x(static_cast<float>(x)), y(static_cast<float>(y)), z(static_cast<float>(z)) {}
 		Float3(MVector v)
-			: x(v[0]), y(v[1]), z(v[2]) {}
+			: x(static_cast<float>(v[0])), y(static_cast<float>(v[1])), z(static_cast<float>(v[2])) {}
 		Float3(MPoint v)
-			: x(v[0]), y(v[1]), z(v[2]) {}
+			: x(static_cast<float>(v[0])), y(static_cast<float>(v[1])), z(static_cast<float>(v[2])) {}
 		float x;
 		float y;
 		float z;
@@ -44,7 +46,7 @@ namespace ed {
 	*/
 
 	template<typename T>
-	T* quatTo4x4Mat(T* quat, T* m) {
+	T* quatTo4x4Mat(T* q, T* m) {
 		// from the id software paper SIMD-From-Quaternion-to-Matrix-and-Back
 
 		// we expect m to be 4x4, no interaction with 4th row or column
@@ -335,16 +337,16 @@ namespace ed {
 		return out;
 	}
 
-	MMatrix interpolateMMatrixArray(std::vector<MMatrix>& mmatrixArr, MMatrix& out, float t) {
+	static inline MMatrix interpolateMMatrixArray(std::vector<MMatrix>& mmatrixArr, MMatrix& out, float t) {
 		/* assuming steadily spaced keypoints in arr, interpolate at param t
 		slerp rotation component
 		*/
-		t = fmin(fmax(t, 0.0), 1.0);
-		
+		t = fmin(fmax(t, 0.0f), 1.0f);
+
 		int start = static_cast<int>(mmatrixArr.size() * t);
 		int end = static_cast<int>(mmatrixArr.size() * t) + 1;
 		float fraction = mmatrixArr.size() * t - start;
-		
+
 		double quatA[4];
 		double quatB[4];
 		x4MatToQuat<double>(MMatrixFlatData(mmatrixArr[start]), quatA);
@@ -361,8 +363,5 @@ namespace ed {
 		);
 		return out;
 	}
-
-
-
 
 }

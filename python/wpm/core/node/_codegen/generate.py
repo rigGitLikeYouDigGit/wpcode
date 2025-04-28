@@ -66,6 +66,7 @@ class NodeData:
 	typeName:str
 	apiTypeConstant:int
 	apiTypeStr : str
+	typeIdInt : int
 	mfnStr : str
 	bases: tuple[str] = ()
 	isAbstract:bool = False
@@ -123,7 +124,7 @@ class NodeBase:
 
 
 
-jsonPath = Path(__file__).parent / "nodeData.json"
+DEFAULT_NODE_JSON_PATH = Path(__file__).parent / "nodeData.json"
 
 templatePath = Path(__file__).parent/ "template.py"
 templateStr = templatePath.read_text()
@@ -291,7 +292,9 @@ def genNodeFileStr(data:NodeData,
 def genNodes(#project:CodeGenProject
 		genDir:Path = Path(__file__).parent.parent / "gen",
 		onlyTransform=False,
-		onlyBase=False
+		onlyBase=False,
+		jsonPath=DEFAULT_NODE_JSON_PATH,
+		refreshGenInitFile=True
              ):
 	"""generate nodes from json data"""
 
@@ -355,6 +358,18 @@ def genNodes(#project:CodeGenProject
 		pass
 	print("generated {} nodes in {}".format(
 		len(targetNodes), time.time() - genStartTime) )
+
+	if refreshGenInitFile:
+		# first recreate main generated init file
+		processGenInitFile(genDir / "__init__.py", genDir)
+
+		# import gen catalogue to author dir init file
+		processGenInitFile(
+			authorDir / "__init__.py", authorDir,
+			extraImports=[Import(fromModule="..gen", module="Catalogue", alias="GenCatalogue")],
+			catalogueBases=("GenCatalogue",)
+		)
+
 
 def processGenInitFile(initFile:Path,
                        gatherDir:Path,
@@ -431,17 +446,11 @@ if __name__ == '__main__':
 
 	genNodes(
 		onlyTransform=False,
-		onlyBase=False
+		onlyBase=False,
+
+		refreshGenInitFile=True
 	)
 
-	processGenInitFile(genDir / "__init__.py", genDir)
-
-	# import gen catalogue to author init
-	processGenInitFile(
-		authorDir / "__init__.py", authorDir,
-		extraImports=[Import(fromModule="..gen", module="Catalogue", alias="GenCatalogue")],
-		catalogueBases=("GenCatalogue",)
-	)
 
 
 

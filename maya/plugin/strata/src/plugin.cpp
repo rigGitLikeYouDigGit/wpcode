@@ -79,6 +79,10 @@ static MString sCustomSpriteShaderDrawdbClassification("drawdb/shader/surface/cu
 static const MString svp2BlinnShaderRegistrantId("vp2BlinnShaderRegistrantId");
 static const MString GLRegistrandId("GLLocatorNodePlugin");
 
+/* strata draw DB strings*/
+static const MString sDrawDbClassification("drawdb/geometry/strataShapeNodeOverride");
+static const MString sDrawRegistrantId("strataShapeNodeOverridePlugin");
+
 MStatus initializePlugin( MObject obj ){
 
     DEBUGS("initialising strata")
@@ -120,46 +124,25 @@ MStatus initializePlugin( MObject obj ){
     REGISTER_NODE(StrataElementOpNode);
     s = fnPlugin.registerNode(StrataElementOpNode::kNODE_NAME, StrataElementOpNode::kNODE_ID, StrataElementOpNode::creator, StrataElementOpNode::initialize); if (MS::kSuccess != s) {
         cerr << 121 << "cannot register node " << StrataElementOpNode::kNODE_NAME; return MS::kFailure;
-    };;
+    };
     
-    //REGISTER_NODE(StrataShapeNode);
-    fnPlugin.registerShape(
+
+    /////// SHAPE NODE /////////
+    s = fnPlugin.registerShape(
         StrataShapeNode::kNODE_NAME,
         StrataShapeNode::kNODE_ID,
         StrataShapeNode::creator,
         StrataShapeNode::initialize,
-        StrataShapeUI::creator,
+        //StrataShapeUI::creator,
+        nullptr, // apparently don't need the dumb legacy creator after all
         &StrataShapeNode::drawDbClassification
     );
+    MCHECK(s, "ERROR registering Strata shape node");
 
-
-
-    ////// strataCurve node
-    //s = fnPlugin.registerNode(
-    //    StrataCurve::kNODE_NAME,
-    //    StrataCurve::kNODE_ID,
-    //    StrataCurve::creator,
-    //    StrataCurve::initialize,
-    //    MPxNode::kDependNode
-    //    //&StrataPoint::drawDbClassification
-    //);
-    //if (MS::kSuccess != s) {
-    //    cerr << 82 << "failed to register node type " + StrataCurve::kNODE_NAME;
-    //    return MS::kFailure;
-    //};
-
-    //// strataSurface
-    //s = fnPlugin.registerShape(
-    //    StrataSurface::kNODE_NAME,
-    //    StrataSurface::kNODE_ID,
-    //    StrataSurface::creator,
-    //    StrataSurface::initialize,
-    //    nullptr
-    //);
-    //if (MS::kSuccess != s) {
-    //    cerr << 82 << "failed to register node type " + StrataSurface::kNODE_NAME;
-    //    return MS::kFailure;
-    //};
+    s = MHWRender::MDrawRegistry::registerGeometryOverrideCreator(sDrawDbClassification,
+        sDrawRegistrantId,
+        StrataShapeGeometryOverride::Creator);
+    MCHECK(s, "ERROR registering Strata shape geometry override");
 
     return s;
 }
@@ -170,21 +153,14 @@ MStatus uninitializePlugin( MObject obj ){
     s = MS::kSuccess;
     MFnPlugin fnPlugin(obj);
 
+    s = MHWRender::MDrawRegistry::deregisterGeometryOverrideCreator(sDrawDbClassification, sDrawRegistrantId);
+    MCHECK(s, "could not deregister drawOverrideCreator for Strata shape");
+
     s = MHWRender::MDrawRegistry::deregisterDrawOverrideCreator(
         StrataPointNode::drawDbClassification,
         StrataPointNode::drawRegistrantId);
-    if (!s) {
-        s.perror("could not deregister drawOverride for StrataPoint");
-        return s;
-    }
+    MCHECK(s, "could not deregister drawOverride for StrataPoint");
 
-    /*
-    DEREGISTER_NODE(StrataPoint);
-    DEREGISTER_NODE(StrataCurve);
-    DEREGISTER_NODE(StrataSurface);*/
-
-    //DEREGISTER_NODE(StrataGraphNode);
-    //DEREGISTER_NODE(StrataOpNodeBase);
     DEREGISTER_NODE(StrataPointNode);
 
     DEREGISTER_NODE(StrataElementOpNode);

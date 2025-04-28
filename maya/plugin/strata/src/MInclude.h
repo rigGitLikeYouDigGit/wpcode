@@ -4,6 +4,14 @@
 // maya h files are pretty lightweight
 // so just include all the main ones
 
+/* MGeometry comes with a warning that you shouldn't use
+MGeometryPrimitive -
+for once this doesn't seem like a me problem
+so we mute all warnings from including maya headers
+*/
+
+#pragma warning( push )
+#pragma warning( disable : 4996)
 
 #include <maya/MObject.h>
 #include <maya/MObjectHandle.h>
@@ -70,3 +78,15 @@
 #include <maya/MPxSurfaceShape.h>
 #include <maya/MPxComponentShape.h>
 
+
+#include <maya/MPxSurfaceShapeUI.h>
+#include <maya/MPxGeometryOverride.h>
+#include <maya/MDrawContext.h>
+#include <maya/MDrawRegistry.h>
+#include <maya/MShaderManager.h>
+#include <maya/MSelectionMask.h>
+
+#include <maya/MHWGeometry.h>
+#include <maya/MGeometry.h>
+
+#pragma warning( pop ) 
