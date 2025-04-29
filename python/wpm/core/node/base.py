@@ -354,7 +354,7 @@ class FilterSequence(list):
 # i've got no strings, so i have fn
 class WN( # short for WePresentNode
 	Catalogue,
-	#StringLike,
+	StringLike,
          NodeBase,
          #Composite,
          CallbackOwner,
@@ -412,8 +412,8 @@ class WN( # short for WePresentNode
 		if cls.apiTypeInt is not None:
 			cls.apiTypeWNClassMap[cls.apiTypeInt] = cls
 			#cls.nodeTypeNameWNClassMap[cls.__name__] = cls
-		if cls.typeId is not None:
-			cls.typeIdWNClassMap[cls.typeIdInt] = cls
+		if cls.typeIdInt is not None:
+			cls.typeIdIntWNClassMap[cls.typeIdInt] = cls
 
 
 	NODE_DATA_ATTR = "_nodeAuxData"

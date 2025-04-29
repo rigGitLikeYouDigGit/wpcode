@@ -32,10 +32,10 @@ Status StrataElementOp::eval(StrataManifold& value,
 		if (p.first[0] == '!') {// parent expression
 			continue;
 		}
-		SElement* outPtr;
+		SElement* outPtr = nullptr;
 		ExpAuxData expAuxData;
 		expAuxData.manifold = &value;
-		std::vector<ExpValue>* resultVals;
+		std::vector<ExpValue>* resultVals = nullptr;
 
 		/* first evaluate driver expression*/
 		DEBUGS("eval param: " + p.first + " : " + p.second.srcStr);
@@ -53,7 +53,10 @@ Status StrataElementOp::eval(StrataManifold& value,
 
 				s = p.second.result(resultVals, &expAuxData);
 				CWRSTAT(s, "error getting exp result, halting");
-				std::vector<SElement*> drivers = expAuxData.expValuesToElements(*resultVals, s);
+				if (resultVals == nullptr) {
+					STAT_ERROR(s, "edge driver result gave a nullptr");
+				}
+				std::vector<int> drivers = expAuxData.expValuesToElements(*resultVals, s);
 				CWRSTAT(s, "error converting final exp result to strata drivers, halting");
 
 				// add new edge element 
@@ -70,37 +73,39 @@ Status StrataElementOp::eval(StrataManifold& value,
 				*/
 
 				for (auto& i : drivers) {
-					outPtr->drivers.push_back(i->globalIndex);
+					SElement* elPtr = value.getEl(i);
+					outPtr->drivers.push_back(i);
 					edgeData.driverDatas.push_back(EdgeDriverData());
 					EdgeDriverData& driverData = edgeData.driverDatas.at(edgeData.driverDatas.size()-1);
-					driverData.index = i->globalIndex;
+					driverData.index = i;
 					MMatrix result;
 					float defaultCoords[3] = {0.5, 0.5, 0.5};
-					if (i->elType == StrataElType::point) { // no offsets on points
+					if (elPtr->elType == StrataElType::point) { // no offsets on points
 						defaultCoords[0] = 0;
 						defaultCoords[1] = 0;
 						defaultCoords[2] = 0;
 					}
 					s = value.matrixAt(
-						i->globalIndex,
+						elPtr->globalIndex,
 						defaultCoords,
 						result, s);
 					CWRSTAT(s, "error getting default driver matrix");
 					driverData.driverMatrix = result;
-					i->edges.push_back(outPtr->globalIndex);
+					elPtr->edges.push_back(outPtr->globalIndex);
 				}
-				elementsAdded.push_back(outPtr->globalIndex);
-
 				break;
 			}
 			case 'f': {
 				/* eval expression to get list of driving elements */
 				ExpAuxData expAuxData;
-				std::vector<ExpValue>* resultVals;
+				std::vector<ExpValue>* resultVals = nullptr;
 				 
 				s = p.second.result(resultVals, &expAuxData);
 				CWRSTAT(s, "error getting exp result, halting");
-				std::vector<SElement*> drivers = expAuxData.expValuesToElements(*resultVals, s);
+				if (resultVals == nullptr) {
+					STAT_ERROR(s, " getting result returned a nullptr");
+				}
+				std::vector<int> drivers = expAuxData.expValuesToElements(*resultVals, s);
 				CWRSTAT(s, "error converting final exp result to strata drivers, halting");
 
 				// add new edge element 
@@ -109,40 +114,54 @@ Status StrataElementOp::eval(StrataManifold& value,
 
 				// add drivers to new edge
 				for (auto& i : drivers) {
-					outPtr->drivers.push_back(i->globalIndex);
-					i->faces.push_back(outPtr->globalIndex);
+					SElement* elPtr = value.getEl(i);
+					outPtr->drivers.push_back(i);
+					elPtr->faces.push_back(outPtr->globalIndex);
 				}
-				elementsAdded.push_back(outPtr->globalIndex);
 				break;
 			}
 			default: {
 				STAT_ERROR(s, "INVALID ELEMENT PREFIX: " + p.first + "; must begin with one of p, e, f");
 			}
 		}
+		if (outPtr == nullptr) {
+			STAT_ERROR(s, "outPtr not set correctly when adding element: " + p.first + ", halting");
+		}
+		elementsAdded.push_back(outPtr->globalIndex);
 		/* eval parent expression*/
 
-		if (paramNameExpMap.count(p.first + "!") == 0) {
+		//if (paramNameExpMap.count(p.first + "!") == 0) {
+		if (paramNameExpMap.count("!" + p.first) == 0) {
 			DEBUGS("no parent expression found for element " + p.first + " - continuing");
 			continue;
 		}
-		Expression& parentExp = paramNameExpMap[p.first + "!"];
+		//Expression& parentExp = paramNameExpMap[p.first + "!"];
+		Expression& parentExp = paramNameExpMap["!" + p.first];
 		trimEnds(parentExp.srcStr);
 		//return s;
 		// check if expression defines a parent point or driver
+		resultVals = nullptr;
 		switch (p.first[0]) { // get the type of element added again
 			case 'p': {
-				if (parentExp.srcStr.empty()) {
-					DEBUGS("expression str not empty, eval ing exp");
-					return s;
+				if (!parentExp.srcStr.empty()) {
+					DEBUGS("parent expression str not empty, eval ing exp");
+					//return s;  // works up to here
 					s = p.second.result(resultVals, &expAuxData);
 					CWRSTAT(s, "Error evaling point exp result, halting");
+					if (resultVals == nullptr) {
+						STAT_ERROR(s, "point parent result gave nullptr");
+					}
+					//return s;
 
-					std::vector<SElement*> drivers = expAuxData.expValuesToElements(*resultVals, s);
+
+					std::vector<int> drivers = expAuxData.expValuesToElements(*resultVals, s); // error in resultValuesToElements
+					/* issue seems to be in derefing vector of ExpValues*/
 					CWRSTAT(s, "error converting final exp result to strata drivers, halting");
 					// add drivers to new point (should only be 1 I think?)
 					for (auto& i : drivers) {
-						outPtr->drivers.push_back(i->globalIndex);
-						i->points.push_back(outPtr->globalIndex);
+						SElement* elPtr = value.getEl(i);
+						outPtr->drivers.push_back(i);
+						elPtr->points.push_back(outPtr->globalIndex);
 					}
 				}
 

@@ -173,7 +173,9 @@ def genNodeFileStr(data:NodeData,
 		parent = data.bases[-1]
 		# no direct import, go through retriever class
 		importLines.append("from .. import retriever")
-		# Dag = retriever.getNodeCls("Dag")
+
+		if(parent.lower() == "thdependnode"):
+			parent = "_BASE_"
 		importLines.append(f"{wpstring.cap(parent)} = retriever.getNodeCls(\"{wpstring.cap(parent)}\")")
 
 		# type-checking time import for final user-authored file
@@ -257,6 +259,7 @@ def genNodeFileStr(data:NodeData,
 	if str(data.apiTypeConstant).strip():
 		nodeAssigns.append(Assign("apiTypeInt", data.apiTypeConstant))
 		nodeAssigns.append(Assign("apiTypeStr", Literal(data.apiTypeStr)))
+		nodeAssigns.append(Assign("typeIdInt", data.typeIdInt))
 	# MFn type
 	# TODO: get the correct MFn type for the node, gather from maya
 	nodeAssigns.append(Assign("MFnCls", "om." + data.mfnStr))

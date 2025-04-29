@@ -84,6 +84,9 @@ def getNodeData(nodeTypeName:str):
 		if nodeTypeName in reportTypes:
 			print(*s)
 	mclass = om.MNodeClass(nodeTypeName)
+	typeIdInt = None
+	if(mclass.typeId.id() != 0):
+		typeIdInt = mclass.typeId.id()
 
 	# get node class bases
 	baseClasses = cmds.nodeType(nodeTypeName, isTypeName=1, inherited=1) or []
@@ -98,9 +101,9 @@ def getNodeData(nodeTypeName:str):
 	# get all attribute data
 	attrDatas = list(sorted((getAttrData(attr) for attr in attrs), key=lambda x: x.name))
 	#mfn :om.MFnBase = om.MFnBase()
-	apiTypeConstant = 0
-	apiTypeStr = "kBase"
-	mfnStr = "MFnBase"
+	apiTypeConstant = 4
+	apiTypeStr = "kDependencyNode"
+	mfnStr = "MFnDependencyNode"
 	try:
 		pr("nodetype", nodeTypeName, )
 		# mfn : om.MFnBase = getCache().nodeTypeLeafMFnMap[nodeTypeName](om.MObject())
@@ -113,14 +116,14 @@ def getNodeData(nodeTypeName:str):
 	except:
 		if nodeTypeName in reportTypes:
 			traceback.print_exc()
-		pass
+
 	data = NodeData(
 		typeName=nodeTypeName,
 
 		apiTypeConstant=apiTypeConstant,
 		apiTypeStr=apiTypeStr,
 		mfnStr=mfnStr,
-		typeIdInt=mclass.typeId.id(),
+		typeIdInt=typeIdInt,
 		#attrs=mclass.attributeList()
 		attrDatas=attrDatas,
 		bases=tuple(baseClasses),

@@ -45,6 +45,7 @@ MStatus StrataElementOpNode::initialize() {
 
     aStElement = cFn.create("stElement", "stElement");
     cFn.setArray(true);
+    cFn.setUsesArrayDataBuilder(true);
 
     /*expression to generate given elements - leave blank for raw points
     */
@@ -86,6 +87,7 @@ MStatus StrataElementOpNode::initialize() {
     cFn.addChild(aStMatchWorldSpaceIn);
     aStDriverWeightIn = nFn.create("stDriverWeightIn", "stInDriverWeightIn", MFnNumericData::kFloat, 1.0);
     nFn.setArray(true);
+    nFn.setUsesArrayDataBuilder(true);
     cFn.addChild(aStDriverWeightIn);
 
     // point attributes
@@ -96,6 +98,7 @@ MStatus StrataElementOpNode::initialize() {
     aStPointDriverLocalMatrixIn = mFn.create("stPointDriverLocalMatrixIn", "stPointDriverLocalMatrixIn");
     mFn.setDefault(MMatrix()); /* separate local matrix per driver*/
     mFn.setArray(true);
+    mFn.setUsesArrayDataBuilder(true);
     cFn.addChild(aStPointDriverLocalMatrixIn);
 
     aStPointFinalWorldMatrixOut = mFn.create("stPointFinalWorldMatrixOut", "stPointFinalWorldMatrixOut");
@@ -109,10 +112,12 @@ MStatus StrataElementOpNode::initialize() {
     aStPointWeightedLocalOffsetMatrixOut = mFn.create("stPointWeightedLocalOffsetMatrixOut", "stPointWeightedLocalOffsetMatrixOut");
     mFn.setDefault(MMatrix());
     mFn.setArray(true);
+    mFn.setUsesArrayDataBuilder(true);
     cFn.addChild(aStPointWeightedLocalOffsetMatrixOut);
     aStPointDriverMatrixOut = mFn.create("stPointDriverMatrixOut", "stPointDriverMatrixOut");
     mFn.setDefault(MMatrix());
     mFn.setArray(true);
+    mFn.setUsesArrayDataBuilder(true);
     cFn.addChild(aStPointDriverMatrixOut);
 
 
@@ -368,12 +373,18 @@ MStatus StrataElementOpNode::compute(const MPlug& plug, MDataBlock& data) {
     // pass to bases, compute strata op
     s = superT::compute<thisT>(thisMObject(), plug, data);
     MCHECK(s, NODENAME + " ERROR in strata bases compute, halting");
+    //DEBUGSL("strata base computed, back to elOp scope");
 
+    //return s;
     // update index attrs from op elements
     thisStrataOpT* opPtr = getStrataOp<thisT>(data);
     MArrayDataHandle elArrDH = data.outputArrayValue(aStElement);
-    for (unsigned int i = 0; i < elArrDH.elementCount(); i++){
-        jumpToElement(elArrDH, i);
+    //for (unsigned int i = 0; i < elArrDH.elementCount(); i++){
+    for (unsigned int i = 0; i < static_cast<unsigned int>(opPtr->elementsAdded.size()); i++){
+        DEBUGS("try jump to output element: " + std::to_string(i));
+        //continue;
+        s = jumpToElement(elArrDH, i);
+        MCHECK(s, NODENAME + "ERROR setting outputs, could not jump to element: " + std::to_string(i).c_str());
         int elGlobalIndex = opPtr->elementsAdded[i];
         elArrDH.outputValue().child(aStGlobalIndex).setInt(
             elGlobalIndex

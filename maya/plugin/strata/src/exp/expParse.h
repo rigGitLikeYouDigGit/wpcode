@@ -952,18 +952,20 @@ namespace ed {
 			StrataManifold* manifold;
 			ExpStatus* expStatus;
 
-			std::vector<SElement*> expValuesToElements(std::vector<ExpValue> values, Status& s) {
+			std::vector<int> expValuesToElements(std::vector<ExpValue>& values, Status& s) {
 				/* resolve all possible values to elements */
-				std::vector<SElement*> result;
-				for (auto& v : values) {
+				std::vector<int> result;
+				for( size_t vi = 0; vi < values.size(); vi++){
+				//for (auto& v : values) {
+					ExpValue& v = values[vi];
 					for (auto& f : v.numberVals) { // check for integer indices
 						int id = fToInt(f);
 						SElement* ptr = manifold->getEl(id);
-						if (ptr == nullptr) {
+						if (ptr == nullptr) { // index not found in manifold
 							continue;
 						}
-						if (!seqContains(result, ptr)) { // add unique value found
-							result.push_back(ptr);
+						if (!seqContains(result, id)) { // add unique value found
+							result.push_back(id);
 						}
 					}
 					for (auto& s : v.stringVals) { // check for string names
@@ -972,8 +974,8 @@ namespace ed {
 						if (ptr == nullptr) {
 							continue;
 						}
-						if (!seqContains(result, ptr)) { // add unique value found
-							result.push_back(ptr);
+						if (!seqContains(result, ptr->globalIndex)) { // add unique value found
+							result.push_back(ptr->globalIndex);
 						}
 					}
 				}

@@ -772,7 +772,8 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 		Status graphS;
 		int upToNode = getOpIndexFromNode<NodeT>(data);
 		//DEBUGSL("template got index from node")
-		opGraphPtr.get()->evalGraph(graphS, upToNode);
+		graphS = opGraphPtr.get()->evalGraph(graphS, upToNode);
+		CWSTAT(graphS);
 		DEBUGSL("template graph eval'd");
 
 		data.setClean(NodeT::aStOutput);

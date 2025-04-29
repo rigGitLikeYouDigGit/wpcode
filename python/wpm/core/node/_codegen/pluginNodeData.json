@@ -65,10 +65,10 @@
   "2": {
     "strataElementOp": {
       "typeName": "strataElementOp",
-      "apiTypeConstant": 0,
-      "apiTypeStr": "kBase",
+      "apiTypeConstant": 4,
+      "apiTypeStr": "kDependencyNode",
       "typeIdInt": 1191074,
-      "mfnStr": "MFnBase",
+      "mfnStr": "MFnDependencyNode",
       "bases": [
         "_BASE_",
         "THdependNode"
@@ -136,6 +136,16 @@
           "parentName": ""
         },
         {
+          "name": "stDriverExp",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stDriverExp",
+          "parentName": "stElement"
+        },
+        {
           "name": "stDriverWeightIn",
           "type": 566,
           "typeName": "kNumericAttribute",
@@ -176,16 +186,6 @@
           "parentName": ""
         },
         {
-          "name": "stExp",
-          "type": 574,
-          "typeName": "kTypedAttribute",
-          "isArray": false,
-          "isInput": true,
-          "isOutput": true,
-          "shortName": "stExp",
-          "parentName": "stElement"
-        },
-        {
           "name": "stGlobalIndex",
           "type": 566,
           "typeName": "kNumericAttribute",
@@ -214,6 +214,16 @@
           "isOutput": false,
           "shortName": "stInput",
           "parentName": ""
+        },
+        {
+          "name": "stMatchWorldSpaceIn",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stMatchWorldSpaceIn",
+          "parentName": "stElement"
         },
         {
           "name": "stName",
@@ -256,6 +266,36 @@
           "parentName": ""
         },
         {
+          "name": "stParentExp",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stParentExp",
+          "parentName": "stElement"
+        },
+        {
+          "name": "stPointDriverLocalMatrixIn",
+          "type": 578,
+          "typeName": "kMatrixAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stPointDriverLocalMatrixIn",
+          "parentName": "stElement"
+        },
+        {
+          "name": "stPointDriverMatrixOut",
+          "type": 578,
+          "typeName": "kMatrixAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stPointDriverMatrixOut",
+          "parentName": "stElement"
+        },
+        {
           "name": "stPointFinalWorldMatrixOut",
           "type": 578,
           "typeName": "kMatrixAttribute",
@@ -266,13 +306,23 @@
           "parentName": "stElement"
         },
         {
-          "name": "stPointLocalMatrixIn",
+          "name": "stPointWeightedDriverMatrixOut",
+          "type": 578,
+          "typeName": "kMatrixAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stPointWeightedDriverMatrixOut",
+          "parentName": "stElement"
+        },
+        {
+          "name": "stPointWeightedLocalOffsetMatrixOut",
           "type": 578,
           "typeName": "kMatrixAttribute",
           "isArray": true,
           "isInput": true,
           "isOutput": true,
-          "shortName": "stPointLocalMatrixIn",
+          "shortName": "stPointWeightedLocalOffsetMatrixOut",
           "parentName": "stElement"
         },
         {
@@ -301,10 +351,10 @@
   "8": {
     "strataPoint": {
       "typeName": "strataPoint",
-      "apiTypeConstant": 0,
-      "apiTypeStr": "kBase",
+      "apiTypeConstant": 4,
+      "apiTypeStr": "kDependencyNode",
       "typeIdInt": 1191073,
-      "mfnStr": "MFnBase",
+      "mfnStr": "MFnDependencyNode",
       "bases": [
         "_BASE_",
         "containerBase",
@@ -2253,10 +2303,10 @@
   "10": {
     "strataShape": {
       "typeName": "strataShape",
-      "apiTypeConstant": 0,
-      "apiTypeStr": "kBase",
+      "apiTypeConstant": 4,
+      "apiTypeStr": "kDependencyNode",
       "typeIdInt": 1191075,
-      "mfnStr": "MFnBase",
+      "mfnStr": "MFnDependencyNode",
       "bases": [
         "_BASE_",
         "containerBase",
@@ -4052,24 +4102,44 @@
           "parentName": ""
         },
         {
-          "name": "stData",
+          "name": "stDataIn",
           "type": 576,
           "typeName": "kCompoundAttribute",
           "isArray": true,
           "isInput": true,
           "isOutput": true,
-          "shortName": "stData",
+          "shortName": "stDataIn",
           "parentName": ""
         },
         {
-          "name": "stExp",
+          "name": "stDataOut",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stDataOut",
+          "parentName": ""
+        },
+        {
+          "name": "stExpIn",
           "type": 574,
           "typeName": "kTypedAttribute",
           "isArray": false,
           "isInput": true,
           "isOutput": true,
-          "shortName": "stExp",
-          "parentName": "stData"
+          "shortName": "stExpIn",
+          "parentName": "stDataIn"
+        },
+        {
+          "name": "stExpOut",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stExpOut",
+          "parentName": "stDataOut"
         },
         {
           "name": "stGraph",
@@ -4090,6 +4160,26 @@
           "isOutput": false,
           "shortName": "stInput",
           "parentName": ""
+        },
+        {
+          "name": "stMatrixIn",
+          "type": 578,
+          "typeName": "kMatrixAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stMatrixIn",
+          "parentName": "stDataIn"
+        },
+        {
+          "name": "stMatrixOut",
+          "type": 578,
+          "typeName": "kMatrixAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stMatrixOut",
+          "parentName": "stDataOut"
         },
         {
           "name": "stOpName",
@@ -4119,6 +4209,16 @@
           "isInput": false,
           "isOutput": true,
           "shortName": "stOutput",
+          "parentName": ""
+        },
+        {
+          "name": "stShowPoints",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stShowPoints",
           "parentName": ""
         },
         {

@@ -28,8 +28,8 @@ thisFilePath = Path(strata.__file__).parent / "plugin" / "__init__.py"
 # construct overall plugin object, register any python plugin nodes
 pluginAid = WpPluginAid(
 	"strata",
-	#pluginPath=str(WP_ROOT_PATH/"code"/"maya"/"plugin"/"strata"/"Debug"/"strata.mll"),
-	pluginPath=str(WP_ROOT_PATH/"code"/"maya"/"plugin"/"output"/"Maya2023"/"plug-ins"/"strata.mll"),
+	pluginPath=str(WP_ROOT_PATH/"code"/"maya"/"plugin"/"strata"/"Debug"/"strata.mll"),
+	#pluginPath=str(WP_ROOT_PATH/"code"/"maya"/"plugin"/"output"/"Maya2023"/"plug-ins"/"strata.mll"),
 	# nodeClasses={
 	# 	1 : StrataPoint
 	# }
@@ -92,7 +92,7 @@ def reloadPluginTest():
 	# test creating a single face of strataSurface
 	ptA = makeStrataPoint("ptA")
 	cmds.setAttr(ptA + ".translate", -3, 2, -3)
-	return
+
 
 	ptB = makeStrataPoint("strataPointB")
 	ptC = makeStrataPoint("strataPointC")

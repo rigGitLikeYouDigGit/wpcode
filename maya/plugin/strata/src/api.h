@@ -207,11 +207,17 @@ namespace ed {
 		s = hArray.jumpToElement(index);
 		if (MFAIL(s)) {
 			MArrayDataBuilder builder = hArray.builder(&s);
-			builder.addElement(index);
+			if (s == MS::kInvalidParameter) {
+				MCHECK(s, "array handle does not support data builder, go fix it");
+			}
+			builder.addElement(index, &s);
+			MCHECK(s, "could not add element to arr builder");
 			s = hArray.set(builder);
+			MCHECK(s, "could not set builder back to array");
 			s = hArray.jumpToElement(index);
+			MCHECK(s, "could not finally jump to array element");
 		}
-		CHECK_MSTATUS_AND_RETURN_IT(s);
+		//CHECK_MSTATUS_AND_RETURN_IT(s);
 		return s;
 	}
 

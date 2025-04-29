@@ -871,7 +871,7 @@ namespace ed {
 			op->preEval("main", s);
 			CWRSTAT(s, "error in preEval for node: " + op->name);
 			DEBUGS("pre eval nResults, " + std::to_string(results.size()));
-			op->eval( results[op->index], auxData, s);
+			op->eval( results[op->index], auxData, s); // illegal read on this line apparently
 			CWRSTAT(s, "error in EVAL for node: " + op->name);
 
 			// donezo
@@ -900,6 +900,7 @@ namespace ed {
 
 			// sort topo generations in nodes if graph has changed
 			DEBUGSL("EvalGraph begin eval to node: " + std::to_string(upToNodeId));
+			//return s;
 			if (graphChanged) {
 				DEBUGS("rebuilding graph structure")
 				rebuildGraphStructure(s);
