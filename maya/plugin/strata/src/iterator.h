@@ -20,6 +20,41 @@ just like in python
 
 namespace ed {
 
+	// map key iterator, from StackOverflow user Marius
+	template<typename map_type>
+	class key_iterator : public map_type::iterator
+	{
+	public:
+		typedef typename map_type::iterator map_iterator;
+		typedef typename map_iterator::value_type::first_type key_type;
+
+		key_iterator(const map_iterator& other) : map_type::iterator(other) {};
+
+		key_type& operator *()
+		{
+			return map_type::iterator::operator*().first;
+		}
+	};
+
+	// helpers to create iterators easier:
+	template<typename map_type>
+	key_iterator<map_type> key_begin(map_type& m)
+	{
+		return key_iterator<map_type>(m.begin());
+	}
+	template<typename map_type>
+	key_iterator<map_type> key_end(map_type& m)
+	{
+		return key_iterator<map_type>(m.end());
+	}
+	template<typename map_type>
+	inline std::vector<map_type::key_type>key_sorted(map_type& m)
+	{
+		std::vector<map_type::key_type> sorted(key_begin(m), key_end(m));
+		std::sort(sorted.begin(), sorted.end());
+		return sorted;
+	}
+
 	//template<typename VT>
 	struct ItParams {
 		// parametre struct to inherit from for traversal logic

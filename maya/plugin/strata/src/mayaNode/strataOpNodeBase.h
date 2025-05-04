@@ -170,23 +170,23 @@ struct StrataOpNodeBase {
 		return s;
 	}
 
-	template<typename NodeT>
-	static MStatus cacheOpIndexOnNodeObject(MObject& nodeObj, int index) {
-		MStatus s;
-		if (nodeObj.isNull()) {
-			DEBUGSL("cacheOpIndex nodeObj is null");
-			return MS::kFailure;
-		}
-		MFnDependencyNode nodeFn(nodeObj);
-		NodeT* userPtr = dynamic_cast<NodeT*>(nodeFn.userNode());
-		if (userPtr == nullptr) {
-			//STAT_ERROR(s, "USERPTR in dynamic cast is null");
-			DEBUGSL("USERPTR in dynamic cast is null");
-			return MS::kFailure;
-		}
-		userPtr->outputOpIndex = index;
-		return s;
-	}
+	//template<typename NodeT>
+	//static MStatus cacheOpIndexOnNodeObject(MObject& nodeObj, int index) {
+	//	MStatus s;
+	//	if (nodeObj.isNull()) {
+	//		DEBUGSL("cacheOpIndex nodeObj is null");
+	//		return MS::kFailure;
+	//	}
+	//	MFnDependencyNode nodeFn(nodeObj);
+	//	NodeT* userPtr = dynamic_cast<NodeT*>(nodeFn.userNode());
+	//	if (userPtr == nullptr) {
+	//		//STAT_ERROR(s, "USERPTR in dynamic cast is null");
+	//		DEBUGSL("USERPTR in dynamic cast is null");
+	//		return MS::kFailure;
+	//	}
+	//	userPtr->outputOpIndex = index;
+	//	return s;
+	//}
 
 	MStatus setFreshGraph(MObject& nodeObj);
 	MStatus setFreshGraph(MObject& nodeObj, MDataBlock& data);
@@ -207,14 +207,16 @@ struct StrataOpNodeBase {
 		*/
 		MS s = MS::kSuccess;
 		MFnDependencyNode depFn(nodeObj);
-		MPlug graphInPlug = depFn.findPlug(NodeT::aStGraph, true, &s);
-		MCHECK(s, "Could not find plug for aStGraph for node" + depFn.name());
-		if (graphInPlug.isConnected()) { // cast the input node to StrataNodeBase
-			StrataOpNodeBase* nodePtr;
-			s = castToUserNode<StrataOpNodeBase>(graphInPlug.node(), nodePtr);
-			MCHECK(s, "Could not cast driving node " + MFnDependencyNode(graphInPlug.node()).name());
-			sourceGraphPtr = nodePtr->opGraphPtr;
-		}
+		//MPlug graphInPlug = depFn.findPlug(NodeT::aStGraph, true, &s);
+		//MCHECK(s, "Could not find plug for aStGraph for node" + depFn.name());
+		//if (graphInPlug.isConnected()) { // cast the input node to StrataNodeBase
+		//	StrataOpNodeBase* nodePtr;
+		//	s = castToUserNode<StrataOpNodeBase>(graphInPlug.node(), nodePtr);
+		//	MCHECK(s, "Could not cast driving node " + MFnDependencyNode(graphInPlug.node()).name());
+		//	sourceGraphPtr = nodePtr->opGraphPtr;
+		//}
+		
+		sourceGraphPtr = nullptr;
 
 		// copy any input graphs
 		MPlug inputPlug = depFn.findPlug("stInput", true, &s);
@@ -260,15 +262,29 @@ struct StrataOpNodeBase {
 			// 0 not found, make new graph
 			//s = setFreshGraph(nodeObj);
 			s = this->setFreshGraph(nodeObj);
-			return s;
+			//return s;
 		}
-		if (incomingGraphPtrs[0].expired()) {
+		else if (incomingGraphPtrs[0].expired()) {
 			// 0 weak pointer expired (somehow), make new graph
 			//setFreshGraph(nodeObj);
 			this->setFreshGraph(nodeObj);
-			return s;
+			//return s;
 		}
-		opGraphPtr = incomingGraphPtrs[0].lock().get()->cloneShared<StrataOpGraph>();
+		else {
+			opGraphPtr = incomingGraphPtrs[0].lock().get()->cloneShared<StrataOpGraph>();
+		}
+
+		// now merge all graphs from inputs
+		// TODO: optimise this, cache on this node a hash value or an op counter for each input or something
+		for (auto& pair : incomingGraphPtrs) {
+			if (pair.first == 0) {
+				continue;
+			}
+			if (pair.second.expired()) {
+				continue;
+			}
+			opGraphPtr.get()->mergeOther(pair.second.lock().get())
+		}
 		return s;
 	}
 
@@ -378,7 +394,7 @@ struct StrataOpNodeBase {
 			//NodeT::aStGraph,
 			//NodeT::aStInput,
 			//NodeT::aStOpName
-			NodeT::aStGraph,
+			//NodeT::aStGraph,
 			NodeT::aStInput,
 			NodeT::aStOpName
 			//aStParam,
@@ -394,8 +410,8 @@ struct StrataOpNodeBase {
 		drivenVec.insert(drivenVec.end(), driven.begin(), driven.end());
 
 		std::vector<MObject> toAdd = {
-			//NodeT::aStOutput
-			NodeT::aStGraph, NodeT::aStInput, NodeT::aStOpName,
+			//NodeT::aStGraph, 
+			NodeT::aStInput, NodeT::aStOpName,
 			NodeT::aStOpNameOut, NodeT::aStOutput,
 		};
 		toAddVec.insert(toAddVec.end(), toAdd.begin(), toAdd.end());
@@ -424,7 +440,8 @@ struct StrataOpNodeBase {
 		}
 
 		// copy graph data if it's dirty
-		if (!data.isClean(NodeT::aStGraph)) {
+		//if (!data.isClean(NodeT::aStGraph)) {
+		if (!data.isClean(NodeT::aStInput)) {
 			s = syncIncomingGraphData<NodeT>(nodeObj, data);
 			DEBUGS("syncIncoming graph complete")
 				MCHECK(s, "error syncing incoming graph data");
@@ -457,7 +474,7 @@ struct StrataOpNodeBase {
 		// can't just connect a random integer
 		DEBUGS("Base legalConnection")
 
-		if (plug.attribute() == NodeT::aStGraph) { // main graph input
+		if (plug.attribute() == NodeT::aStInput) { // main graph input
 			if (otherPlug.node() == plug.node()) { // no feedback loops
 				isLegal = false;
 				return MS::kSuccess;
@@ -469,21 +486,6 @@ struct StrataOpNodeBase {
 			isLegal = false; // only allow graph connections from graph outputs
 			return MS::kSuccess;
 		}
-		
-		// stInput can just be integers I think? we can check more carefully for copying input graphs when they change
-
-		//if (MFnAttribute(plug.attribute()).name() == "stInput") {
-		//	if (otherPlug.node() == plug.node()) { // no feedback loops
-		//		isLegal = false;
-		//		return MS::kSuccess;
-		//	}
-		//	if (MFnAttribute(otherPlug.attribute()).name() == "stOutput") {
-		//		isLegal = true;
-		//		return MS::kSuccess;
-		//	}
-		//	isLegal = false;
-		//	return MS::kSuccess;
-		//}
 		return MStatus::kUnknownParameter;
 	}
 
@@ -498,6 +500,7 @@ struct StrataOpNodeBase {
 		copy the graph of the incoming node
 		*/
 		MStatus s = MS::kSuccess;
+		MFnDependencyNode depFn(nodeObj);
 
 		DEBUGS("CONNECTION MADE begin");
 		if (!addedToGraph) {
@@ -512,16 +515,25 @@ struct StrataOpNodeBase {
 		DEBUGS("plug name" + plug.name());
 		DEBUGS("other plug name" + plug.name());
 
-		if (MFnAttribute(plug.attribute()).name() != "stInput") {// crash
+		// we only care about stInput
+		if (MFnAttribute(plug.attribute()).name() != "stInput") {
 			return s;
 		}
 
-		/*StrataOpNodeBase* otherNodePtr;
-		s = castToUserNode<StrataOpNodeBase>(otherPlug.node(), otherNodePtr);*/
-		MCHECK(s, "ERROR casting incoming strata connection to StrataOpNodeBase");
-		//s = refreshGraphPtr(otherNodePtr->opGraphPtr.get());
+		// if a plug has been connected to input0, we copy its graph for this node
+		/*if (plug.logicalIndex() == 0) {
+			StrataOpNodeBase* otherNodePtr;
+			s = castToUserNode<StrataOpNodeBase>(otherPlug.node(), otherNodePtr);
+			MCHECK(s, "ERROR casting incoming main strata connection to StrataOpNodeBase: " +  depFn.name());
+			opGraphPtr.get()->copyOther(otherNodePtr)
+
+		}*/
+
 		s = syncIncomingGraphConnections<NodeT>(plug.node());
 		MCHECK(s, "ERROR refreshing graph pointer from incoming node connection");
+		/* actual operations to copy and merge graphs need to be done in compute,
+		since if a structural change happens more than one maya node before this one,
+		this function won't re-run*/
 		return s;
 	}
 	template <typename NodeT>
@@ -603,12 +615,24 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 		* I KNOW THE TEMPLATING HERE SUCKS
 		* we have to template this with the final real class
 		* i'll fix it someday i swear
+		* 
+		* check if op name already exists in graph - if yes, for now, ERROR
+		* get it working then make it fancy
 		*/
 		DEBUGS("createNewOp")
 		MS s(MS::kSuccess);
+
+		const char* nodeName = data.outputValue(NodeT::aStOpNameOut).asString().asChar();
+
+		// check existing
+		if (opGraphPtr.get()->nameIndexMap.count(nodeName)) {
+			MGlobal::displayError("strata op node " + MFnDependencyNode(mayaNodeMObject).name() + " tried to add a strata op with a name already found in incoming graph: " + nodeName + " -- halting.");
+			return MS::kInvalidParameter;
+		}
+
 		opPtrOut = nullptr;
 		StrataOpT* opPtr = opGraphPtr.get()->addNode<StrataOpT>(
-			data.outputValue(NodeT::aStOpNameOut).asString().asChar()
+			nodeName
 		);
 		opPtrOut = opPtr;
 		DEBUGSL("added new op to graph")
@@ -649,29 +673,20 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 			getOpNameFromNode<NodeT>(mayaNodeMObject)
 		);
 		opPtrOut = opPtr;
-		DEBUGSL("added new op to graph")
-			// set op index on node output
-			s = setOpIndexOnNode<NodeT>(mayaNodeMObject, opPtr->index);
-			s = cacheOpIndexOnNodeObject<NodeT>(mayaNodeMObject, opPtr->index);
+		DEBUGSL("added new op to graph");
+
+		// flag the latest added node as the output of this graph
+		opGraphPtr->setOutputNode(opPtr->index);
+		// set op index on node output
+		s = setOpIndexOnNode<NodeT>(mayaNodeMObject, opPtr->index);			
 		DEBUGS("set op index on node")
-			// check input connections
-			/*MFnDependencyNode depFn(mayaNodeMObject );
-			MPlug inPlug = depFn.findPlug(aStInput, true, &s);*/
-			MCHECK(s, "ERROR creating new op, could not find networked aStInput plug");
-		//MArrayDataHandle arrDh = data.inputArrayValue(NodeT::aStInput);
-		//for (unsigned int i = 0; i < arrDh.elementCount(); i++) {
-		//	opPtrOut->inputs.push_back(arrDh.inputValue().asInt());
-		//	arrDh.next();
-		//}
-		//DEBUGS("pulled op inputs")
-
-			//// get indices of each input op, set as node inputs
-			//for (unsigned int i = 0; i < inPlug.evaluateNumElements(&s); i++) {
-			//	MCHECK(s, "ERROR in evaluateNumElements for strata input plug");
-			//	opPtrOut->inputs.push_back(inPlug.elementByPhysicalIndex(i).asInt());
-			//}
-
-			return s;
+		/*s = cacheOpIndexOnNodeObject<NodeT>(mayaNodeMObject, opPtr->index);
+		MCHECK(s, "could not cache op index on maya node ")*/
+		// check input connections
+		/*MFnDependencyNode depFn(mayaNodeMObject );
+		MPlug inPlug = depFn.findPlug(aStInput, true, &s);*/
+		MCHECK(s, "ERROR creating new op, could not find networked aStInput plug");
+		return s;
 	}
 
 
@@ -737,17 +752,17 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 		MS s = setFreshGraph<NodeT>(nodeObj);
 	}
 
-	template<typename NodeT>
-	MStatus syncIncomingGraphData(MObject& nodeObj, MDataBlock& data) {
-		/* copy graph, and add new node to it*/
-		MStatus s = StrataOpNodeBase::syncIncomingGraphData<NodeT>(nodeObj, data);
-		DEBUGS("template syncIncoming")
-			MCHECK(s, "Error copying graph data from OpNodeBase, halting");
-		StrataOpT* opPtr;
-		s = createNewOp<NodeT>(nodeObj, data, opPtr);
-		MCHECK(s, "Error adding new op to new graph");
-		return s;
-	};
+	//template<typename NodeT>
+	//MStatus syncIncomingGraphData(MObject& nodeObj, MDataBlock& data) {
+	//	/* copy graph, and add new node to it*/
+	//	MStatus s = StrataOpNodeBase::syncIncomingGraphData<NodeT>(nodeObj, data);
+	//	DEBUGS("template syncIncoming")
+	//		MCHECK(s, "Error copying graph data from OpNodeBase, halting");
+	//	StrataOpT* opPtr;
+	//	s = createNewOp<NodeT>(nodeObj, data, opPtr);
+	//	MCHECK(s, "Error adding new op to new graph");
+	//	return s;
+	//};
 
 	template <typename NodeT>
 	MStatus compute(MObject& nodeObj, const MPlug& plug, MDataBlock& data) {
@@ -760,10 +775,15 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 		}
 
 		// copy graph data if it's dirty
-		if (!data.isClean(NodeT::aStGraph)) {
+		//if (!data.isClean(NodeT::aStGraph)) {
+		if (!data.isClean(NodeT::aStInput)) {
 			s = syncIncomingGraphData<NodeT>(nodeObj, data);
 			DEBUGS("syncIncoming graph complete")
 				MCHECK(s, "error syncing incoming graph data");
+
+			// add new op to graph, set as graph output
+			s = createNewOp<NodeT>(nodeObj, data, opPtr);
+			MCHECK(s, "failed to add new op to graph for node " )
 		}
 		s = syncStrataParams(nodeObj, data);
 		DEBUGSL("base synced strata params")
@@ -772,7 +792,7 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 		Status graphS;
 		int upToNode = getOpIndexFromNode<NodeT>(data);
 		//DEBUGSL("template got index from node")
-		graphS = opGraphPtr.get()->evalGraph(graphS, upToNode);
+		graphS = opGraphPtr.get()->evalGraph(graphS, opGraphPtr->outputIndex);
 		CWSTAT(graphS);
 		DEBUGSL("template graph eval'd");
 

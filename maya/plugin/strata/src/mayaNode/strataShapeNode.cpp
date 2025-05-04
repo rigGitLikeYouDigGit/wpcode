@@ -171,13 +171,14 @@ MStatus StrataShapeNode::compute(const MPlug& plug, MDataBlock& data) {
     If shape node is hidden, only evaluate ops in history of expOut attributes.
     If visible, need to eval the whole graph
     */
-    DEBUGS("shape compute")
-        MS s(MS::kSuccess);
-
+    MS s(MS::kSuccess);
     // check if plug is already computed
     if (data.isClean(plug)) {
         return s;
     }
+
+    DEBUGS("shape compute")
+        
 
     /* pull in drawing values to cache*/
     pointOpacity = data.inputValue(aStShowPoints).asFloat();

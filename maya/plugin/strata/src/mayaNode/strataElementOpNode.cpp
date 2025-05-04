@@ -378,7 +378,7 @@ MStatus StrataElementOpNode::compute(const MPlug& plug, MDataBlock& data) {
     //return s;
     // update index attrs from op elements
     thisStrataOpT* opPtr = getStrataOp<thisT>(data);
-    MArrayDataHandle elArrDH = data.outputArrayValue(aStElement);
+    MArrayDataHandle elArrDH = data.outputArrayValue (aStElement);
     //for (unsigned int i = 0; i < elArrDH.elementCount(); i++){
     for (unsigned int i = 0; i < static_cast<unsigned int>(opPtr->elementsAdded.size()); i++){
         DEBUGS("try jump to output element: " + std::to_string(i));

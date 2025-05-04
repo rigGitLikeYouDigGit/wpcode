@@ -48,6 +48,8 @@ namespace ed {
 		std::string name;
 		DirtyGraph* graphPtr = nullptr;
 
+		bool enabled = true; /* should this be per-node, or a set on the parent object?*/
+
 		/*template<typename GraphT=DirtyGraph>
 		virtual GraphT* getGraphPtr() { return ; }*/
 
@@ -65,6 +67,32 @@ namespace ed {
 			return false;
 		}
 
+		inline std::map<std::string, DirtyNode*> nameInputNodeMap() {
+			std::map<std::string, DirtyNode*> result;
+			for (auto i : inputs) {
+				auto node = graphPtr->getNode(i);
+				result[node->name] = node;
+			}
+			return result;
+		}
+
+		inline std::vector<DirtyNode*> inputNodes() {
+			std::vector<DirtyNode*> result(inputs.size());
+			for (auto i : inputs) {
+				auto node = graphPtr->getNode(i);
+				result.push_back(node);
+			}
+			return result;
+		}
+
+		inline std::vector<std::string> inputNames() {
+			std::vector<std::string> result(inputs.size());
+			for (auto i : inputs) {
+				result.push_back(graphPtr->nodes[i].get()->name);
+			}
+			return result;
+		}
+
 		int temp_inDegree = 0;
 		int temp_generation = 0;
 
@@ -78,6 +106,13 @@ namespace ed {
 		virtual Status postConstructor() {
 			/* called after node added to graph, all connections set up*/
 			return Status();
+		}
+
+		inline void nodeError(std::string errorMsg) {
+			if (!graphPtr) {
+				return;
+			}
+			graphPtr->addNodeError(index, errorMsg);
 		}
 	};
 
@@ -93,16 +128,28 @@ namespace ed {
 		*/
 
 
+		/* MEMBERS TO COPY / SERIALISE */
 		std::vector<std::unique_ptr<DirtyNode>> nodes;
 		std::unordered_map<std::string, int> nameIndexMap;
-		//std::vector<VT> results;
+		int outputIndex = -1; // houdini-esque tracking which node is 
+		// designated as the output of the graph
 
+		
+		/* TRANSIENT MEMBERS */
 		bool graphChanged = true; // if true, needs full rebuild of topo generations
 		// topo maps
 		std::vector<std::unordered_set<int>> generations;
 		// transient map for topology
 		std::unordered_map<int, std::unordered_set<int>> nodeDirectDependentsMap;
 		std::unordered_map<int, std::unordered_set<int>> nodeAllDependentsMap;
+
+		// map to track nodes that have errored
+		std::map<int, std::string> indexErrorMap;
+
+		inline void setOutputNode(int index) {
+			outputIndex = index;
+			graphChanged = true;
+		}
 
 		///////////////// COPYING ////////
 		//rule of five (apparently?)
@@ -117,6 +164,7 @@ namespace ed {
 		virtual void copyOther(const DirtyGraph& other) {
 			copyOtherNodesVector(other);
 			nameIndexMap = nameIndexMap;
+			outputIndex = other.outputIndex;
 		}
 
 		DirtyGraph() {}
@@ -192,12 +240,12 @@ namespace ed {
 			return newNodePtr;
 		}
 
-		inline DirtyNode* getNode(DirtyNode*& node) {
+		inline DirtyNode* getNode(DirtyNode*& node) const {
 			// included here for similar syntax to get op pointer, no matter the input
 			// not sure if this is actually useful in c++
 			return node;
 		}
-		inline DirtyNode* getNode(const int& index) {
+		inline DirtyNode* getNode(const int& index) const {
 			//DEBUGSL("get node by index " + std::to_string(index));
 			//DEBUGSL("nodes size: " + std::to_string(nodes.size()));
 			if (nodes.size() <= index) {
@@ -205,9 +253,57 @@ namespace ed {
 			}
 			return nodes[index].get();
 		}
-		inline DirtyNode* getNode(const std::string& nodeName) {
-			return nodes[nameIndexMap[nodeName]].get();
+		inline DirtyNode* getNode(const std::string& nodeName) const {
+			//return nodes[nameIndexMap[nodeName]].get();
+			//return nodes[nameIndexMap.find(nodeName)].get();
+			//return nodes.at(nameIndexMap.find(nodeName)).get();
+			
+			//return nodes[0].get();
+
+			auto check = nameIndexMap.find(nodeName);
+			if (check == nameIndexMap.end()) { return nullptr; }
+			return nodes[check->second].get();
 		}
+
+		template<typename argT>
+		inline std::vector<DirtyNode*> getNodes(argT* start, argT* end) {
+			/* this won't filter out unknown nodes, you'll just get nullptrs
+			in the returned vector. That way size stays the same*/
+			std::vector<DirtyNode*> result;
+			while (start != end) {
+				result.push_back(getNode(*start));
+				start++;
+			}
+			return result;
+		}
+
+		inline void addNodeError(int index, std::string& errorMsg) {
+			indexErrorMap.insert(std::make_pair(index, errorMsg)
+			);
+		}
+		
+		/*template<typename seqT>
+		inline seqT<int> namesToIndices(seqT<str> names) {
+		}*/
+		// couldn't work out how to template on a template like this
+
+		inline std::vector<int> namesToIndices(std::string* start, std::string* end) {
+			std::vector<int> result;
+			while (start != end) {
+				result.push_back(nameIndexMap[*start]);
+				start++;
+			}
+			return result;
+		}
+		inline std::vector<std::string> indicesToNames(int* start, int* end) {
+			std::vector<std::string> result;
+			while (start != end) {
+				result.push_back(nodes[*start].get()->name);
+				start++;
+			}
+			return result;
+		}
+
 
 		Status getTopologicalGenerations(std::vector<std::unordered_set<int>>& result, Status& s) {
 			/* get sets of nodes guaranteed not to depend on each other
@@ -673,6 +769,156 @@ namespace ed {
 			}
 			return 0;
 		};
+
+
+		struct NodeDelta {
+			/* given base graph and target graph, 
+			get nodes to add and nodes to remove, in order to take base
+			to target
+			WE DON'T DO ANYTHING FANCY TO CHECK TYPES
+			*/
+			std::unordered_set<std::string> nodesToAdd; 
+			std::unordered_set<std::string> nodesToRemove; 
+
+		};
+
+		struct EdgeDelta {
+			/* given base graph and target graph,
+			get edges to add and remove, in order to take base
+			to target.
+
+			doesn't check nodes - if a node name isn't found in both graphs, 
+			skip that edge
+			*/
+
+			std::map<std::string, std::vector<std::string>> edgesToAdd;
+			//std::vector < std::pair<std::string, std::vector<std::string>>> edgesToRemove;
+
+		};
+		
+		NodeDelta getNodeDelta(const DirtyGraph& other,
+			std::vector<std::string>& otherNamesToCheck) const {
+			/* works entirely on names
+			pass in list of names to consider in other graph
+			*/
+			NodeDelta result;
+			std::vector<std::string> thisSortedKeys(key_begin(nameIndexMap), key_end(nameIndexMap));
+			//std::vector<std::string> otherSortedKeys(key_begin(other.nameIndexMap), key_end(other.nameIndexMap));
+
+			std::sort(thisSortedKeys.begin(), thisSortedKeys.end());
+			std::sort(otherNamesToCheck.begin(), otherNamesToCheck.end());
+			std::set_difference(
+				otherNamesToCheck.begin(), otherNamesToCheck.end(),
+				thisSortedKeys.begin(), thisSortedKeys.end(),
+				result.nodesToAdd.begin()
+			);
+			std::set_difference(
+				thisSortedKeys.begin(), thisSortedKeys.end(),
+				otherNamesToCheck.begin(), otherNamesToCheck.end(),
+				result.nodesToRemove.begin()
+			);
+			return result;
+		}
+
+		NodeDelta getNodeDelta(const DirtyGraph& other) const {
+			// get delta of all nodes in graph if not specified
+			std::vector<std::string> otherSortedKeys(key_begin(other.nameIndexMap), key_end(other.nameIndexMap));
+			return getNodeDelta(other, otherSortedKeys);
+		}
+
+		EdgeDelta getEdgeDelta(
+			const DirtyGraph& other,
+			//std::vector<std::string>& nodesToCheck 
+			std::unordered_set<std::string>& nodesToCheck
+			) const {
+			/* not quite as sleek as nodes
+			ordering of edges???
+			probably need a more atomic delta system here
+
+			TODO: maybe come back to this, but it probably isn't so necessary - 
+			because of the rules of Strata (eg no going back and changing graph
+			structure once it's made)
+			we probably don't need to get too fancy? since edges can only ever be added
+
+			for now we just copy the named input map from the target other.
+			it's too complicated otherwise
+			*/
+			EdgeDelta result;
+			for (auto& nodeNameToCheck : nodesToCheck) {
+				DirtyNode* thisNode = getNode(nodeNameToCheck);
+				if (!thisNode) {
+					continue;
+				}
+				auto& name = thisNode->name;
+				// skip if node from this graph not found in other
+				if (other.nameIndexMap.find(name) == other.nameIndexMap.end()) {
+					continue;
+				}				
+				auto otherNode = other.getNode(name);
+
+				result.edgesToAdd[name] = otherNode->inputNames();
+				
+
+				//auto thisInputNodes = thisNode->inputNodes();
+				//int localIndex = 0;
+				//for (auto otherInputNode : otherNode->inputNodes()) {
+				//	// skip if this driver node's name in the other graph is not found in this one
+				//	if (nameIndexMap.find(otherInputNode->name) == nameIndexMap.end()) {
+				//		continue;
+				//	}
+				//	if (thisInputNodes[localIndex]->name != otherInputNode->name) {
+				//		//result.edgesToAdd.
+				//	}
+				//		localIndex += 1;	
+				//}
+			}
+			return result;
+		}
+
+		virtual DirtyNode* importNode(const DirtyGraph& other, int& thatIndex) {
+			/* merge in a new node
+			DOES NOT CHECK EDGES / CONNECTIONS*/
+			nodes.push_back(other.nodes[thatIndex]->clone());
+			nodes.back().get()->index = static_cast<int>(nodes.size()) - 1;
+			nameIndexMap[nodes.back().get()->name] = static_cast<int>(nodes.size()) - 1;
+			return nodes.back().get();
+		}
+
+		virtual void mergeOther(const DirtyGraph& other, Status& s) {
+			/* copy nodes from other not found in this graph - 
+			works by NAME ONLY
+			indices of merged nodes WILL BE DIFFERENT
+			we also pull in any edge connections from them
+
+			LATER add in some way to check / add from only nodes in the critical path of the output
+			(but with this system, that's guaranteed to be all nodes in the graph?)
+			*/
+			NodeDelta nDelta = getNodeDelta(other);
+			// copy nodes to add (required for correct edge delta
+			for (std::string nodeName : nDelta.nodesToAdd) {
+				//importNode(other, other.nameIndexMap.find(nodeName))
+				int otherIndex = other.nameIndexMap.at(nodeName);
+				importNode(other, otherIndex );
+			}
+			EdgeDelta eDelta = getEdgeDelta(other, nDelta.nodesToAdd);
+
+			// node inputs need to be re-indexed based on names
+			for (auto& nodeInputsPair : eDelta.edgesToAdd) {
+				DirtyNode* thisNode = getNode(nodeInputsPair.first);
+				thisNode->inputs.clear();
+				thisNode->inputs.reserve(eDelta.edgesToAdd[thisNode->name].size());
+				for (auto inputNodeName : eDelta.edgesToAdd[thisNode->name]) {
+					thisNode->inputs.push_back(nameIndexMap[inputNodeName]);
+				}
+				nodeInputsChanged(thisNode->index);
+				
+			}
+			graphChanged = true;
+			return;
+		}
+
+
+
 	};
 
 	template <typename VT>
@@ -969,7 +1215,16 @@ namespace ed {
 			return s;
 		}
 
+		virtual DirtyNode* importNode(const EvalGraph& other, int& thatIndex) {
+			/* merge in a new node, and add entry in results for it?*/
+			nodes.push_back(other.nodes[thatIndex]->clone());
+			nodes.back().get()->index = static_cast<int>(nodes.size()) - 1;
+			nameIndexMap[nodes.back().get()->name] = static_cast<int>(nodes.size()) - 1;
+			return nodes.back().get();
+		}
+
 	};
+
 
 }
 	//static DirtyGraph testGraph;
