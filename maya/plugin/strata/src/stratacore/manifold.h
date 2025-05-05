@@ -288,9 +288,6 @@ namespace ed {
 
 		std::vector<SElement> elements;
 
-
-		int globalIndex = 0; // ticks up any time an element is added
-		//std::unordered_map<int,  STid> globalIndexElTypeMap; // this just feels ridiculous
 		std::unordered_map<std::string, int> nameGlobalIndexMap; // everyone point and laugh 
 		std::map<int, int> pointIndexGlobalIndexMap;
 		std::map<int, int> edgeIndexGlobalIndexMap;
@@ -304,11 +301,14 @@ namespace ed {
 
 		inline SElData* elData(int globalElId, StrataElType elT) {
 			switch (elT) {
-			case StrataElType::point: return &pointDatas[pointIndexGlobalIndexMap[globalIndex]];
-			case StrataElType::edge: return &edgeDatas[edgeIndexGlobalIndexMap[globalIndex]];
-			case StrataElType::face: return &faceDatas[faceIndexGlobalIndexMap[globalIndex]];
+			case StrataElType::point: return &pointDatas[pointIndexGlobalIndexMap[globalElId]];
+			case StrataElType::edge: return &edgeDatas[edgeIndexGlobalIndexMap[globalElId]];
+			case StrataElType::face: return &faceDatas[faceIndexGlobalIndexMap[globalElId]];
 			default: return nullptr;
 			}
+		}
+		inline SElData* elData(int globalElId) {
+			return elData(globalElId, elements[globalElId].elType);
 		}
 		inline SElData* elData(SElement& el) {
 			switch (el.elType) {
@@ -328,12 +328,7 @@ namespace ed {
 		void clear() {
 			// is it better to just make a new object?
 
-			/*points.clear();
-			edges.clear();
-			faces.clear();*/
 			elements.clear();
-			globalIndex = 0;
-			//globalIndexElTypeMap.clear();
 			nameGlobalIndexMap.clear();
 			pointDatas.clear();
 			edgeDatas.clear();
@@ -392,6 +387,26 @@ namespace ed {
 			return result;
 		}
 
+		
+		SElData* setElData(SElement* el, SElData* data) {
+			/* absolutely no idea on how best to do these uniform interfaces for #
+			setting data of different types*/
+			switch (el->elType) {
+			case StrataElType::point: {
+				pointDatas[el->elIndex] = *static_cast<SPointData*>(data);
+				return &pointDatas[el->elIndex];
+			}
+			case StrataElType::edge: {
+				edgeDatas[el->elIndex] = *static_cast<SEdgeData*>(data);
+				return &edgeDatas[el->elIndex];
+			}
+			case StrataElType::face: {
+				faceDatas[el->elIndex] = *static_cast<SFaceData*>(data);
+				return &faceDatas[el->elIndex];
+			}
+			default: return nullptr;
+			}
+		}
 
 		Status addElement(
 			SElement& el,
@@ -575,6 +590,40 @@ namespace ed {
 			}
 			return &(groups[name]);
 		}
+
+		/*
+		merging
+		*/
+
+		static constexpr int MERGE_OVERWRITE = 0;
+		static constexpr int MERGE_LEAVE = 1;
+
+		Status mergeOther(StrataManifold& other, int mergeMode, Status& s) {
+			/*given another manifold, merge it into this one
+			* if names are found, update according to merge mode - 
+			*	MERGE_OVERWRITE - overwrite this graph's data with matching names in other
+			*	MERGE_LEAVE - leave matching names as they are
+			*/
+			
+			// add any elements not already known by name
+			for (auto& otherEl : other.elements) {
+				SElement* newEl;
+				// if element not found, add it and copy over its data directly
+				if (nameGlobalIndexMap.find(otherEl.name) == nameGlobalIndexMap.end()) {
+					addElement(otherEl, newEl);
+					setElData(newEl, other.elData(otherEl));
+					continue;
+				}
+				// element found already - do we overwrite?
+				newEl = getEl(otherEl.name);
+				if (mergeMode == MERGE_OVERWRITE) {
+					setElData(newEl, other.elData(otherEl));
+				}
+			}
+			return s;
+		}
+
+
 
 		/*
 		spatial functions

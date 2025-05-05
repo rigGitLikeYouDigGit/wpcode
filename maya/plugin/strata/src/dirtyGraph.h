@@ -48,6 +48,9 @@ namespace ed {
 		std::string name;
 		DirtyGraph* graphPtr = nullptr;
 
+		using graphT = DirtyGraph;
+		inline graphT* getGraphPtr() { return static_cast<graphT*>(graphPtr); }
+
 		bool enabled = true; /* should this be per-node, or a set on the parent object?*/
 
 		/*template<typename GraphT=DirtyGraph>
@@ -282,6 +285,13 @@ namespace ed {
 			);
 		}
 		
+		const inline std::string outputNodeName() {
+			if (outputIndex == -1) {
+				return "";
+			}
+			return nodes[outputIndex]->name;
+		}
+
 		/*template<typename seqT>
 		inline seqT<int> namesToIndices(seqT<str> names) {
 		}*/
@@ -884,7 +894,7 @@ namespace ed {
 			return nodes.back().get();
 		}
 
-		virtual void mergeOther(const DirtyGraph& other, Status& s) {
+		virtual int mergeOther(const DirtyGraph& other, Status& s) {
 			/* copy nodes from other not found in this graph - 
 			works by NAME ONLY
 			indices of merged nodes WILL BE DIFFERENT
@@ -892,13 +902,19 @@ namespace ed {
 
 			LATER add in some way to check / add from only nodes in the critical path of the output
 			(but with this system, that's guaranteed to be all nodes in the graph?)
+
+			returns FIRST INDEX of added nodes, or -1 if none have been added
 			*/
+			int resultIndex = -1;
 			NodeDelta nDelta = getNodeDelta(other);
 			// copy nodes to add (required for correct edge delta
 			for (std::string nodeName : nDelta.nodesToAdd) {
 				//importNode(other, other.nameIndexMap.find(nodeName))
 				int otherIndex = other.nameIndexMap.at(nodeName);
-				importNode(other, otherIndex );
+				DirtyNode* importedNode = importNode(other, otherIndex );
+				if (resultIndex == -1) {
+					resultIndex = importedNode->index;
+				}
 			}
 			EdgeDelta eDelta = getEdgeDelta(other, nDelta.nodesToAdd);
 
@@ -914,7 +930,7 @@ namespace ed {
 				
 			}
 			graphChanged = true;
-			return;
+			return resultIndex;
 		}
 
 
@@ -1029,10 +1045,25 @@ namespace ed {
 		
 		std::vector<NodeData> nodeDatas; 
 
-		virtual void copyOther(const EvalGraph& other) {
+		template <typename T>
+		auto cloneShared(bool copyAllResults) const { return std::shared_ptr<T>(static_cast<T*>(clone_impl(copyAllResults))); }
+		virtual DirtyGraph* clone_impl(bool copyAllResults) const {
+			auto newPtr = clone_impl();
+			newPtr->copyOther(*this, copyAllResults);
+			return newPtr;
+		};
+
+		virtual void copyOther(const EvalGraph& other, bool copyAllResults=true) {
 			DirtyGraph::copyOther(other);
-			results = other.results;
 			nodeDatas = other.nodeDatas;
+			if (copyAllResults) {
+				results = other.results;
+			}
+			else { // only copy result of output node
+				results.clear();
+				results.resize(other.results.size());
+				results[outputIndex] = other.results[outputIndex];
+			}
 		}
 
 		EvalGraph() {
@@ -1046,6 +1077,33 @@ namespace ed {
 			copyOther(other);
 		}
 		EvalGraph& operator=(EvalGraph&& other) = default;
+
+
+		virtual int mergeOther(const EvalGraph& other, bool mergeAllResults, Status& s) {
+			/* if not mergeAllResults, only copy across the result value
+			* of the graph's output node, if it's part of the nodes merged
+			* 
+			* maybe this should be an extension of ImportNode instead
+			*/
+			int result = DirtyGraph::mergeOther(other, s);
+			if (s) {
+				return result;
+			}
+			// if we want to merge all results or the other graph has no output index set,
+			// copy everything
+			if (mergeAllResults || (other.outputIndex == -1) {
+				for (int i = result; i < static_cast<int>(nodes.size()); i++) {
+					int otherIndex = other.nameIndexMap[getNode(i)->name];
+					results[i] = other.results[otherIndex];
+				}
+			}
+			else { // copy only the value of the result node
+				DirtyNode* otherOutNode = other.getNode(outputIndex);
+				results[nameIndexMap[otherOutNode->name]] = other.results[otherOutNode.index];
+			}
+			return result;
+		}
+
 
 		template <typename NodeT = EvalNode<VT>>
 		NodeT* addNode(const std::string& name, VT defaultValue = VT(),

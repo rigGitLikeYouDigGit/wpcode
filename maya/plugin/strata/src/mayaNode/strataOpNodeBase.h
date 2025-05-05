@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdlib>
+
 #include <maya/MObject.h>
 #include "../MInclude.h"
 #include "../stratacore/op.h"
@@ -271,7 +273,7 @@ struct StrataOpNodeBase {
 			//return s;
 		}
 		else {
-			opGraphPtr = incomingGraphPtrs[0].lock().get()->cloneShared<StrataOpGraph>();
+			opGraphPtr = incomingGraphPtrs[0].lock().get()->cloneShared<StrataOpGraph>(false);
 		}
 
 		// now merge all graphs from inputs
@@ -283,7 +285,8 @@ struct StrataOpNodeBase {
 			if (pair.second.expired()) {
 				continue;
 			}
-			opGraphPtr.get()->mergeOther(pair.second.lock().get())
+			opGraphPtr.get()->mergeOther(pair.second.lock().get(), false, s);
+			CWRSTAT(s, "Error merging incoming graph to input " + std::to_string(pair.first));
 		}
 		return s;
 	}
@@ -642,60 +645,26 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 		s = cacheOpIndexOnNodeObject<NodeT>(mayaNodeMObject, opPtr->index);
 		MCHECK(s, "ERROR creating new op, could not cache op index on node");
 
-		//// set new node as the graph output - caveman solution to subtle situation
-		opGraphPtr.get()->outNodeIndex = opPtr->index;
+		// set graph's output index to this node
+		opGraphPtr->outputIndex = opPtr->index;
 
-		//DEBUGS("set op index on node")
-		// check input connections
-
-		MArrayDataHandle arrDh = data.inputArrayValue(NodeT::aStInput);
-		for (unsigned int i = 0; i < arrDh.elementCount(); i++) {
-			opPtrOut->inputs.push_back(arrDh.inputValue().asInt());
-			arrDh.next();
-		}
-		DEBUGS("pulled op inputs");
-
-
-
-		return s;
-	}
-
-	template<typename NodeT>
-	MStatus createNewOp(MObject& mayaNodeMObject, StrataOpT*& opPtrOut) {
-		/* create new op, and if we have incoming nodes, make new connections to it
-		* this is only called on postConstructor to set up first op when node is created
-		*/
-		DEBUGS("createNewOp new data");
-		MS s(MS::kSuccess);
-		opPtrOut = nullptr;
-		StrataOpT* opPtr = opGraphPtr.get()->addNode<StrataOpT>(
-			//data.outputValue(NodeT::aStOpNameOut).asString().asChar()
-			getOpNameFromNode<NodeT>(mayaNodeMObject)
+		// look up linked graphs, connect their output ops to this op's inputs
+		opPtr->inputs.reserve(
+			std::max_element(key_begin(incomingGraphPtrs), key_end(incomingGraphPtrs))
 		);
-		opPtrOut = opPtr;
-		DEBUGSL("added new op to graph");
-
-		// flag the latest added node as the output of this graph
-		opGraphPtr->setOutputNode(opPtr->index);
-		// set op index on node output
-		s = setOpIndexOnNode<NodeT>(mayaNodeMObject, opPtr->index);			
-		DEBUGS("set op index on node")
-		/*s = cacheOpIndexOnNodeObject<NodeT>(mayaNodeMObject, opPtr->index);
-		MCHECK(s, "could not cache op index on maya node ")*/
-		// check input connections
-		/*MFnDependencyNode depFn(mayaNodeMObject );
-		MPlug inPlug = depFn.findPlug(aStInput, true, &s);*/
-		MCHECK(s, "ERROR creating new op, could not find networked aStInput plug");
+		for (int i = 0; i < static_cast<int>(incomingGraphPtrs.size()); i++) {
+			if (!incomingGraphPtrs.count(i)) {
+				opPtr->inputs.push_back(-1);
+				continue;
+			}
+			opPtr->inputs.push_back(
+				opGraphPtr->nameIndexMap.at(
+					incomingGraphPtrs.at(i).lock().get()->outputNodeName()
+				)
+			);
+		}
 		return s;
 	}
-
-
-
-	//static void testNoTemplateFn();
-
-	//template<typename NodeT>
-	//static void testFn();
-	
 
 	Status syncOp(StrataOpT* op, MDataBlock& data) {
 		/* update op from maya node datablock -
@@ -752,17 +721,6 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 		MS s = setFreshGraph<NodeT>(nodeObj);
 	}
 
-	//template<typename NodeT>
-	//MStatus syncIncomingGraphData(MObject& nodeObj, MDataBlock& data) {
-	//	/* copy graph, and add new node to it*/
-	//	MStatus s = StrataOpNodeBase::syncIncomingGraphData<NodeT>(nodeObj, data);
-	//	DEBUGS("template syncIncoming")
-	//		MCHECK(s, "Error copying graph data from OpNodeBase, halting");
-	//	StrataOpT* opPtr;
-	//	s = createNewOp<NodeT>(nodeObj, data, opPtr);
-	//	MCHECK(s, "Error adding new op to new graph");
-	//	return s;
-	//};
 
 	template <typename NodeT>
 	MStatus compute(MObject& nodeObj, const MPlug& plug, MDataBlock& data) {

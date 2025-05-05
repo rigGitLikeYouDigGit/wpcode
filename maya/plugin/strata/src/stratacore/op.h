@@ -65,6 +65,8 @@ namespace ed {
 		// maybe later we try and split topological and smooth operations
 
 		using EvalNode::EvalNode;
+
+		using graphT = StrataOpGraph;
 				
 		// dense map of { param string name : param object }
 		std::map<std::string, expns::Expression > paramNameExpMap;
