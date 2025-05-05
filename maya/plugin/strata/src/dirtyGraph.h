@@ -56,7 +56,7 @@ namespace ed {
 		/*template<typename GraphT=DirtyGraph>
 		virtual GraphT* getGraphPtr() { return ; }*/
 
-		virtual DirtyGraph* getGraphPtr() { return graphPtr; }
+		//virtual DirtyGraph* getGraphPtr() { return graphPtr; }
 
 		std::vector<int> inputs; // manage connections yourself
 
@@ -70,31 +70,11 @@ namespace ed {
 			return false;
 		}
 
-		inline std::map<std::string, DirtyNode*> nameInputNodeMap() {
-			std::map<std::string, DirtyNode*> result;
-			for (auto i : inputs) {
-				auto node = graphPtr->getNode(i);
-				result[node->name] = node;
-			}
-			return result;
-		}
+		inline std::map<std::string, DirtyNode*> nameInputNodeMap();
 
-		inline std::vector<DirtyNode*> inputNodes() {
-			std::vector<DirtyNode*> result(inputs.size());
-			for (auto i : inputs) {
-				auto node = graphPtr->getNode(i);
-				result.push_back(node);
-			}
-			return result;
-		}
+		std::vector<DirtyNode*> inputNodes();
 
-		inline std::vector<std::string> inputNames() {
-			std::vector<std::string> result(inputs.size());
-			for (auto i : inputs) {
-				result.push_back(graphPtr->nodes[i].get()->name);
-			}
-			return result;
-		}
+		std::vector<std::string> inputNames();
 
 		int temp_inDegree = 0;
 		int temp_generation = 0;
@@ -111,12 +91,7 @@ namespace ed {
 			return Status();
 		}
 
-		inline void nodeError(std::string errorMsg) {
-			if (!graphPtr) {
-				return;
-			}
-			graphPtr->addNodeError(index, errorMsg);
-		}
+		inline void nodeError(std::string errorMsg);
 	};
 
 	struct DirtyGraph {
@@ -787,8 +762,8 @@ namespace ed {
 			to target
 			WE DON'T DO ANYTHING FANCY TO CHECK TYPES
 			*/
-			std::unordered_set<std::string> nodesToAdd; 
-			std::unordered_set<std::string> nodesToRemove; 
+			std::vector<std::string> nodesToAdd; 
+			std::vector<std::string> nodesToRemove; 
 
 		};
 
@@ -812,7 +787,7 @@ namespace ed {
 			pass in list of names to consider in other graph
 			*/
 			NodeDelta result;
-			std::vector<std::string> thisSortedKeys(key_begin(nameIndexMap), key_end(nameIndexMap));
+			std::vector<std::string> thisSortedKeys = mapKeys(nameIndexMap);
 			//std::vector<std::string> otherSortedKeys(key_begin(other.nameIndexMap), key_end(other.nameIndexMap));
 
 			std::sort(thisSortedKeys.begin(), thisSortedKeys.end());
@@ -832,14 +807,14 @@ namespace ed {
 
 		NodeDelta getNodeDelta(const DirtyGraph& other) const {
 			// get delta of all nodes in graph if not specified
-			std::vector<std::string> otherSortedKeys(key_begin(other.nameIndexMap), key_end(other.nameIndexMap));
+			std::vector<std::string> otherSortedKeys = mapKeys(other.nameIndexMap);
 			return getNodeDelta(other, otherSortedKeys);
 		}
 
 		EdgeDelta getEdgeDelta(
 			const DirtyGraph& other,
 			//std::vector<std::string>& nodesToCheck 
-			std::unordered_set<std::string>& nodesToCheck
+			std::vector<std::string>& nodesToCheck
 			) const {
 			/* not quite as sleek as nodes
 			ordering of edges???
@@ -864,9 +839,9 @@ namespace ed {
 				if (other.nameIndexMap.find(name) == other.nameIndexMap.end()) {
 					continue;
 				}				
-				auto otherNode = other.getNode(name);
+				DirtyNode* otherNode = other.getNode(name);
 
-				result.edgesToAdd[name] = otherNode->inputNames();
+				result.edgesToAdd.insert(std::make_pair(name, otherNode->inputNames()));
 				
 
 				//auto thisInputNodes = thisNode->inputNodes();
@@ -1047,8 +1022,8 @@ namespace ed {
 
 		template <typename T>
 		auto cloneShared(bool copyAllResults) const { return std::shared_ptr<T>(static_cast<T*>(clone_impl(copyAllResults))); }
-		virtual DirtyGraph* clone_impl(bool copyAllResults) const {
-			auto newPtr = clone_impl();
+		virtual EvalGraph<VT>* clone_impl(bool copyAllResults) const {
+			auto newPtr = new EvalGraph<VT>(*this);
 			newPtr->copyOther(*this, copyAllResults);
 			return newPtr;
 		};
@@ -1091,15 +1066,15 @@ namespace ed {
 			}
 			// if we want to merge all results or the other graph has no output index set,
 			// copy everything
-			if (mergeAllResults || (other.outputIndex == -1) {
+			if (mergeAllResults || (other.outputIndex == -1)) {
 				for (int i = result; i < static_cast<int>(nodes.size()); i++) {
-					int otherIndex = other.nameIndexMap[getNode(i)->name];
+					int otherIndex = other.nameIndexMap.at(getNode(i)->name);
 					results[i] = other.results[otherIndex];
 				}
 			}
 			else { // copy only the value of the result node
 				DirtyNode* otherOutNode = other.getNode(outputIndex);
-				results[nameIndexMap[otherOutNode->name]] = other.results[otherOutNode.index];
+				results[nameIndexMap[otherOutNode->name]] = other.results[otherOutNode->index];
 			}
 			return result;
 		}

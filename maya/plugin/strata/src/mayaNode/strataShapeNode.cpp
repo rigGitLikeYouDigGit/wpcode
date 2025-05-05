@@ -124,18 +124,17 @@ MStatus StrataShapeNode::connectionMade(
     const MPlug& otherPlug,
     bool 	asSrc
 ) {
-    //DEBUGSL("el connection made")
-    //    MStatus s = superT::connectionMade(
-    //        thisMObject(),
-    //        plug,
-    //        otherPlug,
-    //        asSrc
-    //    );
-    return MPxNode::connectionMade(
+    return StrataOpNodeBase::connectionMade<StrataShapeNode>(
+        thisMObject(),
         plug,
         otherPlug,
         asSrc
     );
+    //return MPxNode::connectionMade(
+    //    plug,
+    //    otherPlug,
+    //    asSrc
+    //);
 }
 
 MStatus StrataShapeNode::connectionBroken(
@@ -143,18 +142,18 @@ MStatus StrataShapeNode::connectionBroken(
     const MPlug& otherPlug,
     bool 	asSrc
 ) {
-   /* DEBUGSL("el connection broken")
-        MStatus s = superT::connectionBroken(
+    //DEBUGSL("el connection broken")
+        return StrataOpNodeBase::connectionBroken<StrataShapeNode>(
             thisMObject(),
             plug,
             otherPlug,
             asSrc
-        );*/
-    return MPxNode::connectionBroken(
+        );
+    /*return MPxNode::connectionBroken(
         plug,
         otherPlug,
         asSrc
-    );
+    );*/
 }
 
 MStatus StrataShapeNode::syncStrataParams(MObject& nodeObj, MDataBlock& data) {
@@ -176,18 +175,13 @@ MStatus StrataShapeNode::compute(const MPlug& plug, MDataBlock& data) {
     if (data.isClean(plug)) {
         return s;
     }
+    DEBUGS("shape compute");
+    // run strata op merge
+    superT::compute<StrataShapeNode>(thisMObject(), plug, data);
 
-    DEBUGS("shape compute")
-        
 
     /* pull in drawing values to cache*/
     pointOpacity = data.inputValue(aStShowPoints).asFloat();
-
-    // pass to bases
-    /*s = superT::compute(thisMObject(), plug, data);
-    MCHECK(s, NODENAME + " ERROR in strata bases compute, halting");*/
-
-
 
     data.setClean(plug);
 

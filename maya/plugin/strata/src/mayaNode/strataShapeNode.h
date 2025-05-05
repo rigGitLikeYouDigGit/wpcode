@@ -3,7 +3,7 @@
 
 #include "../MInclude.h"
 #include "strataMayaLib.h"
-#include "../strataop/elementOp.h"
+#include "../strataop/mergeOp.h"
 #include "strataOpNodeBase.h"
 
 #include "../exp/expParse.h"
@@ -65,9 +65,9 @@ public:
 	}
 };
 
-//class StrataShapeNode : public MPxNode, public StrataOpNodeTemplate<ed::StrataElementOp> {
+class StrataShapeNode : public MPxNode, public StrataOpNodeTemplate<ed::StrataMergeOp> {
 //class StrataShapeNode : public MPxNode, public StrataOpNodeBase {
-class StrataShapeNode : public MPxComponentShape, public StrataOpNodeBase {
+//class StrataShapeNode : public MPxComponentShape, public StrataOpNodeBase {
 public:
 	
 	using superT = StrataOpNodeBase;
@@ -139,21 +139,30 @@ public:
 };
 
 class StrataShapeGeometryOverride : public MHWRender::MPxGeometryOverride {
+	/* we copy the drawn value here,
+	so it can draw while a new value computes*/
 
 public:
 	
 	// examples do this so I guess it's legal? Hold pointer to shape node on its draw override
 	StrataShapeNode* shapeNodePtr = nullptr; 
 	MObjectHandle shapeNodeObjHdl;
+	ed::StrataManifold manifold;
 
-	inline ed::StrataManifold* manifold() {
+	bool selectablePoints = false;
+	bool selectableEdges = false;
+	bool selectableFaces = false;
+
+	inline Status syncManifold() {
 		/* eval manifold if its final out node is dirty*/
 		Status s;
 		int outIndex = shapeNodePtr->opGraphPtr.get()->outNodeIndex;
 		if (shapeNodePtr->opGraphPtr.get()->getNode(outIndex)->anyDirty()) {
 			s = shapeNodePtr->opGraphPtr.get()->evalGraph(s, outIndex);
+			CWRSTAT(s, "error eval-ing manifold to draw with strataShape node");
 		}
-		return &(shapeNodePtr->opGraphPtr.get()->results)[outIndex];
+		manifold = shapeNodePtr->opGraphPtr.get()->results[outIndex];
+		return s;
 	}
 
 	/*static const char* sActiveWireframeRenderItemName;
@@ -184,8 +193,42 @@ public:
 	MHWRender::DrawAPI supportedDrawAPIs() const override {
 		return MHWRender::kOpenGL;
 	}
+
+
+	void updateSelectionGranularity(const MDagPath& path,
+		MSelectionContext& selectionContext
+	) {
+		/* this is actually really complicated, skip for now*/
+	}
+
 	void updateDG() override {
 		/* check here if the linked shape node has dirty items*/
+		Status s = syncManifold();
+		CWMSG(s, "Error on syncManifold in updateDG() for strataShape");
+	}
+
+	virtual bool supportsEvaluationManagerParallelUpdate()	const {
+		return true;
+	}
+
+	/* UI drawing - for now just dots on points, as well as the gnomon lines -
+	just an experiment*/
+	virtual bool hasUIDrawables()	const {
+		/* only render ui points if in selection/component mode?
+		*/
+		//getFrameContext()->getSelectionInfo()
+		return true;
+	}
+	virtual void addUIDrawables(const MDagPath& path,
+		MUIDrawManager& drawManager,
+		const MFrameContext& frameContext
+	) {
+		Status s;
+		drawManager.beginDrawable();
+		drawManager.setPointSize(1.0);
+		drawManager.points(manifold.getPointPositionArray<MPointArray>(s), false);
+		CWMSG(s, "error getting point position array for addUiDrawables");
+		drawManager.endDrawable();
 	}
 
 	inline MIndexBufferDescriptor getCurveIndexBufferDescriptor() {
@@ -308,12 +351,6 @@ public:
 		*/
 
 		DEBUGSL("PopulateGeometry");
-		if (!shapeNodePtr)
-			return;
-		ed::StrataManifold* manifoldPtr = manifold();
-		if (!manifoldPtr) { 
-			DEBUGSL("no manifold pointer, returning");
-			return;  }
 		Status s;
 		MS ms(MS::kSuccess);
 		const MVertexBufferDescriptorList& vertexBufferDescriptorList = requirements.vertexRequirements();
@@ -340,7 +377,7 @@ public:
 				// check if this is for point positions
 				if (desc.name() == sStPointRenderItemName) {
 
-					ed::Float3Array positions = manifoldPtr->getWireframePointVertexPositionArray(s);
+					ed::Float3Array positions = manifold.getWireframePointGnomonVertexPositionArray(s);
 					if (s) {
 						DEBUGSL("ERROR getting position vertex buffer for manifold points");
 						return;
@@ -486,7 +523,7 @@ public:
 					DEBUGSL("invalid semantic used to create index buffer, aborting");
 					return;
 				}
-				ed::IndexList indices = manifoldPtr->getWireframePointIndexArray(s);
+				ed::IndexList indices = manifold.getWireframePointIndexArray(s);
 				if (s) {
 					DEBUGSL("ERROR getting wireframe point index array, aborting");
 					return;
@@ -511,15 +548,9 @@ public:
 	void cleanUp() override {
 		/* null the pointers just in case?*/
 		shapeNodePtr = nullptr;
+		manifold.clear();
 	}
-	bool requiresGeometryUpdate() const override
-	{
-		/* check with cached node */
-		return false;
-	}
-	bool supportsEvaluationManagerParallelUpdate() const override {
-		return true;
-	}
+
 
 
 

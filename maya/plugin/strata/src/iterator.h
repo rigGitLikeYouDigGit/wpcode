@@ -20,6 +20,10 @@ just like in python
 
 namespace ed {
 
+	/* kept getting templating errors from this ._.
+	going with the caveman option again
+	*/
+
 	// map key iterator, from StackOverflow user Marius
 	template<typename map_type>
 	class key_iterator : public map_type::iterator
@@ -36,21 +40,43 @@ namespace ed {
 		}
 	};
 
-	// helpers to create iterators easier:
-	template<typename map_type>
-	key_iterator<map_type> key_begin(map_type& m)
-	{
-		return key_iterator<map_type>(m.begin());
+	//// helpers to create iterators easier:
+	//template<typename map_type>
+	//key_iterator<map_type> key_begin(map_type& m)
+	//{
+	//	return key_iterator<map_type>(m.begin());
+	//}
+	//template<typename map_type>
+	//key_iterator<map_type> key_end(map_type& m)
+	//{
+	//	return key_iterator<map_type>(m.end());
+	//}
+
+	template<typename mapT>
+	std::vector<typename mapT::key_type> mapKeys(const mapT& map) {
+		std::vector<typename mapT::key_type> result(map.size());
+		for (auto& p : map) {
+			result.push_back(p.first);
+		}
+		return result;
 	}
+	
+	//template<typename map_type>
+	//key_iterator<map_type> key_begin(map_type& m)
+	//{
+	//	return mapKeys(m).begin();
+	//}
+	//template<typename map_type>
+	//key_iterator<map_type> key_end(map_type& m)
+	//{
+	//	return mapKeys(m).end();
+	//}
+
 	template<typename map_type>
-	key_iterator<map_type> key_end(map_type& m)
+	std::vector<typename map_type::key_type>key_sorted(map_type& m)
 	{
-		return key_iterator<map_type>(m.end());
-	}
-	template<typename map_type>
-	inline std::vector<map_type::key_type>key_sorted(map_type& m)
-	{
-		std::vector<map_type::key_type> sorted(key_begin(m), key_end(m));
+		//std::vector<map_type::key_type> sorted(key_begin(m), key_end(m));
+		std::vector<map_type::key_type> sorted = mapKeys(m);
 		std::sort(sorted.begin(), sorted.end());
 		return sorted;
 	}

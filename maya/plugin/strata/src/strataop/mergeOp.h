@@ -20,7 +20,7 @@ namespace ed {
 		*/
 		using StrataOp::StrataOp;
 
-		virtual Status makeParams() { return Status(); }
+		virtual Status makeParams();
 
 		///template <typename AuxT>
 		virtual Status eval(StrataManifold& value, EvalAuxData* auxData, Status& s);

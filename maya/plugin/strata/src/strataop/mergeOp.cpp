@@ -30,10 +30,10 @@ Status StrataMergeOp::eval(StrataManifold& value,
 	return s;
 }
 
-Status evalTopo(StrataManifold& manifold, Status& s) {
-	return s;
-}
-
-Status evalData(StrataManifold& manifold, Status& s) {
-	return s;
-}
+//Status evalTopo(StrataManifold& manifold, Status& s) {
+//	return s;
+//}
+//
+//Status evalData(StrataManifold& manifold, Status& s) {
+//	return s;
+//}

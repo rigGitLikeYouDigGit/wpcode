@@ -748,6 +748,32 @@ namespace ed {
 		static int constexpr CURVE_SHAPE_RES = 20; // how many points to sample each curve?
 		// surely we'll have to break this up for longer edges
 
+		inline Float3Array getPointPositionArray(Status& s) {
+			/* flattened float array of positions for all points
+			I suppose this would be where struct of arrays wins over struct of arrays
+			TODO: struct of arrays
+			*/
+			Float3Array result(static_cast<int>(pointDatas.size()));
+			for (int i = 0; i < static_cast<int>(pointDatas.size()); i++) {
+				result[i] = pointDatas[i].finalMatrix * MVector::zero;
+			}
+			return result;
+		}
+
+		template<typename arrT>
+		inline arrT getPointPositionArray(Status& s) {
+			/* flattened float array of positions for all points
+			I suppose this would be where struct of arrays wins over struct of arrays
+			TODO: struct of arrays
+			*/
+			arrT result(static_cast<int>(pointDatas.size()));
+			for (int i = 0; i < static_cast<int>(pointDatas.size()); i++) {
+				result[i] = pointDatas[i].finalMatrix * MVector::zero;
+			}
+			return result;
+		}
+
+
 		inline Float3Array getWireframeVertexPositionArray(Status& s) {
 			/* return flat float3 array for vector positions on points and curves
 			* 
@@ -787,7 +813,7 @@ namespace ed {
 			return result;
 		}
 
-		inline Float3Array getWireframePointVertexPositionArray(Status& s) {
+		inline Float3Array getWireframePointGnomonVertexPositionArray(Status& s) {
 			/* return flat float3 array for gnomon positions only on points
 			* each point has 4 coords - point itself, and then 0.1 units in x, y, z of that point
 			*/

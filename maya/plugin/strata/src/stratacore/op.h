@@ -10,6 +10,8 @@
 
 #include "../dirtyGraph.h"
 
+#include "opgraph.h"
+
 namespace ed {
 
 

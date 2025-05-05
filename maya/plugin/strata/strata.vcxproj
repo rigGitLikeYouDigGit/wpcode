@@ -313,6 +313,8 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\mayaNode\matrixCurve.cpp" />
+    <ClCompile Include="src\strataop\mergeOp.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\MInclude.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\api.h" />
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\containers.cpp" />
@@ -361,6 +363,8 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\strataop\elementOp.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\strataop\elementOp.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stringLib.h" />
+    <ClInclude Include="src\mayaNode\matrixCurve.h" />
+    <ClInclude Include="src\strataop\mergeOp.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="F:\wp\code\maya\plugin\strata\ZERO_CHECK.vcxproj">

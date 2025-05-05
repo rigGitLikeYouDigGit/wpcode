@@ -218,7 +218,7 @@ struct StrataOpNodeBase {
 		//	sourceGraphPtr = nodePtr->opGraphPtr;
 		//}
 		
-		sourceGraphPtr = nullptr;
+		sourceGraphPtr.reset();
 
 		// copy any input graphs
 		MPlug inputPlug = depFn.findPlug("stInput", true, &s);
@@ -253,11 +253,18 @@ struct StrataOpNodeBase {
 		return s;
 	};
 
+
 	template<typename NodeT>
 	MStatus syncIncomingGraphData(MObject& nodeObj, MDataBlock& data) {
+		return syncIncomingGraphData<NodeT>(nodeObj);
+	}
+
+	template<typename NodeT>
+	MStatus syncIncomingGraphData(MObject& nodeObj) {
 		/* copy incoming graph data - extend to also add new node into graph
 		* check through incoming map - if 0 entry found, copy it to a new object
 		*/
+		Status strataS;
 		DEBUGS("base sync incoming")
 			MS s = MS::kSuccess;
 		if (incomingGraphPtrs.find(0) == incomingGraphPtrs.end()) {
@@ -285,8 +292,9 @@ struct StrataOpNodeBase {
 			if (pair.second.expired()) {
 				continue;
 			}
-			opGraphPtr.get()->mergeOther(pair.second.lock().get(), false, s);
-			CWRSTAT(s, "Error merging incoming graph to input " + std::to_string(pair.first));
+			opGraphPtr.get()->mergeOther(*pair.second.lock().get(), false, strataS);
+			//CWSTAT(strataS, "Error merging incoming graph to input " + std::to_string(pair.first));
+			CWMSG(strataS, "Error merging incoming graph to input " + std::to_string(pair.first));
 		}
 		return s;
 	}
@@ -533,7 +541,9 @@ struct StrataOpNodeBase {
 		}*/
 
 		s = syncIncomingGraphConnections<NodeT>(plug.node());
-		MCHECK(s, "ERROR refreshing graph pointer from incoming node connection");
+		MCHECK(s, "ERROR refreshing graph pointer on connectionMade");
+		s = syncIncomingGraphData<NodeT>(plug.node());
+		MCHECK(s, "ERROR merging incoming graphs on connectionMade");
 		/* actual operations to copy and merge graphs need to be done in compute,
 		since if a structural change happens more than one maya node before this one,
 		this function won't re-run*/
@@ -551,8 +561,10 @@ struct StrataOpNodeBase {
 		if (MFnAttribute(plug.attribute()).name() != "stInput") {
 			return s;
 		}
-		//refreshGraphPtr(nullptr);
-		syncIncomingGraphConnections<NodeT>(plug.node());
+		s = syncIncomingGraphConnections<NodeT>(plug.node());
+		MCHECK(s, "ERROR refreshing graph pointer on connectionBroken");
+		s = syncIncomingGraphData<NodeT>(plug.node());
+		MCHECK(s, "ERROR merging incoming graphs on connectionBroken");
 		return s;
 	}
 
@@ -581,7 +593,7 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 //
 //	// pointer to this node's op
 //// retrieve anytime the node or graph changes
-//	StrataOpT* opPtr = nullptr;
+	//StrataOpT* opPtr = nullptr;
 
 	template<typename NodeT>
 	StrataOpT* getStrataOp(const MObject& nodeObj) {
@@ -642,15 +654,16 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 		// set op index on node output
 		s = setOpIndexOnNode<NodeT>(data, opPtr->index);
 		MCHECK(s, "ERROR creating new op, could not set op index on node");
-		s = cacheOpIndexOnNodeObject<NodeT>(mayaNodeMObject, opPtr->index);
-		MCHECK(s, "ERROR creating new op, could not cache op index on node");
+		/*s = cacheOpIndexOnNodeObject<NodeT>(mayaNodeMObject, opPtr->index);
+		MCHECK(s, "ERROR creating new op, could not cache op index on node");*/
 
 		// set graph's output index to this node
 		opGraphPtr->outputIndex = opPtr->index;
 
 		// look up linked graphs, connect their output ops to this op's inputs
+		std::vector<int> inputKeys = mapKeys(incomingGraphPtrs);
 		opPtr->inputs.reserve(
-			std::max_element(key_begin(incomingGraphPtrs), key_end(incomingGraphPtrs))
+			*std::max_element(inputKeys.begin(), inputKeys.end())
 		);
 		for (int i = 0; i < static_cast<int>(incomingGraphPtrs.size()); i++) {
 			if (!incomingGraphPtrs.count(i)) {
@@ -715,21 +728,28 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 	template<typename NodeT>
 	void postConstructor(MObject& nodeObj) {
 		//StrataOpNodeBase::postConstructor(nodeObj);
-		DEBUGS("template postConstructor")
-			addedToGraph = true;
-		//return;
-		MS s = setFreshGraph<NodeT>(nodeObj);
+		return;
+		//DEBUGS("template postConstructor")
+		//	addedToGraph = true;
+		////return;
+		//MS s = setFreshGraph<NodeT>(nodeObj);
 	}
 
 
 	template <typename NodeT>
 	MStatus compute(MObject& nodeObj, const MPlug& plug, MDataBlock& data) {
 		MS s(MS::kSuccess);
+
 		// sync op name
 		if (plug.attribute() == NodeT::aStOpNameOut) {
 			syncOpNameOut<NodeT>(nodeObj, data);
 			data.setClean(plug);
 			return s;
+		}
+		StrataOpT* opPtr = getStrataOp<NodeT>(data);
+		// create op if none
+		if (opPtr == nullptr) {
+			createNewOp<NodeT>(nodeObj, data, opPtr);
 		}
 
 		// copy graph data if it's dirty
@@ -740,6 +760,7 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 				MCHECK(s, "error syncing incoming graph data");
 
 			// add new op to graph, set as graph output
+			StrataOpT* opPtr = nullptr;
 			s = createNewOp<NodeT>(nodeObj, data, opPtr);
 			MCHECK(s, "failed to add new op to graph for node " )
 		}

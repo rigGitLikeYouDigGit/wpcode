@@ -6,7 +6,6 @@
 
 #include "../dirtyGraph.h"
 #include "manifold.h"
-#include "op.h"
 
 namespace ed {
 	/// do we need to keep entire manifolds? can we eval the whole graph live at all times?
