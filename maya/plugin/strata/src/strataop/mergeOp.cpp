@@ -1,6 +1,8 @@
 
 #include "mergeOp.h"
 #include "../stringLib.h"
+#include "../lib.h"
+#include "../libEigen.h"
 
 using namespace ed;
 using namespace ed::expns;

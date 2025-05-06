@@ -27,38 +27,38 @@ class StringLike(object):
 	def __contains__(self, item):
 		return str(self).__contains__(item)
 	def __delslice__(self, i, j):
-		return str.__delslice__(self.value, i, j)
+		return str.__delslice__(str(self), i, j)
 	def __eq__(self, other):
 		return str(self).__eq__(other)
 	def __format__(self, format_spec):
 		return str(self).__format__(format_spec)
 	def __ge__(self, other):
-		return str.__ge__(self.value, other)
+		return str.__ge__(str(self), other)
 	def __getitem__(self, item):
-		return str.__getitem__(self.value, item)
+		return str.__getitem__(str(self), item)
 	def __getslice__(self, start, stop):
-		return str.__getslice__(self.value, start, stop)
+		return str.__getslice__(str(self), start, stop)
 	def __gt__(self, other):
-		return str.__gt__(self.value, other)
-	def __iadd__(self, other):
-		self.value = self.value + other
-		return self.value
-	def __imul__(self, other):
-		self.value = self.value * other
-		return self.value
+		return str.__gt__(str(self), other)
+	# def __iadd__(self, other):
+	# 	self.value = str(self) + other
+	# 	return self.value
+	# def __imul__(self, other):
+	# 	self.value = self.value * other
+	# 	return self.value
 	def __le__(self, other):
-		return str.__le__(self.value, other)
+		return str.__le__(str(self), other)
 	def __len__(self):
-		return len(self.value)
+		return len(str(self))
 	def __lt__(self, other):
-		return str.__lt__(self.value, other)
+		return str.__lt__(str(self), other)
 	def __mul__(self, other):
-		return str.__mul__(self.value, other)
+		return str.__mul__(str(self), other)
 	def __ne__(self, other):
-		return str.__ne__(self.value, other)
+		return str.__ne__(str(self), other)
 	def __reversed__(self):
-		return reversed(self.value)
+		return reversed(str(self))
 	def __rmul__(self, other):
-		return str.__rmul__(self.value, other)
+		return str.__rmul__(str(self), other)
 	def __hash__(self):
-		return str.__hash__(self.value)
+		return str.__hash__(str(self))

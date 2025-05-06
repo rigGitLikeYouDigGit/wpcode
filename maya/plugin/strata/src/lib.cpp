@@ -1,48 +1,14 @@
 
 #pragma once
+
 #include "api.h"
 #include "macro.h"
 
+#include "lib.h"
+
 namespace ed {
-
-	typedef unsigned int uint;
-
-	BETTER_ENUM(STDriverType, int, point, line, face); // used in maya enum attr
-
-	/* handy way to work more easily with vertex buffer memory - cast
-	it to vector of float types like this */
-	struct Float2
-	{
-		Float2() {}
-		Float2(float x, float y)
-			: x(static_cast<float>(x)), y(static_cast<float>(y)) {}
-		Float2(MVector v)
-			: x(static_cast<float>(v[0])), y(static_cast<float>(v[1])) {}
-		Float2(MPoint v)
-			: x(static_cast<float>(v[0])), y(static_cast<float>(v[1])) {}
-		float x;
-		float y;
-	};
-	struct Float3
-	{
-		Float3() {}
-		Float3(float x, float y, float z)
-			: x(static_cast<float>(x)), y(static_cast<float>(y)), z(static_cast<float>(z)) {}
-		Float3(MVector v)
-			: x(static_cast<float>(v[0])), y(static_cast<float>(v[1])), z(static_cast<float>(v[2])) {}
-		Float3(MPoint v)
-			: x(static_cast<float>(v[0])), y(static_cast<float>(v[1])), z(static_cast<float>(v[2])) {}
-		float x;
-		float y;
-		float z;
-	};
-	typedef std::vector<Float3>       Float3Array;
-	typedef std::vector<Float2>       Float2Array;
-	typedef std::vector<unsigned int> IndexList;
-
-
 	/* FUNCTIONS TAKE QUATERNIONS OF FORM X-Y-Z-W
-	
+
 	*/
 
 	template<typename T>
@@ -116,11 +82,6 @@ namespace ed {
 		return m;
 	}
 
-	template<typename T>
-	inline T* quatTo4x4Mat(T* quat) {
-		T* m[16];
-		return quatTo4x4Mat(quat, m);
-	}
 
 	template<typename T>
 	T* quatTo3x3Mat(T* quat, T* m) {
@@ -159,30 +120,13 @@ namespace ed {
 		return m;
 	}
 
-	template<typename T>
-	inline T* quatTo3x3Mat(T* quat) {
-		T* m[9];
-		return quatTo3x3Mat(quat, m);
-	}
 
 	template<typename T>
-	T ReciprocalSqrt(T x) {
-		long i;
-		T y, r;
-		y = x * 0.5f;
-		i = *(long*)(&x);
-		i = 0x5f3759df - (i >> 1); // mr carmack please calm down
-		r = *(T*)(&i);
-		r = r * (1.5f - r * r * y);
-		return r;
-	}
-
-	template<typename T>
-	T* x4MatToQuat(T* m, T* q) {
+	static T* x4MatToQuat(T* m, T* q) {
 
 		//float* q = &jointQuats[i].q;
 		//T* q[4];
-	
+
 		// diagonal sign check
 		if (m[0 * 4 + 0] + m[1 * 4 + 1] + m[2 * 4 + 2] > 0.0f) {
 			T t = +m[0 * 4 + 0] + m[1 * 4 + 1] + m[2 * 4 + 2] + 1.0f;
@@ -220,33 +164,33 @@ namespace ed {
 		return q;
 	}
 
-	static MDoubleArray uniformKnotsForCVs(int nCVs, int degree) {
-		// for degree = 1, k=2
-		// degree = 2, k=3 etc
-		// degree = 3, k=4
-		// for a cubic curve with 6 CVs, knots should be thus
-		// [ 0, 0, 0, 0, 1, 2, 3, 3, 3, 3 ]
-		// for cubic curve with 4 CVs:
-		// [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]
-		// 
+	//static MDoubleArray ed::uniformKnotsForCVs(int nCVs, int degree) {
+	//	// for degree = 1, k=2
+	//	// degree = 2, k=3 etc
+	//	// degree = 3, k=4
+	//	// for a cubic curve with 6 CVs, knots should be thus
+	//	// [ 0, 0, 0, 0, 1, 2, 3, 3, 3, 3 ]
+	//	// for cubic curve with 4 CVs:
+	//	// [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]
+	//	// 
 
-		MDoubleArray arr(nCVs + degree - 1, float(nCVs) - float(degree));
-		float knotVal = 0.0;
-		for (int i = 0; i < (nCVs); i++) {
-			if (i < (degree-1)) {
-				arr[i] = knotVal;
-				continue;
-			}
-			arr[i] = knotVal;
-			knotVal += 1.0;
-		}
-		return arr;
-	}
+	//	MDoubleArray arr(nCVs + degree - 1, float(nCVs) - float(degree));
+	//	float knotVal = 0.0;
+	//	for (int i = 0; i < (nCVs); i++) {
+	//		if (i < (degree - 1)) {
+	//			arr[i] = knotVal;
+	//			continue;
+	//		}
+	//		arr[i] = knotVal;
+	//		knotVal += 1.0;
+	//	}
+	//	return arr;
+	//}
 
 	template<typename T>
 	inline T* slerp(T* qa, T* qb, T* qm, T t) {
 		/* adapted from euclideanspace.com https://www.euclideanspace.com/maths/algebra/realNormedAlgebra/quaternions/slerp/
-		
+
 		quats should be X-Y-Z-W
 
 		matches maya, but not eigen :(
@@ -258,7 +202,7 @@ namespace ed {
 
 		quat pointers should all be 4-long
 		*/
-		
+
 		// Calculate angle between them.
 		//T cosHalfTheta = qa.w * qb.w + qa.x * qb.x + qa.y * qb.y + qa.z * qb.z;
 		//T cosHalfTheta = qa[0] * qb[0] + qa[1] * qb[1] + qa[2] * qb[2] + qa[3] * qb[3];
@@ -272,7 +216,7 @@ namespace ed {
 			cosHalfTheta = -cosHalfTheta;
 		}
 		/////
-		
+
 		// if qa=qb or qa=-qb then theta = 0 and we can return qa
 		if (abs(cosHalfTheta) >= 1.0) {
 			//qm.w = qa.w; qm.x = qa.x; qm.y = qa.y; qm.z = qa.z;
@@ -310,24 +254,6 @@ namespace ed {
 		return qm;
 	}
 
-	template<typename T>
-	static inline void WXYZ_to_XYZW(T* q) {
-		T temp = q[0];
-		q[0] = q[1];
-		q[1] = q[2];
-		q[2] = q[3];
-		q[3] = temp;
-	}
-
-	template<typename T>
-	static inline void XYZW_to_WXYZ(T* q) {
-		T temp = q[3];
-		q[3] = q[2];
-		q[2] = q[1];
-		q[1] = q[0];
-		q[0] = temp;
-	}
-
 	// TODO: simd
 	template<typename T, int N>
 	static inline T* lerpN(T* a, T* b, T* out, T t) {
@@ -337,7 +263,37 @@ namespace ed {
 		return out;
 	}
 
-	static inline MMatrix interpolateMMatrixArray(std::vector<MMatrix>& mmatrixArr, MMatrix& out, float t) {
+	//MDoubleArray ed::uniformKnotsForCVs(int nCVs, int degree)
+	//{
+	//		// for degree = 1, k=2
+	//// degree = 2, k=3 etc
+	//// degree = 3, k=4
+	//// for a cubic curve with 6 CVs, knots should be thus
+	//// [ 0, 0, 0, 0, 1, 2, 3, 3, 3, 3 ]
+	//// for cubic curve with 4 CVs:
+	//// [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]
+	//// 
+
+	//	MDoubleArray arr(nCVs + degree - 1, float(nCVs) - float(degree));
+	//	float knotVal = 0.0;
+	//	for (int i = 0; i < (nCVs); i++) {
+	//		if (i < (degree - 1)) {
+	//			arr[i] = knotVal;
+	//			continue;
+	//		}
+	//		arr[i] = knotVal;
+	//		knotVal += 1.0;
+	//	}
+	//	return arr;
+	//}
+
+
+	MDoubleArray uniformKnotsForCVs(int nCVs, int degree)
+	{
+		return MDoubleArray();
+	}
+
+	MMatrix interpolateMMatrixArray(std::vector<MMatrix>& mmatrixArr, MMatrix& out, float t) {
 		/* assuming steadily spaced keypoints in arr, interpolate at param t
 		slerp rotation component
 		*/
@@ -365,3 +321,5 @@ namespace ed {
 	}
 
 }
+
+

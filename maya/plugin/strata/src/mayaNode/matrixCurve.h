@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../MInclude.h"
-#include "strataMayaLib.h"
 
 /* strata spinoff:
 seems very useful to have the matrix curve available outside a full strata graph
@@ -12,6 +11,8 @@ prefix MObject nodeT aMatrixStartIn;\
 prefix MObject nodeT aMatrixEndIn;\
 prefix MObject nodeT aMatrixMidIn;\
 prefix MObject nodeT aMatrixMidInMatrix;\
+prefix MObject nodeT aCurveRootResIn;\
+prefix MObject nodeT aCurvePointResIn;\
 prefix MObject nodeT aSampleIn;\
 prefix MObject nodeT aSampleInParam;\
 prefix MObject nodeT aSampleOut;\
@@ -39,10 +40,14 @@ public:
 	static  MString     drawDbClassification;
 	static  MString     drawRegistrantId;
 
+	std::vector<MMatrix> cachedMats;
 
 	static MStatus initialize();
 
 	virtual MStatus compute(const MPlug& plug, MDataBlock& data);
+
+	MStatus updateMatrixCache(MDataBlock& data);
+	MStatus updateCurve(MDataBlock& data);
 
 };
 

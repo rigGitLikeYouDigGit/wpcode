@@ -21,7 +21,7 @@ namespace ed {
 	BETTER_ENUM(LiveState, int, stop, playback, realtime);
 
 	template<typename T>
-	static MObject makeEnumAttr(char* name, T defaultVal, MFnEnumAttribute &fn) {
+	static MObject makeEnumAttr(char* name, T defaultVal, MFnEnumAttribute& fn) {
 		MObject newBind;
 		//int defaultValInt = defaultVal._to_integral();
 		newBind = fn.create(name, name, 0);
@@ -41,9 +41,9 @@ namespace ed {
 	const double defaultNeutral[3] = { 0.0, 0.0, 0.0 };
 
 	static MObject makeVectorAttr(
-		MString name, 
+		MString name,
 		MFnNumericAttribute& nFn,
-		const double default[3]=defaultNeutral) 
+		const double default[3] = defaultNeutral)
 	{
 		MObject xObj = nFn.create(name + "X", name + "X",
 			MFnNumericData::kDouble, default[0]);
@@ -127,6 +127,19 @@ namespace ed {
 		}
 	}
 
+	inline bool attrsClean(std::vector<MObject>& attrs, MDataBlock& data) {
+		bool result = true;
+		for (auto& obj : attrs) {
+			result = result && data.isClean(obj);
+		}
+		return result;
+	}
+	inline void setAttrsClean(std::vector<MObject>& attrs, MDataBlock& data)
+	{
+		for (auto& obj : attrs) {
+			data.setClean(obj);
+		}
+	}
 	template < typename T>
 	inline void joinVectors(std::vector<T>& toExtend, std::vector<T>& toAdd) {
 		toExtend.reserve(toExtend.size() + std::distance(toAdd.begin(), toAdd.end()));

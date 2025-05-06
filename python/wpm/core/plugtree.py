@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import types
 import typing as T
 from collections import namedtuple
 from typing import NamedTuple
@@ -20,12 +21,13 @@ from wplib.object import Signal, Adaptor
 if T.TYPE_CHECKING:
 	from wpm import WN
 
-_WNCache : T.Type[WN] = None
-def _getWN()->_WNCache:
-	if _WNCache is None:
-		from wpm.core.node.base import WN
-		_WNCache = WN
-	return _WNCache
+# _WNCache : T.Type[WN] = None
+# def _getWN()->_WNCache:
+# 	global _WNCache
+# 	if _WNCache is None:
+# 		from wpm.core.node.base import WN
+# 		_WNCache = WN
+# 	return _WNCache
 
 class PlugMeta(type):
 	"""Metaclass to initialise plug wrapper from mplug
@@ -184,7 +186,7 @@ class Plug(PlugBase,
 
 	def node(self)->WN:
 		"""return parent node"""
-		return _getWN()(self.MPlug.node())
+		return WN(self.MPlug.node())
 
 	def dataObject(self)->om.MObject:
 		"""return data MObject from plug - used
@@ -248,7 +250,7 @@ class Plug(PlugBase,
 		return self.MPlug is other.MPlug
 
 	def __str__(self):
-		return self.stringAddress()
+		return om.MFnDependencyNode(self.plug().node()).name() + "." + self.stringAddress()
 
 	def __hash__(self):
 		return hash((self.node, self.MPlug.name()))
@@ -468,6 +470,8 @@ class Plug(PlugBase,
 	def _filterPlugParam(self, plug:plugParamType)->om.MPlug:
 		"""return an MPlug from variety of acceptable sources"""
 		plug = getattr(plug, "plug", plug)
+		if isinstance(plug, (types.FunctionType, types.MethodType)):
+			plug = plug()
 		if isinstance(plug, Plug):
 			plug = plug.MPlug
 		elif isinstance(plug, str):
@@ -487,7 +491,11 @@ class Plug(PlugBase,
 
 		for otherPlug in otherPlug:
 			# check if other object has a .plug attribute to use
+			log("other plug start", otherPlug, type(otherPlug))
 			otherPlug = self._filterPlugParam(otherPlug)
+			log("other plug end", otherPlug, type(otherPlug))
+
+			log("con:", self.MPlug, otherPlug)
 			pluglib.con(self.MPlug, otherPlug, dgMod)
 		dgMod.doIt()
 

@@ -313,6 +313,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\libEigen.cpp" />
     <ClCompile Include="src\mayaNode\matrixCurve.cpp" />
     <ClCompile Include="src\strataop\mergeOp.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\MInclude.h" />
@@ -363,6 +364,8 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\strataop\elementOp.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\strataop\elementOp.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stringLib.h" />
+    <ClInclude Include="src\lib.h" />
+    <ClInclude Include="src\libEigen.h" />
     <ClInclude Include="src\mayaNode\matrixCurve.h" />
     <ClInclude Include="src\strataop\mergeOp.h" />
   </ItemGroup>

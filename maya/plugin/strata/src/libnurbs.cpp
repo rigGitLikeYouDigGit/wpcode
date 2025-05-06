@@ -13,7 +13,7 @@
 #include <maya/MPoint.h>
 
 #include "macro.h"
-#include "lib.cpp"
+#include "lib.h"
 
 // just seems more convenient to use maya types for core maths
 

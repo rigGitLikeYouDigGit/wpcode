@@ -41,3 +41,17 @@ class Transform(GenTransform):
 	def setWorldPos(self, v):
 		v = to(v, om.MVector)
 		self.MFn.setTranslation(v, om.MSpace.kWorld)
+
+	@property
+	def localIn(self) -> Plug:
+		return self.matrix_
+	@property
+	def localOut(self) -> Plug:
+		return self.matrix_
+
+	@property
+	def worldIn(self) -> Plug:
+		return self.worldMatrix_[0]
+	@property
+	def worldOut(self) -> Plug:
+		return self.worldMatrix_[1]

@@ -19,6 +19,7 @@ so we mute all warnings from including maya headers
 #include <maya/MMatrix.h>
 #include <maya/MString.h>
 #include <maya/MPlug.h>
+#include <maya/MDataBlock.h>
 #include <maya/MDataHandle.h>
 #include <maya/MArrayDataBuilder.h>
 #include <maya/MArrayDataHandle.h>

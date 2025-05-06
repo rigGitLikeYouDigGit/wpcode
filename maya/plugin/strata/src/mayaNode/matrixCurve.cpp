@@ -7,6 +7,9 @@
 #include "../api.h"
 #include "../MInclude.h"
 
+#include "../lib.h"
+#include "../libEigen.h"
+
 #include "matrixCurve.h"
 
 using namespace ed;
@@ -22,7 +25,6 @@ DEFINE_STATIC_NODE_CPP_MEMBERS(MATCURVE_NODE_STATIC_MEMBERS, MatrixCurveNode)
 
 
 MStatus MatrixCurveNode::initialize() {
-    DEBUGSL("shape initialize")
         MStatus s = MS::kSuccess;
     MFnNumericAttribute nFn;
     MFnCompoundAttribute cFn;
@@ -47,6 +49,9 @@ MStatus MatrixCurveNode::initialize() {
     aMatrixMidInMatrix = mFn.create("matrixMidInMatrix", "matrixMidInMatrix");
     mFn.setDefault(MMatrix::identity);
     cFn.addChild(aMatrixMidInMatrix);
+
+    aCurveRootResIn = nFn.create("curveRootResIn", "curveRootIn", MFnNumericData::kInt, 5);
+    nFn.setMin(1);
 
     aSampleIn = cFn.create("sampleIn", "sampleIn");
     cFn.setArray(true);
@@ -74,7 +79,8 @@ MStatus MatrixCurveNode::initialize() {
     std::vector<MObject> drivers{
         aMatrixStartIn,
         aMatrixEndIn,
-        aMatrixMidInMatrix
+        aMatrixMidInMatrix,
+        aCurveRootResIn,
     };
     std::vector<MObject> driven{
         aCurveOut,
@@ -97,6 +103,59 @@ MStatus MatrixCurveNode::initialize() {
     return s;
 }
 
+
+MStatus MatrixCurveNode::updateMatrixCache(MDataBlock& data) {
+    /* update the cached mmatrixArray on node 
+    to recalculate output curve shape*/
+    MS s(MS::kSuccess);
+
+
+    MArrayDataHandle arrDH = data.inputArrayValue(aMatrixMidIn);
+    int nSpans = 1 + arrDH.elementCount();
+    int nResultMats = (nSpans) * 
+        data.inputValue(aCurveRootResIn).asInt() + 1;
+
+    std::vector<MMatrix> controlMats(nSpans + 1);
+    //controlMats.resize(nSpans + 1);
+    controlMats[0] = data.inputValue(aMatrixStartIn).asMatrix();
+    for (int i = 0; i < nSpans - 1; i++) {
+        jumpToElement(arrDH, i);
+        controlMats[i + 1] = arrDH.inputValue().child(aMatrixMidInMatrix).asMatrix();
+    }
+    controlMats[nSpans] = data.inputValue(aMatrixEndIn).asMatrix();
+
+    cachedMats = curveMatricesFromDriverDatas(
+        controlMats, data.inputValue(aCurveRootResIn).asInt());
+
+    return s;
+
+}
+
+MStatus MatrixCurveNode::updateCurve(MDataBlock& data) {
+    /* create new nurbsCurve data object and set it as data output
+    */
+    MS s(MS::kSuccess);
+    MPointArray curvePts(static_cast<int>(cachedMats.size()));
+    for (unsigned int i = 0; i < curvePts.length(); i++) {
+        curvePts[i] = MPoint(cachedMats[i].matrix[3]);
+    }
+
+    MFnNurbsCurveData dataFn(data.outputValue(aCurveOut).asNurbsCurve());
+
+    MFnNurbsCurve::Form curveForm = MFnNurbsCurve::kOpen;
+    if (cachedMats[0].isEquivalent(cachedMats.back())) {
+        curveForm = MFnNurbsCurve::kClosed;
+    }
+
+    MObject newCurveObj = MFnNurbsCurve().createWithEditPoints(
+        curvePts, 2, curveForm,
+        false, true, true,
+        dataFn.object()
+    );
+    data.setClean(aCurveOut);
+    return s;
+}
+
 MStatus MatrixCurveNode::compute(const MPlug& plug, MDataBlock& data) {
     /* 
     */
@@ -106,7 +165,21 @@ MStatus MatrixCurveNode::compute(const MPlug& plug, MDataBlock& data) {
         return s;
     }
 
+    std::vector<MObject> curveAffectors{
+        aMatrixStartIn, aMatrixMidInMatrix,
+        aMatrixEndIn, aCurveRootResIn
+    };
 
+    if (!attrsClean(curveAffectors, data) )
+    {
+        s = updateMatrixCache(data);
+        MCHECK(s, "ERROR updating matrix cache");
+        s = updateCurve(data);
+        MCHECK(s, "ERROR updating output curve shape");
+
+        setAttrsClean(curveAffectors, data);
+        data.setClean(aCurveOut);
+    }
 
     data.setClean(plug);
 

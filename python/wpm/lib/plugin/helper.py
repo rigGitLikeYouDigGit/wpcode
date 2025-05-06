@@ -1,5 +1,7 @@
 
 from __future__ import annotations
+
+import pprint
 import typing as T
 
 import sys, os, traceback
@@ -237,8 +239,11 @@ class MayaPluginAid:
 		if not nodeClassNames:
 			log("no node classes to update wrappers for plugin " + self.name)
 			return
-		gather.gatherNodeData(nodeClassNames, outputPath)
-		generate.genNodes(jsonPath=outputPath)
+		nodeTypes = gather.gatherNodeData(nodeClassNames, outputPath)
+		#log("classes to update:")
+		#pprint.pprint(nodeTypes)
+		generate.genNodes(jsonPath=outputPath,
+		                  refreshGenInitFile=True)
 		# self._mfnPlugin = om.MFnPlugin(
 		# 	om.MFnPlugin().findPlugin(self.name)
 		# )

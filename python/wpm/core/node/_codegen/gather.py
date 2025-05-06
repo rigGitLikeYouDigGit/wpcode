@@ -1,6 +1,7 @@
 
 from __future__ import annotations
 
+import pprint
 import traceback
 import typing as T
 import json, sys, os
@@ -80,6 +81,7 @@ reportTypes = {"nurbsCurve", "transform", "lambert", "animLayer",
 
 def getNodeData(nodeTypeName:str):
 
+	#log("get data for ", nodeTypeName)
 	def pr(*s):
 		if nodeTypeName in reportTypes:
 			print(*s)
@@ -96,24 +98,32 @@ def getNodeData(nodeTypeName:str):
 	try:
 		attrs : list[om.MObject] = mclass.getAttributes()
 	except:
-		print("failed to get attributes for", nodeTypeName)
-		raise
+		# abstract and intermediate node classes may not define any attributes
+		# especially for MPxNode parents
+		#print("failed to get attributes for", nodeTypeName)
+		attrs = []
 	# get all attribute data
 	attrDatas = list(sorted((getAttrData(attr) for attr in attrs), key=lambda x: x.name))
-	#mfn :om.MFnBase = om.MFnBase()
-	apiTypeConstant = 4
-	apiTypeStr = "kDependencyNode"
-	mfnStr = "MFnDependencyNode"
+
+	# apiTypeConstant = 4
+	# apiTypeStr = "kDependencyNode"
+	# mfnStr = "MFnDependencyNode"
+	apiTypeConstant = ""
+	apiTypeStr = ""
+	mfnStr = ""
 	try:
 		pr("nodetype", nodeTypeName, )
 		# mfn : om.MFnBase = getCache().nodeTypeLeafMFnMap[nodeTypeName](om.MObject())
-		# "mfn", mfn
-		mfn : om.MFnBase = getCache().nodeTypeLeafMFnMap[nodeTypeName]
+
+		mfn: om.MFnBase = getCache().nodeTypeLeafMFnMap[nodeTypeName]
 		kStr = getCache().nodeTypeNameToKStr(nodeTypeName)
 		apiTypeConstant = getCache().classNameConstantMaps[om.MFn][kStr]
 		apiTypeStr = getCache().classConstantNameMaps[om.MFn][apiTypeConstant]
+
 		mfnStr = mfn.__name__
-	except:
+	except Exception as e:
+		#log("error gathering node:", nodeTypeName)
+		#traceback.print_exc()
 		if nodeTypeName in reportTypes:
 			traceback.print_exc()
 
@@ -207,33 +217,39 @@ def gatherNodeData(nodeTypes=None, outputPath=None):
 	abstractMap = {x.replace(" (abstract)", ""): " (abstract)" in x for x in nodeTypes}
 	nodeTypes = [x.replace(" (abstract)", "") for x in nodeTypes]
 
+	# check that all base classes are included
+	nodeTypeSet = set(nodeTypes)
+	for i in nodeTypes:
+		nodeTypeSet.update(cmds.nodeType(i, isTypeName=1, inherited=1) or ())
 
 	# recover type tree for all nodes, avoid duplication
-
 	typeLenSetMap : dict[int, set[str]] = defaultdict(set)
-
-	for nodeType in nodeTypes:
+	for nodeType in nodeTypeSet:
 		# get node class bases
 		baseClasses = cmds.nodeType(nodeType, isTypeName=1, inherited=1) or []
-		baseClasses = baseClasses[:-1]  # remove the last one, which is the node type itself
-		# all nodes have "frozen", "message" etc attributes, create a "_BASE_" node type for these
-		baseClasses.insert(0, "_BASE_")
 		typeLenSetMap[len(baseClasses)].add(nodeType)
+		# baseClasses = baseClasses[:-1]  # remove the last one, which is the node type itself
+		# # all nodes have "frozen", "message" etc attributes, create a "_BASE_" node type for these
+		# baseClasses.insert(0, "_BASE_")
+		#typeLenSetMap[len(baseClasses)].add(nodeType)
 
 	nodeData : dict[str, dict[str, NodeData] ]= {}
 
 	nodeData["0"] = {"_BASE_" : getBaseNodeData() }
+
+	#("getting data for following nodes:")
+	#pprint.pprint(typeLenSetMap, depth=10, sort_dicts=1)
 
 	for typeLen, typeSet in sorted(typeLenSetMap.items(), key=lambda x: x[0]):
 		nodeData[str(typeLen)] = {}
 		#for nodeType in sorted(typeSet, key=lambda x: x):
 		for nodeType in sorted(typeSet):
 			data = getNodeData(nodeType)
-			data.isAbstract = abstractMap[nodeType]
+			data.isAbstract = abstractMap.get(nodeType, True)
 			nodeData[str(typeLen)][nodeType] = data
 			if nodeType in reportTypes:
 				log("writing data", nodeType)
-				print(data)
+				log(data)
 
 
 	# write to file
@@ -242,7 +258,8 @@ def gatherNodeData(nodeTypes=None, outputPath=None):
 			orjson.dumps(nodeData, option=orjson.OPT_INDENT_2).decode("utf-8")
 		)
 	
-	log("gather done")
+	#log("gather done")
+	return nodeData
 
 """
 script:

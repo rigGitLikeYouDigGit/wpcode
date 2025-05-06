@@ -4,7 +4,7 @@
 #include "../macro.h"
 #include "../api.h"
 #include "strataOpNodeBase.h"
-#include "../lib.cpp"
+#include "../lib.h"
 
 
 using namespace ed;

@@ -29,7 +29,7 @@
 #include "../macro.h"
 #include "../api.h"
 #include "stratasurfacenode.h"
-#include "../lib.cpp"
+#include "../lib.h"
 
 
 using namespace ed;

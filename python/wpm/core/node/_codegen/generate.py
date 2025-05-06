@@ -178,13 +178,16 @@ def genNodeFileStr(data:NodeData,
 			parent = "_BASE_"
 		importLines.append(f"{wpstring.cap(parent)} = retriever.getNodeCls(\"{wpstring.cap(parent)}\")")
 
+		importLines.append(f"assert {wpstring.cap(parent)}")
+
 		# type-checking time import for final user-authored file
 		# for parent class and for node itself,
 		# to set hint ".node" attribute on plugs
 		typeCheckImports = IfBlock(
 			conditionBlocks=[["T.TYPE_CHECKING",
 			                  ["from .. import " + wpstring.cap(parent),
-			                   "from .. import " + wpstring.cap(nodeType)],
+			                   #"from .. import " + wpstring.cap(nodeType)
+			                   ],
 			                   ]],
 		)
 		importLines.append(str(typeCheckImports))
@@ -256,13 +259,15 @@ def genNodeFileStr(data:NodeData,
 	nodeAssigns = []
 	nodeAssigns.append(Assign("typeName", Literal(nodeType)))
 	#log("apiTypeConstant", data.apiTypeConstant)
-	if str(data.apiTypeConstant).strip():
+	if(data.apiTypeConstant):
 		nodeAssigns.append(Assign("apiTypeInt", data.apiTypeConstant))
 		nodeAssigns.append(Assign("apiTypeStr", Literal(data.apiTypeStr)))
+	if data.typeIdInt:
 		nodeAssigns.append(Assign("typeIdInt", data.typeIdInt))
 	# MFn type
 	# TODO: get the correct MFn type for the node, gather from maya
-	nodeAssigns.append(Assign("MFnCls", "om." + data.mfnStr))
+	if data.mfnStr:
+		nodeAssigns.append(Assign("MFnCls", "om." + data.mfnStr))
 	#nodeAssigns.append(Assign(("MFn", "om." + data.apiTypeStr)))
 
 
@@ -290,6 +295,12 @@ def genNodeFileStr(data:NodeData,
 		NODE_DEF_BLOCK=nodeDef)
 	#(project.refPath / fileName).write_text(fileContent)
 	return fileContent
+
+
+genDir = Path(__file__).parent.parent / "gen"
+genInitTemplatePath = Path(__file__).parent / "__genInit__.py"
+authorDir = Path(__file__).parent.parent / "author"
+authorInitTemplatePath = Path(__file__).parent / "__authorInit__.py"
 
 
 def genNodes(#project:CodeGenProject
@@ -364,11 +375,13 @@ def genNodes(#project:CodeGenProject
 
 	if refreshGenInitFile:
 		# first recreate main generated init file
-		processGenInitFile(genDir / "__init__.py", genDir)
+		processGenInitFile(genDir / "__init__.py", genDir,
+		                   genInitTemplatePath)
 
 		# import gen catalogue to author dir init file
 		processGenInitFile(
 			authorDir / "__init__.py", authorDir,
+			authorInitTemplatePath,
 			extraImports=[Import(fromModule="..gen", module="Catalogue", alias="GenCatalogue")],
 			catalogueBases=("GenCatalogue",)
 		)
@@ -376,6 +389,7 @@ def genNodes(#project:CodeGenProject
 
 def processGenInitFile(initFile:Path,
                        gatherDir:Path,
+                       initFileTemplate:Path,
                        extraImports:list[Import]=(),
                        catalogueBases=(),
                        ):
@@ -388,7 +402,8 @@ def processGenInitFile(initFile:Path,
 
 	janky args for different behaviour in author vs gen
 	"""
-	initFileText = initFile.read_text()
+	#log("processGenInitFile ", initFile)
+	initFileText = initFileTemplate.read_text()
 
 	# get all imports
 	imports = extraImports or []
@@ -405,6 +420,8 @@ def processGenInitFile(initFile:Path,
 		assignments.append(Assign(
 			wpstring.cap(refFile.stem), wpstring.cap(refFile.stem)
 		))
+	#log("assignments", assignments)
+	#log("imports", imports)
 
 	catalogueClassDef = ClassTemplate(
 		className="Catalogue",
@@ -420,14 +437,8 @@ def processGenInitFile(initFile:Path,
 
 	initFileText = initFileText.format(
 		TYPE_CHECK_BLOCK=typeCondition)
-
 	initFile.write_text(initFileText)
 
-
-genDir = Path(__file__).parent.parent / "gen"
-genInitTemplatePath = Path(__file__).parent / "__genInit__.py"
-authorDir = Path(__file__).parent.parent / "author"
-authorInitTemplatePath = Path(__file__).parent / "__authorInit__.py"
 
 def resetGenDir():
 
@@ -443,14 +454,20 @@ def resetGenDir():
 
 if __name__ == '__main__':
 
-	print(genDir, genDir.is_dir())
+	# processGenInitFile(
+	# 	genDir / "__init__.py",
+	# 	genDir,
+	# 	genInitTemplatePath
+	#
+	# )
+
+
+	# print(genDir, genDir.is_dir())
 
 	resetGenDir()
 
 	genNodes(
-		onlyTransform=False,
-		onlyBase=False,
-
+		genDir,
 		refreshGenInitFile=True
 	)
 

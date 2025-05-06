@@ -95,13 +95,19 @@ class NodeClassRetriever:
 		:param nodeClsName:
 		:return:
 		"""
-		#log("getNodeCls", nodeClsName, self.nodeClsCache)
 		nodeClsNameLower = nodeClsName[0].lower() + nodeClsName[1:]
 		nodeClsNameUpper = nodeClsName[0].upper() + nodeClsName[1:]
-		found = self.nodeClsCache.get(nodeClsNameLower)
+		#log("getNodeCls", nodeClsName, nodeClsNameUpper, nodeClsNameLower, self.nodeClsCache)
+
+		found = self.nodeClsCache.get(nodeClsNameLower,
+		                              self.nodeClsCache.get(nodeClsNameUpper))
 		if found:
 			return found
 		mod = self.getNodeModule(nodeClsNameLower)
+		if mod is None:
+			# caveman crutch to account for THDependNode etc
+			# the UV prefix casing problem again
+			mod = self.getNodeModule(nodeClsNameUpper)
 		if mod is None: # no class found anywhere
 			log("No generated OR author node class found for " + nodeClsName + ", using base WN type")
 			self.nodeClsCache[nodeClsNameLower] = None

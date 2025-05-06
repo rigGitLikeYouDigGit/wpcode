@@ -9,7 +9,7 @@
 #include "../api.h"
 #include "../libplug.h"
 #include "stratacurvenode.h"
-#include "../lib.cpp"
+#include "../lib.h"
 
 
 using namespace ed;
@@ -46,6 +46,8 @@ MObject StrataCurve::aBalanceWheel;
 
 MObject StrataCurve::aStEditMode;
 MObject StrataCurve::aStUiData;
+
+
 
 
 void StrataCurve::postConstructor() {

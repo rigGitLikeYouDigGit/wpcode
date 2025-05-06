@@ -12,7 +12,7 @@
 #include "strataPointNode.h"
 #include "strataOpNodeBase.h"
 //#include "strataOpNodeBase.cpp"
-#include "../lib.cpp"
+#include "../lib.h"
 #include "../stringLib.h"
 #include "../strataop/elementOp.h"
 

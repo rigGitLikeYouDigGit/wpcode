@@ -7,7 +7,7 @@
 #include "../stratacore/op.h"
 #include "../stratacore/opgraph.h"
 
-#include "../strataop/elementOp.h" // TEMP
+//#include "../strataop/elementOp.h" // TEMP
 
 
 /*
@@ -48,10 +48,6 @@ prefix MObject nodeT aStOpName; \
 prefix MObject nodeT aStOpNameOut; \
 prefix MObject nodeT aStOutput; \
 
-
-/// after all, why not
-/// why shouldn't we inherit a base class from MPxNode
-//struct StrataOpNodeBase : public MPxNode {
 
 // here we template the base class, so each Maya node is specialised for a certain kind of Strata op?
 // TEMPLATING BASE CLASS CAUSED GREAT PAIN

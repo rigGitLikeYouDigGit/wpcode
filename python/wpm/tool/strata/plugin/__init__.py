@@ -81,7 +81,7 @@ def makeStrataCurve(name, tf1, tf2):
 
 def reloadPluginTest():
 	"""single test to check strata nodes are working"""
-	from maya import cmds
+	from wpm import cmds
 	cmds.file(newFile=1, f=1)
 	pluginAid.loadPlugin(forceReload=True)
 	#pt = cmds.createNode("strataPoint")
@@ -90,19 +90,26 @@ def reloadPluginTest():
 	pluginAid.updateGeneratedNodeClasses()
 
 	# test creating a single face of strataSurface
-	ptA = makeStrataPoint("ptA")
-	cmds.setAttr(ptA + ".translate", -3, 2, -3)
+	ptA = makeStrataPoint("ptA").tf()
+	cmds.setAttr(ptA.tf() + ".translate", -3, 2, -3)
 
 
-	ptB = makeStrataPoint("strataPointB")
-	ptC = makeStrataPoint("strataPointC")
-	ptD = makeStrataPoint("strataPointD")
+	ptB = makeStrataPoint("strataPointB").tf()
+	ptC = makeStrataPoint("strataPointC").tf()
+	ptD = makeStrataPoint("strataPointD").tf()
 	# # move points
-	cmds.setAttr(ptA + ".translate", -3, 2, -3)
-	cmds.setAttr(ptB + ".translate", 2, 3, -3)
+	cmds.setAttr(ptA.translate_, -3, 2, -3)
+	cmds.setAttr(ptB.tf().translate_, 2, 3, -3)
 	#
 	cmds.setAttr(ptC + ".translate", 2, -1, -3)
 	cmds.setAttr(ptD + ".translate", 3, -1, -3)
+
+	# test out the matrixCurve node
+	crv = WN.NurbsCurve.create("matrixRoot_CRV")
+	matCrv = WN.MatrixCurve.create("matrixCurve")
+	matCrv.curveOut_.con(crv.worldIn)
+
+	# localIn, localOut, worldIn, worldOut
 
 	#return
 	#elOp = cmds.createNode("strataElementOp")

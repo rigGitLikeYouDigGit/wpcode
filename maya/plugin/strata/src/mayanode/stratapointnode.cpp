@@ -8,7 +8,7 @@
 #include "../macro.h"
 #include "../api.h"
 #include "stratapointnode.h"
-#include "../lib.cpp"
+#include "../lib.h"
 
 
 /* skip all the driver stuff for now, 

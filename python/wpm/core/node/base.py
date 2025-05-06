@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import fnmatch
+import traceback
 import typing as T, types
 import ast
 from typing import TypedDict, NamedTuple
@@ -11,10 +12,9 @@ import numpy as np
 
 # tree libs for core behaviour
 #from wptree import Tree
-from wplib import Sentinel, log
+from wplib import Sentinel, log, wpstring
 from wplib.object import Signal, Adaptor
 from wplib.inheritance import iterSubClasses
-from wplib.wpstring import camelJoin
 from wplib.object import UnHashableDict, StringLike, SparseList
 #from tree.lib.treecomponent import TreeBranchLookupComponent
 from wplib.sequence import toSeq, firstOrNone
@@ -99,14 +99,20 @@ class DGDagModifier(om.MDagModifier):
 		super().__init__()
 		self._dgMod = om.MDGModifier()
 	def createNode(self, nodeTypeNameOrId, parent=om.MObject.kNullObj):
+		baseExc = None
 		try:
 			return super().createNode(nodeTypeNameOrId, parent)
 		except TypeError:
 			pass
+		except Exception as e:
+			baseExc = e
 		try:
 			return self._dgMod.createNode(nodeTypeNameOrId)
 		except:
 			log("proper type error raised when trying to create with combined modifiers")
+			if baseExc:
+				log("base error:")
+				traceback.print_exception(baseExc)
 			raise
 	def deleteNode(self, node:om.MObject):
 		super().deleteNode(node, False) # do NOT include empty dag parents by default
@@ -195,7 +201,9 @@ class WNMeta(type):
 		"""return a wrapper class for the given mobject
 		bit more involved if we don't know the string type
 		"""
+
 		mfn = om.MFnDependencyNode(mobj)
+		#log("get wrapper class", mfn.typeName, mfn.name())
 		if result := WN.typeIdIntWNClassMap.get(mfn.typeId.id()):
 			return result
 		apiType = mobj.apiType()
@@ -204,8 +212,12 @@ class WNMeta(type):
 			return result
 		#className = api.nodeTypeFromMObject(mobj)
 		#log("className", className)
-		className = mfn.typeName
-		return cls.retriever.getNodeCls(className) or WN
+		className = mfn.typeName # still works properly for plugin nodes
+		try:
+			return cls.retriever.getNodeCls(className) or WN
+		except:
+			log("error getting node class from retriever - looked for:", className)
+			raise
 
 		try:
 			return cls.retriever.getNodeCls(className)
@@ -391,7 +403,7 @@ class WN( # short for WePresentNode
 	typeIdInt : int = None # master, if node class has a typeId, obviously use that
 	@classmethod
 	def typeId(cls)->om.MTypeId:
-		return om.MTypeId(int)
+		return om.MTypeId(cls.typeIdInt) if cls.typeIdInt is not None else None
 	MFnCls = om.MFnDependencyNode
 
 	clsIsDag = False
@@ -494,7 +506,7 @@ class WN( # short for WePresentNode
 	# WNMeta should delegate to this
 	@classmethod
 	def create(cls,
-	           name:str="", dgMod_:om.MDGModifier=None, parent_:nodeArgT=None, **kwargs)->WN:
+	           name:str="", dgMod_:DGDagModifier=None, parent_:nodeArgT=None, **kwargs)->WN:
 		"""
 		explicitly create a new node of this type, incrementing name if necessary
 
@@ -506,38 +518,15 @@ class WN( # short for WePresentNode
 		"""
 		# creating from raw WN class, default to Transform
 		if cls is WN:
-			cls = WN.Transform
-
-		if cls.clsIsDag:
-			opMod = dgMod_ or om.MDagModifier()
+			nodeCls = WN.Transform
 		else:
-			opMod = dgMod_ or om.MDGModifier()
-
-		log("op mod", opMod)
-
-		if parent_ is not None:
-			parent_ = filterToMObject(parent_)
-
-		if(isinstance(opMod, om.MDagModifier)):
-			newObj = opMod.createNode(
-				#om.MTypeId(cls.apiTypeInt),
-				#cls.apiTypeStr,
-				cls.typeName,
-				parent_ or om.MObject.kNullObj)
-		else:
-			newObj = opMod.createNode(om.MTypeId(cls.apiTypeInt))
-		opMod.renameNode(newObj, name)
-
-		if(dgMod_ is None):
-			opMod.doIt()
-
-		wrapper = cls(newObj)
-		return wrapper
+			nodeCls = cls
+		return cls.createNode(nodeCls.typeId(), name, dgMod_, parent_, **kwargs)
 
 
 	@classmethod
 	def createNode(cls,
-	           nodeType:str, name:str="", dgMod_:om.MDGModifier=None, parent_:nodeArgT=None, **kwargs)->WN:
+	           nodeType:(str, om.MTypeId), name:str="", dgMod_:DGDagModifier=None, parent_:nodeArgT=None, **kwargs)->WN:
 		"""
 		explicitly create a new node of the given type type, incrementing name if necessary
 
@@ -559,10 +548,17 @@ class WN( # short for WePresentNode
 		check if the typeId returned by the modifier matches the node type created
 		"""
 
-		# check that desired node type is valid
-		nc = om.MNodeClass(nodeType)
-		if(nc.typeId.id() == 0): # invalid type
-			raise TypeError("cannot create node of unknown type: " + nodeType)
+
+		if isinstance(nodeType, str):
+			# check that desired node type is valid
+			nc = om.MNodeClass(nodeType)
+			if(nc.typeId.id() == 0): # invalid type
+				raise TypeError("cannot create node of unknown type: " + nodeType)
+			typeId = nc.typeId
+			nodeType = nc.typeName
+		else:
+			typeId = nodeType
+			nodeType = om.MNodeClass(typeId).typeName
 
 		opMod = dgMod_ or DGDagModifier()
 		name = name or nodeType + str(1)
@@ -571,15 +567,19 @@ class WN( # short for WePresentNode
 			parent_ = filterToMObject(parent_)
 
 		newObj = opMod.createNode(
-			nc.typeId,
+			typeId,
 			parent_ or om.MObject.kNullObj)
-
-		opMod.renameNode(newObj, name)
+		# returns the created transform node, if you create a shape
+		opMod.renameNode(newObj, name) # will rename the
 
 		if(dgMod_ is None):
 			opMod.doIt()
 
 		wrapper = WN(newObj)
+		if(parent_ is None and wrapper.shape()):
+			nameRoot, digits = wpstring.trailingDigits(wrapper.name())
+			wrapper.shape().setName(name + "Shape" + digits)
+			wrapper = wrapper.shape()
 		return wrapper
 
 
@@ -699,10 +699,24 @@ class WN( # short for WePresentNode
 
 	def __getattribute__(self, item:str)->Plug:
 		"""check if plug has been accessed directly by name -
-		always has a trailing underscore"""
+		always has a trailing underscore
+
+		We emulate the maya cmds behaviour for forgiving shape or transform
+		plug lookups
+		"""
 		if(item[-1] == "_" and item[0] != "_"):
 			if (foundPlug := self.plug(item[:-1])) is not None:
 				return foundPlug
+			if self.shape():
+				try:
+					return self.shape().__getattribute__(item)
+				except TypeError:
+					raise TypeError("no maya plug found for", item, "on transform or shape")
+			if self.isShape():
+				try:
+					return self.tf().__getattribute__(item)
+				except TypeError:
+					raise TypeError("no maya plug found for", item, "on transform or shape")
 			raise TypeError("no maya plug found for ", item)
 		return super().__getattribute__(item)
 
@@ -755,7 +769,9 @@ class WN( # short for WePresentNode
 		return [WN(i) for i in self._shapeObjects()]
 
 	def shape(self)->WN:
-		return firstOrNone(self.shapes() or ())
+		if shapes := self._shapeObjects():
+			return WN(shapes[0])
+		return None
 
 	def tf(self)->WN.Transform:
 		"""'transform()' sounds too much like a verb
@@ -767,6 +783,22 @@ class WN( # short for WePresentNode
 			return self
 		return self.parent()
 
+	# helpers for local and worldspace attributes -
+	# reimplement in relevant shape classes
+
+	@property
+	def localIn(self)->Plug:
+		raise AttributeError(f"Node type {type(self)} has no relevant local input")
+	@property
+	def localOut(self) -> Plug:
+		raise AttributeError(f"Node type {type(self)} has no relevant local output")
+
+	@property
+	def worldIn(self) -> Plug:
+		raise AttributeError(f"Node type {type(self)} has no relevant world input")
+	@property
+	def worldOut(self)-> Plug:
+		raise AttributeError(f"Node type {type(self)} has no relevant world output")
 	#endregion
 
 
