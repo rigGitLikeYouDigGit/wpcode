@@ -723,7 +723,7 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 
 	template<typename NodeT>
 	void postConstructor(MObject& nodeObj) {
-		//StrataOpNodeBase::postConstructor(nodeObj);
+		StrataOpNodeBase::postConstructor(nodeObj);
 		return;
 		//DEBUGS("template postConstructor")
 		//	addedToGraph = true;

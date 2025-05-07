@@ -1,67 +1,4 @@
 {
-  "0": {
-    "_BASE_": {
-      "typeName": "_BASE_",
-      "apiTypeConstant": 0,
-      "apiTypeStr": "kBase",
-      "typeIdInt": -1,
-      "mfnStr": "MFnBase",
-      "bases": [],
-      "isAbstract": true,
-      "attrDatas": [
-        {
-          "name": "message",
-          "type": 580,
-          "typeName": "om.MFnMessageAttribute",
-          "isArray": false,
-          "isInput": true,
-          "isOutput": true,
-          "shortName": "msg",
-          "parentName": ""
-        },
-        {
-          "name": "caching",
-          "type": 566,
-          "typeName": "om.MFnNumericAttribute",
-          "isArray": false,
-          "isInput": true,
-          "isOutput": true,
-          "shortName": "cch",
-          "parentName": ""
-        },
-        {
-          "name": "frozen",
-          "type": 566,
-          "typeName": "om.MFnNumericAttribute",
-          "isArray": false,
-          "isInput": true,
-          "isOutput": true,
-          "shortName": "frz",
-          "parentName": ""
-        },
-        {
-          "name": "isHistoricallyInteresting",
-          "type": 566,
-          "typeName": "om.MFnNumericAttribute",
-          "isArray": false,
-          "isInput": true,
-          "isOutput": true,
-          "shortName": "hst",
-          "parentName": ""
-        },
-        {
-          "name": "nodeState",
-          "type": 572,
-          "typeName": "om.MFnEnumAttribute",
-          "isArray": false,
-          "isInput": true,
-          "isOutput": true,
-          "shortName": "nst",
-          "parentName": ""
-        }
-      ]
-    }
-  },
   "1": {
     "THdependNode": {
       "typeName": "THdependNode",
@@ -684,6 +621,16 @@
           "isInput": false,
           "isOutput": true,
           "shortName": "curveOut",
+          "parentName": ""
+        },
+        {
+          "name": "curveRootResIn",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "curveRootIn",
           "parentName": ""
         },
         {
@@ -16568,6 +16515,69 @@
           "isOutput": true,
           "shortName": "zv",
           "parentName": "controlPoints"
+        }
+      ]
+    }
+  },
+  "0": {
+    "_BASE_": {
+      "typeName": "_BASE_",
+      "apiTypeConstant": 0,
+      "apiTypeStr": "kBase",
+      "typeIdInt": -1,
+      "mfnStr": "MFnDependencyNode",
+      "bases": [],
+      "isAbstract": true,
+      "attrDatas": [
+        {
+          "name": "message",
+          "type": 580,
+          "typeName": "om.MFnMessageAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "msg",
+          "parentName": ""
+        },
+        {
+          "name": "caching",
+          "type": 566,
+          "typeName": "om.MFnNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "cch",
+          "parentName": ""
+        },
+        {
+          "name": "frozen",
+          "type": 566,
+          "typeName": "om.MFnNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "frz",
+          "parentName": ""
+        },
+        {
+          "name": "isHistoricallyInteresting",
+          "type": 566,
+          "typeName": "om.MFnNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "hst",
+          "parentName": ""
+        },
+        {
+          "name": "nodeState",
+          "type": 572,
+          "typeName": "om.MFnEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "nst",
+          "parentName": ""
         }
       ]
     }

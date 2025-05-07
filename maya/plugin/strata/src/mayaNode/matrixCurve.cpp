@@ -91,6 +91,7 @@ MStatus MatrixCurveNode::initialize() {
         aMatrixStartIn, 
         aMatrixEndIn,
         aMatrixMidIn,
+        aCurveRootResIn,
         aSampleIn,
         aSampleOut,
         aCurveOut,
@@ -110,10 +111,15 @@ MStatus MatrixCurveNode::updateMatrixCache(MDataBlock& data) {
     MS s(MS::kSuccess);
 
 
-    MArrayDataHandle arrDH = data.inputArrayValue(aMatrixMidIn);
-    int nSpans = 1 + arrDH.elementCount();
+    MArrayDataHandle arrDH = data.inputArrayValue(aMatrixMidIn, &s);
+    MCHECK(s, "ERROR getting array data handle ");
+    int nSpans = 1 + arrDH.elementCount(&s);
+    MCHECK(s, "ERROR getting arrayDH element count");
+    MDataHandle rootResDH = data.inputValue(aCurveRootResIn, &s);
+    MCHECK(s, "ERROR getting rootResDH");
+    int rootRes = rootResDH.asInt();
     int nResultMats = (nSpans) * 
-        data.inputValue(aCurveRootResIn).asInt() + 1;
+         rootRes + 1;
 
     std::vector<MMatrix> controlMats(nSpans + 1);
     //controlMats.resize(nSpans + 1);
@@ -152,6 +158,7 @@ MStatus MatrixCurveNode::updateCurve(MDataBlock& data) {
         false, true, true,
         dataFn.object()
     );
+    data.outputValue(aCurveOut).setMObject(dataFn.object());
     data.setClean(aCurveOut);
     return s;
 }

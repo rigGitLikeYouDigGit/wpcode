@@ -85,9 +85,11 @@ def getNodeData(nodeTypeName:str):
 	def pr(*s):
 		if nodeTypeName in reportTypes:
 			print(*s)
+	pr("getNodeData", nodeTypeName)
 	mclass = om.MNodeClass(nodeTypeName)
 	typeIdInt = None
 	if(mclass.typeId.id() != 0):
+		pr("legit typeIdInt found", mclass.typeId.id(), mclass.typeName)
 		typeIdInt = mclass.typeId.id()
 
 	# get node class bases
@@ -197,7 +199,7 @@ def getBaseNodeData():
 		apiTypeConstant=0,
 		apiTypeStr="kBase",
 		typeIdInt=-1,
-		mfnStr="MFnBase",
+		mfnStr="MFnDependencyNode",
 		attrDatas=[ messageData, cachingData, frozenData,
 		            isHistoricallyInterestingData, nodeStateData ],
 		bases=(),
@@ -235,7 +237,6 @@ def gatherNodeData(nodeTypes=None, outputPath=None):
 
 	nodeData : dict[str, dict[str, NodeData] ]= {}
 
-	nodeData["0"] = {"_BASE_" : getBaseNodeData() }
 
 	#("getting data for following nodes:")
 	#pprint.pprint(typeLenSetMap, depth=10, sort_dicts=1)
@@ -250,6 +251,7 @@ def gatherNodeData(nodeTypes=None, outputPath=None):
 			if nodeType in reportTypes:
 				log("writing data", nodeType)
 				log(data)
+	nodeData["0"] = {"_BASE_" : getBaseNodeData() }
 
 
 	# write to file

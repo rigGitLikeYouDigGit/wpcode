@@ -89,6 +89,12 @@ def reloadPluginTest():
 	# update node class wrappers
 	pluginAid.updateGeneratedNodeClasses()
 
+	# test out the matrixCurve node
+	crv = WN.NurbsCurve.create("matrixRoot_CRV")
+	matCrv = WN.MatrixCurve.create("matrixCurve")
+	matCrv.curveOut_.con(crv.shape().worldIn)
+
+
 	# test creating a single face of strataSurface
 	ptA = makeStrataPoint("ptA").tf()
 	cmds.setAttr(ptA.tf() + ".translate", -3, 2, -3)
@@ -104,10 +110,13 @@ def reloadPluginTest():
 	cmds.setAttr(ptC + ".translate", 2, -1, -3)
 	cmds.setAttr(ptD + ".translate", 3, -1, -3)
 
-	# test out the matrixCurve node
-	crv = WN.NurbsCurve.create("matrixRoot_CRV")
-	matCrv = WN.MatrixCurve.create("matrixCurve")
-	matCrv.curveOut_.con(crv.worldIn)
+	ptA.worldOut.con(matCrv.matrixStartIn_)
+	ptD.worldOut.con(matCrv.matrixEndIn_)
+
+	ptB.worldOut.con(matCrv.matrixMidIn_[0].matrixMidInMatrix_)
+
+	return
+
 
 	# localIn, localOut, worldIn, worldOut
 

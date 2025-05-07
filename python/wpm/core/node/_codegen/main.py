@@ -5,3 +5,12 @@ from wplib import log
 
 from wpm.core.node._codegen import gather, generate
 
+
+def regenMayaNodeFiles():
+	generate.resetGenDir()
+	gather.gatherNodeData()
+	generate.genNodes()
+
+if __name__ == '__main__':
+	pass
+

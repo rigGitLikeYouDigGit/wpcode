@@ -54,4 +54,4 @@ class Transform(GenTransform):
 		return self.worldMatrix_[0]
 	@property
 	def worldOut(self) -> Plug:
-		return self.worldMatrix_[1]
+		return self.worldMatrix_[0]

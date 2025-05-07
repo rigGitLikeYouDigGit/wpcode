@@ -51,7 +51,8 @@ if isThisMaya():
 		WN,
 		Plug,
 		getSceneGlobals, # scene wrappers
-		api
+		api,
+	getMFn, getMPlug, getMObject, getMFnType
 
 	)
 

@@ -185,14 +185,19 @@ class WNMeta(type):
 		raise AttributeError(f"no attribute {item}")
 
 	@classmethod
-	def wrapperClassForNodeType(cls, nodeType: str) -> T.Type[WN]:
+	def wrapperClassForNodeType(cls, nodeType: (str, om.MTypeId)) -> T.Type[WN]:
 		"""return a wrapper class for the given node's type
 		if it exists"""
-		if result := WN.nodeTypeNameWNClassMap.get(nodeType):
+		nc = om.MNodeClass(nodeType)
+		if nc.typeId.id() == 0:
+			raise TypeError("No known node class matches: " + nodeType)
+		if result := WN.typeIdIntWNClassMap.get(nc.typeId.id()):
+			return result
+		if result := WN.nodeTypeNameWNClassMap.get(nc.typeName):
 			return result
 		# not already cached, go looking with retriever
 		try:
-			return cls.retriever.getNodeCls(nodeType)
+			return cls.retriever.getNodeCls(nc.typeName)
 		except:
 			return WN
 
@@ -203,15 +208,12 @@ class WNMeta(type):
 		"""
 
 		mfn = om.MFnDependencyNode(mobj)
-		#log("get wrapper class", mfn.typeName, mfn.name())
 		if result := WN.typeIdIntWNClassMap.get(mfn.typeId.id()):
 			return result
 		apiType = mobj.apiType()
-		if result := WN.apiTypeWNClassMap.get(apiType):
-			#log("result", result)
+		if result := WN.nodeTypeNameWNClassMap.get(apiType):
 			return result
-		#className = api.nodeTypeFromMObject(mobj)
-		#log("className", className)
+
 		className = mfn.typeName # still works properly for plugin nodes
 		try:
 			return cls.retriever.getNodeCls(className) or WN
@@ -410,7 +412,7 @@ class WN( # short for WePresentNode
 
 
 	apiTypeWNClassMap : dict[int, type[WN]] = {}
-	#nodeTypeNameWNClassMap : dict[str, type[WN]] = {} # replace with MNodeClass
+	nodeTypeNameWNClassMap : dict[str, type[WN]] = {} # replace with MNodeClass
 	typeIdIntWNClassMap : dict[int, type[WN]] = {}
 	def __init_subclass__(cls, **kwargs):
 		"""happily, if you subclass a generated Node class and
@@ -427,6 +429,8 @@ class WN( # short for WePresentNode
 		if cls.typeIdInt is not None:
 			cls.typeIdIntWNClassMap[cls.typeIdInt] = cls
 
+		if cls.typeName is not None:
+			cls.nodeTypeNameWNClassMap[cls.typeName] = cls
 
 	NODE_DATA_ATTR = "_nodeAuxData"
 	NODE_PROXY_ATTR = "_proxyDrivers"
@@ -457,9 +461,10 @@ class WN( # short for WePresentNode
 		assert not node.isNull(), f"invalid MObject passed to WN constructor for {type(self)}"
 
 		self.MObjectHandle = om.MObjectHandle(node)
+		self._mobj = node
 
 		# maybe it's ok to cache MFn?
-		self._MFn = None
+		#self._MFn = None
 
 		# slot to hold live data tree object
 		# only used for optimisation, don't rely on it
@@ -469,6 +474,7 @@ class WN( # short for WePresentNode
 	def MObject(self)->om.MObject:
 		"""return MObject from handle"""
 		return self.MObjectHandle.object()
+		#return self._mobj
 
 
 	def object(self, checkValid=False)->om.MObject:
@@ -481,26 +487,112 @@ class WN( # short for WePresentNode
 		"""check MObject is valid"""
 		return not self.MObject.isNull()
 
-	@property
 	def dagPath(self)->om.MDagPath:
 		return om.MDagPath.getAPathTo(self.MObject)
 
 	@property
 	def MFn(self)->MFnCls:
 		"""return the best-matching function set """
-		if self._MFn is not None:
-			return self._MFn
-		#mfnType = getMFnType(self.MObject)
+		if self.isDag():
+			return self.MFnCls(self.dagPath())
+		return self.MFnCls(self.MObject)
+		#import maya.api.OpenMaya as om
+		baseFn = om.MFnDependencyNode(self.MObject)
+		baseFn.name()
+		print("MFN for", baseFn.name(), baseFn.typeName, self.MFnCls)
+		assert not self.MObject.isNull()
+		if(self.isDag()):
+			dp : om.MDagPath = om.MDagPath.getAPathTo(self.MObject)
+			assert dp.isValid()
+			print("dp", dp, dp.fullPathName(), dp.isValid())
 
-		# TODO: rework this once we have specific MFn
-		#  if issubclass(self.MFnCls, om.MFnDagNode):
+			dpFn = om.MFnDagNode(dp)
+			#dpFn.name()
+			print("dpFn path", dpFn.dagPath())
 
-		try:
-			# dag node, initialise against dag path
-			self._MFn = self.MFnCls(self.dagPath)
-		except:
-			self._MFn = self.MFnCls(self.MObject)
-		return self._MFn
+			sel = om.MSelectionList()
+			sel.add(dp)
+			newDp = sel.getDagPath(0)
+			assert newDp.isValid()
+
+			nurbsCurveFn = om.MFnNurbsCurve(newDp)
+			#nurbsCurveFn = om.MFnNurbsCurve(dp.getPath(0))
+			nurbsCurveFn.name()
+
+
+			nurbsCurveFn = om.MFnNurbsCurve(dp)
+			#nurbsCurveFn = om.MFnNurbsCurve(dp.getPath(0))
+			nurbsCurveFn.name()
+
+			pathObj : om.MObject = dp.node()
+			assert not pathObj.isNull()
+			#return self.MFnCls(dp)
+
+			objFn : om.MFnDagNode = self.MFnCls(pathObj)
+			assert not pathObj.isNull()
+			pathFn : om.MFnDagNode = self.MFnCls(dp)
+			print("pathFn", pathFn)
+			print("pathFn obj", pathFn.object())
+			print("pathFn obj isNull", pathFn.object().isNull())
+			print("pathFn getPath", pathFn.getPath())
+
+			print("pathFn path", pathFn.dagPath())
+
+
+			assert pathFn.dagPath().isValid()
+			assert pathFn.dagPath() == dp
+
+
+			pathFn.name()
+			#assert pathObj == objFn.object()
+			assert not objFn.object().isNull()
+			objFn.name()
+			objFn.setObject(dp)
+			objFn.name()
+			objFn.dagPath()
+			# mfn : om.MFnDagNode = self.MFnCls(dp)
+			# mfn.dagPath()
+			# mfn.name()
+
+			# print("mfnCls", self.MFnCls)
+			# print("dp", mfn.dagPath())
+			# print(mfn.dagPath().isValid())
+			# assert not mfn.object().isNull()
+		return self.MFnCls(self.MObject)
+
+		# if self._MFn is not None:
+		# 	return self._MFn
+		# #mfnType = getMFnType(self.MObject)
+		#
+		# # TODO: rework this once we have specific MFn
+		# #  if issubclass(self.MFnCls, om.MFnDagNode):
+		#
+		# try:
+		# 	# dag node, initialise against dag path
+		# 	self._MFn = self.MFnCls(self.dagPath)
+		# except:
+		# 	self._MFn = self.MFnCls(self.MObject)
+		#
+		# assert not self._MFn.object().isNull()
+		# return self._MFn
+
+	# geometry node creation - basically ONLY for curve and mesh nodes
+	""" something silly happens if you create these from scratch with MDagModifier - 
+	the data objects never get created properly, so MFnNurbsCurve( myNewCurveShapeNode )
+	fails with 'Object does not exist' , and won't let you do any modifications to it
+	"""
+
+	def getGeoDataParentObject(self)->om.MObject:
+		"""return an MObject to use as parent for directly
+		setting geometry data, through MFnNurbsCurve.create()
+		"""
+		raise TypeError("no data parent object for node type: " + self.typeName)
+
+	def setGeoDataObject(self, dataObj:om.MObject):
+		"""directly set geo data through MObject -
+		use for structural changes like setting new CV number
+		"""
+		raise TypeError("no geo data object for node type: " + self.typeName)
 
 	# use create() to define order of arguments and process on creation,
 	# WNMeta should delegate to this
@@ -511,17 +603,35 @@ class WN( # short for WePresentNode
 		explicitly create a new node of this type, incrementing name if necessary
 
 		suffix _ to avoid name clashes with kwargs
-		if dgmod is passed, add actions to it - otherwise immediately
-		execute
 
-		TODO: finesse logic around MDGmod vs MDagmod
+		leaving this as the single method to override for specific creation behaviour,
+		without a deeper "_createInner()" method to actually create the object -
+		will result in some copying of the argument processing here,
+		but I find copying can sometimes be comforting for work code
 		"""
 		# creating from raw WN class, default to Transform
 		if cls is WN:
 			nodeCls = WN.Transform
 		else:
 			nodeCls = cls
-		return cls.createNode(nodeCls.typeId(), name, dgMod_, parent_, **kwargs)
+		if parent_ is not None:
+			parent_ = filterToMObject(parent_)
+
+
+		opMod = dgMod_ or DGDagModifier()
+		name = name or nodeCls.typeName + str(1)
+		typeId = nodeCls.typeId()
+		newObj = opMod.createNode(
+			typeId,
+			parent_ or om.MObject.kNullObj)
+		# returns the created transform node, if you create a shape
+		# always execute the modifier for now, too complicated and not useful otherwise
+		opMod.doIt()
+
+		wrapper = nodeCls(newObj)
+		wrapper.setName(name)
+
+		return wrapper
 
 
 	@classmethod
@@ -548,39 +658,35 @@ class WN( # short for WePresentNode
 		check if the typeId returned by the modifier matches the node type created
 		"""
 
-
-		if isinstance(nodeType, str):
-			# check that desired node type is valid
-			nc = om.MNodeClass(nodeType)
-			if(nc.typeId.id() == 0): # invalid type
-				raise TypeError("cannot create node of unknown type: " + nodeType)
-			typeId = nc.typeId
-			nodeType = nc.typeName
-		else:
-			typeId = nodeType
-			nodeType = om.MNodeClass(typeId).typeName
+		wrapperCls = cls.wrapperClassForNodeType(nodeType)
 
 		opMod = dgMod_ or DGDagModifier()
 		name = name or nodeType + str(1)
 
 		if parent_ is not None:
 			parent_ = filterToMObject(parent_)
-
-		newObj = opMod.createNode(
-			typeId,
-			parent_ or om.MObject.kNullObj)
-		# returns the created transform node, if you create a shape
-		opMod.renameNode(newObj, name) # will rename the
-
-		if(dgMod_ is None):
-			opMod.doIt()
-
-		wrapper = WN(newObj)
-		if(parent_ is None and wrapper.shape()):
-			nameRoot, digits = wpstring.trailingDigits(wrapper.name())
-			wrapper.shape().setName(name + "Shape" + digits)
-			wrapper = wrapper.shape()
-		return wrapper
+		return wrapperCls.create(name, opMod, parent_, **kwargs)
+		#
+		#
+		# wrapper = WN(newObj)
+		# if(dgMod_ is None):
+		# 	print("DO IT")
+		# 	opMod.doIt()
+		#
+		# if not newObj.hasFn(om.MFn.kDagNode):
+		# 	return wrapper
+		#
+		# if(dgMod_ is not None):
+		# 	return wrapper
+		#
+		# # check if new shape was created under the world
+		# if(parent_ is None and wrapper._shapeObjects() ):
+		# 	nameRoot, digits = wpstring.trailingDigits(wrapper.name())
+		# 	shape = wrapper.shape()
+		# 	print("shape", shape, shape.exists())
+		# 	wrapper.shape().MFn.setName(name + "Shape" + digits)
+		# 	wrapper = wrapper.shape()
+		# return wrapper
 
 
 	def setInitAttrs(self, ):
@@ -600,8 +706,10 @@ class WN( # short for WePresentNode
 
 	## refreshing mechanism
 	def __str__(self):
-		self.value = self.MFn.name()
-		return self.value
+		if(self.object().isNull()):
+			return str(type(self)) + "(NULL_OBJ)"
+		#return self.MFn.absoluteName()
+		return self.MFn.name()
 
 	def name(self):
 		return str(self).split("|")[-1]
@@ -618,29 +726,34 @@ class WN( # short for WePresentNode
 			return
 		if value.endswith("Shape"):
 			self.shape().setName(value, exact=True)
-			self.tf().setName(value.rsplit("Shape")[0], exact=True)
+			root, digits = wpstring.trailingDigits(self.shape().name())
+			self.tf().setName(root.rsplit("Shape")[0] + digits, exact=True)
 		else:
-			self.transform().setName(value, exact=True)
-			self.shape().setName(value + "Shape", exact=True)
+			self.tf().setName(value, exact=True)
+			root, digits = wpstring.trailingDigits(self.tf().name())
+			self.shape().setName(root + "Shape" + digits, exact=True)
 
 	def address(self)->tuple[str]:
 		"""return sequence of node names up to root """
-		return self.dagPath.fullPathName().split("|")
+		return self.dagPath().fullPathName().split("|")
 
 	def stringAddress(self, joinChar="/"):
 		"""allows more houdini-esque operations on nodes
 		also lets us be a little less scared of duplicate leaf names in
 		separate hierarchies"""
-		return self.dagPath.fullPathName().replace("|", joinChar)
+		return self.dagPath().fullPathName().replace("|", joinChar)
 
 	def isTransform(self):
-		return isinstance(self.MFn, om.MFnTransform)
+		#return isinstance(self.MFn, om.MFnTransform)
+		return self.MObject.hasFn(om.MFn.kTransform)
 
 	def isShape(self):
-		return self.isDag() and not self.isTransform()
+		#return self.isDag() and not self.isTransform()
+		return self.MObject.hasFn(om.MFn.kShape)
 
 	def isDag(self):
-		return isinstance(self.MFn, om.MFnDagNode)
+		#return isinstance(self.MFn, om.MFnDagNode)
+		return self.MObject.hasFn(om.MFn.kDagNode)
 
 	def isShapeTransform(self)->bool:
 		"""return true if this is a transform directly over a shape"""
@@ -697,7 +810,8 @@ class WN( # short for WePresentNode
 			return super().__getitem__(item[0])
 		raise TypeError("invalid arg type to index into node")
 
-	def __getattribute__(self, item:str)->Plug:
+	#def __getattribute__(self, item:str)->Plug:
+	def __getattr__(self, item:str)->Plug:
 		"""check if plug has been accessed directly by name -
 		always has a trailing underscore
 
@@ -718,7 +832,7 @@ class WN( # short for WePresentNode
 				except TypeError:
 					raise TypeError("no maya plug found for", item, "on transform or shape")
 			raise TypeError("no maya plug found for ", item)
-		return super().__getattribute__(item)
+		return super().__getattr__(item)
 
 	def __setattr__(self, item:str, val):
 		"""check if plug has been accessed directly by name -
