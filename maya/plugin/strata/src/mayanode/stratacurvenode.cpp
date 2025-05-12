@@ -10,6 +10,7 @@
 #include "../libplug.h"
 #include "stratacurvenode.h"
 #include "../lib.h"
+#include "../libnurbs.h"
 
 
 using namespace ed;

@@ -160,25 +160,43 @@ namespace ed {
 
 	};
 
+	/*
+	for full separation, we might break things up further?
+
+
+	an edge is driven by EdgeDriverData -
+	outputs of an edge are EdgeSampleData? - 
+	*/
+
+	struct SSampleData { //?
+		int index = -1;
+		float uvn[3] = { 0, 0, 0 };
+	};
+
+	
+
+
 	// data for discrete hard connections between elements
 	struct EdgeDriverData {
 		/* struct for a single driver OF an edge - get tangent, normal and twist
 		vectors for curve frame
+
+		// do we just use NAN values to show arrays being unused?
 		
 		TODO: tension, param pinning etc?
 		*/
-		int index = -1;
-		float uv[2] = { 0, 0 };
-		float tan[3] = { 1, 0, 0 }; // tangent and normal directions
-		float normal[3] = {0, 0, 1};
+		int index = -1; // index of parent element
+		float uvn[3] = { 0, 0, 0 }; // uvn coords of parent element to sample for points on this edge
+		float tan[3] = { NAN, 0, 0}; // tangent of curve at this point - if left NAN is unused
+		float normal[3] = { NAN, 0, 1}; // normal of curve at this point - if left NAN is unused
 		float orientWeight = 0.0; // how strongly matrix should contribute to curve tangent, vs auto behaviour
-		MMatrix driverMatrix; // matrix to use for final curve? might not need to cache this
-		float twist = 0.0;
+		float twist = 0.0; // how much extra twist to add to point, on top of default curve frame
 	};
 
 
 	// parent datas always relative in parent space - when applied, recover the original shape of element
 	struct SPointParentData { // parent data FOR a point, driver could be any type
+		int index = -1;
 		float weight = 1.0;
 		float uvn[3] = {0, 0, 0}; // if parent is a point, this is just the literal vector in that point's space
 		// also this need only be an orient matrix
@@ -189,13 +207,21 @@ namespace ed {
 		};
 	};
 
+	// DRIVER datas are in space of the DRIVER
+	// PARENT datas are in space of the PARENT
+	// convert between them by multiplying out to world and back - 
+	// parent datas always overlap drivers at some point
 	struct SEdgeParentData {
+		int index = -1; // feels cringe to copy the index on all of these  
+		// TEEECHNICALLLY this should be independent of any driver - 
+		// re-sampling UVNs on any random parent should transform this curve into that element's space
 		std::vector<float> weights;
 		std::vector<std::array<float, 3>> uvns;
-		std::vector<float> twists;
+		//std::vector<float> twists;
 	};
 
 	struct SElData {
+		int index = -1;
 	};
 
 	struct SPointData : SElData {
@@ -204,7 +230,7 @@ namespace ed {
 	};
 
 	struct SEdgeData : SElData {
-		std::vector<EdgeDriverData> driverDatas;
+		std::vector<EdgeDriverData> driverDatas; // drivers of this edge
 		std::array<SEdgeParentData, stMaxParents> parentDatas; // curves in space of each driver
 		int segmentPointCount = 3; // number of sub-points in each segment
 		std::vector<MMatrix> finalMatrices; // final dense list of matrices along curve??

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import fnmatch
+import time
 import traceback
 import typing as T, types
 import ast
@@ -461,6 +462,9 @@ class WN( # short for WePresentNode
 		assert not node.isNull(), f"invalid MObject passed to WN constructor for {type(self)}"
 
 		self.MObjectHandle = om.MObjectHandle(node)
+		# assert self.object()Handle.isAlive()
+		# assert self.object()Handle.isValid()
+		# assert not self.object()Handle.object().isNull()
 		self._mobj = node
 
 		# maybe it's ok to cache MFn?
@@ -470,39 +474,46 @@ class WN( # short for WePresentNode
 		# only used for optimisation, don't rely on it
 		self._liveDataTree = None
 
-	@property
-	def MObject(self)->om.MObject:
-		"""return MObject from handle"""
-		return self.MObjectHandle.object()
-		#return self._mobj
+	# @property
+	# def MObject(self)->om.MObject:
+	# 	"""return MObject from handle"""
+	# 	return self.object()Handle.object()
+	# 	#return self._mobj
 
 
 	def object(self, checkValid=False)->om.MObject:
 		"""same interface as MFnBase"""
 		if checkValid:
-			assert not self.MObject.isNull()
-		return self.MObject
+			assert not self.MObjectHandle.object().isNull()
+		return self.MObjectHandle.object()
 
 	def exists(self)->bool:
 		"""check MObject is valid"""
-		return not self.MObject.isNull()
+		return not self.object().isNull()
 
 	def dagPath(self)->om.MDagPath:
-		return om.MDagPath.getAPathTo(self.MObject)
+		return om.MDagPath.getAPathTo(self.object())
 
 	@property
 	def MFn(self)->MFnCls:
 		"""return the best-matching function set """
 		if self.isDag():
-			return self.MFnCls(self.dagPath())
-		return self.MFnCls(self.MObject)
+			mfn = self.MFnCls(self.dagPath())
+		else:
+			mfn = self.MFnCls(self.object())
+		try:
+			mfn.name()
+		except:
+			log("mfn init error, retrying")
+			raise RuntimeError
+		return mfn
 		#import maya.api.OpenMaya as om
-		baseFn = om.MFnDependencyNode(self.MObject)
+		baseFn = om.MFnDependencyNode(self.object())
 		baseFn.name()
 		print("MFN for", baseFn.name(), baseFn.typeName, self.MFnCls)
-		assert not self.MObject.isNull()
+		assert not self.object().isNull()
 		if(self.isDag()):
-			dp : om.MDagPath = om.MDagPath.getAPathTo(self.MObject)
+			dp : om.MDagPath = om.MDagPath.getAPathTo(self.object())
 			assert dp.isValid()
 			print("dp", dp, dp.fullPathName(), dp.isValid())
 
@@ -558,11 +569,11 @@ class WN( # short for WePresentNode
 			# print("dp", mfn.dagPath())
 			# print(mfn.dagPath().isValid())
 			# assert not mfn.object().isNull()
-		return self.MFnCls(self.MObject)
+		return self.MFnCls(self.object())
 
 		# if self._MFn is not None:
 		# 	return self._MFn
-		# #mfnType = getMFnType(self.MObject)
+		# #mfnType = getMFnType(self.object())
 		#
 		# # TODO: rework this once we have specific MFn
 		# #  if issubclass(self.MFnCls, om.MFnDagNode):
@@ -571,7 +582,7 @@ class WN( # short for WePresentNode
 		# 	# dag node, initialise against dag path
 		# 	self._MFn = self.MFnCls(self.dagPath)
 		# except:
-		# 	self._MFn = self.MFnCls(self.MObject)
+		# 	self._MFn = self.MFnCls(self.object())
 		#
 		# assert not self._MFn.object().isNull()
 		# return self._MFn
@@ -593,6 +604,46 @@ class WN( # short for WePresentNode
 		use for structural changes like setting new CV number
 		"""
 		raise TypeError("no geo data object for node type: " + self.typeName)
+
+	@staticmethod
+	def _validateCreatedWrapper(obj:om.MObject, wrapper:WN)->WN:
+		"""TRAUMA TIME:
+		I was getting inconsistent and rarely reproducible problems where
+		the MObject handle for newly created nodes would return a null MObject, after
+		being set on the new one -
+		the created MObject is evidently fine, it's just the handle that gives the issue.
+
+		so here, we ask calmly, "did I stutter?"
+		if the object handle isn't valid,
+		then we just get a new object handle.
+
+		STILL not convinced there's actually any value to the handle indirection,
+		how bad can it be to just save references to MObjects? all my friends are doing it.
+		"""
+		limit = 10
+		i = 0
+		while wrapper.object().isNull():
+			if i > limit:
+				raise RuntimeError("invalid wrapper")
+			#log("invalid wrapper found, resetting MObjectHandle")
+			wrapper.MObjectHandle = om.MObjectHandle(obj)
+			#time.sleep(0.1)
+		return wrapper
+		isValid = False
+		hdl = om.MObjectHandle(obj)
+		hdl.object()
+		return hdl
+		while not isValid:
+			objValid = om.MObjectHandle(obj).isValid()
+			objAlive = om.MObjectHandle(obj).isAlive()
+			if not (objValid and objAlive):
+				log("mobj not valid or alive - valid:", objValid, "alive:", objAlive )
+				time.sleep(1)
+				continue
+			return om.MObjectHandle(obj)
+
+
+
 
 	# use create() to define order of arguments and process on creation,
 	# WNMeta should delegate to this
@@ -628,7 +679,33 @@ class WN( # short for WePresentNode
 		# always execute the modifier for now, too complicated and not useful otherwise
 		opMod.doIt()
 
+		#hdl = cls._validateCreatedMObject(newObj)
 		wrapper = nodeCls(newObj)
+		cls._validateCreatedWrapper(newObj, wrapper)
+		wrapper.setName(name)
+		return wrapper
+
+
+
+		# assert not newObj.isNull() # this NEVER errors
+		# hdl = om.MObjectHandle(newObj)
+		# if hdl.object().isNull():
+		# 	log("HDL OBJECT IS NULL")
+		# 	raise RuntimeError
+		#wrapper = nodeCls(newObj)
+		del opMod
+		#assert not hdl.object().isNull()
+
+		wrapper.object()
+
+		#assert not wrapper.object().isNull()
+		while wrapper.object().isNull():
+			log("found null object in wrapper, setting new handle")
+			wrapper.MObjectHandle = om.MObjectHandle(newObj)
+			time.sleep(1)
+		assert not wrapper.object().isNull()
+		assert wrapper.object() == newObj
+		assert wrapper.object(checkValid=True)
 		wrapper.setName(name)
 
 		return wrapper
@@ -745,15 +822,15 @@ class WN( # short for WePresentNode
 
 	def isTransform(self):
 		#return isinstance(self.MFn, om.MFnTransform)
-		return self.MObject.hasFn(om.MFn.kTransform)
+		return self.object().hasFn(om.MFn.kTransform)
 
 	def isShape(self):
 		#return self.isDag() and not self.isTransform()
-		return self.MObject.hasFn(om.MFn.kShape)
+		return self.object().hasFn(om.MFn.kShape)
 
 	def isDag(self):
 		#return isinstance(self.MFn, om.MFnDagNode)
-		return self.MObject.hasFn(om.MFn.kDagNode)
+		return self.object().hasFn(om.MFn.kDagNode)
 
 	def isShapeTransform(self)->bool:
 		"""return true if this is a transform directly over a shape"""
@@ -883,6 +960,8 @@ class WN( # short for WePresentNode
 		return [WN(i) for i in self._shapeObjects()]
 
 	def shape(self)->WN:
+		if self.isShape():
+			return self
 		if shapes := self._shapeObjects():
 			return WN(shapes[0])
 		return None
@@ -975,7 +1054,7 @@ class WN( # short for WePresentNode
 		node history gives nodes, plug history gives plugs
 		"""
 		it = om.MItDependencyGraph(
-			self.MObject,
+			self.object(),
 			mfnType,
 			self.GraphDirection.History.value,
 			traversal.value,
@@ -992,7 +1071,7 @@ class WN( # short for WePresentNode
 		"""create MItDependencyGraph rooted on this node
 		node history gives nodes, plug history gives plugs"""
 		it = om.MItDependencyGraph(
-			self.MObject,
+			self.object(),
 			mfnType,
 			self.GraphDirection.History.value,
 			self.GraphLevel.NodeLevel.value

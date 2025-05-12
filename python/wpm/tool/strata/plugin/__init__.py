@@ -91,10 +91,13 @@ def reloadPluginTest():
 
 	# test out the matrixCurve node
 	crv = WN.NurbsCurve.create("matrixRoot_CRV")
+	#return # works when run multiple times
+
 	matCrv = WN.MatrixCurve.create("matrixCurve")
 	matCrv.curveOut_.con(crv.shape().worldIn)
+	return
 
-
+	#return
 	# test creating a single face of strataSurface
 	ptA = makeStrataPoint("ptA").tf()
 	cmds.setAttr(ptA.tf() + ".translate", -3, 2, -3)
@@ -114,6 +117,7 @@ def reloadPluginTest():
 	ptD.worldOut.con(matCrv.matrixEndIn_)
 
 	ptB.worldOut.con(matCrv.matrixMidIn_[0].matrixMidInMatrix_)
+	#ptC.worldOut.con(matCrv.matrixMidIn_[1].matrixMidInMatrix_)
 
 	return
 

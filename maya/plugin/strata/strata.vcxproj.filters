@@ -16,9 +16,6 @@
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\lib.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\libnurbs.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\libramp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -154,6 +151,9 @@
     <ClInclude Include="src\mayaNode\matrixCurve.h" />
     <ClInclude Include="src\lib.h" />
     <ClInclude Include="src\libEigen.h" />
+    <ClInclude Include="src\libnurbs.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="F:\wp\code\maya\plugin\strata\CMakeLists.txt" />

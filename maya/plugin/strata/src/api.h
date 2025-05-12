@@ -302,6 +302,35 @@ namespace ed {
 		return out;
 	}
 
+	inline MMatrix setRow(MMatrix& mat, const int row, const double* data) {
+		mat(row, 0) = data[0];
+		mat(row, 1) = data[1];
+		mat(row, 2) = data[2];
+		return mat;
+	}
+	inline MMatrix setRow(MMatrix& mat, const int row, const MVector& data) {
+		mat(row, 0) = data.x;
+		mat(row, 1) = data.y;
+		mat(row, 2) = data.z;
+		return mat;
+	}
+	inline MMatrix setRow(MMatrix& mat, const int row, const MPoint& data) {
+		mat(row, 0) = data.x;
+		mat(row, 1) = data.y;
+		mat(row, 2) = data.z;
+		return mat;
+	}
+	inline MFloatMatrix setRow(MFloatMatrix& mat, const int row, const float* data) {
+		mat(row, 0) = data[0];
+		mat(row, 1) = data[1];
+		mat(row, 2) = data[2];
+		return mat;
+	}
+	
+	template <typename T>
+	inline MVector getRow(const T mat, const int row) {
+		return MVector(mat[row][0], mat[row][1], mat[row][2]);
+	}
 	//inline Eigen::Matrix4f toEigen(const MMatrix& mat) {
 	//	//return Eigen::Matrix4f(mat.matrix);
 	//	Eigen::Matrix4f m;

@@ -684,6 +684,16 @@
           "parentName": "matrixMidIn"
         },
         {
+          "name": "matrixRootIterationsIn",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": false,
+          "shortName": "matrixRootIterationsIn",
+          "parentName": ""
+        },
+        {
           "name": "matrixStartIn",
           "type": 578,
           "typeName": "kMatrixAttribute",

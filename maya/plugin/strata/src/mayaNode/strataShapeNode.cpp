@@ -78,6 +78,7 @@ MStatus StrataShapeNode::initialize() {
     };
     std::vector<MObject> driven{
         aStMatrixOut,
+        aStCurveOut,
         
     };
 

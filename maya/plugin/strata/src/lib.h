@@ -91,7 +91,6 @@ namespace ed {
 	template<typename T>
 	static T* x4MatToQuat(T* m, T* q);
 
-	MDoubleArray uniformKnotsForCVs(int nCVs, int degree);
 
 	template<typename T>
 	inline T* slerp(T* qa, T* qb, T* qm, T t);

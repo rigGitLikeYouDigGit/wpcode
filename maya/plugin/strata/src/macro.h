@@ -32,6 +32,8 @@ COUT << __FILE__ << " " << __LINE__ << " \n" << info << std::endl;
 
 #define NODENAME (MFnDependencyNode(thisMObject()).name())
 
+#define WP_INVALID_SCALAR(v)\
+	(v != v)
 
 #define MNCHECK(stat, msg) \
 	MCHECK(stat, "ERR - " + NODENAME + ": " + msg);
@@ -51,6 +53,16 @@ for(auto const& i: vec){ \
 // as in "debugMVector"
 #define DEBUGMV(vec) \
 COUT << vec[0] << ", " << vec[1] << ", " << vec[2] << std::endl;
+
+#define DEBUGMMAT(msg, mat)\
+COUT << msg << "{ " << std::endl;\
+COUT << std::to_string(mat[0][0]) + ", " + std::to_string(mat[0][1]) + ", " + std::to_string(mat[0][2]) + ", " + std::to_string(mat[0][3]) << std::endl;\
+COUT << std::to_string(mat[1][0]) + ", " + std::to_string(mat[1][1]) + ", " + std::to_string(mat[1][2]) + ", " + std::to_string(mat[1][3]) << std::endl;\
+COUT << std::to_string(mat[2][0]) + ", " + std::to_string(mat[2][1]) + ", " + std::to_string(mat[2][2]) + ", " + std::to_string(mat[2][3]) << std::endl;\
+COUT << std::to_string(mat[3][0]) + ", " + std::to_string(mat[3][1]) + ", " + std::to_string(mat[3][2]) + ", " + std::to_string(mat[3][3]) << std::endl; 
+
+#define DEBUGQuat(msg, v)\
+COUT << msg << "{ " << std::to_string(v[0]) + ", " + std::to_string(v[1]) + ", " + std::to_string(v[2]) + ", " + std::to_string(v[3]) + " }" << std::endl;
 
 #define DEBUGVF(vec) \
 copy( vec.begin(), vec.end(), ostream_iterator<float>(MStreamUtils::stdOutStream, " "));

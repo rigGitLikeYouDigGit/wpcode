@@ -4,6 +4,7 @@ import typing as T
 from ..gen.nurbsCurve import NurbsCurve as GenNurbsCurve
 import numpy as np
 from wpm import cmds, om, WN, to, arr
+from wplib import log
 
 from wpm.lib import curve
 
@@ -41,9 +42,9 @@ class NurbsCurve(GenNurbsCurve):
 	def create(cls,
 	           name:str="", dgMod_:DGDagModifier=None,
 	           parent_:(str, om.MObject, WN)=None,
-	           cvs=[om.MPoint(), om.MPoint()],
+	           cvs=(),
 	           knots=None,
-	           degree=2,
+	           degree=1,
 	           form=om.MFnNurbsCurve.kOpen,
 	           is2d=False,
 	           rational=True
@@ -58,19 +59,18 @@ class NurbsCurve(GenNurbsCurve):
 		will result in some copying of the argument processing here,
 		but I find copying can sometimes be comforting for work code
 		"""
-		# creating from raw WN class, default to Transform
-		if cls is WN:
-			nodeCls = WN.Transform
-		else:
-			nodeCls = cls
+
 		if parent_ is not None:
 			parent_ = filterToMObject(parent_)
 		opMod = dgMod_ or DGDagModifier()
-		name = name or nodeCls.typeName + str(1)
+		name = name or cls.typeName + str(1)
 
+		cvs = cvs or [om.MPoint(0, 0, 0), om.MPoint(1, 0, 0)]
 		knots = knots or curve.knotArrayForCurve(len(cvs), degree)
 
-
+		parentObj = parent_
+		if parent_ is None:
+			parentObj = WN.Transform.create(name).object()
 		newObj = om.MFnNurbsCurve().create(
 			cvs,
 			knots,
@@ -78,11 +78,29 @@ class NurbsCurve(GenNurbsCurve):
 			form,
 			is2d,
 			rational,
-			parent_ or om.MObject.kNullObj
+			#parent_ or om.MObject.kNullObj
+			parentObj
 		)
+		#hdl = cls._validateCreatedMObject(newObj)
+		shapeWrapper = cls(newObj)
+		cls._validateCreatedWrapper(newObj, shapeWrapper)
+
+		om.MFnNurbsCurve(newObj).name()
 		# returns the created transform node, if you create a shape with no parent transform
+		if(parent_ is None):
+			#shapeWrapper = cls(newObj)
+			if shapeWrapper.tf() is None:
+				log("shape wrapper is None")
+				log(newObj, newObj.isNull())
+				log(shapeWrapper.name(), log(shapeWrapper.MFn), shapeWrapper)
+				raise RuntimeError
+			shapeWrapper.tf().setName(name)
+			return shapeWrapper
+			tfWrapper = WN(newObj)
+			tfWrapper.setName(name)
+			return cls(tfWrapper.shape())
 
-		wrapper = nodeCls(newObj)
-		wrapper.setName(name)
+		#wrapper = cls(newObj)
+		shapeWrapper.setName(name)
 
-		return wrapper
+		return shapeWrapper

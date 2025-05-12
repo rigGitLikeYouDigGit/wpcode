@@ -100,6 +100,7 @@
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>WIN32;_WINDOWS;CMAKE_INTDIR="Debug";strata_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)</ObjectFileName>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;CMAKE_INTDIR=\"Debug\";strata_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -330,7 +331,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\fnmatch.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\iterator.h" />
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\lib.cpp" />
-    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\libnurbs.cpp" />
+    <ClInclude Include="src\libnurbs.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\libplug.h" />
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\libramp.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\macro.h" />

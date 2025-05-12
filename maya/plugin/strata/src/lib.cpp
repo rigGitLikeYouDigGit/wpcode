@@ -288,10 +288,7 @@ namespace ed {
 	//}
 
 
-	MDoubleArray uniformKnotsForCVs(int nCVs, int degree)
-	{
-		return MDoubleArray();
-	}
+
 
 	MMatrix interpolateMMatrixArray(std::vector<MMatrix>& mmatrixArr, MMatrix& out, float t) {
 		/* assuming steadily spaced keypoints in arr, interpolate at param t

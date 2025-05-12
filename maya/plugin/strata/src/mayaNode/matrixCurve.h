@@ -1,5 +1,6 @@
 #pragma once
-
+#include <vector>
+#include <memory>
 #include "../MInclude.h"
 
 /* strata spinoff:
@@ -12,6 +13,7 @@ prefix MObject nodeT aMatrixEndIn;\
 prefix MObject nodeT aMatrixMidIn;\
 prefix MObject nodeT aMatrixMidInMatrix;\
 prefix MObject nodeT aCurveRootResIn;\
+prefix MObject nodeT aMatrixRootIterationsIn;\
 prefix MObject nodeT aCurvePointResIn;\
 prefix MObject nodeT aSampleIn;\
 prefix MObject nodeT aSampleInParam;\
@@ -40,7 +42,13 @@ public:
 	static  MString     drawDbClassification;
 	static  MString     drawRegistrantId;
 
-	std::vector<MMatrix> cachedMats;
+	//std::vector<MMatrix> cachedMats;
+	MMatrixArray cachedMats;
+	/* hassle to save eigen matrixPower structs*/
+	typedef Eigen::MatrixPower<Eigen::Matrix4f> MatPowerT;
+	std::vector<std::unique_ptr<MatPowerT>> fullSpanMatPowers;
+	std::vector<std::unique_ptr<MatPowerT>> halfSpanMatPowers; // when bisect is used
+
 
 	static MStatus initialize();
 

@@ -98,6 +98,32 @@ namespace ed {
         size_t rows_, cols_;
     };
 
+    inline MDoubleArray uniformKnotsForCVs(int nCvs, int degree) {
+        if (degree == 1) {
+            MDoubleArray result(nCvs, 0.0);
+            for (int i = 0; i < nCvs; i++) {
+                result[i] = float(i);
+            }
+            return result;
+        }
+        MDoubleArray result(degree + nCvs - 1);
+        int i = 0;
+        float v = 0;
+        for (int n = 0; n < degree; n++) {
+            result[i] = v;
+            i += 1;
+        }
+        for (int n = 0; n < nCvs - degree; n++) {
+            v += 1.0;
+            result[i] = v;
+            i += 1;
+        }
+        for (int n = 0; n < degree - 1; n++) {
+            result[i] = v;
+            i += 1;
+        }
+        return result;
+    }
 
     /**
  * Convert an nd point in homogenous coordinates to an (n-1)d point in cartesian
