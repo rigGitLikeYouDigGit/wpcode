@@ -6,14 +6,17 @@
 #include <cstdint>
 #include <chrono>
 #include <thread>
+#include <algorithm>
+#include <vector>
+#include <math.h>
 
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <unsupported/Eigen/MatrixFunctions>
+#include <unsupported/Eigen/Splines>
 
 
 #include "libEigen.h"
-
 
 
 using namespace ed;
@@ -52,6 +55,43 @@ Eigen::Matrix4<T>& translate(
 	lhs.block<1, 3>(3, 0, 1, 3) += rotated;
 	return lhs;
 }
+
+Status& ed::splineUVN(
+	Status& s,
+	//Eigen::Matrix4d& outMat,
+	Eigen::Affine3d& outMat,
+	const Eigen::Spline3d& posSpline,
+	const Eigen::Spline3d& normalSpline,
+	double uvw[3]
+) {
+	/* polar-like coords around spline
+	u is parametre
+	v is rotation
+	w is distance
+	*/
+	uvw[0] = std::min(std::max(uvw[0], 0.0), 1.0);
+
+	Eigen::Vector3d pos = posSpline(uvw[0]).matrix(); // we assume that normal is actually normal, no need to redo double cross here
+	//auto derivatives = posSpline.derivatives<1>(uvw[0], 1);
+	Eigen::Vector3d tan = posSpline.derivatives(uvw[0], 1).col(1).matrix();
+	//Eigen::Array3d n = posSpline(uvw[1]);
+	Eigen::Vector3d n = normalSpline(uvw[1]).matrix();
+
+	
+	makeFrame(outMat.matrix(), pos, tan, n);
+	if (!EQ(uvw[1], 0.0)) {
+		/* rotate n times clockwise about tangent*/
+		Eigen::AngleAxisd orient(uvw[1], tan);
+		outMat *= orient;
+	}
+	if (!EQ(uvw[2], 0.0)) {
+		/* rotate n times clockwise about tangent*/
+		outMat.translate(Eigen::Vector3d{ 0.0, 0.0, uvw[2] });
+	}
+
+	return s;
+}
+
 
 #define FE_MSQ_METHOD 0
 

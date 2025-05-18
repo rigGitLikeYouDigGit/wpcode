@@ -348,7 +348,8 @@ MStatus StrataElementOpNode::syncStrataParams(MObject& nodeObj, MDataBlock& data
         // always match in worldspace for now
         switch (elName[0]) {
             case 'p': { // points have no drivers
-                opPtr->namePointDataMap[elName].finalMatrix = elDH.inputValue().child(aStPointWorldMatrixIn).asMatrix();
+                //opPtr->namePointDataMap[elName].finalMatrix = elDH.inputValue().child(aStPointWorldMatrixIn).asMatrix();
+                opPtr->namePointDataMap[elName].finalMatrix = toEigen(elDH.inputValue().child(aStPointWorldMatrixIn).asMatrix());
                 break;
             }
             case 'e': {

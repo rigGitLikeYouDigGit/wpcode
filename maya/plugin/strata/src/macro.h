@@ -87,6 +87,8 @@ copy( vec.begin(), vec.end(), ostream_iterator<float>(MStreamUtils::stdOutStream
 #define seqContains(seq, v)\
 	(std::find(seq.begin(), seq.end(), v) != seq.end())\
 
+#define LERP(a, b, t)\
+	b * t + (1.0 - t) * b
 
 /* example of the macro to give to the system below
 # define STRATABASE_STATIC_MEMBERS(prefix, nodeT) \

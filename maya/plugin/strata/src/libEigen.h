@@ -6,6 +6,8 @@
 #include "MInclude.h"
 #include "api.h"
 #include "macro.h"
+#include "status.h"
+
 #include <unsupported/Eigen/Splines>
 
 namespace ed {
@@ -107,41 +109,149 @@ namespace ed {
 		//int rootIterations
 	);
 
-	template<typename T>
-	bool makeFrameTangentX(Eigen::Matrix4<T>& a_frame,
-		const Eigen::Vector3<T>& a_location,
-		const Eigen::Vector3<T>& a_tangentX, 
-		const Eigen::Vector3<T>& a_normalY)
-	{
-		//Eigen::Vector3<T> sideZ = cross(a_tangentX, a_normalY);
-		Eigen::Vector3<T> sideZ = a_tangentX.cross(a_normalY);
-		//if (isZero(sideZ))
-		if (sideZ)
-		{
-			return FALSE;
+	template<typename MATRIX, typename T, int N=3>
+	inline void setMatrixRow(MATRIX& mat, const int& rowIndex, const T* data) {
+		for (int i = 0; i < N; i++) {
+			mat(rowIndex, i) = data[i];
 		}
-		//normalize(sideZ);
-		sideZ.normalize();
-		//SpatialVector normalY = cross(sideZ, a_tangentX);
-		Eigen::Vector3<T> normalY = sideZ.cross( a_tangentX);
-		if (isZero(normalY))
-		{
-			return false;
-		}
-		//normalize(normalY);
-		normalY.normalize();
+	}
 
-		/*a_frame.direction() = a_tangentX;
-		a_frame.left() = normalY;
-		a_frame.up() = sideZ;
-		a_frame.translation() = a_location;*/
-		a_frame[0] = a_tangentX;
-		a_frame[1] = normalY;
-		a_frame[2] = sideZ;
-		a_frame[3] = a_location;
+	template<typename T>
+	inline bool makeFrame(Eigen::Matrix4<T>& frameMat,
+		const Eigen::Vector3<T>& pos,
+		const Eigen::Vector3<T>& tan, 
+		const Eigen::Vector3<T>& normal
+	){
+		/* x is tangent,
+		y is up,
+		z is normal
+		*/
+		Eigen::Vector3<T> up = tan.cross(normal);
+		Eigen::Vector3<T> normalZ = tan.cross(up);
+		setMatrixRow(frameMat, 0, tan.data());
+		setMatrixRow(frameMat, 1, up.data());
+		setMatrixRow(frameMat, 2, normalZ.data());
 		return true;
 	}
 
+	inline bool makeFrame(Eigen::Affine3d& frameMat,
+		const Eigen::Vector3d& pos,
+		const Eigen::Vector3d& tan,
+		const Eigen::Vector3d& normal
+	) {
+		/* x is tangent,
+		y is up,
+		z is normal
+		*/
+		Eigen::Vector3d up = tan.cross(normal);
+		Eigen::Vector3d normalZ = tan.cross(up);
+		setMatrixRow(frameMat, 0, tan.data());
+		setMatrixRow(frameMat, 1, up.data());
+		setMatrixRow(frameMat, 2, normalZ.data());
+		return true;
+	}
+
+	inline Eigen::Vector3d splineTan(const Eigen::Spline3d& sp, const double u) {
+		return sp.derivatives(u, 1).col(0).matrix();
+	}
+
+	inline double closestParamOnSpline(const Eigen::Spline3d& sp, const Eigen::Vector3d pt,
+		int nSamples =10,
+		int iterations=2
+	) {
+		/* basic binary search?
+		or we start by checking control points?
+		
+		or we just put this in maya
+		
+		seems like an initial scattered search is used even in some SVG libraries
+		algebraic solutions are apparently possible?
+
+		JUST BRUTE FORCE IT
+		10 sparse, 10 dense, move on
+		*/
+		Eigen::Vector3d l, r;
+		double a = 0.0;
+		double b = 1.0;
+		/*l = sp(a).matrix();
+		r = sp(b).matrix();*/
+		Eigen::ArrayX3d iterSamples(nSamples, 3);
+		Eigen::ArrayXd lins(nSamples);
+		Eigen::ArrayXd distances(nSamples);
+		//int maxCol, maxRow = 0;
+		int minIndex = 0;
+		for (int i = 0; i < iterations; i++) {
+			//iterSamples = Eigen::ArrayX3d::Zero(nSamples);
+			lins = Eigen::ArrayXd::LinSpaced(nSamples, a, b);
+			for (int n = 0; n < nSamples; n++) {
+				//auto res = sp(lins[n]);
+				//iterSamples(n) = res;
+				//iterSamples.row(n) = res;
+				iterSamples.row(n) = sp(lins(n));
+				distances[n] = (sp(lins[n]).matrix() - pt).squaredNorm();
+			}
+			//distances.maxCoeff(maxRow, maxCol);
+			//minIndex = distances.minCoeff();
+			distances.minCoeff(&minIndex);
+			if (minIndex == (nSamples - 1)) { // closest to right
+				b = lins[nSamples - 2];
+				continue;
+			}
+			if (minIndex == 0) { // closest to left
+				a = lins[1];
+				continue;
+			}
+
+			//if(distances[minIndex + 1] > distances)
+			a = minIndex - 1;
+			b = minIndex + 1;
+			
+		}
+		// return last hit float coord
+		return lins[minIndex];
+	}
+
+	inline Status& matrixAtU(
+		Status& s,
+		Eigen::Affine3d& mat,
+		const Eigen::Spline3d& posSpline,
+		const Eigen::Spline3d& normalSpline,
+		const double u
+		) {
+		
+		makeFrame(
+			mat,
+			posSpline(u).matrix(),
+			posSpline.derivatives(u, 1).col(0).matrix(),
+			normalSpline(u).matrix()
+		);
+		return s;
+	}
+
+
+	inline Eigen::ArrayXd arcLengthToParamMapping(const Eigen::Spline3d& sp, const int npoints = 20) {
+		// return an array of equally-spaced points giving the 0-1 arc length to each point
+		Eigen::ArrayXd result = Eigen::ArrayXd::Constant(npoints, 0.0);
+		//Eigen::ArrayXXd data = Eigen::ArrayXXd::Constant(nRow, nCol, 1.0);
+		Eigen::Vector3d prevpt = sp(0.0);
+		Eigen::Vector3d thispt;
+		for (int i = 1; i < npoints; i++) {
+			double u = 1.0 / double(npoints - 1) * i;
+			thispt = sp(u);
+			result[i] = result[i-1] + (thispt - prevpt).norm();
+			prevpt = thispt;
+		}
+		return result;
+	}
+
+	Status& splineUVN(
+		Status& s,
+		//Eigen::Matrix4d& outMat,
+		Eigen::Affine3d& outMat,
+		const Eigen::Spline3d& posSpline,
+		const Eigen::Spline3d& normalSpline,
+		double uvw[3]
+	);
 
 	/**************************************************************************//**
 	@brief solve B = A^^power, where A is a matrix

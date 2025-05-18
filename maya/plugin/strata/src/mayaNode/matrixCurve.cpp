@@ -1,4 +1,14 @@
 
+/*
+* some portions below are taken from the Free Electron project - 
+* at time of writing they are distributed under the BSD 2-clause license,
+* with the following notice:
+Copyright(C) 2003 - 2021 Free Electron Organization
+Any use of this software requires a license.If a valid license
+was not distributed with this file, visit freeelectron.org.* /
+
+*/
+
 #pragma once
 #include <vector>
 //#include <array>

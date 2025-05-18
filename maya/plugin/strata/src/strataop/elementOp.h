@@ -34,7 +34,9 @@ namespace ed {
 		*/
 		using StrataOp::StrataOp;
 
-		std::map<std::string, SPointData> namePointDataMap;
+		// populate these if literal worldspace inputs are given
+		std::map<StrataName, SPointData> namePointDataMap; 
+		std::map<StrataName, SEdgeData> nameEdgeDataMap; 
 
 		virtual Status makeParams();
 
