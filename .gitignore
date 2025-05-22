@@ -346,3 +346,7 @@ maya/plugin/strata/Debug/strata.ilk
 maya/plugin/strata/Debug/strata.pdb
 maya/plugin/strata/Debug/strata.pdb
 maya/plugin/strata/Debug/strata.mll
+maya/plugin/strata/Debug/strata.mll
+maya/plugin/strata/Debug/strata.pdb
+*.mll
+*.pdb
