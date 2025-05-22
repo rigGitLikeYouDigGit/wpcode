@@ -84,6 +84,9 @@ Status& edgeEvalDriverExpression(
 		driverPtr->edges.push_back(outPtr->globalIndex);
 
 	}
+
+	s = value.buildEdgeData(s, edgeData);
+
 	return s;
 }
 
@@ -93,8 +96,8 @@ Status& faceEvalDriverExpression(
 	std::vector<ExpValue>* resultVals,
 	const std::string& paramName, ed::expns::Expression& exp) 
 {
-	ExpAuxData expAuxData;
-	std::vector<ExpValue>* resultVals = nullptr;
+	//ExpAuxData expAuxData;
+	//std::vector<ExpValue>* resultVals = nullptr;
 
 	s = exp.result(resultVals, &expAuxData);
 	CWRSTAT(s, "error getting exp result, halting");
@@ -205,7 +208,7 @@ Status& evalParentExpression(
 	// add drivers to new point (should only be 1 I think?)
 	for (auto& i : drivers) {
 		SElement* elPtr = value.getEl(i);
-		outPtr->drivers.push_back(i);
+		outPtr->drivers.push_back(elPtr->name);
 		elPtr->points.push_back(outPtr->globalIndex);
 	}
 

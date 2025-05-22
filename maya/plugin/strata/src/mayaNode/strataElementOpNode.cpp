@@ -13,6 +13,8 @@
 #include "strataOpNodeBase.h"
 //#include "strataOpNodeBase.cpp"
 #include "../lib.h"
+#include "../libEigen.h"
+#include "../libNurbs.h"
 #include "../stringLib.h"
 #include "../strataop/elementOp.h"
 
@@ -122,6 +124,10 @@ MStatus StrataElementOpNode::initialize() {
 
 
     //// edge attributes
+    aStEdgeCurveIn = tFn.create("stEdgeCurveIn", "stEdgeCurveIn", MFnData::kNurbsCurve);
+    tFn.setDefault(MFnNurbsCurveData().create());
+    cFn.addChild(aStEdgeCurveOut);
+
     aStEdgeCurveOut = tFn.create("stEdgeCurveOut", "stEdgeCurveOut", MFnData::kNurbsCurve);
     tFn.setDefault(MFnNurbsCurveData().create());
     cFn.addChild(aStEdgeCurveOut);
@@ -190,6 +196,8 @@ MStatus StrataElementOpNode::initialize() {
         aStPointWeightedDriverMatrixOut,
         aStPointWeightedLocalOffsetMatrixOut,
         aStPointFinalWorldMatrixOut,
+
+        aStEdgeCurveIn
     };
     std::vector<MObject> driven{
         aStGlobalIndex,
@@ -274,6 +282,54 @@ MStatus StrataElementOpNode::connectionBroken(
         otherPlug,
         asSrc
     );
+}
+
+
+MStatus StrataElementOpNode::edgeDataFromRawCurve(MStatus& ms, MObject& nodeObj, MDataBlock& data, MDataHandle& elDH, SEdgeData& eData) {
+    /* if you specify only a raw curve without driver data (not recommended),
+    build edge data from it - from maya this will be a nurbs curve
+    
+    sample the curve for each of its control points, and from that build raw spline for edge data
+    */
+    MDataHandle curveDH = elDH.child(aStEdgeCurveIn);
+    MObject& curveObj = curveDH.asNurbsCurve();
+    MFnNurbsCurveData dataFn(curveObj, &ms);
+    MCHECK(ms, "Error retrieving nurbs curve data for plug");
+    
+    MFnNurbsCurve cFn(dataFn.object());
+
+    if (cFn.numCVs() < 2) {
+        DEBUGSL("Invalid curve passed for literal edge")
+        return MS::kFailure;
+    }
+
+    // driver data for each cv, and for each half-span?
+    eData.driverDatas.resize(cFn.numCVs() * 2 - 1);
+
+    // set up point list for edge
+    //Eigen::Matrix3Xd curvePoints(cFn.numCVs());
+
+    // need to remap uniform param into knot space
+    double uStart, uEnd;
+    cFn.getKnotDomain(uStart, uEnd);
+
+    for (int i = 0; i < cFn.numCVs() * 2 - 1; i++) {
+        eData.driverDatas[i].index = -1;
+        double u = 1.0 / (cFn.numCVs() - 1) * i;
+        u = lerp(uStart + 0.0001, uEnd - 0.0001, u);
+        MPoint pt;
+        MVector tan;
+        ms = cFn.getDerivativesAtParm(u, pt, tan, MSpace::kObject);
+        MCHECK(ms, "invalid sample point on curve");
+
+        Status s;
+        makeFrame(s,
+            eData.driverDatas[i].finalMatrix,
+            Eigen::Vector3d{ pt.x, pt.y, pt.z },
+            Eigen::Vector3d{ tan.x, tan.y, tan.z }
+        );
+    }
+    return ms;
 }
 
 MStatus StrataElementOpNode::syncStrataParams(MObject& nodeObj, MDataBlock& data) {

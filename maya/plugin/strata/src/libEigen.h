@@ -10,6 +10,8 @@
 
 #include <unsupported/Eigen/Splines>
 
+//#include <bezier/bezier.h>
+
 namespace ed {
 	/* copying various from Free Electron,
 	adapting to Eigen types
@@ -109,6 +111,34 @@ namespace ed {
 		//int rootIterations
 	);
 
+	//inline Eigen::ArrayXd uniformKnotsForCVs(Status& s, int nCvs, int degree) {
+	//	if (degree == 1) {
+	//		//Eigen::ArrayXd result()
+	//		MDoubleArray result(nCvs, 0.0);
+	//		for (int i = 0; i < nCvs; i++) {
+	//			result[i] = float(i);
+	//		}
+	//		return result;
+	//	}
+	//	MDoubleArray result(degree + nCvs - 1);
+	//	int i = 0;
+	//	float v = 0;
+	//	for (int n = 0; n < degree; n++) {
+	//		result[i] = v;
+	//		i += 1;
+	//	}
+	//	for (int n = 0; n < nCvs - degree; n++) {
+	//		v += 1.0;
+	//		result[i] = v;
+	//		i += 1;
+	//	}
+	//	for (int n = 0; n < degree - 1; n++) {
+	//		result[i] = v;
+	//		i += 1;
+	//	}
+	//	return result;
+	//}
+
 	template<typename MATRIX, typename T, int N=3>
 	inline void setMatrixRow(MATRIX& mat, const int& rowIndex, const T* data) {
 		for (int i = 0; i < N; i++) {
@@ -117,7 +147,9 @@ namespace ed {
 	}
 
 	template<typename T>
-	inline bool makeFrame(Eigen::Matrix4<T>& frameMat,
+	inline Status& makeFrame(
+		Status& s,
+		Eigen::Matrix4<T>& frameMat,
 		const Eigen::Vector3<T>& pos,
 		const Eigen::Vector3<T>& tan, 
 		const Eigen::Vector3<T>& normal
@@ -131,10 +163,12 @@ namespace ed {
 		setMatrixRow(frameMat, 0, tan.data());
 		setMatrixRow(frameMat, 1, up.data());
 		setMatrixRow(frameMat, 2, normalZ.data());
-		return true;
+		return s;
 	}
 
-	inline bool makeFrame(Eigen::Affine3d& frameMat,
+	inline Status& makeFrame(
+		Status& s,
+		Eigen::Affine3d& frameMat,
 		const Eigen::Vector3d& pos,
 		const Eigen::Vector3d& tan,
 		const Eigen::Vector3d& normal
@@ -145,15 +179,167 @@ namespace ed {
 		*/
 		Eigen::Vector3d up = tan.cross(normal);
 		Eigen::Vector3d normalZ = tan.cross(up);
-		setMatrixRow(frameMat, 0, tan.data());
-		setMatrixRow(frameMat, 1, up.data());
-		setMatrixRow(frameMat, 2, normalZ.data());
-		return true;
+		setMatrixRow(frameMat, 0, tan.normalized().data());
+		setMatrixRow(frameMat, 1, up.normalized().data());
+		setMatrixRow(frameMat, 2, normalZ.normalized().data());
+		return s;
 	}
 
-	inline Eigen::Vector3d splineTan(const Eigen::Spline3d& sp, const double u) {
-		return sp.derivatives(u, 1).col(0).matrix();
+	inline Status& makeFrame(
+		Status& s,
+		Eigen::Affine3d& frameMat,
+		const Eigen::Vector3d& pos,
+		const Eigen::Vector3d& tan
+	) {// default {0, 1, 0} normal
+		return makeFrame(s, frameMat, pos, tan, { 0.0, 1.0, 0.0 });
 	}
+
+	//inline Eigen::Vector3d splineTan(const Eigen::Spline3d& sp, const double u) {
+	//	//sp.derivatives(u, 0);
+
+	//	sp.derivatives<1>(u);
+	//	
+	//	return sp.derivatives(u, 1).matrix().row(0);
+	//}
+
+	template<typename T>
+	inline Eigen::MatrixX3<T> cubicTangentPointsForBezPoints(
+		const Eigen::MatrixX3<T>& inPoints,
+		const bool closed,
+		float* inContinuities = nullptr
+	) 
+	{
+		// treat open and closed the same, just discount final span if not closed
+
+		Eigen::MatrixX3<T> result(inPoints.rows() * 3);
+		int nPoints = inPoints.rows();
+
+		// set tangent vectors for each one (scaling done later)
+		// also includes start and end, as if it were closed
+		int nextInI, prevInI;
+		int outI, nextOutI, prevOutI;
+		for (int i = 0; i < nPoints; i++) {
+			nextInI = (i + 1) % nPoints;
+			prevInI = (i - 1) % nPoints;
+
+			outI = i * 3;
+			nextOutI = (i* 3 + 1) % nPoints;
+			prevOutI = (i* 3 - 1) % nPoints;
+
+			auto thisPos = inPoints.row(i);
+			auto nextPos = inPoints.row(nextInI);
+			auto prevPos = inPoints.row(prevInI);
+
+			// set start point from originals
+			result.row(outI) = thisPos;
+
+			// vector from prev ctl pt to next
+			auto tanVec = nextPos - prevPos;
+			//thisDriver.baseTan = tanVec;
+
+			auto toThisVec = thisPos - prevPos;
+			// vector from this ctl pt to next
+			auto toNextVec = nextPos - thisPos;
+			//auto toPrevVec = nextPos - thisPos;
+
+			// forwards tan scale factor
+			T nextTanScale = tanVec.dot(toNextVec) - (tanVec.dot(toThisVec)) / 3.0;
+			nextTanScale = -sminQ(-nextTanScale, 0.0, 0.2);
+
+			// back tan scale factor
+			T prevTanScale = tanVec.dot(-toThisVec) - (tanVec.dot(toThisVec)) / 3.0;
+			prevTanScale = -sminQ(-prevTanScale, 0.0, 0.2);
+
+			result.row(nextOutI) = tanVec.normalized() * nextTanScale;
+			result.row(prevOutI) = -tanVec.normalized() * prevTanScale;
+		}
+
+		// if we don't care about continuities, return
+		if (inContinuities == nullptr) {
+			return result;
+		}
+
+
+		// set ends if not continuous
+		// if not closed, ends are not continuous
+		if (!closed) {
+			inContinuities[0] = 0.0;
+			inContinuities[nPoints - 1] = 0.0;
+		}
+
+		// check continuity
+		for (int i = 0; i < nPoints; i++) {
+			nextInI = (i + 1) % nPoints;
+			prevInI = (i - 1) % nPoints;
+
+			outI = i * 3;
+			nextOutI = (i * 3 + 1) % nPoints;
+			prevOutI = (i * 3 - 1) % nPoints;
+
+			int nextPtI = ((i + 1) * 3) % nPoints;
+			int nextPtPrevTanI = ((i + 1) * 3 - 1) % nPoints;
+			int nextPtNextTanI = ((i + 1) * 3 + 1) % nPoints;
+
+			int prevPtI = ((i - 1) * 3) % nPoints;
+			int prevPtPrevTanI = ((i - 1) * 3 - 1) % nPoints;
+			int prevPtNextTanI = ((i - 1) * 3 + 1) % nPoints;
+
+
+			// blend between next tangent point and next point, based on continuity
+			//double postTanLen = thisDriver.postTan.norm();
+			float postTanLen = result.row(nextOutI).norm();
+			result.row(nextOutI) = lerp(
+				Eigen::Vector3<T>(result.row(nextOutI)),
+				Eigen::Vector3<T>(lerp(
+						//nextDriver.pos(),
+						Eigen::Vector3<T>(result.row(nextPtI)),
+						//Eigen::Vector3d(nextDriver.pos() + nextDriver.prevTan),
+						Eigen::Vector3<T>(result.row(nextPtI) + result.row(nextPtPrevTanI)),
+						//Eigen::Vector3d(nextDriver.pos() + nextDriver.preTan).matrix(),
+						//nextDriver.continuity
+						T(inContinuities[nextInI])
+					) - result.row(outI)),
+					T(inContinuities[i])
+					
+			);
+			//thisDriver.postTan = thisDriver.postTan.normalized() * postTanLen;
+			result.row(nextOutI) = result.row(nextOutI).normalized() * postTanLen;
+
+			// prev tan
+			//double prevTanLen = thisDriver.prevTan.norm();
+			//thisDriver.prevTan = lerp(
+			//	thisDriver.postTan,
+			//	(lerp(
+			//		prevDriver.pos(),
+			//		Eigen::Vector3d(prevDriver.pos() + prevDriver.postTan),
+			//		prevDriver.continuity
+			//	) - thisDriver.pos()).eval(),
+			//	thisDriver.continuity
+			//);
+			//thisDriver.prevTan = thisDriver.prevTan.normalized() * prevTanLen;
+
+			float prevTanLen = result.row(prevOutI).norm();
+			result.row(prevOutI) = lerp(
+				Eigen::Vector3<T>(result.row(prevOutI)),
+				Eigen::Vector3<T>(
+					lerp(
+					
+					Eigen::Vector3<T>(result.row(prevPtI)),
+					Eigen::Vector3<T>(result.row(prevPtI) + result.row(prevPtNextTanI)),
+					T(inContinuities[prevInI])
+
+				) - result.row(outI)),
+				T(inContinuities[i])
+
+			);
+
+		}
+
+		return result;
+
+	}
+
+
 
 	inline double closestParamOnSpline(const Eigen::Spline3d& sp, const Eigen::Vector3d pt,
 		int nSamples =10,
@@ -219,7 +405,7 @@ namespace ed {
 		const double u
 		) {
 		
-		makeFrame(
+		s = makeFrame(s,
 			mat,
 			posSpline(u).matrix(),
 			posSpline.derivatives(u, 1).col(0).matrix(),
@@ -227,6 +413,105 @@ namespace ed {
 		);
 		return s;
 	}
+
+	/*
+	curve functions from Pomax Bezier Primer
+
+	getCubicDerivative(t, points) {
+	let mt = (1 - t), a = mt*mt, b = 2*mt*t, c = t*t, d = [
+		{
+			x: 3 * (points[1].x - points[0].x),
+			y: 3 * (points[1].y - points[0].y)
+		},
+		{
+			x: 3 * (points[2].x - points[1].x),
+			y: 3 * (points[2].y - points[1].y)
+		},
+		{
+			x: 3 * (points[3].x - points[2].x),
+			y: 3 * (points[3].y - points[2].y)
+		}
+	];
+
+	return {
+		x: a * d[0].x + b * d[1].x + c * d[2].x,
+		y: a * d[0].y + b * d[1].y + c * d[2].y
+	};
+}
+
+	*/
+	//Eigen::MatrixX3d
+	Status& getCubicDerivative(Status& s, Eigen::Vector3d& out, double t, Eigen::Matrix<double, 4, 3> points) {
+		// TODO: if this works, rewrite last block as arrays
+		auto mt = 1.0 - t;
+		auto a = mt * mt;
+		auto b = 2.0 * mt * t;
+		auto c = t * t;
+		Eigen::Matrix3d d;
+		d << 3.0 * (points.row(1).x() - points.row(0).x()),
+			3.0 * (points.row(1).y() - points.row(0).y()),
+			3.0 * (points.row(1).z() - points.row(0).z()),
+
+			3.0 * (points.row(2).x() - points.row(1).x()),
+			3.0 * (points.row(2).y() - points.row(1).y()),
+			3.0 * (points.row(2).z() - points.row(1).z()),
+
+			3.0 * (points.row(3).x() - points.row(2).x()),
+			3.0 * (points.row(3).y() - points.row(2).y()),
+			3.0 * (points.row(3).z() - points.row(2).z());
+
+		out(0) = a * d.row(0).x() + b * d.row(1).x() + c * d.row(2).x();
+		out(1) = a * d.row(0).y() + b * d.row(1).y() + c * d.row(2).y();
+		out(2) = a * d.row(0).z() + b * d.row(1).z() + c * d.row(2).z();
+		return s;
+	}
+
+	inline double closestParamOnSpline(const bezier::BezierCurve& sp, const Eigen::Vector3d pt,
+		int nSamples = 10,
+		int iterations = 2
+	) {
+
+		Eigen::Vector3d l, r;
+		double a = 0.0;
+		double b = 1.0;
+		/*l = sp(a).matrix();
+		r = sp(b).matrix();*/
+		Eigen::ArrayX3d iterSamples(nSamples, 3);
+		Eigen::ArrayXd lins(nSamples);
+		Eigen::ArrayXd distances(nSamples);
+		//int maxCol, maxRow = 0;
+		int minIndex = 0;
+		for (int i = 0; i < iterations; i++) {
+			//iterSamples = Eigen::ArrayX3d::Zero(nSamples);
+			lins = Eigen::ArrayXd::LinSpaced(nSamples, a, b);
+			for (int n = 0; n < nSamples; n++) {
+				//auto res = sp(lins[n]);
+				//iterSamples(n) = res;
+				//iterSamples.row(n) = res;
+				iterSamples.row(n) = sp(lins(n));
+				distances[n] = (sp(lins[n]).matrix() - pt).squaredNorm();
+			}
+			//distances.maxCoeff(maxRow, maxCol);
+			//minIndex = distances.minCoeff();
+			distances.minCoeff(&minIndex);
+			if (minIndex == (nSamples - 1)) { // closest to right
+				b = lins[nSamples - 2];
+				continue;
+			}
+			if (minIndex == 0) { // closest to left
+				a = lins[1];
+				continue;
+			}
+
+			//if(distances[minIndex + 1] > distances)
+			a = minIndex - 1;
+			b = minIndex + 1;
+
+		}
+		// return last hit float coord
+		return lins[minIndex];
+	}
+
 
 
 	inline Eigen::ArrayXd arcLengthToParamMapping(const Eigen::Spline3d& sp, const int npoints = 20) {

@@ -1,6 +1,21 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\bezier\CubicSpline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\bezier\bezier_curve.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\bezier\composite_bezier_curve.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\bezier\curve.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\bezier\fit_composite_bezier_curve.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\containers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -16,7 +31,13 @@
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\lib.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\libEigen.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\libramp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\mayaNode\matrixCurve.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataElementOpNode.cpp">
@@ -55,15 +76,39 @@
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\strataop\elementOp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\strataop\mergeOp.cpp" />
-    <ClCompile Include="src\mayaNode\matrixCurve.cpp" />
-    <ClCompile Include="src\libEigen.cpp" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\strataop\mergeOp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\MInclude.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\api.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\CubicSpline.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\CubicSplineHelpers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\bezier.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\bezier_curve.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\composite_bezier_curve.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\curve.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\fit_composite_bezier_curve.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\utilities.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\containers.h">
@@ -87,6 +132,15 @@
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\iterator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\lib.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\libEigen.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\libnurbs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\libplug.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -97,6 +151,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaConvert\manifoldMTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaNode\matrixCurve.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataElementOpNode.h">
@@ -144,15 +201,14 @@
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\strataop\elementOp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stringLib.h">
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\strataop\mergeOp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\strataop\mergeOp.h" />
-    <ClInclude Include="src\mayaNode\matrixCurve.h" />
-    <ClInclude Include="src\lib.h" />
-    <ClInclude Include="src\libEigen.h" />
-    <ClInclude Include="src\libnurbs.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\strataop\strataTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stringLib.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -150,6 +150,7 @@ prefix MObject nodeT aStPointWeightedDriverMatrixOut; \
 prefix MObject nodeT aStPointWeightedLocalOffsetMatrixOut; \
 prefix MObject nodeT aStPointFinalWorldMatrixOut; \
 \
+prefix MObject nodeT aStEdgeCurveIn;\
 prefix MObject nodeT aStEdgeCurveOut;\
 
 
@@ -222,6 +223,8 @@ public:
 
 
 	static MStatus initialize();
+
+	MStatus StrataElementOpNode::edgeDataFromRawCurve(MStatus& ms, MObject& nodeObj, MDataBlock& data, MDataHandle& elDH, ed::SEdgeData& eData);
 
 	virtual MStatus syncStrataParams(MObject& nodeObj, MDataBlock& data);
 

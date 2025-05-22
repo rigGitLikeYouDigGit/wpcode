@@ -100,7 +100,6 @@
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>WIN32;_WINDOWS;CMAKE_INTDIR="Debug";strata_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)</ObjectFileName>
-      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;CMAKE_INTDIR=\"Debug\";strata_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -314,11 +313,21 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\libEigen.cpp" />
-    <ClCompile Include="src\mayaNode\matrixCurve.cpp" />
-    <ClCompile Include="src\strataop\mergeOp.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\MInclude.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\api.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\bezier\CubicSpline.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\CubicSpline.h" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\CubicSplineHelpers.h" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\bezier.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\bezier\bezier_curve.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\bezier_curve.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\bezier\composite_bezier_curve.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\composite_bezier_curve.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\bezier\curve.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\curve.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\bezier\fit_composite_bezier_curve.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\fit_composite_bezier_curve.h" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\utilities.h" />
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\containers.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\containers.h" />
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\dirtyGraph.cpp" />
@@ -331,12 +340,17 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\fnmatch.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\iterator.h" />
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\lib.cpp" />
-    <ClInclude Include="src\libnurbs.h" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\lib.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\libEigen.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\libEigen.h" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\libnurbs.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\libplug.h" />
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\libramp.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\macro.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\matrixRoot.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaConvert\manifoldMTypes.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\mayaNode\matrixCurve.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaNode\matrixCurve.h" />
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataElementOpNode.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataElementOpNode.h" />
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataGraphNode.cpp" />
@@ -364,11 +378,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\opgraph.h" />
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\strataop\elementOp.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\strataop\elementOp.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\strataop\mergeOp.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\strataop\mergeOp.h" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\strataop\strataTypes.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stringLib.h" />
-    <ClInclude Include="src\lib.h" />
-    <ClInclude Include="src\libEigen.h" />
-    <ClInclude Include="src\mayaNode\matrixCurve.h" />
-    <ClInclude Include="src\strataop\mergeOp.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="F:\wp\code\maya\plugin\strata\ZERO_CHECK.vcxproj">

@@ -25,6 +25,7 @@ include_directories(${MAYA_INCLUDE_DIR})
 
 #include_directories(${EIGEN_INCLUDE_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
+#include_directories(${CMAKE_CURRENT_BINARY_DIR}/include/bezier/include)
 
 link_directories(${MAYA_LIBRARY_DIR})
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})

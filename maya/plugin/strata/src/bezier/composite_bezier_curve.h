@@ -3,9 +3,11 @@
 
 #include <vector>
 
-#include <bezier/curve.h>
-#include <bezier/bezier_curve.h>
+//#include <bezier/curve.h>
+//#include <bezier/bezier_curve.h>
 
+#include "curve.h"
+#include "bezier_curve.h"
 namespace bezier {
 
     using std::vector;

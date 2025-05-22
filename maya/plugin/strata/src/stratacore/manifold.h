@@ -19,6 +19,8 @@
 #include <maya/MVector.h>
 #include <maya/MMatrix.h>
 
+#include "../bezier/bezier.h"
+
 #include "wpshared/enum.h"
 #include "../macro.h"
 #include "../status.h"
@@ -129,6 +131,8 @@ namespace ed {
 			//elType = t;
 		};
 
+		inline bool hasDrivers() { return (drivers.size() > 0); }
+		inline bool hasParents() { return (parents.size() > 0); }
 
 		// neighbours do not include child / driven elements
 		// topology functions only return raw ints from these structs - 
@@ -203,6 +207,10 @@ namespace ed {
 		Eigen::Affine3d finalMatrix = Eigen::Affine3d::Identity(); // final evaluated matrix in world space
 	};
 
+	/*edge system is quite messy, 
+	bits of the main data object depend on drivers, and on parents,
+	but those also depend back and forth during construction
+	*/
 
 	// data for discrete hard connections between elements
 	struct EdgeDriverData {
@@ -237,14 +245,10 @@ namespace ed {
 		inline Eigen::Vector3d pos() { return finalMatrix.translation(); }
 	};
 
-
-
-
 	// DRIVER datas are in space of the DRIVER
 	// PARENT datas are in space of the PARENT
 	// convert between them by multiplying out to world and back - 
 	// parent datas always overlap drivers at some point
-
 
 	/* so to generate a full curve,
 	for each separate parent, we transpose driver points and vectors
@@ -261,10 +265,10 @@ namespace ed {
 	struct SEdgeParentData {
 		int index = -1; // feels cringe to copy the index on all of these  
 		// TEEECHNICALLLY this should be independent of any driver - 
-		// re-sampling UVNs on any random parent should transform this curve into that element's space
-		std::vector<float> weights;
-		std::vector<std::array<float, 3>> uvns;
-		//std::vector<float> twists;
+		Eigen::ArrayXd weights; // per-dense-point weights for this parent
+		Eigen::ArrayX3d cvs; // UVN bezier control points - ordered {pt, tanOut, tanIn, pt, tanOut...} etc
+		bez::CubicBezierPath parentCurve; // curve in UVN space of parent, used for final interpolation
+
 	};
 
 
@@ -274,11 +278,30 @@ namespace ed {
 		*/
 		std::vector<EdgeDriverData> driverDatas; // drivers of this edge
 		std::array<SEdgeParentData, stMaxParents> parentDatas; // curves in space of each driver
-		int denseCount = 10; // number of dense sub-points in each segment
-		Eigen::Spline3d posSpline;// worldspace dense positions of curve
-		Eigen::Spline3d normalSpline; // worldspace dense positions of curve
-		//Eigen::MatrixX3d finalPositions; 
-		//Eigen::MatrixX3d finalNormals; // worldspace normals
+		int denseCount = 5; // number of dense sub-points in each segment
+
+		/* don't keep live splines, output from parent system etc - 
+		all temporary during construction
+		posSpline is FINAL spline of all points on this edge
+		*/
+
+		Eigen::ArrayX3d uvnOffsets; // final dense offsets should only be in space of final built curve?
+		// maybe???? 
+
+		//// IGNORE FOR NOW
+		/// brain too smooth
+		// surrender to ancestors
+		// become caveman
+
+		//Eigen::MatrixX3d finalPositions; // dense worldspace positions
+		bez::CubicBezierPath finalCurve; // dense? final curve
+
+
+		Eigen::MatrixX3d finalNormals; // worldspace normals
+
+		SEdgeData() {
+			
+		}
 
 		inline bool isClosed() {
 			return driverDatas[0].finalMatrix.translation().isApprox(
@@ -296,11 +319,41 @@ namespace ed {
 			return static_cast<int>(driverDatas.size()) - 1;
 		}
 
+		inline int nCVs() {
+			// number of all cvs including tangent points
+			return static_cast<int>((driverDatas.size()) * 3);
+		}
+		inline int nBezierCVs() {
+			// number of cvs in use with bezier curves - basically shaving off start and end
+			return static_cast<int>((driverDatas.size() - 1) * 3 + 2);
+		}
+
+		inline void rawBezierCVs(Eigen::Array3Xd& arr) {
+			// ARRAY MUST BE CORRECTLY SIZED FIRST from nBezierCVs()
+			
+			//arr.resize(nBezierCVs());
+			for (int i = 0; i < driverDatas.size(); i++) {
+				if (i != 0) {
+					arr.row(i * 3 - 1) = driverDatas[i].pos() + driverDatas[i].prevTan;
+				}
+				arr.row(i * 3) = driverDatas[i].pos();
+
+				if (i != driverDatas.size() - 1) {
+					arr.row(i * 3 + 1) = driverDatas[i].pos() + driverDatas[i].postTan;
+				}
+			}
+		}
+
+
 		inline void driversForSpan(const int spanIndex, EdgeDriverData& lower, EdgeDriverData& upper) {
 			lower = driverDatas[spanIndex];
 			upper = driverDatas[spanIndex + 1];
 		}
 	};
+
+
+
+
 
 	struct SFaceData : SElData {
 		//std::string name; // probably generated, but still needed for semantics?
@@ -787,6 +840,15 @@ namespace ed {
 			return s;
 		}
 
+		Status& pointInSpaceOf(Status& s, Eigen::Affine3d& outMat, int elIndex, Eigen::Affine3d worldMat) {
+			/* localise matrix by point parent -
+			how do we handle local rotations?
+			*/
+			SPointData& d = pointDatas[elIndex];
+			outMat = d.finalMatrix.inverse() * worldMat;
+			return s;
+		}
+
 		Status& edgeInSpaceOf(Status& s, double outUVN[3], int elIndex, Eigen::Affine3d worldMat) {
 			/* get nearest point on spline to worldMat
 			*/
@@ -798,6 +860,29 @@ namespace ed {
 			outUVN[0] = uvn[0];
 			outUVN[1] = uvn[1];
 			outUVN[2] = uvn[2];
+			return s;
+		}
+
+		Status& edgeInSpaceOf(Status& s, Eigen::Affine3d& outMat, int elIndex, Eigen::Affine3d worldMat) {
+			/* localise matrix by point parent -
+			how do we handle local rotations?
+			*/
+			SEdgeData& d = edgeDatas[elIndex];
+			double closeU = closestParamOnSpline(d.posSpline, worldMat.translation());
+			Eigen::Affine3d curveMat;
+			matrixAtU(s, curveMat, d.posSpline, d.normalSpline, closeU);
+			outMat = curveMat.inverse() * worldMat;
+			return s;
+		}
+
+		Status& edgeInSpaceOf(Status& s, Eigen::Vector3d& outVec, int elIndex, Eigen::Vector3d& worldVec) {
+			/* TODO: convert final vector properly to polar coords
+			*/
+			SEdgeData& d = edgeDatas[elIndex];
+			double closeU = closestParamOnSpline(d.posSpline, worldVec);
+			Eigen::Affine3d curveMat;
+			matrixAtU(s, curveMat, d.posSpline, d.normalSpline, closeU);
+			outVec = curveMat.inverse() * worldVec;
 			return s;
 		}
 
@@ -817,13 +902,26 @@ namespace ed {
 			return s;
 		}
 
+		void tempFn(Eigen::Vector3d v) {
+			1;
+		}
 
-		Status& buildEdgeParentData(Status& s, SEdgeData& eData) 
+		Status& edgeParentDataFromDrivers(Status& s, SEdgeData& eData, SEdgeParentData& pData) 
 		{
-			/* set up parent influences from matrix drivers
-			* arrive at final spans in each parent space
+			/*Assumes edge data already has final drivers set up
+			* 
 			*/
-
+			int parentElIndex = getEl(pData.index)->elIndex;
+			Eigen::Array3Xd cvs(eData.nBezierCVs());
+			eData.rawBezierCVs(cvs);
+			Eigen::Affine3d outMat;
+			for (int i = 0; i < cvs.size(); i++) {
+				
+				tempFn(cvs.row(i));
+				//s = edgeInSpaceOf(s, cvs.row(i), parentElIndex, cvs.row(i));
+			}
+			
+			return s;
 			
 		}
 
@@ -852,8 +950,41 @@ namespace ed {
 
 		*/
 
-		MStatus weightEdgeDriverMatrix(std::vector<EdgeDriverData>& driverDatas, int targetIndex, MMatrix& out) {
+		Status& buildEdgeDrivers(Status& s, SEdgeData& eData) {
 
+			Eigen::MatrixX3f driverPoints(eData.driverDatas.size());
+			std::vector<float> inContinuities(driverPoints.rows());
+
+
+			// set base matrices on all points, eval driver at saved UVN
+			for (int i = 0; i < static_cast<int>(eData.driverDatas.size()); i++) {
+				matrixAt(s,
+					eData.driverDatas[i].finalMatrix,
+					eData.driverDatas[i].index,
+					eData.driverDatas[i].uvn
+				);
+				driverPoints.row(i) = eData.driverDatas[i].finalMatrix.translation();
+				inContinuities[i] = eData.driverDatas[i].continuity;
+			}
+			
+			Eigen::MatrixX3f pointsAndTangents = cubicTangentPointsForBezPoints(
+				driverPoints,
+				eData.isClosed(),
+				inContinuities.data()
+			);
+
+			/// TODO //// 
+			//// resample these back into driver's space? or no point since they'll be sampled into PARENT's space anyway
+			for (int i = 0; i < eData.nCVs(); i++) {
+				int thisI = (i * 3) % eData.nCVs();
+				int prevI = (i * 3 - 1) % eData.nCVs();
+				int nextI = (i * 3 + 1) % eData.nCVs();
+				eData.driverDatas[i].prevTan = pointsAndTangents.row(prevI);
+				eData.driverDatas[i].postTan = pointsAndTangents.row(nextI);
+			}
+
+
+			return s;
 		}
 
 		Status& buildEdgeData(Status& s, SEdgeData& eData) {
@@ -868,97 +999,10 @@ namespace ed {
 			*/
 
 			// Bezier control points for each span
-			std::vector<Eigen::Vector3d> spanPoints;
-			spanPoints.resize(eData.nSpans() * 2);
 
-			// set base matrices on all points
-			for (int i = 0; i < static_cast<int>(eData.driverDatas.size()); i++) {
-				// vector from prev ctl pt to next
-				//eData.driverDatas[i].finalMatrix = matrixAt()
-				matrixAt(s,
-					eData.driverDatas[i].finalMatrix,
-					eData.driverDatas[i].index,
-					eData.driverDatas[i].uvn
-				);
-			}
+			s = buildEdgeDrivers(s, eData);
 
-			// set tangent vectors for each one (scaling done later)
-			// also includes start and end, as if it were closed
-			int nextI, prevI;
-			for (int i = 0; i < static_cast<int>(eData.driverDatas.size()); i++) {
-				nextI = (i + 1) % static_cast<int>(eData.driverDatas.size());
-				prevI = (i - 1) % static_cast<int>(eData.driverDatas.size());
-
-				EdgeDriverData& thisDriver = eData.driverDatas[i];
-				EdgeDriverData& prevDriver = eData.driverDatas[prevI];
-				EdgeDriverData& nextDriver = eData.driverDatas[nextI];
-
-				// vector from prev ctl pt to next
-				auto tanVec = nextDriver.pos() - prevDriver.pos();
-				thisDriver.baseTan = tanVec;
-
-				auto toThisVec = thisDriver.pos() - prevDriver.pos();
-				// vector from this ctl pt to next
-				Eigen::Vector3d nextVec = nextDriver.pos() - thisDriver.pos();
-
-				// forwards tan scale factor
-				double nextTanScale = (tanVec.dot(nextVec) - tanVec.dot(toThisVec)) / 3.0;
-				nextTanScale = -sminQ(-nextTanScale, 0.0, 0.2);
-
-				// back tan scale factor
-				double prevTanScale = tanVec.dot(toThisVec) - (tanVec.dot(toThisVec)) / 3.0;
-				prevTanScale = -sminQ(-prevTanScale, 0.0, 0.2);
-
-				thisDriver.postTan = tanVec.normalized() * nextTanScale;
-				thisDriver.prevTan = -tanVec.normalized() * prevTanScale;
-			}
-
-			// set ends if not continuous
-			// if not closed, ends are not continuous
-			if (!eData.isClosed()) {
-				eData.driverDatas[0].continuity = 0.0;
-				eData.driverDatas.back().continuity = 0.0;
-			}
-
-			// check continuity
-			for (int i = 0; i < static_cast<int>(eData.driverDatas.size()); i++) {
-				nextI = (i + 1) % static_cast<int>(eData.driverDatas.size());
-				prevI = (i - 1) % static_cast<int>(eData.driverDatas.size());
-
-				EdgeDriverData& thisDriver = eData.driverDatas[i];
-				EdgeDriverData& prevDriver = eData.driverDatas[prevI];
-				EdgeDriverData& nextDriver = eData.driverDatas[nextI];
-
-				// blend between next tangent point and next point, based on continuity
-				double postTanLen = thisDriver.postTan.norm();
-				thisDriver.postTan = lerp(
-					thisDriver.postTan,
-					(lerp(
-						nextDriver.pos(),
-						Eigen::Vector3d(nextDriver.pos() + nextDriver.prevTan),
-						//Eigen::Vector3d(nextDriver.pos() + nextDriver.preTan).matrix(),
-						nextDriver.continuity
-					) - thisDriver.pos()).eval(),
-					thisDriver.continuity
-				);
-				thisDriver.postTan = thisDriver.postTan.normalized() * postTanLen;
-
-				// prev tan
-				double prevTanLen = thisDriver.prevTan.norm();
-				thisDriver.prevTan = lerp(
-					thisDriver.postTan,
-					(lerp(
-						prevDriver.pos(),
-						Eigen::Vector3d(prevDriver.pos() + prevDriver.postTan),
-						prevDriver.continuity
-					) - thisDriver.pos()).eval(),
-					thisDriver.continuity
-				);
-				thisDriver.prevTan = thisDriver.prevTan.normalized() * prevTanLen;
-
-			}
-
-
+			return s;
 		}
 
 		Status getIntersection(const SElement& elA, const SElement& elB, MMatrix& matOut, bool& crossFound) {

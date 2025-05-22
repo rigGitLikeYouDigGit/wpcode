@@ -1,0 +1,9 @@
+#pragma once
+
+this is a combination of 2 separate bezier projects I've found online - 
+unsure how the licensing here works
+
+CubicSplineClosestPoint - https://github.com/nrtaylor/CubicSplineClosestPoint/tree/master
+
+Bezier - https://github.com/oysteinmyrmo/bezier
+
