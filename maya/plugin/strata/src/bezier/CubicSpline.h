@@ -112,11 +112,17 @@ namespace bez
             uToLengthMap_.reset(std::move(result.get()));
         }
 
-        Eigen::ArrayXf* getUToLengthMap(int nSamples) {
+        int N_SAMPLES = 50;
+
+        inline Eigen::ArrayXf& getUToLengthMap(int nSamples) {
             if (uToLengthMap_.get() == nullptr) {
                 _buildULengthMap(nSamples);
             }
-            return uToLengthMap_.get();
+            return *(uToLengthMap_.get());
+        }
+
+        float length() {
+            return getUToLengthMap(N_SAMPLES)[getUToLengthMap(N_SAMPLES).size()];
         }
 
     };

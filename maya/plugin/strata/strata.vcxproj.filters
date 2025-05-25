@@ -222,4 +222,8 @@
       <UniqueIdentifier>{80B647A3-8B43-3121-8F30-8A95EBA1D9AB}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="src\bezier\CubicSplineHelpers.inl" />
+    <None Include="src\bezier\CubicSplineSimd.inl" />
+  </ItemGroup>
 </Project>

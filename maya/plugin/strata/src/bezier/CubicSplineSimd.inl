@@ -5,7 +5,7 @@
 #include <xmmintrin.h>
 #include <smmintrin.h>
 
-namespace CubicSplineTest
+namespace bez
 {
     float Polynomial5::EvaluateNormedEquation(
         const float t) const
