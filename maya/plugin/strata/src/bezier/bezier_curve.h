@@ -4,8 +4,8 @@
 #include <vector>
 #include <Eigen/Dense>
 
-#include <bezier/curve.h>
-#include <bezier/math/misc.h>
+#include "curve.h"
+#include "math/misc.h"
 
 
 namespace bezier {

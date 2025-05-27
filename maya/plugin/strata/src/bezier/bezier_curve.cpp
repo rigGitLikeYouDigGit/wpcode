@@ -1,4 +1,4 @@
-#include <bezier/bezier_curve.h>
+#include "bezier_curve.h"
 
 namespace bezier {
     using std::vector;
@@ -50,7 +50,7 @@ namespace bezier {
     }
 
     VectorXd BezierCurve::operator()(double t) const {
-        if(t < 0 or t > 1){
+        if(t < 0 || t > 1){
             throw std::domain_error("Bezier curve only defined on [0,1].");
         }
         VectorXd tvec(_degree + 1);

@@ -60,7 +60,7 @@ namespace bezier {
 
 
     VectorXd CompositeBezierCurve::operator()(double t) const {
-        if(t < 0 or t > 1){
+        if(t < 0 || t > 1){
             throw std::domain_error("Composite Bezier curve only defined on [0,1].");
         }
         std::pair<int, double> local_param = global_to_local_param(t, _bezier_curves.size());

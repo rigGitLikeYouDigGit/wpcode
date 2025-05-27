@@ -312,7 +312,7 @@ MStatus MatrixCurveNode::updateCurve(MDataBlock& data) {
     //Eigen::ArrayXXd eiPointArr(static_cast<int>(cachedMats.length()), 3);
     //Eigen::MatrixXd eiPointArr(nMats, 3);
     Eigen::MatrixXd eiPointArr(3, nMats);
-    //std::vector<Eigen::Vector3d> eiPointArr(nMats);
+    //std::vector<Eigen::Vector3f> eiPointArr(nMats);
 
     Eigen::MatrixXd eiTanArr(3, nMats);
 

@@ -1,7 +1,7 @@
 #ifndef BEZIER_FIT_COMPOSITE_BEZIER_CURVE_H
 #define BEZIER_FIT_COMPOSITE_BEZIER_CURVE_H
 
-#include <bezier/composite_bezier_curve.h>
+#include "composite_bezier_curve.h"
 
 
 namespace bezier {

@@ -149,7 +149,8 @@ namespace ed {
 	template<typename T>
 	inline Status& makeFrame(
 		Status& s,
-		Eigen::Matrix4<T>& frameMat,
+		//Eigen::Matrix4<T>& frameMat,
+		Eigen::Transform<T, 3, Eigen::Affine> frameMat,
 		const Eigen::Vector3<T>& pos,
 		const Eigen::Vector3<T>& tan, 
 		const Eigen::Vector3<T>& normal
@@ -169,16 +170,16 @@ namespace ed {
 	inline Status& makeFrame(
 		Status& s,
 		Eigen::Affine3d& frameMat,
-		const Eigen::Vector3d& pos,
-		const Eigen::Vector3d& tan,
-		const Eigen::Vector3d& normal
+		const Eigen::Vector3f& pos,
+		const Eigen::Vector3f& tan,
+		const Eigen::Vector3f& normal
 	) {
 		/* x is tangent,
 		y is up,
 		z is normal
 		*/
-		Eigen::Vector3d up = tan.cross(normal);
-		Eigen::Vector3d normalZ = tan.cross(up);
+		Eigen::Vector3f up = tan.cross(normal);
+		Eigen::Vector3f normalZ = tan.cross(up);
 		setMatrixRow(frameMat, 0, tan.normalized().data());
 		setMatrixRow(frameMat, 1, up.normalized().data());
 		setMatrixRow(frameMat, 2, normalZ.normalized().data());
@@ -188,13 +189,13 @@ namespace ed {
 	inline Status& makeFrame(
 		Status& s,
 		Eigen::Affine3d& frameMat,
-		const Eigen::Vector3d& pos,
-		const Eigen::Vector3d& tan
+		const Eigen::Vector3f& pos,
+		const Eigen::Vector3f& tan
 	) {// default {0, 1, 0} normal
 		return makeFrame(s, frameMat, pos, tan, { 0.0, 1.0, 0.0 });
 	}
 
-	//inline Eigen::Vector3d splineTan(const Eigen::Spline3d& sp, const double u) {
+	//inline Eigen::Vector3f splineTan(const Eigen::Spline3d& sp, const double u) {
 	//	//sp.derivatives(u, 0);
 
 	//	sp.derivatives<1>(u);
@@ -293,9 +294,9 @@ namespace ed {
 				Eigen::Vector3<T>(lerp(
 						//nextDriver.pos(),
 						Eigen::Vector3<T>(result.row(nextPtI)),
-						//Eigen::Vector3d(nextDriver.pos() + nextDriver.prevTan),
+						//Eigen::Vector3f(nextDriver.pos() + nextDriver.prevTan),
 						Eigen::Vector3<T>(result.row(nextPtI) + result.row(nextPtPrevTanI)),
-						//Eigen::Vector3d(nextDriver.pos() + nextDriver.preTan).matrix(),
+						//Eigen::Vector3f(nextDriver.pos() + nextDriver.preTan).matrix(),
 						//nextDriver.continuity
 						T(inContinuities[nextInI])
 					) - result.row(outI)),
@@ -311,7 +312,7 @@ namespace ed {
 			//	thisDriver.postTan,
 			//	(lerp(
 			//		prevDriver.pos(),
-			//		Eigen::Vector3d(prevDriver.pos() + prevDriver.postTan),
+			//		Eigen::Vector3f(prevDriver.pos() + prevDriver.postTan),
 			//		prevDriver.continuity
 			//	) - thisDriver.pos()).eval(),
 			//	thisDriver.continuity
@@ -341,7 +342,7 @@ namespace ed {
 
 
 
-	inline double closestParamOnSpline(const Eigen::Spline3d& sp, const Eigen::Vector3d pt,
+	inline double closestParamOnSpline(const Eigen::Spline3d& sp, const Eigen::Vector3f pt,
 		int nSamples =10,
 		int iterations=2
 	) {
@@ -356,7 +357,7 @@ namespace ed {
 		JUST BRUTE FORCE IT
 		10 sparse, 10 dense, move on
 		*/
-		Eigen::Vector3d l, r;
+		Eigen::Vector3f l, r;
 		double a = 0.0;
 		double b = 1.0;
 		/*l = sp(a).matrix();
@@ -441,7 +442,7 @@ namespace ed {
 
 	*/
 	//Eigen::MatrixX3d
-	Status& getCubicDerivative(Status& s, Eigen::Vector3d& out, double t, Eigen::Matrix<double, 4, 3> points) {
+	Status& getCubicDerivative(Status& s, Eigen::Vector3f& out, double t, Eigen::Matrix<double, 4, 3> points) {
 		// TODO: if this works, rewrite last block as arrays
 		auto mt = 1.0 - t;
 		auto a = mt * mt;
@@ -466,12 +467,12 @@ namespace ed {
 		return s;
 	}
 
-	inline double closestParamOnSpline(const bezier::BezierCurve& sp, const Eigen::Vector3d pt,
+	inline double closestParamOnSpline(const bezier::BezierCurve& sp, const Eigen::Vector3f pt,
 		int nSamples = 10,
 		int iterations = 2
 	) {
 
-		Eigen::Vector3d l, r;
+		Eigen::Vector3f l, r;
 		double a = 0.0;
 		double b = 1.0;
 		/*l = sp(a).matrix();
@@ -518,8 +519,8 @@ namespace ed {
 		// return an array of equally-spaced points giving the 0-1 arc length to each point
 		Eigen::ArrayXd result = Eigen::ArrayXd::Constant(npoints, 0.0);
 		//Eigen::ArrayXXd data = Eigen::ArrayXXd::Constant(nRow, nCol, 1.0);
-		Eigen::Vector3d prevpt = sp(0.0);
-		Eigen::Vector3d thispt;
+		Eigen::Vector3f prevpt = sp(0.0);
+		Eigen::Vector3f thispt;
 		for (int i = 1; i < npoints; i++) {
 			double u = 1.0 / double(npoints - 1) * i;
 			thispt = sp(u);
@@ -608,5 +609,57 @@ namespace ed {
 		makeFrameTangentX(B, locMix, xArmBlend, yArmBlend);
 	}
 
+
+
+	template <typename T>
+	T lerpSampleScalarArr(Eigen::VectorX<T> arr, T t) {
+		// sample array at a certain interval
+		//float& a;
+		
+		if (t >= 1.0) {
+			return arr.tail<1>()[0];
+		}
+		if (t <= 0.0) {
+			return arr[0];
+		}
+		int a;
+		int b;
+		a = floor(arr.size() * t);
+		b = a + 1;
+		return lerp<T, T>(arr[a], arr[b], t - (arr.size() * t));
+	}
+
+	template <typename T, int N>
+	Eigen::Vector<T, N> lerpSampleMatrix(Eigen::MatrixX<T> arr, T t) {
+		// sample array at a certain interval
+		//float& a;
+
+		if (t >= 1.0) {
+			return arr.row(arr.rows()-1);
+		}
+		if (t <= 0.0) {
+			return arr.row(0);
+		}
+		int a;
+		int b;
+		a = floor(arr.size() * t);
+		b = a + 1;
+		return lerp<Eigen::Vector<T, N>, T>(arr.row(a), arr.row(b), t - (arr.size() * t));
+	}
+
+	inline float getAngleAroundAxis(
+		const Eigen::Vector3f& frameNormal,
+		const Eigen::Vector3f& frameUp,
+		const Eigen::Vector3f& v
+	) { // where is the axis?
+		// the axis is implied - this returns 0-1 depending on v's rotation around frameNormal x frameUp
+		// test using only dots
+		// i think this is the counterpart to atan2
+		return 0.5 - sus(frameNormal.dot(v)) * 0.5 + float(frameUp.dot(v) > 0.0) * 0.5;
+		//if (frameUp.dot(v) > 0.0) { // on the frame up side, should vary between 0 and 0.5
+		//	return 0.5 - sus(frameNormal.dot(v)) * 0.5;  // at dot == 0.99 (vector almost on normal), angle should be near 0.0, 
+		//}
+		//return 1.0 - sus(frameNormal.dot(v)) * 0.5;
+	}
 
 }

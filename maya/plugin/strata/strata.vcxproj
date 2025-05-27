@@ -23,7 +23,6 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{40CB2D13-BCEE-3D63-BA3E-FC9C2B6BACF3}</ProjectGuid>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <Keyword>Win32Proj</Keyword>
     <Platform>x64</Platform>
     <ProjectName>strata</ProjectName>
@@ -382,6 +381,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\strataop\mergeOp.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\strataop\strataTypes.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stringLib.h" />
+    <ClInclude Include="src\mixin.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="F:\wp\code\maya\plugin\strata\ZERO_CHECK.vcxproj">

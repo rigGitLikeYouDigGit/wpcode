@@ -3,6 +3,7 @@
 
 #include <array>
 #include <vector>
+//#include <math>
 
 #include <Eigen/Dense>
 
@@ -78,11 +79,11 @@ namespace bez
     //    float inv_leading_coefficient_;
     //};
 
-    CubicBezierPath::CubicBezierPath() {
-        /* leave empty for now */
-    }
+    //CubicBezierPath::CubicBezierPath() {
+    //    /* leave empty for now */
+    //}
 
-    CubicBezierPath::CubicBezierPath(
+    /*CubicBezierPath::CubicBezierPath(
         const WorldSpace* control_points,
         const int num_points)
     {
@@ -91,7 +92,7 @@ namespace bez
         {
             splines_.emplace_back(new CubicBezierSpline(&control_points[i * 3]));
         }
-    }
+    }*/
 
     CubicBezierPath::CubicBezierPath(
         std::vector < std::unique_ptr<CubicBezierSpline>> splines) : 
@@ -102,32 +103,89 @@ namespace bez
 
     WorldSpace CubicBezierPath::ClosestPointToPath(
         const WorldSpace& position,
-        const ClosestPointSolver* solver) const
+        const ClosestPointSolver* solver,
+        float& u) const
     {
         WorldSpace min_position{ 0.f };
         float min_dist_sq = std::numeric_limits<float>::max();
 
         // The closest point on the path, is the closest point from the set of closest points to each spline.
         WorldSpace spline_position{ 0.f };
+        u = 0.0f;
+        float splineN = 0.0f;
         for (const auto& spline : splines_)
         {
-            const float dist_sq = spline->ClosestPointToSpline(position, solver->Get(), spline_position);
+            const float dist_sq = spline->ClosestPointToSpline(position, solver->Get(), spline_position, u);
             if (dist_sq < min_dist_sq)
             {
                 min_dist_sq = dist_sq;
                 min_position = spline_position;
+                u = u + splineN;
             }
+            splineN += 1.0f;
         }
-
+        u /= float(splines_.size()); // normalise u across whole path
         return min_position;
     }
 
-    WorldSpace CubicBezierPath::tangentAt(float t) {
+    WorldSpace CubicBezierPath::tangentAt(float t) const {
         auto r = global_to_local_param(t);
         return (1.0f / 0.0001f) * (
-            splines_[r.first].get()->EvaluateAt(std::max(1.0f, r.second + 0.0001f)) - 
+            splines_[r.first].get()->EvaluateAt(std::max(1.0f, r.second + 0.0001f)) -
             splines_[r.first].get()->EvaluateAt(std::min(0.0f, r.second - 0.0001f)));
     }
+
+    Eigen::Vector3f CubicBezierPath::tangentAt(float t, Eigen::Vector3f& basePos) const {
+        /* specialty treatment for 1.0 or 0.0 u values -
+        * basePos should be original sampled position on curve
+        */
+        auto r = global_to_local_param(t);
+        if (t > 0.999) { // sample backwards, negate result vector
+            Eigen::Vector3f tanPos = toEig(splines_[r.first].get()->EvaluateAt(t - 0.0001));
+            return (1.0f / 0.0001f) * (basePos - tanPos);
+        }
+        Eigen::Vector3f tanPos = toEig(splines_[r.first].get()->EvaluateAt(t + 0.0001));
+        return (1.0f / 0.0001f) * tanPos - basePos;
+
+    }
+
+    Eigen::Vector3f CubicBezierPath::ClosestPointToPath(
+        const WorldSpace& position,
+        const ClosestPointSolver* solver,
+        float& u,
+        Eigen::Vector3f& tan
+        ) const
+    {// what is consistency
+        Eigen::Vector3f result = toEig(ClosestPointToPath(position, solver, u));
+        // sample curve once more to get tangent // save one sample by reusing orig result
+        
+        Eigen::Vector3f tan = tangentAt(u, result);
+        return result;
+    }
+
+    WorldSpace CubicBezierPath::ClosestPointToPath(
+        const WorldSpace& position,
+        const ClosestPointSolver* solver) const
+    {
+        float u = 0.0;
+        return ClosestPointToPath(position, solver, u);
+    }
+
+    Eigen::Vector3f CubicBezierPath::ClosestPointToPath(
+        const Eigen::Vector3f& position,
+        const ClosestPointSolver* solver) const
+    {   
+        return toEig(ClosestPointToPath(WorldSpace(position), solver));
+    }
+
+    //float CubicBezierPath::ClosestUToPath(
+    //    const Eigen::Vector3f& position,
+    //    const ClosestPointSolver* solver) const
+    //{
+    //    return toEig(ClosestPointToPath(WorldSpace(position), solver));
+    //}
+
+
 
 
     class QuinticSolver
@@ -512,10 +570,12 @@ namespace bez
         }
     }
 
+
     float CubicBezierSpline::ClosestPointToSpline(
         const WorldSpace& position,
         const QuinticSolver* solver,
-        WorldSpace& closest) const
+        WorldSpace& closest,
+        float& u) const
     {
         Polynomial5 quintic;
         std::copy(precomputed_coefficients_.begin(), precomputed_coefficients_.end(), quintic.equation.begin());
@@ -531,6 +591,7 @@ namespace bez
         // Test the first control point.
         WorldSpace min_position = control_points_[0];
         float min_dist_sq = LengthSquared(position - min_position);
+        u = 0.0;
 
         // Test the roots.
         for (int i = 0; i < roots; ++i)
@@ -541,6 +602,7 @@ namespace bez
             {
                 min_dist_sq = root_dist_sq;
                 min_position = root_position;
+                u = realRoots[i];
             }
         }
 
@@ -550,10 +612,25 @@ namespace bez
         {
             min_dist_sq = dist_sq;
             min_position = control_points_[3];
+            u = 1.0;
         }
 
         closest = min_position;
         return min_dist_sq;
+    }
+
+
+    float CubicBezierSpline::ClosestPointToSpline(
+        const WorldSpace& position,
+        const QuinticSolver* solver,
+        WorldSpace& closest) const {
+        float u = 0.0f;
+        return ClosestPointToSpline(
+            position,
+            solver,
+            closest,
+            u
+        );
     }
 
     WorldSpace CubicBezierSpline::EvaluateAt(
@@ -576,8 +653,8 @@ namespace bez
         Eigen::ArrayXf result(nSamples);
         result(0) = 0.0;
         for (int i = 1; i < nSamples; i++) {
-            float t = (0.999 / float(nSamples - 1) * float(i));
-            float prevT = (0.999 / float(nSamples - 1) * float(i-1));
+            float t = (0.999f / float(nSamples - 1) * float(i));
+            float prevT = (0.999f / float(nSamples - 1) * float(i-1));
             result(i) = result(i-1) + (eval(t) - eval(prevT)).norm();
         }
         return result;

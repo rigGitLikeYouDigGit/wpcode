@@ -1,4 +1,5 @@
-#include <bezier/curve.h>
+
+#include "curve.h"
 
 namespace bezier {
 

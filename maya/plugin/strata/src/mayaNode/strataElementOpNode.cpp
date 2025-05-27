@@ -325,8 +325,8 @@ MStatus StrataElementOpNode::edgeDataFromRawCurve(MStatus& ms, MObject& nodeObj,
         Status s;
         makeFrame(s,
             eData.driverDatas[i].finalMatrix,
-            Eigen::Vector3d{ pt.x, pt.y, pt.z },
-            Eigen::Vector3d{ tan.x, tan.y, tan.z }
+            Eigen::Vector3f{ pt.x, pt.y, pt.z },
+            Eigen::Vector3f{ tan.x, tan.y, tan.z }
         );
     }
     return ms;

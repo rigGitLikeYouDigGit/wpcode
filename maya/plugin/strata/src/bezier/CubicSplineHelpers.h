@@ -14,8 +14,9 @@ namespace bez
             const float x, 
             const float y, 
             const float z) : x(x), y(y), z(z) {}
-
-        WorldSpace(const Eigen::Vector3d& v) : x(float(v[0])), y(float(v[1])), z(float(v[2])) {}
+        WorldSpace(const float* d) : x(d[0]), y(d[1]), z(d[2]) {
+        }
+        WorldSpace(const Eigen::Vector3f& v) : x(float(v[0])), y(float(v[1])), z(float(v[2])) {}
         WorldSpace(const Eigen::Vector3f& v) : x(float(v[0])), y(float(v[1])), z(float(v[2])) {}
         WorldSpace(const Eigen::Array3d& v) : x(float(v[0])), y(float(v[1])), z(float(v[2])) {}
         WorldSpace(const Eigen::Array3f& v) : x(float(v[0])), y(float(v[1])), z(float(v[2])) {}

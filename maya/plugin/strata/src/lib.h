@@ -39,10 +39,19 @@ namespace ed {
 			: x(static_cast<float>(v[0])), y(static_cast<float>(v[1])), z(static_cast<float>(v[2])) {}
 		Float3(float* v)
 			: x(static_cast<float>(v[0])), y(static_cast<float>(v[1])), z(static_cast<float>(v[2])) {}
+		Float3(const float* v)
+			: x(static_cast<float>(v[0])), y(static_cast<float>(v[1])), z(static_cast<float>(v[2])) {
+		}
 		Float3(double* v)
 			: x(static_cast<float>(v[0])), y(static_cast<float>(v[1])), z(static_cast<float>(v[2])) {}
-		Float3(Eigen::Vector3d& v)
+		Float3(Eigen::Vector3f& v)
 			: x(static_cast<float>(v.data()[0])), y(static_cast<float>(v.data()[1])), z(static_cast<float>(v.data()[2])) {}
+		Float3(Eigen::Vector3f&& v)
+			: x(static_cast<float>(v[0])), y(static_cast<float>(v.data()[1])), z(static_cast<float>(v.data()[2])) {
+		}
+		Float3(Eigen::Matrix<float, 3, 1, 0, 3, 1>&& v)
+			: x(static_cast<float>(v[0])), y(static_cast<float>(v.data()[1])), z(static_cast<float>(v.data()[2])) {
+		}
 		Float3(Eigen::Matrix<double, 3, 1, 0, 3, 1> v)
 			: x(static_cast<float>(v.data()[0])), y(static_cast<float>(v.data()[1])), z(static_cast<float>(v.data()[2])) {}
 		Float3(Eigen::Array<double, 3, 1, 0, 3, 1> v)
@@ -50,6 +59,21 @@ namespace ed {
 		float x;
 		float y;
 		float z;
+		Float3& operator=(const float*& v) {
+			x = v[0];
+			y = v[1];
+			z = v[2];
+			return *this;
+		}
+		Float3& operator=(const Eigen::Vector3f& v) {
+			return operator=(v.data());
+		}
+		Float3& operator=(const Eigen::MatrixBase<float>& v) {
+			x = *v.begin();
+			y = *(v.begin()+1);
+			z = *(v.begin()+2);
+			return *this;
+		}
 	};
 	typedef std::vector<Float3>       Float3Array;
 	typedef std::vector<Float2>       Float2Array;

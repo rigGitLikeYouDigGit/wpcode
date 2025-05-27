@@ -4,14 +4,19 @@
 #include <memory>
 #include <Eigen/Dense>
 
+#include "../mixin.h"
 #include "CubicSplineHelpers.h"
 
 /* todo:
 bounds / centroid
 */
 
+
+
 namespace bez
 {
+    //using StaticClonable = ed::StaticClonable;
+
     class CubicBezierSpline;
     class QuinticSolver;
 
@@ -28,10 +33,17 @@ namespace bez
 
     
 
-    class CubicBezierSpline
+    class CubicBezierSpline : ed::StaticClonable<CubicBezierSpline>
     {
     public:
+        using thisT = CubicBezierSpline;
+
+        //using thisT::thisT;
+        //DECLARE_DEFINE_CLONABLE_METHODS(thisT)
+        DECLARE_DEFINE_CLONABLE_METHODS(thisT)
+
         CubicBezierSpline(const WorldSpace* control_points);
+        float ClosestPointToSpline(const WorldSpace& position, const QuinticSolver* solver, WorldSpace& closest, float& u) const;
         float ClosestPointToSpline(const WorldSpace& position, const QuinticSolver* solver, WorldSpace& closest) const;
         WorldSpace EvaluateAt(const float t) const;
         Eigen::Vector3f eval(const float t) const {
@@ -55,28 +67,53 @@ namespace bez
         ClosestPointEquation precomputed_coefficients_;
         float inv_leading_coefficient_;
 
-        Eigen::VectorXf uToLengthMap(int nSamples);
+        Eigen::ArrayXf uToLengthMap(int nSamples);
     };
 
 
     // A Bezier path is a set of Bezier splines which are connected.
     // (The last control point of a spline, is the first control pont of the next spline.)
-    class CubicBezierPath
+    struct CubicBezierPath : ed::StaticClonable<CubicBezierPath>
     {
     public:
-        CubicBezierPath();
-        CubicBezierPath(const WorldSpace* control_points, const int num_points);
-        CubicBezierPath(std::vector < std::unique_ptr<CubicBezierSpline>> splines);
-        WorldSpace ClosestPointToPath(const WorldSpace& position, const ClosestPointSolver* solver) const;
+        using thisT = CubicBezierPath;
 
-        ~CubicBezierPath();
+        //thisT& operator=(thisT&& other) {
+        //    copyOther(other); return *this;
+        //} thisT& operator=(const thisT& other) {
+        //    copyOther(other); return *this;
+        //}
+
         std::vector<std::unique_ptr<CubicBezierSpline> > splines_;
         std::unique_ptr<Eigen::ArrayXf> uToLengthMap_ = nullptr;
+        std::unique_ptr<ClosestPointSolver> solver_ = nullptr;
+
+        //using thisT::thisT;
+        DECLARE_DEFINE_CLONABLE_METHODS(thisT)
+
+        CubicBezierPath(const WorldSpace* control_points, const int num_points) {
+            int num_splines = num_points / 3;
+            for (int i = 0; i < num_splines; ++i)
+            {
+                splines_.emplace_back(new CubicBezierSpline(&control_points[i * 3]));
+            }
+        }
+        CubicBezierPath(std::vector < std::unique_ptr<CubicBezierSpline>> splines);
+        WorldSpace ClosestPointToPath(const WorldSpace& position, const ClosestPointSolver* solver, float& u) const;
+        Eigen::Vector3f ClosestPointToPath(const WorldSpace& position, const ClosestPointSolver* solver, float& u, Eigen::Vector3f& tan) const;
+        WorldSpace ClosestPointToPath(const WorldSpace& position, const ClosestPointSolver* solver) const;
+        Eigen::Vector3f ClosestPointToPath(const Eigen::Vector3f& position, const ClosestPointSolver* solver) const;
+        //float ClosestU(const Eigen::Vector3f& position, const ClosestPointSolver* solver) const;
+
+        ~CubicBezierPath();
+
         
 
-        WorldSpace CubicBezierPath::tangentAt(float t);
+        WorldSpace CubicBezierPath::tangentAt(float t) const;
+        Eigen::Vector3f CubicBezierPath::tangentAt(float t, Eigen::Vector3f& basePos) const;
 
-        std::pair<int, float> global_to_local_param(float t) {
+
+        std::pair<int, float> global_to_local_param(float t) const {
             int number_of_curves = static_cast<int>(splines_.size());
             int curve_index;
             if (t == 1) {
@@ -89,7 +126,7 @@ namespace bez
             return std::make_pair(curve_index, (t - curve_fraction) * number_of_curves);
         }
 
-        Eigen::Vector3f eval(float t) {
+        Eigen::Vector3f eval(float t) const {
             auto idT = global_to_local_param(t);
             return toEig(splines_[idT.first].get()->EvaluateAt(t));
         }
@@ -114,7 +151,7 @@ namespace bez
 
         int N_SAMPLES = 50;
 
-        inline Eigen::ArrayXf& getUToLengthMap(int nSamples) {
+        Eigen::ArrayXf& getUToLengthMap(int nSamples) {
             if (uToLengthMap_.get() == nullptr) {
                 _buildULengthMap(nSamples);
             }
@@ -123,6 +160,13 @@ namespace bez
 
         float length() {
             return getUToLengthMap(N_SAMPLES)[getUToLengthMap(N_SAMPLES).size()];
+        }
+
+        inline ClosestPointSolver* getSolver() {
+            if (solver_ == nullptr) {
+                solver_ = std::make_unique<ClosestPointSolver>();
+            }
+            return solver_.get();
         }
 
     };

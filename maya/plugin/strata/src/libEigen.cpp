@@ -71,11 +71,11 @@ Status& ed::splineUVN(
 	*/
 	uvw[0] = std::min(std::max(uvw[0], 0.0), 1.0);
 
-	Eigen::Vector3d pos = posSpline(uvw[0]).matrix(); // we assume that normal is actually normal, no need to redo double cross here
+	Eigen::Vector3f pos = posSpline(uvw[0]).matrix(); // we assume that normal is actually normal, no need to redo double cross here
 	//auto derivatives = posSpline.derivatives<1>(uvw[0], 1);
-	Eigen::Vector3d tan = posSpline.derivatives(uvw[0], 1).col(1).matrix();
+	Eigen::Vector3f tan = posSpline.derivatives(uvw[0], 1).col(1).matrix();
 	//Eigen::Array3d n = posSpline(uvw[1]);
-	Eigen::Vector3d n = normalSpline(uvw[1]).matrix();
+	Eigen::Vector3f n = normalSpline(uvw[1]).matrix();
 
 	
 	s = makeFrame(s, 
@@ -87,7 +87,7 @@ Status& ed::splineUVN(
 	}
 	if (!EQ(uvw[2], 0.0)) {
 		/* rotate n times clockwise about tangent*/
-		outMat.translate(Eigen::Vector3d{ 0.0, 0.0, uvw[2] });
+		outMat.translate(Eigen::Vector3f{ 0.0, 0.0, uvw[2] });
 	}
 
 	return s;
@@ -109,11 +109,11 @@ Status& ed::splineUVN(
 	*/
 	uvw[0] = std::min(std::max(uvw[0], 0.0), 1.0);
 
-	Eigen::Vector3d pos = posSpline(uvw[0]).matrix(); // we assume that normal is actually normal, no need to redo double cross here
+	Eigen::Vector3f pos = posSpline(uvw[0]).matrix(); // we assume that normal is actually normal, no need to redo double cross here
 	//auto derivatives = posSpline.derivatives<1>(uvw[0], 1);
-	Eigen::Vector3d tan = posSpline.derivatives(uvw[0], 1).col(1).matrix();
+	Eigen::Vector3f tan = posSpline.derivatives(uvw[0], 1).col(1).matrix();
 	//Eigen::Array3d n = posSpline(uvw[1]);
-	Eigen::Vector3d n = normalSpline(uvw[1]).matrix();
+	Eigen::Vector3f n = normalSpline(uvw[1]).matrix();
 
 
 	s = makeFrame(s,
@@ -125,7 +125,7 @@ Status& ed::splineUVN(
 	}
 	if (!EQ(uvw[2], 0.0)) {
 		/* rotate n times clockwise about tangent*/
-		outMat.translate(Eigen::Vector3d{ 0.0, 0.0, uvw[2] });
+		outMat.translate(Eigen::Vector3f{ 0.0, 0.0, uvw[2] });
 	}
 
 	return s;
@@ -186,7 +186,7 @@ inline void MatrixSqrt<MATRIX>::solve(MATRIX& B, const MATRIX& A) const
 		//F64 radians;
 		double radians;
 		//Vector<3, F64> axis;
-		Eigen::Vector3d axis;
+		Eigen::Vector3f axis;
 		//quat.computeAngleAxis(radians, axis);
 		//Eigen::AngleAxisd angleAxis(quat);
 		//Eigen::AngleAxisd angleAxis{ quat };
@@ -213,7 +213,7 @@ inline void MatrixSqrt<MATRIX>::solve(MATRIX& B, const MATRIX& A) const
 		DEBUGMMAT("correction rot", toMMatrix(correction));
 		//correction = correct64;
 		//const SpatialVector forwardT = 0.5 * tiny * doubleY.translation();
-		Eigen::Vector3d forwardT;
+		Eigen::Vector3f forwardT;
 		forwardT = 0.5 * tiny * doubleY.block<1, 3>(3, 0, 1, 3);
 		//forwardT = 0.5 * tiny * doubleY.block<3,3>(0, 3, 3, 1);
 		DEBUGS("forwardT");
@@ -232,10 +232,10 @@ inline void MatrixSqrt<MATRIX>::solve(MATRIX& B, const MATRIX& A) const
 		tweak.block<3,3>(0, 0, 3, 3) = reverse.toRotationMatrix();
 		DEBUGMMAT("tweak:", toMMatrix(tweak));
 		//const SpatialVector reverseT = -tiny * doubleY.translation();
-		//const Eigen::Vector3d reverseT = -tiny * Eigen::Vector3d(doubleY.row(3));
-		//Eigen::Vector3d reverseT;
+		//const Eigen::Vector3f reverseT = -tiny * Eigen::Vector3f(doubleY.row(3));
+		//Eigen::Vector3f reverseT;
 		//reverseT.block<1, 3>(0, 0, 1, 3) = (doubleY.block<1, 3>(3, 0, 1, 3));
-		Eigen::Vector3d reverseT(
+		Eigen::Vector3f reverseT(
 			doubleY(3, 0),
 			doubleY(3, 1),
 			doubleY(3, 2)

@@ -204,7 +204,7 @@ namespace ed {
 	struct SPointData : SElData {
 		std::array<SPointParentData, stMaxParents> parentDatas; // datas for each driver
 		//MMatrix finalMatrix = MMatrix::identity; // final evaluated matrix in world space
-		Eigen::Affine3d finalMatrix = Eigen::Affine3d::Identity(); // final evaluated matrix in world space
+		Eigen::Affine3f finalMatrix = Eigen::Affine3f::Identity(); // final evaluated matrix in world space
 	};
 
 	/*edge system is quite messy, 
@@ -225,7 +225,7 @@ namespace ed {
 
 		*/
 		int index = -1; // index of parent element
-		double uvn[3] = { 0, 0, 0 }; // uvn coords of parent element to sample for points on this edge
+		Eigen::Vector3f uvn = { 0, 0, 0 }; // uvn coords of parent element to sample for points on this edge
 		//float tan[3] = { NAN, 0, 0 }; // tangent of curve at this point - if left NAN is unused
 
 		// tangents normally inline, unless continuity is not 1
@@ -233,16 +233,16 @@ namespace ed {
 		// tangents should be local to final matrix
 		// they're NOT, they're GLOBAL for now, it was too complicated for first version
 
-		Eigen::Vector3d baseTan = { 0, 0, 0 }; // vector from prev to next point
-		Eigen::Vector3d prevTan = { -1, 0, 0 }; // tangent leading to point
-		Eigen::Vector3d postTan = { 1, 0, 0 }; // tangent after point
+		Eigen::Vector3f baseTan = { 0, 0, 0 }; // vector from prev to next point
+		Eigen::Vector3f prevTan = { -1, 0, 0 }; // tangent leading to point
+		Eigen::Vector3f postTan = { 1, 0, 0 }; // tangent after point
 		float normal[3] = { NAN, 0, 1 }; // normal of curve at this point - if left NAN is unused
 		float orientWeight = 0.0; // how strongly matrix should contribute to curve tangent, vs auto behaviour
 		double continuity = 1.0; // how sharply to break tangents - maybe just use this to scale tangents in?
 		float twist = 0.0; // how much extra twist to add to point, on top of default curve frame
-		Eigen::Affine3d finalMatrix = Eigen::Affine3d::Identity();
+		Eigen::Affine3f finalMatrix = Eigen::Affine3f::Identity();
 
-		inline Eigen::Vector3d pos() { return finalMatrix.translation(); }
+		inline Eigen::Vector3f pos() { return finalMatrix.translation(); }
 	};
 
 	// DRIVER datas are in space of the DRIVER
@@ -262,20 +262,25 @@ namespace ed {
 	if when a parent changes, we re-evaluate the UVNs of each SEdgeParentData.
 
 	*/
-	struct SEdgeParentData {
+	struct SEdgeParentData : StaticClonable<SEdgeParentData> {
+		using thisT = SEdgeParentData;
+		DECLARE_DEFINE_CLONABLE_METHODS(thisT)
+
 		int index = -1; // feels cringe to copy the index on all of these  
 		// TEEECHNICALLLY this should be independent of any driver - 
 		Eigen::ArrayXd weights; // per-dense-point weights for this parent
 		Eigen::ArrayX3d cvs; // UVN bezier control points - ordered {pt, tanOut, tanIn, pt, tanOut...} etc
 		bez::CubicBezierPath parentCurve; // curve in UVN space of parent, used for final interpolation
+		//using thisT::thisT;
 
 	};
 
 
-	struct SEdgeData : SElData {
+	struct SEdgeData : SElData, StaticClonable<SEdgeData> {
 		/* need dense final result to pick up large changes in
 		parent space
 		*/
+		using thisT = SEdgeData;
 		std::vector<EdgeDriverData> driverDatas; // drivers of this edge
 		std::array<SEdgeParentData, stMaxParents> parentDatas; // curves in space of each driver
 		int denseCount = 5; // number of dense sub-points in each segment
@@ -295,12 +300,14 @@ namespace ed {
 
 		//Eigen::MatrixX3d finalPositions; // dense worldspace positions
 		bez::CubicBezierPath finalCurve; // dense? final curve
-
-
 		Eigen::MatrixX3d finalNormals; // worldspace normals
 
-		SEdgeData() {
-			
+
+		DECLARE_DEFINE_CLONABLE_METHODS(thisT)
+
+
+		inline bez::ClosestPointSolver* closestSolver() {
+			return finalCurve.getSolver();
 		}
 
 		inline bool isClosed() {
@@ -764,13 +771,13 @@ namespace ed {
 		/*
 		spatial functions
 		*/
-		Status& pointPosAt(Status& s, Eigen::Vector3d& out, int elIndex, double uvn[3]) {
+		Status& pointPosAt(Status& s, Eigen::Vector3f& out, int elIndex, double uvn[3]) {
 			SPointData& p = pointDatas[elIndex];
 			//out = p.finalMatrix * MVector(uvn);			
-			out = p.finalMatrix * Eigen::Vector3d(uvn);
+			out = p.finalMatrix * Eigen::Vector3f(uvn);
 			return s;
 		}
-		Status& edgePosAt(Status& s, Eigen::Vector3d& out, int elIndex, double uvn[3]) {
+		Status& edgePosAt(Status& s, Eigen::Vector3f& out, int elIndex, double uvn[3]) {
 			/* as above, but just return position -
 			may allow faster sampling in future
 			
@@ -779,12 +786,12 @@ namespace ed {
 			
 			SEdgeData& e = edgeDatas[elIndex];
 			Eigen::Affine3d amat;
-			s = splineUVN(s, amat, e.posSpline, e.normalSpline, uvn);
+			//s = splineUVN(s, amat, e.posSpline, e.normalSpline, uvn);
 			//out = MVector(amat.translation().data());
-			out = Eigen::Vector3d(amat.translation().data());
+			out = Eigen::Vector3f(amat.translation().data());
 			return s;
 		}
-		Status& posAt(Status& s, Eigen::Vector3d& out, int globalIndex, double uvn[3]) {
+		Status& posAt(Status& s, Eigen::Vector3f& out, int globalIndex, double uvn[3]) {
 			/* as above, but just return position -
 			may allow faster sampling in future*/
 			SElement* el = getEl(globalIndex);
@@ -801,18 +808,18 @@ namespace ed {
 			return s;
 		}
 		
-		Status& pointMatrixAt(Status& s, Eigen::Affine3d& out, int elIndex, double uvn[3]){
+		Status& pointMatrixAt(Status& s, Eigen::Affine3f& out, int elIndex, Eigen::Vector3f uvn){
 			SPointData& d = pointDatas[elIndex];
 			out = d.finalMatrix;
-			out.translate( Eigen::Vector3d(uvn));
+			out.translate(uvn);
 			return s;
 		}
-		Status& edgeMatrixAt(Status& s, Eigen::Affine3d& out, int elIndex, double uvn[3]) {
-			SEdgeData& d = edgeDatas[elIndex];
-			s = splineUVN(s, out, d.posSpline, d.normalSpline, uvn);
+		Status& edgeMatrixAt(Status& s, Eigen::Affine3f& out, int elIndex, Eigen::Vector3f uvn) {
+			SEdgeData& d = edgeDatas[elIndex]; 
+			//s = splineUVN(s, out, d.posSpline, d.normalSpline, uvn);
 			return s;
 		}
-		Status& matrixAt(Status& s, Eigen::Affine3d& out, int globalIndex, double uvn[3]) {
+		Status& matrixAt(Status& s, Eigen::Affine3f& out, int globalIndex, Eigen::Vector3f uvn) {
 			/* interpolate a spatial element to get a matrix in world space*/
 			SElement* el = getEl(globalIndex);
 			switch (el->elType) {
@@ -828,81 +835,113 @@ namespace ed {
 		}
 		// am i overdoing the copium, or is this way of dispatching by type quite good?
 
-		Status& pointInSpaceOf(Status& s, double outUVN[3], int elIndex, Eigen::Affine3d worldMat) {
+		Status& pointClosestMatrix(Status& s, Eigen::Affine3f& outMat, int elIndex, const Eigen::Vector3f& worldVec) {
+			outMat = pointDatas[elIndex].finalMatrix;
+			return s;
+		}
+		Status& edgeClosestMatrix(Status& s, Eigen::Affine3f& outMat, int elIndex, const Eigen::Vector3f& worldVec) {
 			/* localise matrix by point parent -
 			how do we handle local rotations?
-			*/
-			SPointData& d = pointDatas[elIndex];
-			auto uvn = (d.finalMatrix.inverse() * worldMat).translation().data();
-			outUVN[0] = uvn[0];
-			outUVN[1] = uvn[1];
-			outUVN[2] = uvn[2];
-			return s;
-		}
-
-		Status& pointInSpaceOf(Status& s, Eigen::Affine3d& outMat, int elIndex, Eigen::Affine3d worldMat) {
-			/* localise matrix by point parent -
-			how do we handle local rotations?
-			*/
-			SPointData& d = pointDatas[elIndex];
-			outMat = d.finalMatrix.inverse() * worldMat;
-			return s;
-		}
-
-		Status& edgeInSpaceOf(Status& s, double outUVN[3], int elIndex, Eigen::Affine3d worldMat) {
-			/* get nearest point on spline to worldMat
+			get nearest point to curve
 			*/
 			SEdgeData& d = edgeDatas[elIndex];
-			double closeU = closestParamOnSpline(d.posSpline, worldMat.translation());
-			Eigen::Affine3d curveMat;
-			matrixAtU(s, curveMat, d.posSpline, d.normalSpline, closeU);
-			auto uvn = (curveMat.inverse() * worldMat).translation().data();
-			outUVN[0] = uvn[0];
-			outUVN[1] = uvn[1];
-			outUVN[2] = uvn[2];
+
+			float u;
+			Eigen::Vector3f tan;
+			Eigen::Vector3f pos = d.finalCurve.ClosestPointToPath(
+				bez::WorldSpace(worldVec.data()),
+				d.finalCurve.getSolver(), u,
+				tan)
+				;
+			
+			Eigen::Vector3f normal = lerpSampleMatrix<float, 3>(d.finalNormals, u);
+
+			s = makeFrame<float>(s, outMat, pos, tan, normal);
+			
 			return s;
 		}
-
-		Status& edgeInSpaceOf(Status& s, Eigen::Affine3d& outMat, int elIndex, Eigen::Affine3d worldMat) {
-			/* localise matrix by point parent -
-			how do we handle local rotations?
-			*/
-			SEdgeData& d = edgeDatas[elIndex];
-			double closeU = closestParamOnSpline(d.posSpline, worldMat.translation());
-			Eigen::Affine3d curveMat;
-			matrixAtU(s, curveMat, d.posSpline, d.normalSpline, closeU);
-			outMat = curveMat.inverse() * worldMat;
-			return s;
+		Status& edgeClosestMatrix(Status& s, Eigen::Affine3f& outMat, int elIndex, const Eigen::Affine3f& worldMat) {
+			return edgeClosestMatrix(s, outMat, elIndex, worldMat.translation());
 		}
-
-		Status& edgeInSpaceOf(Status& s, Eigen::Vector3d& outVec, int elIndex, Eigen::Vector3d& worldVec) {
-			/* TODO: convert final vector properly to polar coords
-			*/
-			SEdgeData& d = edgeDatas[elIndex];
-			double closeU = closestParamOnSpline(d.posSpline, worldVec);
-			Eigen::Affine3d curveMat;
-			matrixAtU(s, curveMat, d.posSpline, d.normalSpline, closeU);
-			outVec = curveMat.inverse() * worldVec;
-			return s;
-		}
-
-		Status& inSpaceOf(Status& s, double outUVN[3], const int globalIndex, const Eigen::Affine3d worldMat) {
+		Status& closestMatrix(Status& s, Eigen::Affine3f& outMat, const int globalIndex, const Eigen::Vector3f closePos) {
 			// localise a world transform into UVN coordinates in the space of given parent
 			// make another function to return a full transform, for point parents
 			SElement* el = getEl(globalIndex);
 			switch (el->elType) {
 			case (StrataElType::point): {
-				return pointInSpaceOf(s, outUVN, el->elIndex, worldMat);
+				return pointClosestMatrix(s, outMat, el->elIndex, closePos);
 			}
 			case (StrataElType::edge): {
-				return edgeInSpaceOf(s, outUVN, el->elIndex, worldMat);
+				return edgeClosestMatrix(s, outMat, el->elIndex, closePos);
 			}
 			default: STAT_ERROR(s, "Cannot eval matrix at UVN for type " + std::to_string(el->elType));
 			}
 			return s;
 		}
 
-		void tempFn(Eigen::Vector3d v) {
+		Status& pointGetUVN(Status& s, Eigen::Vector3f& outUVN, int elIndex, const Eigen::Vector3f worldPos) {
+			/* return UVN displacement from point matrix
+			*/
+			SPointData& d = pointDatas[elIndex];
+			//outUVN = (d.finalMatrix.inverse() * worldMat).translation();
+			outUVN = (d.finalMatrix.inverse() * worldPos);
+			return s;
+		}
+
+		Status& edgeGetUVN(Status& s, Eigen::Vector3f& uvn, int elIndex, const Eigen::Vector3f& worldVec) {
+			/* NEED POLAR / CYLINDRICAL conversion for UVN 
+			* 
+			* for blending, we should probably blend along shortest paths positive or negative, 
+			or everything will move in spirals
+			but let's save that for when we actually do blending
+			*/
+
+			// first get closest matrix on curve
+			Eigen::Affine3f curveMat;
+			s = edgeClosestMatrix(s, curveMat, elIndex, worldVec);
+
+			SEdgeData& d = edgeDatas[elIndex];
+
+			float u;
+			Eigen::Vector3f tan;
+			Eigen::Vector3f pos = d.finalCurve.ClosestPointToPath(
+				bez::WorldSpace(worldVec.data()),
+				d.finalCurve.getSolver(), u,
+				tan)
+				;
+			uvn(0) = u;
+			
+			Eigen::Vector3f normal = lerpSampleMatrix<float, 3>(d.finalNormals, u);
+
+			s = makeFrame<float>(s, curveMat, pos, tan, normal);
+
+			uvn(1) = getAngleAroundAxis(
+				curveMat * Eigen::Vector3f(0, 0, 1),
+				curveMat * Eigen::Vector3f(0, 1, 0),
+				(worldVec - curveMat.translation()).normalized()
+			);
+			uvn(2) = (worldVec - curveMat.translation()).norm();
+			return s;
+		}
+
+
+		Status& getUVN(Status& s, Eigen::Vector3f& uvn, const int globalIndex, const Eigen::Vector3f closePos) {
+			// localise a world transform into UVN coordinates in the space of given parent
+			// make another function to return a full transform, for point parents
+			SElement* el = getEl(globalIndex);
+			switch (el->elType) {
+			case (StrataElType::point): {
+				return pointGetUVN(s, uvn, el->elIndex, closePos);
+			}
+			case (StrataElType::edge): {
+				return edgeGetUVN(s, uvn, el->elIndex, closePos);
+			}
+			default: STAT_ERROR(s, "Cannot get UVN for type " + std::to_string(el->elType));
+			}
+			return s;
+		}
+
+		void tempFn(Eigen::Vector3f v) {
 			1;
 		}
 
@@ -1063,9 +1102,9 @@ namespace ed {
 
 			for (size_t i = 0; i < pointDatas.size(); i++) {
 				result[i * 4] = pointDatas[i].finalMatrix.translation().data();
-				result[i * 4 + 1] = pointDatas[i].finalMatrix * Eigen::Vector3d{ 1, 0, 0 };
-				result[i * 4 + 2] = pointDatas[i].finalMatrix * Eigen::Vector3d{ 0, 1, 0 };
-				result[i * 4 + 3] = pointDatas[i].finalMatrix * Eigen::Vector3d{ 0, 0, 1 };
+				result[i * 4 + 1] = pointDatas[i].finalMatrix * Eigen::Vector3f{ 1, 0, 0 };
+				result[i * 4 + 2] = pointDatas[i].finalMatrix * Eigen::Vector3f{ 0, 1, 0 };
+				result[i * 4 + 3] = pointDatas[i].finalMatrix * Eigen::Vector3f{ 0, 0, 1 };
 			}
 			return result;
 		}
@@ -1088,9 +1127,9 @@ namespace ed {
 		Status& getWireframeSingleEdgeGnomonVertexPositionArray(Status& s, Float3Array& outArr, int elIndex, int arrStartIndex) {
 			SEdgeData& d = edgeDatas[elIndex];
 			int n;
-			double u;
-			Eigen::Affine3d aff;
-			double uvn[3];
+			float u;
+			Eigen::Affine3f aff;
+			Eigen::Vector3f uvn;
 			for (int i = 0; i < d.densePointCount(); i++) {
 				n = arrStartIndex + (i * 4);
 				u = 1.0 / double(d.densePointCount() - 1) * double(i);
@@ -1098,10 +1137,10 @@ namespace ed {
 				uvn[1] = 0; uvn[2] = 0;
 				s = edgeMatrixAt(s, aff, elIndex, uvn);
 
-				outArr[n] = d.posSpline(u);
-				outArr[n + 1] = aff * Eigen::Vector3d{ 1, 0, 0 };
-				outArr[n + 2] = aff * Eigen::Vector3d{ 0, 1, 0 };
-				outArr[n + 3] = aff * Eigen::Vector3d{ 0, 0, 1 };
+				outArr[n] = d.finalCurve.eval(u);
+				outArr[n + 1] = (aff * Eigen::Vector3f{ 1, 0, 0 }).data();
+				outArr[n + 2] = aff * Eigen::Vector3f{ 0, 1, 0 };
+				outArr[n + 3] = aff * Eigen::Vector3f{ 0, 0, 1 };
 			}
 			return s;
 		}

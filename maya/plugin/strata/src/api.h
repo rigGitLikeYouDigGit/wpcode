@@ -352,11 +352,11 @@ namespace ed {
 		return m;
 	}
 	
-	inline Eigen::Vector3d toEigen(const MVector& v) {
-		return Eigen::Vector3d(v[0], v[1], v[2]);
+	inline Eigen::Vector3f toEigen(const MVector& v) {
+		return Eigen::Vector3f(v[0], v[1], v[2]);
 	}
-	inline Eigen::Vector3d toEigen(const MPoint& v) {
-		return Eigen::Vector3d(v[0], v[1], v[2]);
+	inline Eigen::Vector3f toEigen(const MPoint& v) {
+		return Eigen::Vector3f(v[0], v[1], v[2]);
 	}
 
 	inline Eigen::Vector4d toEigenV4(const MVector& v) {
