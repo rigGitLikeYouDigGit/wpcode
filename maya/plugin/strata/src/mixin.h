@@ -67,17 +67,17 @@ namespace ed {
 		thisT(){\
 			this2()->initEmpty();\
 		}\
-		thisT(thisT const& other){\
+		thisT(thisT const& other) noexcept{\
 			copyOther(other);\
 		}\
-		thisT(thisT&& other){\
+		thisT(thisT&& other) noexcept{\
 			copyOther(other);\
 		}\
-		classT& operator=(classT&& other){\
+		classT& operator=(classT&& other) noexcept{\
 			copyOther(other);\
 			return *this;\
 		}\
-		classT& operator=(const classT& other){\
+		classT& operator=(const classT& other) noexcept{\
 			copyOther(other);\
 			return *this;\
 		}\

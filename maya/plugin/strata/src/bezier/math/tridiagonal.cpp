@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-namespace bezier {
+namespace bez {
 
     std::string _invalid_number_of_elements_message(const vector<MatrixXd> & lower_diagonal,
                                        const vector<MatrixXd> & diagonal,
@@ -29,8 +29,8 @@ namespace bezier {
                                                                             rhs));
         }
 
-        if(diagonal.size() != lower_diagonal.size() + 1 or
-           diagonal.size() != upper_diagonal.size() + 1 or
+        if(diagonal.size() != lower_diagonal.size() + 1 || 
+           diagonal.size() != upper_diagonal.size() + 1 || 
            diagonal.size() != rhs.size()){
             throw std::invalid_argument(_invalid_number_of_elements_message(lower_diagonal,
                                                                             diagonal,
@@ -39,31 +39,31 @@ namespace bezier {
         }
 
         // special case if there is only one element on the diagonal
-        if(diagonal.size() == 1 and rhs.size() == 1
-           and lower_diagonal.size() == 0 and upper_diagonal.size() == 0){
+        if(diagonal.size() == 1 &&  rhs.size() == 1
+           &&  lower_diagonal.size() == 0 &&  upper_diagonal.size() == 0){
             return _solve_tridiagonal(lower_diagonal, diagonal, upper_diagonal, rhs);
         }
 
         // upper left corner
-        if(diagonal[0].cols() != lower_diagonal[0].cols() or diagonal[0].rows() != upper_diagonal[0].rows() or
+        if(diagonal[0].cols() != lower_diagonal[0].cols() || diagonal[0].rows() != upper_diagonal[0].rows() || 
                 diagonal[0].rows() != rhs[0].rows()){
             throw std::invalid_argument("Invalid matrix dimensions");
         }
 
         // middle
         for(int i = 1; i < diagonal.size()-1; i++){
-            if(diagonal[i].cols() != upper_diagonal[i-1].cols() or
-               diagonal[i].cols() != lower_diagonal[i].cols() or
-               diagonal[i].rows() != upper_diagonal[i].rows() or
-               diagonal[i].rows() != lower_diagonal[i-1].rows() or
+            if(diagonal[i].cols() != upper_diagonal[i-1].cols() || 
+               diagonal[i].cols() != lower_diagonal[i].cols() || 
+               diagonal[i].rows() != upper_diagonal[i].rows() || 
+               diagonal[i].rows() != lower_diagonal[i-1].rows() || 
                diagonal[i].rows() != rhs[i].rows()){
                 throw std::invalid_argument("Invalid matrix dimensions");
             }
         }
 
         // bottom right corner
-        if(diagonal[diagonal.size()-1].cols() != upper_diagonal[upper_diagonal.size()-1].cols() or
-                diagonal[diagonal.size()-1].rows() != lower_diagonal[lower_diagonal.size()-1].rows() or
+        if(diagonal[diagonal.size()-1].cols() != upper_diagonal[upper_diagonal.size()-1].cols() || 
+                diagonal[diagonal.size()-1].rows() != lower_diagonal[lower_diagonal.size()-1].rows() || 
                 diagonal[diagonal.size()-1].rows() != rhs[rhs.size()-1].rows()){
             throw std::invalid_argument("Invalid matrix dimensions");
         }
@@ -145,7 +145,7 @@ namespace bezier {
         }
 
         if(diagonal.size() == 1){
-            if(!lower_diagonal.empty() or !upper_diagonal.empty() or rhs.size() != 1){
+            if(!lower_diagonal.empty() || !upper_diagonal.empty() || rhs.size() != 1){
                 throw std::invalid_argument(_invalid_number_of_elements_message(lower_diagonal,
                                                                                 diagonal,
                                                                                 upper_diagonal,
@@ -153,7 +153,7 @@ namespace bezier {
             }
         }
         else if(diagonal.size() == 2){
-            if(lower_diagonal.size() != 1 or upper_diagonal.size() != 1 or rhs.size() != 2){
+            if(lower_diagonal.size() != 1 || upper_diagonal.size() != 1 || rhs.size() != 2){
                 throw std::invalid_argument(_invalid_number_of_elements_message(lower_diagonal,
                                                                                 diagonal,
                                                                                 upper_diagonal,
@@ -162,8 +162,8 @@ namespace bezier {
 
             // upper left corner
             if(
-                    diagonal[0].cols() != lower_diagonal[0].cols() or
-                    diagonal[0].rows() != upper_diagonal[0].rows() or
+                    diagonal[0].cols() != lower_diagonal[0].cols() || 
+                    diagonal[0].rows() != upper_diagonal[0].rows() || 
                     diagonal[0].rows() != rhs[0].rows()
                     )
             {
@@ -171,16 +171,16 @@ namespace bezier {
             }
 
             // bottom right corner
-            if(diagonal[1].cols() != upper_diagonal[0].cols() or
-               diagonal[1].rows() != lower_diagonal[0].rows() or
+            if(diagonal[1].cols() != upper_diagonal[0].cols() || 
+               diagonal[1].rows() != lower_diagonal[0].rows() || 
                diagonal[1].rows() != rhs[1].rows()){
                 throw std::invalid_argument("Invalid matrix dimensions");
             }
         }
         else{
 
-            if(diagonal.size() != lower_diagonal.size() or
-               diagonal.size() != upper_diagonal.size() or
+            if(diagonal.size() != lower_diagonal.size() || 
+               diagonal.size() != upper_diagonal.size() || 
                diagonal.size() != rhs.size()){
                 throw std::invalid_argument("Invalid number of block matrix elements");
             }
@@ -189,10 +189,10 @@ namespace bezier {
 
             // upper left corner
             if(
-                    diagonal[0].cols() != lower_diagonal[1].cols() or
-                    diagonal[0].cols() != upper_diagonal[size-1].cols() or
-                    diagonal[0].rows() != upper_diagonal[0].rows() or
-                    diagonal[0].rows() != lower_diagonal[0].rows() or
+                    diagonal[0].cols() != lower_diagonal[1].cols() || 
+                    diagonal[0].cols() != upper_diagonal[size-1].cols() || 
+                    diagonal[0].rows() != upper_diagonal[0].rows() || 
+                    diagonal[0].rows() != lower_diagonal[0].rows() || 
                     diagonal[0].rows() != rhs[0].rows()
                     )
             {
@@ -201,20 +201,20 @@ namespace bezier {
 
             // middle
             for(int i = 1; i < diagonal.size()-1; i++){
-                if(diagonal[i].cols() != upper_diagonal[i-1].cols() or
-                   diagonal[i].cols() != lower_diagonal[i+1].cols() or
-                   diagonal[i].rows() != upper_diagonal[i].rows() or
-                   diagonal[i].rows() != lower_diagonal[i].rows() or
+                if(diagonal[i].cols() != upper_diagonal[i-1].cols() || 
+                   diagonal[i].cols() != lower_diagonal[i+1].cols() || 
+                   diagonal[i].rows() != upper_diagonal[i].rows() || 
+                   diagonal[i].rows() != lower_diagonal[i].rows() || 
                    diagonal[i].rows() != rhs[i].rows()){
                     throw std::invalid_argument("Invalid matrix dimensions");
                 }
             }
 
             // bottom right corner
-            if(diagonal[size-1].cols() != upper_diagonal[size-2].cols() or
-               diagonal[size-1].cols() != lower_diagonal[0].cols() or
-               diagonal[size-1].rows() != lower_diagonal[size-1].rows() or
-               diagonal[size-1].rows() != upper_diagonal[size-1].rows() or
+            if(diagonal[size-1].cols() != upper_diagonal[size-2].cols() || 
+               diagonal[size-1].cols() != lower_diagonal[0].cols() || 
+               diagonal[size-1].rows() != lower_diagonal[size-1].rows() || 
+               diagonal[size-1].rows() != upper_diagonal[size-1].rows() || 
                diagonal[size-1].rows() != rhs[size-1].rows()){
                 throw std::invalid_argument("Invalid matrix dimensions");
             }

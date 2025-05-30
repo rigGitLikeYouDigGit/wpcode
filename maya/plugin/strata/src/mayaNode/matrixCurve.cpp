@@ -159,7 +159,7 @@ void interpolateTransform(
     }
     else
     {
-        Eigen::MatrixPower<Eigen::Matrix4d> relMatPower(delta12);
+        Eigen::MatrixPower<Eigen::Matrix4f> relMatPower(delta12);
         partial = relMatPower(a_fraction);
         
     }

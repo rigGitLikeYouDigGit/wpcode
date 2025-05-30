@@ -5,7 +5,7 @@
 
 #include <iostream>
 
-namespace bezier {
+namespace bez {
 
     using std::vector;
     using Eigen::MatrixXd;

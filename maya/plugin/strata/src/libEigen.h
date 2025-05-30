@@ -1,14 +1,16 @@
-#pragma once
+﻿#pragma once
 
 #include <vector>
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include "MInclude.h"
+
+#include <unsupported/Eigen/Splines>
+
 #include "api.h"
 #include "macro.h"
 #include "status.h"
-
-#include <unsupported/Eigen/Splines>
+#include "lib.h"
 
 //#include <bezier/bezier.h>
 
@@ -169,7 +171,7 @@ namespace ed {
 
 	inline Status& makeFrame(
 		Status& s,
-		Eigen::Affine3d& frameMat,
+		Eigen::Affine3f& frameMat,
 		const Eigen::Vector3f& pos,
 		const Eigen::Vector3f& tan,
 		const Eigen::Vector3f& normal
@@ -188,7 +190,7 @@ namespace ed {
 
 	inline Status& makeFrame(
 		Status& s,
-		Eigen::Affine3d& frameMat,
+		Eigen::Affine3f& frameMat,
 		const Eigen::Vector3f& pos,
 		const Eigen::Vector3f& tan
 	) {// default {0, 1, 0} normal
@@ -212,8 +214,8 @@ namespace ed {
 	{
 		// treat open and closed the same, just discount final span if not closed
 
-		Eigen::MatrixX3<T> result(inPoints.rows() * 3);
-		int nPoints = inPoints.rows();
+		Eigen::MatrixX3<T> result(inPoints.rows() * 3, 3);
+		int nPoints = static_cast<int>(inPoints.rows());
 
 		// set tangent vectors for each one (scaling done later)
 		// also includes start and end, as if it were closed
@@ -244,12 +246,12 @@ namespace ed {
 			//auto toPrevVec = nextPos - thisPos;
 
 			// forwards tan scale factor
-			T nextTanScale = tanVec.dot(toNextVec) - (tanVec.dot(toThisVec)) / 3.0;
-			nextTanScale = -sminQ(-nextTanScale, 0.0, 0.2);
+			T nextTanScale = tanVec.dot(toNextVec) - (tanVec.dot(toThisVec)) / T(3.0);
+			nextTanScale = -sminQ<T>(-nextTanScale, T(0.0), T(0.2));
 
 			// back tan scale factor
-			T prevTanScale = tanVec.dot(-toThisVec) - (tanVec.dot(toThisVec)) / 3.0;
-			prevTanScale = -sminQ(-prevTanScale, 0.0, 0.2);
+			T prevTanScale = tanVec.dot(-toThisVec) - (tanVec.dot(toThisVec)) / T(3.0);
+			prevTanScale = -sminQ<T>(-prevTanScale, T(0.0), T(0.2));
 
 			result.row(nextOutI) = tanVec.normalized() * nextTanScale;
 			result.row(prevOutI) = -tanVec.normalized() * prevTanScale;
@@ -264,8 +266,8 @@ namespace ed {
 		// set ends if not continuous
 		// if not closed, ends are not continuous
 		if (!closed) {
-			inContinuities[0] = 0.0;
-			inContinuities[nPoints - 1] = 0.0;
+			inContinuities[0] = T(0.0);
+			inContinuities[nPoints - 1] = T(0.0);
 		}
 
 		// check continuity
@@ -288,21 +290,39 @@ namespace ed {
 
 			// blend between next tangent point and next point, based on continuity
 			//double postTanLen = thisDriver.postTan.norm();
-			float postTanLen = result.row(nextOutI).norm();
+			auto postTanLen = result.row(nextOutI).norm();
+			Eigen::Vector3<T> nextOutV(result.row(nextOutI));
+			Eigen::Vector3<T> nextPtV(result.row(nextPtI));
+			Eigen::Vector3<T> nextPtPlusPrevTanV(result.row(nextPtI) + result.row(nextPtPrevTanI));
+			Eigen::Vector3<T> outV(result.row(outI));
+
+			// use continuity of next point to check where sharp target should be
+			Eigen::Vector3<T> targetLerpV = lerp(
+				nextPtV, nextPtPlusPrevTanV,
+				static_cast<T>(inContinuities[nextInI])
+				);
+			// use continuity of this point to check how strongly tangent should lerp to that target
+
 			result.row(nextOutI) = lerp(
-				Eigen::Vector3<T>(result.row(nextOutI)),
-				Eigen::Vector3<T>(lerp(
-						//nextDriver.pos(),
-						Eigen::Vector3<T>(result.row(nextPtI)),
-						//Eigen::Vector3f(nextDriver.pos() + nextDriver.prevTan),
-						Eigen::Vector3<T>(result.row(nextPtI) + result.row(nextPtPrevTanI)),
-						//Eigen::Vector3f(nextDriver.pos() + nextDriver.preTan).matrix(),
-						//nextDriver.continuity
-						T(inContinuities[nextInI])
-					) - result.row(outI)),
-					T(inContinuities[i])
-					
+				nextOutV,
+				targetLerpV,
+				static_cast<T>(inContinuities[i])
 			);
+
+			//result.row(nextOutI) = lerp(
+			//	Eigen::Vector3<T>(result.row(nextOutI)),
+			//	Eigen::Vector3<T>(lerp(
+			//			//nextDriver.pos(),
+			//			Eigen::Vector3<T>(result.row(nextPtI)),
+			//			//Eigen::Vector3f(nextDriver.pos() + nextDriver.prevTan),
+			//			Eigen::Vector3<T>(result.row(nextPtI) + result.row(nextPtPrevTanI)),
+			//			//Eigen::Vector3f(nextDriver.pos() + nextDriver.preTan).matrix(),
+			//			//nextDriver.continuity
+			//			T(inContinuities[nextInI])
+			//		) - Eigen::Vector3<T>(result.row(outI))),
+			//		T(inContinuities[i])
+			//);
+		
 			//thisDriver.postTan = thisDriver.postTan.normalized() * postTanLen;
 			result.row(nextOutI) = result.row(nextOutI).normalized() * postTanLen;
 
@@ -329,7 +349,7 @@ namespace ed {
 					Eigen::Vector3<T>(result.row(prevPtI) + result.row(prevPtNextTanI)),
 					T(inContinuities[prevInI])
 
-				) - result.row(outI)),
+				) - Eigen::Vector3<T>(result.row(outI))),
 				T(inContinuities[i])
 
 			);
@@ -342,74 +362,74 @@ namespace ed {
 
 
 
-	inline double closestParamOnSpline(const Eigen::Spline3d& sp, const Eigen::Vector3f pt,
-		int nSamples =10,
-		int iterations=2
-	) {
-		/* basic binary search?
-		or we start by checking control points?
-		
-		or we just put this in maya
-		
-		seems like an initial scattered search is used even in some SVG libraries
-		algebraic solutions are apparently possible?
+	//inline double closestParamOnSpline(const Eigen::Spline3d& sp, const Eigen::Vector3f pt,
+	//	int nSamples =10,
+	//	int iterations=2
+	//) {
+	//	/* basic binary search?
+	//	or we start by checking control points?
+	//	
+	//	or we just put this in maya
+	//	
+	//	seems like an initial scattered search is used even in some SVG libraries
+	//	algebraic solutions are apparently possible?
 
-		JUST BRUTE FORCE IT
-		10 sparse, 10 dense, move on
-		*/
-		Eigen::Vector3f l, r;
-		double a = 0.0;
-		double b = 1.0;
-		/*l = sp(a).matrix();
-		r = sp(b).matrix();*/
-		Eigen::ArrayX3d iterSamples(nSamples, 3);
-		Eigen::ArrayXd lins(nSamples);
-		Eigen::ArrayXd distances(nSamples);
-		//int maxCol, maxRow = 0;
-		int minIndex = 0;
-		for (int i = 0; i < iterations; i++) {
-			//iterSamples = Eigen::ArrayX3d::Zero(nSamples);
-			lins = Eigen::ArrayXd::LinSpaced(nSamples, a, b);
-			for (int n = 0; n < nSamples; n++) {
-				//auto res = sp(lins[n]);
-				//iterSamples(n) = res;
-				//iterSamples.row(n) = res;
-				iterSamples.row(n) = sp(lins(n));
-				distances[n] = (sp(lins[n]).matrix() - pt).squaredNorm();
-			}
-			//distances.maxCoeff(maxRow, maxCol);
-			//minIndex = distances.minCoeff();
-			distances.minCoeff(&minIndex);
-			if (minIndex == (nSamples - 1)) { // closest to right
-				b = lins[nSamples - 2];
-				continue;
-			}
-			if (minIndex == 0) { // closest to left
-				a = lins[1];
-				continue;
-			}
+	//	JUST BRUTE FORCE IT
+	//	10 sparse, 10 dense, move on
+	//	*/
+	//	Eigen::Vector3f l, r;
+	//	double a = 0.0;
+	//	double b = 1.0;
+	//	/*l = sp(a).matrix();
+	//	r = sp(b).matrix();*/
+	//	Eigen::ArrayX3d iterSamples(nSamples, 3);
+	//	Eigen::ArrayXd lins(nSamples);
+	//	Eigen::ArrayXd distances(nSamples);
+	//	//int maxCol, maxRow = 0;
+	//	int minIndex = 0;
+	//	for (int i = 0; i < iterations; i++) {
+	//		//iterSamples = Eigen::ArrayX3d::Zero(nSamples);
+	//		lins = Eigen::ArrayXd::LinSpaced(nSamples, a, b);
+	//		for (int n = 0; n < nSamples; n++) {
+	//			//auto res = sp(lins[n]);
+	//			//iterSamples(n) = res;
+	//			//iterSamples.row(n) = res;
+	//			iterSamples.row(n) = sp(lins(n));
+	//			distances[n] = (sp(lins[n]).matrix() - pt).squaredNorm();
+	//		}
+	//		//distances.maxCoeff(maxRow, maxCol);
+	//		//minIndex = distances.minCoeff();
+	//		distances.minCoeff(&minIndex);
+	//		if (minIndex == (nSamples - 1)) { // closest to right
+	//			b = lins[nSamples - 2];
+	//			continue;
+	//		}
+	//		if (minIndex == 0) { // closest to left
+	//			a = lins[1];
+	//			continue;
+	//		}
 
-			//if(distances[minIndex + 1] > distances)
-			a = minIndex - 1;
-			b = minIndex + 1;
-			
-		}
-		// return last hit float coord
-		return lins[minIndex];
-	}
+	//		//if(distances[minIndex + 1] > distances)
+	//		a = minIndex - 1;
+	//		b = minIndex + 1;
+	//		
+	//	}
+	//	// return last hit float coord
+	//	return lins[minIndex];
+	//}
 
 	inline Status& matrixAtU(
 		Status& s,
-		Eigen::Affine3d& mat,
-		const Eigen::Spline3d& posSpline,
-		const Eigen::Spline3d& normalSpline,
-		const double u
+		Eigen::Affine3f& mat,
+		const Eigen::Spline3f& posSpline,
+		const Eigen::Spline3f& normalSpline,
+		const float u
 		) {
 		
 		s = makeFrame(s,
 			mat,
-			posSpline(u).matrix(),
-			posSpline.derivatives(u, 1).col(0).matrix(),
+			Eigen::Vector3f(posSpline(u).matrix()),
+			Eigen::Vector3f(posSpline.derivatives(u, 1).col(0).matrix()),
 			normalSpline(u).matrix()
 		);
 		return s;
@@ -442,24 +462,24 @@ namespace ed {
 
 	*/
 	//Eigen::MatrixX3d
-	Status& getCubicDerivative(Status& s, Eigen::Vector3f& out, double t, Eigen::Matrix<double, 4, 3> points) {
+	inline Status& getCubicDerivative(Status& s, Eigen::Vector3f& out, float t, Eigen::Matrix<float, 4, 3> points) {
 		// TODO: if this works, rewrite last block as arrays
-		auto mt = 1.0 - t;
+		auto mt = 1.0f - t;
 		auto a = mt * mt;
-		auto b = 2.0 * mt * t;
+		auto b = 2.0f * mt * t;
 		auto c = t * t;
-		Eigen::Matrix3d d;
-		d << 3.0 * (points.row(1).x() - points.row(0).x()),
-			3.0 * (points.row(1).y() - points.row(0).y()),
-			3.0 * (points.row(1).z() - points.row(0).z()),
+		Eigen::Matrix3f d;
+		d << 3.0f * (points.row(1).x() - points.row(0).x()),
+			3.0f * (points.row(1).y() - points.row(0).y()),
+			3.0f * (points.row(1).z() - points.row(0).z()),
 
-			3.0 * (points.row(2).x() - points.row(1).x()),
-			3.0 * (points.row(2).y() - points.row(1).y()),
-			3.0 * (points.row(2).z() - points.row(1).z()),
+			3.0f * (points.row(2).x() - points.row(1).x()),
+			3.0f * (points.row(2).y() - points.row(1).y()),
+			3.0f * (points.row(2).z() - points.row(1).z()),
 
-			3.0 * (points.row(3).x() - points.row(2).x()),
-			3.0 * (points.row(3).y() - points.row(2).y()),
-			3.0 * (points.row(3).z() - points.row(2).z());
+			3.0f * (points.row(3).x() - points.row(2).x()),
+			3.0f * (points.row(3).y() - points.row(2).y()),
+			3.0f * (points.row(3).z() - points.row(2).z());
 
 		out(0) = a * d.row(0).x() + b * d.row(1).x() + c * d.row(2).x();
 		out(1) = a * d.row(0).y() + b * d.row(1).y() + c * d.row(2).y();
@@ -467,62 +487,62 @@ namespace ed {
 		return s;
 	}
 
-	inline double closestParamOnSpline(const bezier::BezierCurve& sp, const Eigen::Vector3f pt,
-		int nSamples = 10,
-		int iterations = 2
-	) {
+	//inline double closestParamOnSpline(const bez::BezierCurve& sp, const Eigen::Vector3f pt,
+	//	int nSamples = 10,
+	//	int iterations = 2
+	//) {
 
-		Eigen::Vector3f l, r;
-		double a = 0.0;
-		double b = 1.0;
-		/*l = sp(a).matrix();
-		r = sp(b).matrix();*/
-		Eigen::ArrayX3d iterSamples(nSamples, 3);
-		Eigen::ArrayXd lins(nSamples);
-		Eigen::ArrayXd distances(nSamples);
-		//int maxCol, maxRow = 0;
-		int minIndex = 0;
-		for (int i = 0; i < iterations; i++) {
-			//iterSamples = Eigen::ArrayX3d::Zero(nSamples);
-			lins = Eigen::ArrayXd::LinSpaced(nSamples, a, b);
-			for (int n = 0; n < nSamples; n++) {
-				//auto res = sp(lins[n]);
-				//iterSamples(n) = res;
-				//iterSamples.row(n) = res;
-				iterSamples.row(n) = sp(lins(n));
-				distances[n] = (sp(lins[n]).matrix() - pt).squaredNorm();
-			}
-			//distances.maxCoeff(maxRow, maxCol);
-			//minIndex = distances.minCoeff();
-			distances.minCoeff(&minIndex);
-			if (minIndex == (nSamples - 1)) { // closest to right
-				b = lins[nSamples - 2];
-				continue;
-			}
-			if (minIndex == 0) { // closest to left
-				a = lins[1];
-				continue;
-			}
+	//	Eigen::Vector3f l, r;
+	//	double a = 0.0;
+	//	double b = 1.0;
+	//	/*l = sp(a).matrix();
+	//	r = sp(b).matrix();*/
+	//	Eigen::ArrayX3d iterSamples(nSamples, 3);
+	//	Eigen::ArrayXd lins(nSamples);
+	//	Eigen::ArrayXd distances(nSamples);
+	//	//int maxCol, maxRow = 0;
+	//	int minIndex = 0;
+	//	for (int i = 0; i < iterations; i++) {
+	//		//iterSamples = Eigen::ArrayX3d::Zero(nSamples);
+	//		lins = Eigen::ArrayXd::LinSpaced(nSamples, a, b);
+	//		for (int n = 0; n < nSamples; n++) {
+	//			//auto res = sp(lins[n]);
+	//			//iterSamples(n) = res;
+	//			//iterSamples.row(n) = res;
+	//			iterSamples.row(n) = sp(lins(n));
+	//			distances[n] = (sp(lins[n]).matrix() - pt).squaredNorm();
+	//		}
+	//		//distances.maxCoeff(maxRow, maxCol);
+	//		//minIndex = distances.minCoeff();
+	//		distances.minCoeff(&minIndex);
+	//		if (minIndex == (nSamples - 1)) { // closest to right
+	//			b = lins[nSamples - 2];
+	//			continue;
+	//		}
+	//		if (minIndex == 0) { // closest to left
+	//			a = lins[1];
+	//			continue;
+	//		}
 
-			//if(distances[minIndex + 1] > distances)
-			a = minIndex - 1;
-			b = minIndex + 1;
+	//		//if(distances[minIndex + 1] > distances)
+	//		a = minIndex - 1;
+	//		b = minIndex + 1;
 
-		}
-		// return last hit float coord
-		return lins[minIndex];
-	}
+	//	}
+	//	// return last hit float coord
+	//	return lins[minIndex];
+	//}
 
 
 
-	inline Eigen::ArrayXd arcLengthToParamMapping(const Eigen::Spline3d& sp, const int npoints = 20) {
+	inline Eigen::ArrayXf arcLengthToParamMapping(const Eigen::Spline3f& sp, const int npoints = 20) {
 		// return an array of equally-spaced points giving the 0-1 arc length to each point
-		Eigen::ArrayXd result = Eigen::ArrayXd::Constant(npoints, 0.0);
+		Eigen::ArrayXf result = Eigen::ArrayXf::Constant(npoints, 0.0f);
 		//Eigen::ArrayXXd data = Eigen::ArrayXXd::Constant(nRow, nCol, 1.0);
-		Eigen::Vector3f prevpt = sp(0.0);
+		Eigen::Vector3f prevpt = sp(0.0f);
 		Eigen::Vector3f thispt;
 		for (int i = 1; i < npoints; i++) {
-			double u = 1.0 / double(npoints - 1) * i;
+			float u = 1.0f / float(npoints - 1) * i;
 			thispt = sp(u);
 			result[i] = result[i-1] + (thispt - prevpt).norm();
 			prevpt = thispt;
@@ -532,11 +552,11 @@ namespace ed {
 
 	Status& splineUVN(
 		Status& s,
-		//Eigen::Matrix4d& outMat,
-		Eigen::Affine3d& outMat,
-		const Eigen::Spline3d& posSpline,
-		const Eigen::Spline3d& normalSpline,
-		double uvw[3]
+		//Eigen::Matrix4f& outMat,
+		Eigen::Affine3f& outMat,
+		const Eigen::Spline3f& posSpline,
+		const Eigen::Spline3f& normalSpline,
+		float uvw[3]
 	);
 
 	/**************************************************************************//**
@@ -612,7 +632,7 @@ namespace ed {
 
 
 	template <typename T>
-	T lerpSampleScalarArr(Eigen::VectorX<T> arr, T t) {
+	 T lerpSampleScalarArr(Eigen::VectorX<T> arr, T t) {
 		// sample array at a certain interval
 		//float& a;
 		
@@ -630,7 +650,7 @@ namespace ed {
 	}
 
 	template <typename T, int N>
-	Eigen::Vector<T, N> lerpSampleMatrix(Eigen::MatrixX<T> arr, T t) {
+	inline Eigen::Vector<T, N> lerpSampleMatrix(Eigen::MatrixX<T> arr, T t) {
 		// sample array at a certain interval
 		//float& a;
 
@@ -642,7 +662,7 @@ namespace ed {
 		}
 		int a;
 		int b;
-		a = floor(arr.size() * t);
+		a = static_cast<int>(static_cast<float>(arr.size()) * t);
 		b = a + 1;
 		return lerp<Eigen::Vector<T, N>, T>(arr.row(a), arr.row(b), t - (arr.size() * t));
 	}
@@ -655,11 +675,72 @@ namespace ed {
 		// the axis is implied - this returns 0-1 depending on v's rotation around frameNormal x frameUp
 		// test using only dots
 		// i think this is the counterpart to atan2
-		return 0.5 - sus(frameNormal.dot(v)) * 0.5 + float(frameUp.dot(v) > 0.0) * 0.5;
+		return 0.5f - sus<float>(frameNormal.dot(v)) * 0.5f + float(frameUp.dot(v) > 0.0f) * 0.5f;
 		//if (frameUp.dot(v) > 0.0) { // on the frame up side, should vary between 0 and 0.5
 		//	return 0.5 - sus(frameNormal.dot(v)) * 0.5;  // at dot == 0.99 (vector almost on normal), angle should be near 0.0, 
 		//}
 		//return 1.0 - sus(frameNormal.dot(v)) * 0.5;
 	}
 
+
+
+	template<typename T>
+	Eigen::MatrixX3f makeRMFNormals(
+		const bez::CubicBezierPath& crv,
+		const Eigen::MatrixX3f& targetNormals,
+		const Eigen::VectorXf& normalUVals,
+		const int nSamples
+	) {/*
+		normals are target vectors, normalUVals are targets to match
+		TODO: maybe get twist in here
+
+		at each targetNormal uValue, normals of RMF are pointed as close to that direction as
+		we can
+
+		having defined normals means we can parallelise between each one?
+
+		for now just do single pass reflection RMF from first normal,
+		TODO
+
+		using double reflection system from the microsoft paper
+
+		 0 to n − 1 do
+		Begin
+			1) v1 := xi+1 − xi ;						/*compute reflection vector of R1.
+			2) c1 := v1 · v1;
+			3) rLi := ri − (2/c1) ∗ (v1 · ri) ∗ v1;		/*compute rL		i = R1ri .
+			4) tLi := ti − (2/c1) ∗ (v1 · ti) ∗ v1;		/*compute tL	i = R1ti .
+			5) v2 := ti+1 − tLi ;						/*compute reflection vector of R2.
+			6) c2 := v2 · v2;
+			7) ri+1 := rLi − (2/c2) ∗ (v2 · rLi ) ∗ v2; /*compute ri+1 = R2rLi .
+			8) si+1 := ti+1 × ri+1;						/*compute vector si+1 of Ui+1.
+			9) Ui+1 := (ri+1,si+1, ti+1);
+
+		*/
+
+		Eigen::MatrixX3f resultNs(nSamples);
+
+		//Eigen::Vector3f ri = targetNormals.row(0);
+		resultNs.row(0) = targetNormals.row(0);
+
+		for (int i = 0; i < nSamples - 1; i++) {
+			float param = (0.9999 / float(nSamples - 1) * float(i));
+			float nextParam = (1.0 / float(nSamples - 1) * float(i + 1));
+			auto xi = crv.eval(param);
+			auto ti = (crv.eval(param + 0.0001) - xi).normalized();
+
+			auto xiPlus1 = crv.eval(nextParam);
+			auto v1 = xiPlus1 - xi;
+			auto c1 = v1.dot(v1);
+			auto rLi = resultNs.row(i) - (2.0 / c1) * (v1.dot(resultNs.row(i))) * v1;
+			auto tLi = ti - (2.0 / c1) * (v1.dot(ti)) * v1;
+
+			auto tiPlus1 = (crv.eval(nextParam + 0.0001) - xiPlus1).normalized(); // next point's tangent
+			auto v2 = tiPlus1 - tLi;
+			auto c2 = v2.dot(v2);
+			auto riPlus1 = rLi - (2.0 / c2) * (v2.dot(rLi)) * v2; // final reflected normal
+			resultNs.row(i + 1) = riPlus1.normalized();
+		}
+		return resultNs;
+	}
 }

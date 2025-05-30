@@ -17,8 +17,8 @@ namespace ed {
 
 	// common functions
 	//enum BindState { off, bind, bound, live };
-	BETTER_ENUM(BindState, int, off, bind, bound, live);
-	BETTER_ENUM(LiveState, int, stop, playback, realtime);
+	BETTER_ENUM(BindState, int, off, bind, bound, live)
+	BETTER_ENUM(LiveState, int, stop, playback, realtime)
 
 	template<typename T>
 	static MObject makeEnumAttr(char* name, T defaultVal, MFnEnumAttribute& fn) {
@@ -341,30 +341,55 @@ namespace ed {
 	//		mat[3][0], mat[3][1], mat[3][2], mat[3][3];
 	//	return m;
 	//}
-	inline Eigen::Matrix4d toEigen(const MMatrix& mat) {
+	template<typename D=float>
+	inline Eigen::Matrix4<D> toEigen(const MMatrix& mat) {
 		//return Eigen::Matrix4f(mat.matrix);
-		Eigen::Matrix4d m;
+		Eigen::Matrix4<D> m;
 		m <<
-			mat[0][0], mat[0][1], mat[0][2], mat[0][3],
-			mat[1][0], mat[1][1], mat[1][2], mat[1][3],
-			mat[2][0], mat[2][1], mat[2][2], mat[2][3],
-			mat[3][0], mat[3][1], mat[3][2], mat[3][3];
+			static_cast<D>(mat[0][0]), static_cast<D>(mat[0][1]), static_cast<D>(mat[0][2]), static_cast<D>(mat[0][3]),
+			static_cast<D>(mat[1][0]), static_cast<D>(mat[1][1]), static_cast<D>(mat[1][2]), static_cast<D>(mat[1][3]),
+			static_cast<D>(mat[2][0]), static_cast<D>(mat[2][1]), static_cast<D>(mat[2][2]), static_cast<D>(mat[2][3]),
+			static_cast<D>(mat[3][0]), static_cast<D>(mat[3][1]), static_cast<D>(mat[3][2]), static_cast<D>(mat[3][3]);
 		return m;
 	}
 	
-	inline Eigen::Vector3f toEigen(const MVector& v) {
-		return Eigen::Vector3f(v[0], v[1], v[2]);
+	template<typename D=float>
+	inline Eigen::Vector3<D> toEigen(const MVector& v) {
+		return Eigen::Vector3<D>(
+			static_cast<D>(v[0]), 
+			static_cast<D>(v[1]), 
+			static_cast<D>(v[2])
+		);
 	}
-	inline Eigen::Vector3f toEigen(const MPoint& v) {
-		return Eigen::Vector3f(v[0], v[1], v[2]);
+	template<typename D = float>
+	inline Eigen::Vector3<D> toEigen(const MPoint& v) {
+		return Eigen::Vector3<D>(
+			static_cast<D>(v[0]),
+			static_cast<D>(v[1]),
+			static_cast<D>(v[2])
+		);
 	}
 
-	inline Eigen::Vector4d toEigenV4(const MVector& v) {
-		return Eigen::Vector4d(v[0], v[1], v[2], 0.0);
+	template<typename D = float>
+	inline Eigen::Vector4<D> toEigenV4(const MVector& v) {
+		return Eigen::Vector4<D>(static_cast<D>(v[0]),
+			static_cast<D>(v[1]),
+			static_cast<D>(v[2]),
+			0.0);
 	}
-	inline Eigen::Vector4d toEigenV4(const MPoint& v) {
-		return Eigen::Vector4d(v[0], v[1], v[2], v[3]);
+	template<typename D = float>
+	inline Eigen::Vector4<D> toEigenV4(const MPoint& v) {
+		return Eigen::Vector4<D>(
+			static_cast<D>(v[0]),
+			static_cast<D>(v[0]),
+			static_cast<D>(v[0]),
+			static_cast<D>(v[0]));
 	}
+
+	/*template <typename D=float, int N=3>
+	inline Eigen::Vector<D, N> toEig(const MVector& v) {
+
+	}*/
 	
 	template <typename T>
 	inline MMatrix toMMatrix(const T& mat) {

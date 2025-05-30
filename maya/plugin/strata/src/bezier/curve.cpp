@@ -1,7 +1,7 @@
 
 #include "curve.h"
 
-namespace bezier {
+namespace bez {
 
     std::vector<Eigen::VectorXd> sample(const Curve * curve, int n){
 

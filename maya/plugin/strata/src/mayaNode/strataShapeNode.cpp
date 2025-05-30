@@ -11,7 +11,6 @@
 #include "strataGraphNode.h"
 #include "strataPointNode.h"
 #include "strataOpNodeBase.h"
-//#include "strataOpNodeBase.cpp"
 #include "../lib.h"
 #include "../stringLib.h"
 #include "../strataop/elementOp.h"
@@ -25,7 +24,7 @@ MString StrataShapeNode::drawDbClassification("drawdb/geometry/strataShape");
 MString StrataShapeNode::drawRegistrantId("StrataShape");
 
 //DEFINE_STATIC_NODE_CPP_MEMBERS(STRATABASE_STATIC_MEMBERS, StrataShapeNode)
-DEFINE_STATIC_NODE_CPP_MEMBERS(STRATABASE_STATIC_MEMBERS, StrataShapeNode);
+DEFINE_STATIC_NODE_CPP_MEMBERS(STRATABASE_STATIC_MEMBERS, StrataShapeNode)
 DEFINE_STATIC_NODE_CPP_MEMBERS(NODE_STATIC_MEMBERS, StrataShapeNode)
 
 

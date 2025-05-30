@@ -4,8 +4,8 @@
 #ifndef API_MACROS
 #define API_MACROS 1
 
-#include "maya/MStreamUtils.h"
-#include "maya/MString.h"
+#include <maya/MStreamUtils.h>
+#include <maya/MString.h>
 
 // debug macros
 #define COUT MStreamUtils::stdOutStream()

@@ -5,7 +5,7 @@
 #include <array>
 #include <vector>
 
-namespace bezier {
+namespace bez {
 
     /**
      * Curve class.

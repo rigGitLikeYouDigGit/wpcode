@@ -3,7 +3,7 @@
 
 #include <vector>
 
-namespace bezier {
+namespace bez {
     using std::vector;
 
     /**

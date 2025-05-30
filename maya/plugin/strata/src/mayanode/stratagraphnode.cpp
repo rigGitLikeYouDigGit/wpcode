@@ -5,7 +5,7 @@
 //
 //#include "../macro.h"
 //#include "../api.h"
-//#include "../lib.cpp"
+
 //
 //using namespace ed;
 //MObject StrataGraphNode::aStGraph;

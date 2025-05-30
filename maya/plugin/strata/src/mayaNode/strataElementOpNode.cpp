@@ -11,7 +11,6 @@
 #include "strataGraphNode.h"
 #include "strataPointNode.h"
 #include "strataOpNodeBase.h"
-//#include "strataOpNodeBase.cpp"
 #include "../lib.h"
 #include "../libEigen.h"
 #include "../libNurbs.h"
@@ -325,8 +324,10 @@ MStatus StrataElementOpNode::edgeDataFromRawCurve(MStatus& ms, MObject& nodeObj,
         Status s;
         makeFrame(s,
             eData.driverDatas[i].finalMatrix,
-            Eigen::Vector3f{ pt.x, pt.y, pt.z },
-            Eigen::Vector3f{ tan.x, tan.y, tan.z }
+            //Eigen::Vector3f{ pt.x, pt.y, pt.z },
+            toEigen<float>(pt),
+            //Eigen::Vector3f{ tan.x, tan.y, tan.z }
+            toEigen<float>(tan)
         );
     }
     return ms;

@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 2.6)
+#cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8)
 set(MAYA_VERSION 2023)
 
 set(CMAKE_MODULE_PATH "C:/Program Files/CMake/share/cmake-3.20/Modules")

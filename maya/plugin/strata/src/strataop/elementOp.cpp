@@ -64,13 +64,13 @@ Status& edgeEvalDriverExpression(
 
 	for (auto& i : drivers) {
 		SElement* driverPtr = value.getEl(i);
-		//outPtr->drivers.push_back(i);
+		//outPtr->drivers.push_back(i); 
 		outPtr->drivers.push_back(driverPtr->name);
 		edgeData.driverDatas.push_back(EdgeDriverData());
 		EdgeDriverData& driverData = edgeData.driverDatas.at(edgeData.driverDatas.size() - 1);
 		driverData.index = i;
 
-		double defaultCoords[3] = { 0.0, 0.0, 0.0 };
+		Eigen::Vector3f defaultCoords{ 0.0, 0.0, 0.0 };
 		// TODO: HOW DO WE DEFINE DRIVER PARAMETRES
 		if (driverPtr->elType == StrataElType::edge) {
 			defaultCoords[0] = 0.5;
@@ -289,14 +289,13 @@ Status StrataElementOp::eval(StrataManifold& value,
 		elementsAdded.push_back(outPtr->globalIndex);
 		/* eval parent expression*/
 
-		//if (paramNameExpMap.count(p.first + "!") == 0) {
-		if (paramNameExpMap.count("!" + p.first) == 0) {
-			DEBUGS("no parent expression found for element " + p.first + " - continuing");
-			continue;
-		}
 		
 		///////////// PARENT //////////
 
+		if (paramNameExpMap.find("!" + p.first) == paramNameExpMap.end()) {
+			DEBUGS("no parent expression found for element " + p.first + " - continuing");
+			continue;
+		}
 		Expression& parentExp = paramNameExpMap["!" + p.first];
 		trimEnds(parentExp.srcStr);
 		

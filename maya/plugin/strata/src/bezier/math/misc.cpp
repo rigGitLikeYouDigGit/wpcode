@@ -2,7 +2,7 @@
 //#include "bezier/math/misc.h"
 #include "misc.h"
 
-namespace bezier {
+namespace bez {
 
     int factorial(int n){
         if (n < 0){

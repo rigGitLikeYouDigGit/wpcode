@@ -4,7 +4,7 @@
 #include "composite_bezier_curve.h"
 
 
-namespace bezier {
+namespace bez {
 
     using std::vector;
 

@@ -99,6 +99,7 @@
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>WIN32;_WINDOWS;CMAKE_INTDIR="Debug";strata_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)</ObjectFileName>
+      <AdditionalOptions>/external:W0 /external:anglebrackets /external:W0 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;CMAKE_INTDIR=\"Debug\";strata_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -312,6 +313,8 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\bezier\math\misc.cpp" />
+    <ClCompile Include="src\bezier\math\tridiagonal.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\MInclude.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\api.h" />
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\bezier\CubicSpline.cpp" />
@@ -381,6 +384,8 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\strataop\mergeOp.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\strataop\strataTypes.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stringLib.h" />
+    <ClInclude Include="src\bezier\math\misc.h" />
+    <ClInclude Include="src\bezier\math\tridiagonal.h" />
     <ClInclude Include="src\mixin.h" />
   </ItemGroup>
   <ItemGroup>

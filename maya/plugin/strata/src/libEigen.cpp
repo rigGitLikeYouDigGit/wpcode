@@ -56,20 +56,20 @@ Eigen::Matrix4<T>& translate(
 	return lhs;
 }
 
-Status& ed::splineUVN(
+inline Status& ed::splineUVN(
 	Status& s,
-	//Eigen::Matrix4d& outMat,
-	Eigen::Affine3d& outMat,
-	const Eigen::Spline3d& posSpline,
-	const Eigen::Spline3d& normalSpline,
-	double uvw[3]
+	//Eigen::Matrix4f& outMat,
+	Eigen::Affine3f& outMat,
+	const Eigen::Spline3f& posSpline,
+	const Eigen::Spline3f& normalSpline,
+	float uvw[3]
 ) {
 	/* polar-like coords around spline
 	u is parametre
 	v is rotation
 	w is distance
 	*/
-	uvw[0] = std::min(std::max(uvw[0], 0.0), 1.0);
+	uvw[0] = std::min(std::max(uvw[0], 0.0f), 1.0f);
 
 	Eigen::Vector3f pos = posSpline(uvw[0]).matrix(); // we assume that normal is actually normal, no need to redo double cross here
 	//auto derivatives = posSpline.derivatives<1>(uvw[0], 1);
@@ -78,14 +78,14 @@ Status& ed::splineUVN(
 	Eigen::Vector3f n = normalSpline(uvw[1]).matrix();
 
 	
-	s = makeFrame(s, 
-		outMat.matrix(), pos, tan, n);
-	if (!EQ(uvw[1], 0.0)) {
+	s = makeFrame<float>(s, 
+		outMat, pos, tan, n);
+	if (!EQ(uvw[1], 0.0f)) {
 		/* rotate n times clockwise about tangent*/
-		Eigen::AngleAxisd orient(uvw[1], tan);
+		Eigen::AngleAxisf orient(uvw[1], tan);
 		outMat *= orient;
 	}
-	if (!EQ(uvw[2], 0.0)) {
+	if (!EQ(uvw[2], 0.0f)) {
 		/* rotate n times clockwise about tangent*/
 		outMat.translate(Eigen::Vector3f{ 0.0, 0.0, uvw[2] });
 	}
@@ -93,43 +93,43 @@ Status& ed::splineUVN(
 	return s;
 }
 
-
-Status& ed::splineUVN(
-	Status& s,
-	//Eigen::Matrix4d& outMat,
-	Eigen::Affine3d& outMat,
-	const Eigen::Spline3d& posSpline,
-	const Eigen::Spline3d& normalSpline,
-	double uvw[3]
-) {
-	/* polar-like coords around spline
-	u is parametre
-	v is rotation
-	w is distance
-	*/
-	uvw[0] = std::min(std::max(uvw[0], 0.0), 1.0);
-
-	Eigen::Vector3f pos = posSpline(uvw[0]).matrix(); // we assume that normal is actually normal, no need to redo double cross here
-	//auto derivatives = posSpline.derivatives<1>(uvw[0], 1);
-	Eigen::Vector3f tan = posSpline.derivatives(uvw[0], 1).col(1).matrix();
-	//Eigen::Array3d n = posSpline(uvw[1]);
-	Eigen::Vector3f n = normalSpline(uvw[1]).matrix();
-
-
-	s = makeFrame(s,
-		outMat.matrix(), pos, tan, n);
-	if (!EQ(uvw[1], 0.0)) {
-		/* rotate n times clockwise about tangent*/
-		Eigen::AngleAxisd orient(uvw[1], tan);
-		outMat *= orient;
-	}
-	if (!EQ(uvw[2], 0.0)) {
-		/* rotate n times clockwise about tangent*/
-		outMat.translate(Eigen::Vector3f{ 0.0, 0.0, uvw[2] });
-	}
-
-	return s;
-}
+//
+//Status& ed::splineUVN(
+//	Status& s,
+//	//Eigen::Matrix4f& outMat,
+//	Eigen::Affine3f& outMat,
+//	const Eigen::Spline3d& posSpline,
+//	const Eigen::Spline3d& normalSpline,
+//	double uvw[3]
+//) {
+//	/* polar-like coords around spline
+//	u is parametre
+//	v is rotation
+//	w is distance
+//	*/
+//	uvw[0] = std::min(std::max(uvw[0], 0.0), 1.0);
+//
+//	Eigen::Vector3f pos = posSpline(uvw[0]).matrix(); // we assume that normal is actually normal, no need to redo double cross here
+//	//auto derivatives = posSpline.derivatives<1>(uvw[0], 1);
+//	Eigen::Vector3f tan = posSpline.derivatives(uvw[0], 1).col(1).matrix();
+//	//Eigen::Array3d n = posSpline(uvw[1]);
+//	Eigen::Vector3f n = normalSpline(uvw[1]).matrix();
+//
+//
+//	s = makeFrame(s,
+//		outMat.matrix(), pos, tan, n);
+//	if (!EQ(uvw[1], 0.0)) {
+//		/* rotate n times clockwise about tangent*/
+//		Eigen::AngleAxisd orient(uvw[1], tan);
+//		outMat *= orient;
+//	}
+//	if (!EQ(uvw[2], 0.0)) {
+//		/* rotate n times clockwise about tangent*/
+//		outMat.translate(Eigen::Vector3f{ 0.0, 0.0, uvw[2] });
+//	}
+//
+//	return s;
+//}
 
 
 #define FE_MSQ_METHOD 0
@@ -138,6 +138,13 @@ template <typename MATRIX>
 class MatrixSqrt
 {
 public:
+	typedef typename MATRIX::Scalar ScalT;
+	//using QuatT = Eigen::Quaternion<MATRIX::Scalar>;
+	//typedef typename Eigen::Quaternion<MATRIX::Scalar> QuatT;
+	typedef typename Eigen::Quaternion<ScalT> QuatT;
+	//using AAxisT = Eigen::AngleAxis<MATRIX::Scalar>;
+	//typedef typename Eigen::AngleAxis<MATRIX::Scalar> AAxisT;
+	typedef typename Eigen::AngleAxis<ScalT> AAxisT;
 	MatrixSqrt(void) :
 		m_iterations(1)
 	{}
@@ -173,40 +180,40 @@ inline void MatrixSqrt<MATRIX>::solve(MATRIX& B, const MATRIX& A) const
 	{
 		//Matrix<3, 4, F64> doubleY = AA;
 		//Eigen::Matrix<double, 3, 4> doubleY = AA;
-		Eigen::Matrix4d doubleY = AA;
+		Eigen::Matrix4f doubleY = AA;
 
 		//Quaternion<F64> quat = doubleY;
 		//Eigen::Quaternion<double> quat = doubleY;
 		//Eigen::Quaternion<double> quat(Eigen::AngleAxisd(doubleY));
 		//Eigen::Quaternion<double> quat(doubleY.);
 		//Eigen::Matrix3d doubleYRot(doubleY.reshaped(3, 3));
-		Eigen::Matrix3d doubleYRot(doubleY.block<3, 3>(0,0, 3, 3));
-		Eigen::Quaternion<double> quat(doubleYRot);
+		Eigen::Matrix3f doubleYRot(doubleY.block<3, 3>(0,0, 3, 3));
+		QuatT quat(doubleYRot);
 
 		//F64 radians;
-		double radians;
+		ScalT radians;
 		//Vector<3, F64> axis;
 		Eigen::Vector3f axis;
 		//quat.computeAngleAxis(radians, axis);
 		//Eigen::AngleAxisd angleAxis(quat);
 		//Eigen::AngleAxisd angleAxis{ quat };
-		Eigen::AngleAxisd angleAxis;
+		AAxisT angleAxis;
 		angleAxis = quat;
 		
 		//quat.computeAngleAxis(radians, axis);
 		radians = angleAxis.angle();
 		axis = angleAxis.axis();
 
-		const double tiny = 0.03;
-		const double tinyAngle = tiny * radians;
+		const ScalT tiny = 0.03f;
+		const ScalT tinyAngle = tiny * radians;
 
 		//Quaternion<F64> forward(0.5 * tinyAngle, axis);
-		Eigen::Quaterniond forward(Eigen::AngleAxis<double>(0.5 * tinyAngle, axis));
+		QuatT forward(AAxisT(0.5f * tinyAngle, axis));
 		//const Matrix<3, 4, F64> correct64(forward);
 		//const Eigen::Matrix<double, 3, 4> correct64(forward);
 		//correction = forward.toRotationMatrix();
 		DEBUGQuat("forward", forward.coeffs());
-		Eigen::Matrix4d correction;
+		Eigen::Matrix4f correction;
 		correction.setIdentity();
 		correction.block<3,3>(0, 0, 3, 3) = forward.toRotationMatrix();
 
@@ -214,18 +221,18 @@ inline void MatrixSqrt<MATRIX>::solve(MATRIX& B, const MATRIX& A) const
 		//correction = correct64;
 		//const SpatialVector forwardT = 0.5 * tiny * doubleY.translation();
 		Eigen::Vector3f forwardT;
-		forwardT = 0.5 * tiny * doubleY.block<1, 3>(3, 0, 1, 3);
+		forwardT = 0.5f * tiny * doubleY.block<1, 3>(3, 0, 1, 3);
 		//forwardT = 0.5 * tiny * doubleY.block<3,3>(0, 3, 3, 1);
 		DEBUGS("forwardT");
 		DEBUGMV(forwardT);
 
-		translate<double>(correction, forwardT);
+		translate<ScalT>(correction, forwardT);
 		DEBUGMMAT("correction end", toMMatrix(correction));
 
 		//Quaternion<F64> reverse(-tinyAngle, axis);
-		Eigen::Quaterniond reverse(Eigen::AngleAxisd(-tinyAngle, axis));
+		QuatT reverse(AAxisT(-tinyAngle, axis));
 		//const Matrix<3, 4, F64> tweak64(reverse);
-		//const Eigen::Matrix4d tweak64(reverse);
+		//const Eigen::Matrix4f tweak64(reverse);
 		//MATRIX tweak = tweak64;
 		MATRIX tweak;
 		tweak.setIdentity();
@@ -241,7 +248,7 @@ inline void MatrixSqrt<MATRIX>::solve(MATRIX& B, const MATRIX& A) const
 			doubleY(3, 2)
 		);
 		reverseT *= -tiny;
-		translate<double>(tweak, reverseT);
+		translate<ScalT>(tweak, reverseT);
 
 #if FE_MSQ_METHOD!=0
 		correction(3, 3) = 1;
@@ -301,7 +308,8 @@ inline void MatrixSqrt<MATRIX>::solve(MATRIX& B, const MATRIX& A) const
 	{
 		//U32 last = current;
 		UINT32 last = current;
-		current = !current;
+		//current = !current;
+		current = ~current;
 
 #if FE_MSQ_DEBUG
 		feLog("\n>>>> iteration %d\nY\n%s\nZ\n%s\n", iteration,
@@ -583,11 +591,11 @@ MMatrixArray ed::curveMatricesFromDriverDatas(
 		DEBUGMMAT("ctlMat:", controlMats[i]);
 
 		// get relative matrix from this point to the next
-		Eigen::Matrix4d relMat = toEigen(controlMats[i].inverse() * controlMats[i + 1]);
+		Eigen::Matrix4f relMat = toEigen(controlMats[i].inverse() * controlMats[i + 1]);
 
 
 		// get square root of matrix, for single midpoint; cubic for 2, etc
-		/*Eigen::MatrixPower<Eigen::Matrix4d> relMatPower(relMat);
+		/*Eigen::MatrixPower<Eigen::Matrix4f> relMatPower(relMat);
 
 		result.append(toMMatrix(relMatPower(2)));*/
 
@@ -596,16 +604,16 @@ MMatrixArray ed::curveMatricesFromDriverDatas(
 		/*result.append(toMMatrix(matRoot));
 		continue;*/
 
-		//Eigen::Matrix4d sqrtResult;
+		//Eigen::Matrix4f sqrtResult;
 		//sqr.solve(sqrtResult, relMat);
-		//result.append(controlMats[i] * toMMatrix<Eigen::Matrix4d>(sqrtResult));
+		//result.append(controlMats[i] * toMMatrix<Eigen::Matrix4f>(sqrtResult));
 		
 		//continue;
 
-		//Eigen::MatrixPower<Eigen::Matrix4d> relMatPower(relMat);
+		//Eigen::MatrixPower<Eigen::Matrix4f> relMatPower(relMat);
 		////auto step = relMatPower(1.0 / float(segmentPointCount + 1));
 		//auto step = 0.5;
-		//Eigen::Matrix4d sqrtResult = relMatPower(step);
+		//Eigen::Matrix4f sqrtResult = relMatPower(step);
 		//
 		//MMatrix sqrtMMat = toMMatrix(sqrtResult);
 		//sqrtMMat = controlMats[i] * sqrtMMat * MMatrix::identity;
@@ -613,7 +621,7 @@ MMatrixArray ed::curveMatricesFromDriverDatas(
 		//result.append(sqrtMMat);
 
 
-		MatrixSqrt<Eigen::Matrix4d> sq;
+		MatrixSqrt<Eigen::Matrix4f> sq;
 		sq.setIterations(rootIterations);
 		auto matResult = toEigen(MMatrix(controlMats[i]));	
 		sq.solve(matResult, relMat);
@@ -630,12 +638,12 @@ MMatrixArray ed::curveMatricesFromDriverDatas(
 		segmentPointCount = 1;
 		for (size_t n = 0; n < segmentPointCount; n++) {
 
-			//result.push_back(controlMats[i] * toMMatrix<Eigen::Matrix4d>(
-			/*result.append(controlMats[i] * toMMatrix<Eigen::Matrix4d>(
+			//result.push_back(controlMats[i] * toMMatrix<Eigen::Matrix4f>(
+			/*result.append(controlMats[i] * toMMatrix<Eigen::Matrix4f>(
 				relMatPower(float(n + 1) / float(segmentPointCount + 1))
 			));*/
 
-			//MatrixSqrt<Eigen::Matrix4d> sq;
+			//MatrixSqrt<Eigen::Matrix4f> sq;
 			//sq.setIterations(rootIterations);
 			//auto matResult = toEigen(MMatrix(controlMats[i]));
 			//
@@ -648,11 +656,11 @@ MMatrixArray ed::curveMatricesFromDriverDatas(
 
 
 
-			//Eigen::Matrix4d matResult;
-			//MatrixPower<Eigen::Matrix4d> mp;
+			//Eigen::Matrix4f matResult;
+			//MatrixPower<Eigen::Matrix4f> mp;
 			//double ratio = float(n + 1) / float(segmentPointCount + 1);
 			//mp.solve<double>(matResult, relMat, ratio);
-			//result.append(controlMats[i] * toMMatrix<Eigen::Matrix4d>(
+			//result.append(controlMats[i] * toMMatrix<Eigen::Matrix4f>(
 			//	matResult
 			//));
 

@@ -238,7 +238,7 @@ namespace ed {
 		Eigen::Vector3f postTan = { 1, 0, 0 }; // tangent after point
 		float normal[3] = { NAN, 0, 1 }; // normal of curve at this point - if left NAN is unused
 		float orientWeight = 0.0; // how strongly matrix should contribute to curve tangent, vs auto behaviour
-		double continuity = 1.0; // how sharply to break tangents - maybe just use this to scale tangents in?
+		float continuity = 1.0; // how sharply to break tangents - maybe just use this to scale tangents in?
 		float twist = 0.0; // how much extra twist to add to point, on top of default curve frame
 		Eigen::Affine3f finalMatrix = Eigen::Affine3f::Identity();
 
@@ -268,11 +268,15 @@ namespace ed {
 
 		int index = -1; // feels cringe to copy the index on all of these  
 		// TEEECHNICALLLY this should be independent of any driver - 
-		Eigen::ArrayXd weights; // per-dense-point weights for this parent
-		Eigen::ArrayX3d cvs; // UVN bezier control points - ordered {pt, tanOut, tanIn, pt, tanOut...} etc
+		Eigen::ArrayXf weights; // per-dense-point weights for this parent
+		Eigen::ArrayX3f cvs; // UVN bezier control points - ordered {pt, tanOut, tanIn, pt, tanOut...} etc
 		bez::CubicBezierPath parentCurve; // curve in UVN space of parent, used for final interpolation
-		//using thisT::thisT;
 
+		Eigen::MatrixX3f finalNormals; // worldspace normals
+
+		inline bez::ClosestPointSolver* closestSolver() {
+			return finalCurve.getSolver();
+		}
 	};
 
 
@@ -299,16 +303,16 @@ namespace ed {
 		// become caveman
 
 		//Eigen::MatrixX3d finalPositions; // dense worldspace positions
-		bez::CubicBezierPath finalCurve; // dense? final curve
-		Eigen::MatrixX3d finalNormals; // worldspace normals
+		//bez::CubicBezierPath finalCurve; // dense? final curve
+		//Eigen::MatrixX3f finalNormals; // worldspace normals
 
 
 		DECLARE_DEFINE_CLONABLE_METHODS(thisT)
 
 
-		inline bez::ClosestPointSolver* closestSolver() {
+		/*inline bez::ClosestPointSolver* closestSolver() {
 			return finalCurve.getSolver();
-		}
+		}*/
 
 		inline bool isClosed() {
 			return driverDatas[0].finalMatrix.translation().isApprox(
@@ -335,7 +339,7 @@ namespace ed {
 			return static_cast<int>((driverDatas.size() - 1) * 3 + 2);
 		}
 
-		inline void rawBezierCVs(Eigen::Array3Xd& arr) {
+		inline void rawBezierCVs(Eigen::Array3Xf& arr) {
 			// ARRAY MUST BE CORRECTLY SIZED FIRST from nBezierCVs()
 			
 			//arr.resize(nBezierCVs());
@@ -771,13 +775,13 @@ namespace ed {
 		/*
 		spatial functions
 		*/
-		Status& pointPosAt(Status& s, Eigen::Vector3f& out, int elIndex, double uvn[3]) {
+		Status& pointPosAt(Status& s, Eigen::Vector3f& out, int elIndex, float uvn[3]) {
 			SPointData& p = pointDatas[elIndex];
 			//out = p.finalMatrix * MVector(uvn);			
 			out = p.finalMatrix * Eigen::Vector3f(uvn);
 			return s;
 		}
-		Status& edgePosAt(Status& s, Eigen::Vector3f& out, int elIndex, double uvn[3]) {
+		Status& edgePosAt(Status& s, Eigen::Vector3f& out, int elIndex, float uvn[3]) {
 			/* as above, but just return position -
 			may allow faster sampling in future
 			
@@ -785,13 +789,13 @@ namespace ed {
 			*/
 			
 			SEdgeData& e = edgeDatas[elIndex];
-			Eigen::Affine3d amat;
+			Eigen::Affine3f amat;
 			//s = splineUVN(s, amat, e.posSpline, e.normalSpline, uvn);
 			//out = MVector(amat.translation().data());
 			out = Eigen::Vector3f(amat.translation().data());
 			return s;
 		}
-		Status& posAt(Status& s, Eigen::Vector3f& out, int globalIndex, double uvn[3]) {
+		Status& posAt(Status& s, Eigen::Vector3f& out, int globalIndex, float uvn[3]) {
 			/* as above, but just return position -
 			may allow faster sampling in future*/
 			SElement* el = getEl(globalIndex);
@@ -951,9 +955,9 @@ namespace ed {
 			* 
 			*/
 			int parentElIndex = getEl(pData.index)->elIndex;
-			Eigen::Array3Xd cvs(eData.nBezierCVs());
+			Eigen::Array3Xf cvs(eData.nBezierCVs(), 3);
 			eData.rawBezierCVs(cvs);
-			Eigen::Affine3d outMat;
+			Eigen::Affine3f outMat;
 			for (int i = 0; i < cvs.size(); i++) {
 				
 				tempFn(cvs.row(i));
@@ -991,7 +995,7 @@ namespace ed {
 
 		Status& buildEdgeDrivers(Status& s, SEdgeData& eData) {
 
-			Eigen::MatrixX3f driverPoints(eData.driverDatas.size());
+			Eigen::MatrixX3f driverPoints(static_cast<int>(eData.driverDatas.size()), 3);
 			std::vector<float> inContinuities(driverPoints.rows());
 
 
@@ -1132,7 +1136,7 @@ namespace ed {
 			Eigen::Vector3f uvn;
 			for (int i = 0; i < d.densePointCount(); i++) {
 				n = arrStartIndex + (i * 4);
-				u = 1.0 / double(d.densePointCount() - 1) * double(i);
+				u = 1.0f / float(d.densePointCount() - 1) * float(i);
 				uvn[0] = u;
 				uvn[1] = 0; uvn[2] = 0;
 				s = edgeMatrixAt(s, aff, elIndex, uvn);

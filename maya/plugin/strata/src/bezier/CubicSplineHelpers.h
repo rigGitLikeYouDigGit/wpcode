@@ -1,6 +1,8 @@
 #pragma once
-
+#ifndef BEZ_CUBIC_SPLINE_HELPERS_H
+#define BEZ_CUBIC_SPLINE_HELPERS_H
 #include <Eigen/Dense>
+typedef unsigned int uint32;
 
 namespace bez
 {
@@ -8,7 +10,7 @@ namespace bez
     {
         float x, y, z;
 
-        WorldSpace() {}
+        WorldSpace() : x(0), y(0), z(0) {}
         WorldSpace(const float f) : x(f), y(f), z(f) {}
         WorldSpace(
             const float x, 
@@ -17,41 +19,48 @@ namespace bez
         WorldSpace(const float* d) : x(d[0]), y(d[1]), z(d[2]) {
         }
         WorldSpace(const Eigen::Vector3f& v) : x(float(v[0])), y(float(v[1])), z(float(v[2])) {}
-        WorldSpace(const Eigen::Vector3f& v) : x(float(v[0])), y(float(v[1])), z(float(v[2])) {}
+        WorldSpace(const Eigen::Vector3f&& v) : x(float(v[0])), y(float(v[1])), z(float(v[2])) {}
         WorldSpace(const Eigen::Array3d& v) : x(float(v[0])), y(float(v[1])), z(float(v[2])) {}
         WorldSpace(const Eigen::Array3f& v) : x(float(v[0])), y(float(v[1])), z(float(v[2])) {}
-        
+
     };
 
-    WorldSpace operator* (float c, const WorldSpace& v)
+    // sometimes marking things static fixes "already-defined" linker errors
+    // sometimes it's marking them inline
+    // I've given up trying to understand  
+    static WorldSpace operator* (float c, const WorldSpace& v)
     {
         WorldSpace cv = { c * v.x, c * v.y, c * v.z };
         return cv;
     }
 
-    WorldSpace operator+ (const WorldSpace& lhs, const WorldSpace& rhs)
+    static WorldSpace operator+ (const WorldSpace& lhs, const WorldSpace& rhs)
     {
         WorldSpace v = { lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z };
         return v;
     }
 
-    WorldSpace operator- (const WorldSpace& lhs, const WorldSpace& rhs)
+    static WorldSpace operator- (const WorldSpace& lhs, const WorldSpace& rhs)
     {
         WorldSpace v = { lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z };
         return v;
     }
 
-    float Dot(const WorldSpace& lhs, const WorldSpace& rhs)
+    static float Dot(const WorldSpace& lhs, const WorldSpace& rhs)
     {
         return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
     }
 
-    float LengthSquared(const WorldSpace& v)
+    static float LengthSquared(const WorldSpace& v)
     {
         return Dot(v, v);
     }
 
-    Eigen::Vector3f toEig(WorldSpace& v) {
+    static Eigen::Vector3f toEig(WorldSpace& v) {
         return Eigen::Map<Eigen::Vector3f>(&v.x);
     }
+
+
+
 }
+#endif

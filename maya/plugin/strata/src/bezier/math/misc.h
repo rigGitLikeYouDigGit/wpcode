@@ -1,7 +1,7 @@
 #ifndef BEZIER_MISC_H
 #define BEZIER_MISC_H
 
-namespace bezier {
+namespace bez {
     int factorial(int n);
 }
 

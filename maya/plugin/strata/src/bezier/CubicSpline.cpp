@@ -1,5 +1,5 @@
 #include "CubicSpline.h"
-#include "CubicSplineHelpers.inl"
+//#include "CubicSplineHelpers.inl"
 
 #include <array>
 #include <vector>
@@ -14,6 +14,7 @@
 
 namespace bez
 {
+
     // The Sturm method of finding roots uses subdivision. 
     const float kTolerance = 0.00001f;
 
@@ -141,10 +142,10 @@ namespace bez
         */
         auto r = global_to_local_param(t);
         if (t > 0.999) { // sample backwards, negate result vector
-            Eigen::Vector3f tanPos = toEig(splines_[r.first].get()->EvaluateAt(t - 0.0001));
+            Eigen::Vector3f tanPos = toEig(splines_[r.first].get()->EvaluateAt(t - 0.0001f));
             return (1.0f / 0.0001f) * (basePos - tanPos);
         }
-        Eigen::Vector3f tanPos = toEig(splines_[r.first].get()->EvaluateAt(t + 0.0001));
+        Eigen::Vector3f tanPos = toEig(splines_[r.first].get()->EvaluateAt(t + 0.0001f));
         return (1.0f / 0.0001f) * tanPos - basePos;
 
     }
@@ -159,7 +160,7 @@ namespace bez
         Eigen::Vector3f result = toEig(ClosestPointToPath(position, solver, u));
         // sample curve once more to get tangent // save one sample by reusing orig result
         
-        Eigen::Vector3f tan = tangentAt(u, result);
+        tan = tangentAt(u, result);
         return result;
     }
 

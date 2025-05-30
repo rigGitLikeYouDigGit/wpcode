@@ -463,7 +463,7 @@ namespace ed {
 			}
 			virtual InfixParselet* clone_impl() const override { return new InfixParselet(*this); };
 
-			MAKE_COPY_FNS(InfixParselet);
+			MAKE_COPY_FNS(InfixParselet)
 
 			virtual Status parse(
 				ExpGraph& graph,
@@ -663,7 +663,7 @@ namespace ed {
 				InfixParselet::copyOther(other);
 			}
 
-			MAKE_COPY_FNS(CallAtom);
+			MAKE_COPY_FNS(CallAtom)
 
 			virtual Status parse(
 				ExpGraph& graph,
@@ -708,7 +708,7 @@ namespace ed {
 				InfixParselet::copyOther(other);
 			}
 
-			MAKE_COPY_FNS(AccessAtom);
+			MAKE_COPY_FNS(AccessAtom)
 			virtual Status eval(std::vector<ExpValue>& argList, ExpStatus* expStat, std::vector<ExpValue>& result, Status& s)
 			{
 
@@ -728,7 +728,7 @@ namespace ed {
 			void copyOther(const GetItemAtom& other) {
 				InfixParselet::copyOther(other);
 			}
-			MAKE_COPY_FNS(GetItemAtom);
+			MAKE_COPY_FNS(GetItemAtom)
 			virtual Status eval(std::vector<ExpValue>& argList, ExpStatus* expStat, std::vector<ExpValue>& result, Status& s)
 			{
 
@@ -755,7 +755,7 @@ namespace ed {
 				InfixParselet::copyOther(other);
 			}
 
-			MAKE_COPY_FNS(ResultAtom);
+			MAKE_COPY_FNS(ResultAtom)
 			virtual Status eval(std::vector<ExpValue>& argList, ExpStatus* expStat, std::vector<ExpValue>& result, Status& s)
 			{
 				if (argList.size() == 0) { // nothing to do
@@ -788,7 +788,7 @@ namespace ed {
 			void copyOther(const PlusAtom& other) {
 				InfixParselet::copyOther(other);
 			}
-			MAKE_COPY_FNS(PlusAtom);
+			MAKE_COPY_FNS(PlusAtom)
 			virtual Status eval(std::vector<ExpValue>& argList, ExpStatus* expStat, std::vector<ExpValue>& result, Status& s)
 			{
 				if (!(argList.size() == 2)) { // check only name of variable and variable value passed

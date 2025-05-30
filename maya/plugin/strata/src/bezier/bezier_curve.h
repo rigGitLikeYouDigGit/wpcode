@@ -8,7 +8,7 @@
 #include "math/misc.h"
 
 
-namespace bezier {
+namespace bez {
     using std::vector;
     using Eigen::VectorXd;
     using Eigen::MatrixXd;

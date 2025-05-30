@@ -12,13 +12,13 @@ namespace ed {
 	using std::min;
 	using std::max;
 
-	BETTER_ENUM(STDriverType, int, point, line, face); // used in maya enum attr
+	BETTER_ENUM(STDriverType, int, point, line, face) // used in maya enum attr
 
 	/* handy way to work more easily with vertex buffer memory - cast
 	it to vector of float types like this */
 	struct Float2
 	{
-		Float2() {}
+		Float2() { x = 0.0f; y = 0.0f; }
 		Float2(float x, float y)
 			: x(static_cast<float>(x)), y(static_cast<float>(y)) {}
 		Float2(MVector v)
@@ -49,9 +49,9 @@ namespace ed {
 		Float3(Eigen::Vector3f&& v)
 			: x(static_cast<float>(v[0])), y(static_cast<float>(v.data()[1])), z(static_cast<float>(v.data()[2])) {
 		}
-		Float3(Eigen::Matrix<float, 3, 1, 0, 3, 1>&& v)
-			: x(static_cast<float>(v[0])), y(static_cast<float>(v.data()[1])), z(static_cast<float>(v.data()[2])) {
-		}
+		//Float3(Eigen::Matrix<float, 3, 1, 0, 3, 1>&& v)
+		//	: x(static_cast<float>(v[0])), y(static_cast<float>(v.data()[1])), z(static_cast<float>(v.data()[2])) {
+		//}
 		Float3(Eigen::Matrix<double, 3, 1, 0, 3, 1> v)
 			: x(static_cast<float>(v.data()[0])), y(static_cast<float>(v.data()[1])), z(static_cast<float>(v.data()[2])) {}
 		Float3(Eigen::Array<double, 3, 1, 0, 3, 1> v)
@@ -65,10 +65,8 @@ namespace ed {
 			z = v[2];
 			return *this;
 		}
-		Float3& operator=(const Eigen::Vector3f& v) {
-			return operator=(v.data());
-		}
-		Float3& operator=(const Eigen::MatrixBase<float>& v) {
+
+		Float3& operator=(const Eigen::Vector3<float>& v) {
 			x = *v.begin();
 			y = *(v.begin()+1);
 			z = *(v.begin()+2);
@@ -91,17 +89,27 @@ namespace ed {
 	inline T sus(T in) {
 		/* signed-to-unsigned conversion -
 		[-1,1] -> [0,1] */
-		return (in + 1.0) / 2.0;
+		return (in + T(1.0)) / T(2.0);
 	}
 
 	template<typename T>
 	inline T lerp( T a, T b, T t ) {
-		return b * t + (1.0 - t) * b;
+		return b * t + (T(1.0) - t) * b;
 	}
 
 	template<typename T, typename N>
 	inline T lerp( T a, T b, N t) {
-		return b * t + (1.0 - t) * b;
+		return b * t + (N(1.0f) - t) * b;
+	}
+
+	template Eigen::Vector3f lerp<Eigen::Vector3f, float>(Eigen::Vector3f a, Eigen::Vector3f b, float t);
+
+	inline float lerp(float a, float b, float t) {
+		return b * t + (float(1.0f) - t) * b;
+	}
+
+	inline Eigen::Vector3f lerp(Eigen::Vector3f a, Eigen::Vector3f b, float t) {
+		return b * t + (float(1.0f) - t) * b;
 	}
 
 	template<typename T>
@@ -162,24 +170,24 @@ namespace ed {
 	T sminQ(T a, T b, T k)
 	{
 		k *= 4.0;
-		T h = max(k - abs(a - b), 0.0) / k;
-		return min(a, b) - h * h * k * (1.0 / 4.0);
+		T h = max(k - abs(a - b), T(0.0)) / k;
+		return min(a, b) - h * h * k * (T(1.0) / T(4.0));
 	}
 	// cubic polynomial
 	template<typename T>
 	T sminC(T a, T b, T k)
 	{
 		k *= 6.0;
-		T h = max(k - abs(a - b), 0.0) / k;
-		return min(a, b) - h * h * h * k * (1.0 / 6.0);
+		T h = max(k - abs(a - b), T(0.0)) / k;
+		return min(a, b) - h * h * h * k * T(1.0 / 6.0);
 	}
 	// quartic polynomial
 	template<typename T>
 	T sminQuart(T a, T b, T k)
 	{
-		k *= 16.0 / 3.0;
-		T h = max(k - abs(a - b), 0.0) / k;
-		return min(a, b) - h * h * h * (4.0 - h) * k * (1.0 / 16.0);
+		k *= T(16.0 / 3.0);
+		T h = max(k - abs(a - b), T(0.0)) / k;
+		return min(a, b) - h * h * h * (T(4.0) - h) * k * T(1.0 / 16.0);
 	}
 	// circular
 	template<typename T>
@@ -302,63 +310,4 @@ namespace ed {
 	so we still pay cubic cost anyway
 	*/
 
-	template<typename T>
-	Eigen::MatrixX3f makeRMFNormals(
-		const bez::CubicBezierPath& crv,
-		const Eigen::MatrixX3f& targetNormals,
-		const Eigen::VectorXf& normalUVals,
-		const int nSamples
-	) {/* 
-		normals are target vectors, normalUVals are targets to match
-		TODO: maybe get twist in here
-
-		at each targetNormal uValue, normals of RMF are pointed as close to that direction as
-		we can
-
-		having defined normals means we can parallelise between each one? 
-
-		for now just do single pass reflection RMF from first normal,
-		TODO
-
-		using double reflection system from the microsoft paper
-
-		 0 to n − 1 do
-		Begin
-			1) v1 := xi+1 − xi ;						/*compute reflection vector of R1. 
-			2) c1 := v1 · v1;
-			3) rLi := ri − (2/c1) ∗ (v1 · ri) ∗ v1;		/*compute rL		i = R1ri . 
-			4) tLi := ti − (2/c1) ∗ (v1 · ti) ∗ v1;		/*compute tL	i = R1ti . 
-			5) v2 := ti+1 − tLi ;						/*compute reflection vector of R2. 
-			6) c2 := v2 · v2;
-			7) ri+1 := rLi − (2/c2) ∗ (v2 · rLi ) ∗ v2; /*compute ri+1 = R2rLi . 
-			8) si+1 := ti+1 × ri+1;						/*compute vector si+1 of Ui+1. 
-			9) Ui+1 := (ri+1,si+1, ti+1);
-
-		*/
-
-		Eigen::MatrixX3f resultNs(nSamples);
-
-		//Eigen::Vector3f ri = targetNormals.row(0);
-		resultNs.row(0) = targetNormals.row(0);
-
-		for (int i = 0; i < nSamples - 1; i++) {
-			float param = (0.9999 / float(nSamples-1) * float(i));
-			float nextParam = (1.0 / float(nSamples - 1) * float(i + 1));
-			auto xi = crv.eval(param);
-			auto ti = (crv.eval(param + 0.0001) - xi).normalized();
-
-			auto xiPlus1 = crv.eval(nextParam);
-			auto v1 = xiPlus1 - xi;
-			auto c1 = v1.dot(v1);
-			auto rLi = resultNs.row(i) - (2.0 / c1) * (v1.dot(resultNs.row(i))) * v1;
-			auto tLi = ti - (2.0 / c1) * (v1.dot(ti)) * v1;
-
-			auto tiPlus1 = (crv.eval(nextParam + 0.0001) - xiPlus1).normalized(); // next point's tangent
-			auto v2 = tiPlus1 - tLi;
-			auto c2 = v2.dot(v2);
-			auto riPlus1 = rLi - (2.0 / c2) * (v2.dot(rLi)) * v2; // final reflected normal
-			resultNs.row(i + 1) = riPlus1.normalized();
-		}
-		return resultNs;
-	}
 }

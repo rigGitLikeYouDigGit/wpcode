@@ -8,7 +8,7 @@
 
 #include "curve.h"
 #include "bezier_curve.h"
-namespace bezier {
+namespace bez {
 
     using std::vector;
     using Eigen::VectorXd;
@@ -24,7 +24,7 @@ namespace bezier {
         /**
          * Construct empty Bezier curve
          */
-        explicit CompositeBezierCurve(){}
+        explicit CompositeBezierCurve() { _dimension = 3; }
 
         /**
          * Construct the composite Bezier curve.

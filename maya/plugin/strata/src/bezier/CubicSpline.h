@@ -39,8 +39,8 @@ namespace bez
         using thisT = CubicBezierSpline;
 
         //using thisT::thisT;
-        //DECLARE_DEFINE_CLONABLE_METHODS(thisT)
         DECLARE_DEFINE_CLONABLE_METHODS(thisT)
+
 
         CubicBezierSpline(const WorldSpace* control_points);
         float ClosestPointToSpline(const WorldSpace& position, const QuinticSolver* solver, WorldSpace& closest, float& u) const;

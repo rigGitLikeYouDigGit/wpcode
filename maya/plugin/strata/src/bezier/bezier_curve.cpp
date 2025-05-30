@@ -1,6 +1,7 @@
 #include "bezier_curve.h"
+#include "math/misc.h"
 
-namespace bezier {
+namespace bez {
     using std::vector;
     using Eigen::VectorXd;
     using Eigen::MatrixXd;
@@ -21,8 +22,8 @@ namespace bezier {
 
         // initialize control matrix
         _control_matrix.resize(_degree + 1, _dimension);
-        for(int j = 0; j < _degree+1; j++){
-            for (int i = 0; i < _dimension; ++i) {
+        for(unsigned int j = 0; j < _degree+1; j++){
+            for (unsigned int i = 0; i < _dimension; ++i) {
                 _control_matrix(j, i) = _control_points[j](i);
             }
         }
@@ -55,7 +56,7 @@ namespace bezier {
         }
         VectorXd tvec(_degree + 1);
         double t_pow = 1;
-        for(int j = 0; j < _degree+1; j++){
+        for(unsigned int j = 0; j < _degree+1; j++){
             tvec(j) = t_pow;
             t_pow *= t;
         }

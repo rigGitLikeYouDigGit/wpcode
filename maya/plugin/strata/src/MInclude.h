@@ -60,12 +60,6 @@ so we mute all warnings from including maya headers
 #include <maya/MFnMatrixData.h>
 #include <maya/MFnStringData.h>
 
-#include <maya/MDrawRegistry.h>
-#include <maya/MUserData.h>
-#include <maya/MDrawContext.h>
-#include <maya/MHWGeometryUtilities.h>
-#include <maya/MGlobal.h>
-
 #include <maya/MEventMessage.h>
 #include <maya/MDagMessage.h>
 #include <maya/MDGMessage.h>
