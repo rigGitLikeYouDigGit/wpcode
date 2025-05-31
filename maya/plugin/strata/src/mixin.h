@@ -34,115 +34,105 @@ namespace ed {
 	/*
 	copying and assigning, no support for polymorphism or virtual pointer stuff.
 	a class implementing this should let any OWNER be trivially copiable
-
-	DirtyGraph(DirtyGraph const& other) {
-				copyOther(other);
-			}
-			DirtyGraph(DirtyGraph&& other) = default;
-			DirtyGraph& operator=(DirtyGraph const& other) {
-				copyOther(other);
-			}
-			DirtyGraph& operator=(DirtyGraph&& other) = default;
-
-			auto clone() const { return std::unique_ptr<DirtyGraph>(clone_impl()); }
-			template <typename T>
-			auto clone() const { return std::unique_ptr<T>(static_cast<T*>(clone_impl())); }
-			auto cloneShared() const { return std::shared_ptr<DirtyGraph>(clone_impl()); }
-			template <typename T>
-			auto cloneShared() const { return std::shared_ptr<T>(static_cast<T*>(clone_impl())); }
-			virtual DirtyGraph* clone_impl() const {
-				auto newPtr = new DirtyGraph(*this);
-				newPtr->copyOther(*this);
-				return newPtr;
-			};
-
 	*/
 
 
-	/*thisT(thisT const& other) {
-		\
-			this_().copyOther(other); \
-	}\*/
 #define DECLARE_DEFINE_CLONABLE_METHODS(classT)\
-		thisT(){\
-			this2()->initEmpty();\
+		classT(){\
+			thisRef().initEmpty();\
 		}\
-		thisT(thisT const& other) noexcept{\
+classT(const classT& other) noexcept{\
 			copyOther(other);\
 		}\
-		thisT(thisT&& other) noexcept{\
-			copyOther(other);\
-		}\
-		classT& operator=(classT&& other) noexcept{\
-			copyOther(other);\
-			return *this;\
+	classT(classT&& other) noexcept{\
+			takeOther(other);\
 		}\
 		classT& operator=(const classT& other) noexcept{\
 			copyOther(other);\
 			return *this;\
 		}\
-		//classT& operator=(classT const& other) {\
-		//	copyOther(other);\
-		//	return *this;\
-		//}\
+classT& operator=(classT&& other) noexcept{\
+			takeOther(other);\
+			return *this;\
+		}\
 
 
-
+	// ok can't do a common base template for mixins yet, that's fine - 
+	// this is good enough for now
 	template <typename T>
-	struct StaticClonable : MixinBase<T> {
-		using thisT = StaticClonable<T>;
+	struct StaticClonable// : public MixinBase<T> 
+	{
+		using thisT = typename StaticClonable<T>;
 
-		//StaticClonable<T>() {}
-		inline const thisT& this_() const {
-			//return static_cast<const thisT&>(*this);
-			return *static_cast<const thisT*>(this);
+		// marking this const or not has big impact - has to return const reference, if marked const
+		T& thisRef() {
+			T& ref = static_cast<T&>(*this);
+			//thisT& ref = static_cast<T&>(*this);
+			return ref;
 		}
-		inline thisT* this2() {
-			return static_cast<thisT*>(this);
-		}
-		using uniquePtrT = std::unique_ptr<thisT>;
-		using sharedPtrT = std::shared_ptr<thisT>;
 
-		void copyOther(const thisT& other) {}
+		const T& thisConstRef() const {
+			return static_cast<const T&>(*this);
+		}
+
+		T* thisPtr() {
+			return static_cast<T*>(this);
+		}
+
+		thisT& thisTRef() {
+			return *(static_cast<thisT*>(this));
+		}
+
+		using uniquePtrT = std::unique_ptr<T>;
+		using sharedPtrT = std::shared_ptr<T>;
+
+
+		void copyOther(const T& other) {
+			// OVERRIDE this for main copying logic 
+			//std::cout << "BASE copy other\n";
+		}
+
+		void takeOther(T& other) {
+			/* override to do proper moving on complex types*/
+			copyOther(other);
+		}
 
 		void initEmpty() {} // do setup for default empty constructor
 
-		DECLARE_DEFINE_CLONABLE_METHODS(thisT)
-
-
-		thisT cloneOnStack() const { /// ???
-			//thisT result();
-			thisT result;
-			//result.copyOther(this_());
-			//result.copyOther(*this);
-			result.copyOther(*this);
-			return result;
-		}
-
-		auto cloneNew() const {
+		T* cloneNew() const {
 			// add any logic here in real class
-			auto p = new thisT(*this);
-			//p->copyOther(this_());
-			p->copyOther(*this);
+			T* p = new T(thisConstRef());
+			//std::cout << "BASE after cloneNew init\n";
+
+			//const T& ref = *this; // this seems to cause a copy?
 			return p;
 		}
+		T cloneOnStack() { /// ???
+			T result;
+			result.copyOther(thisRef());
+			return result;
+		}
+		T cloneOnStack() const { /// ???
+			T result;
+			result.copyOther(thisConstRef());
+			return result;
+		}
 		inline uniquePtrT cloneUnique() const {
-			return std::unique_ptr<thisT>(std::move(cloneNew()));
+			return std::unique_ptr<T>(std::move(cloneNew()));
 		}
 		inline sharedPtrT cloneShared() const {
-			return std::shared_ptr<thisT>(cloneNew());
+			return std::shared_ptr<T>(cloneNew());
 		}
 
 		static std::vector<uniquePtrT> cloneUniquePtrVector(const std::vector<uniquePtrT>& other) {
 			std::vector<uniquePtrT> result;
 			result.reserve(other.size());
 			for (size_t i = 0; i < other.size(); i++) {
-				result.push_back( other.at(i)->cloneUnique() );
+				result.push_back(other.at(i)->cloneUnique());
 			}
-			
+
 			return result;
 		}
-
 	};
 
 
@@ -161,4 +151,25 @@ namespace ed {
 
 		
 	};
+
+
+
+	class TestClonable : public StaticClonable<TestClonable>{
+
+
+	};
+
+	
+	static void testClonables() {
+
+		TestClonable s;
+		TestClonable& sRef = s.thisRef();
+
+		//TestClonable* p = s.tThis();
+
+		TestClonable* newClonable = s.cloneNew();
+
+
+	}
+
 }

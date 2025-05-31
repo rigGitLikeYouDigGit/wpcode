@@ -81,6 +81,7 @@
     </ClCompile>
     <ClCompile Include="src\bezier\math\misc.cpp" />
     <ClCompile Include="src\bezier\math\tridiagonal.cpp" />
+    <ClCompile Include="src\mixin.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\MInclude.h">

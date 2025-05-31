@@ -264,6 +264,7 @@ namespace ed {
 	*/
 	struct SEdgeParentData : StaticClonable<SEdgeParentData> {
 		using thisT = SEdgeParentData;
+		using T = SEdgeParentData;
 		DECLARE_DEFINE_CLONABLE_METHODS(thisT)
 
 		int index = -1; // feels cringe to copy the index on all of these  
@@ -275,7 +276,7 @@ namespace ed {
 		Eigen::MatrixX3f finalNormals; // worldspace normals
 
 		inline bez::ClosestPointSolver* closestSolver() {
-			return finalCurve.getSolver();
+			return parentCurve.getSolver();
 		}
 	};
 
@@ -285,6 +286,7 @@ namespace ed {
 		parent space
 		*/
 		using thisT = SEdgeData;
+		using T = SEdgeData;
 		std::vector<EdgeDriverData> driverDatas; // drivers of this edge
 		std::array<SEdgeParentData, stMaxParents> parentDatas; // curves in space of each driver
 		int denseCount = 5; // number of dense sub-points in each segment
@@ -306,6 +308,8 @@ namespace ed {
 		//bez::CubicBezierPath finalCurve; // dense? final curve
 		//Eigen::MatrixX3f finalNormals; // worldspace normals
 
+		Eigen::MatrixX3f finalPoints; // densely sampled final points in worldspace - use for querying
+
 
 		DECLARE_DEFINE_CLONABLE_METHODS(thisT)
 
@@ -317,6 +321,11 @@ namespace ed {
 		inline bool isClosed() {
 			return driverDatas[0].finalMatrix.translation().isApprox(
 				driverDatas.back().finalMatrix.translation());
+		}
+
+		inline Eigen::Vector3f samplePos(const float t) {
+			/* sample all parents, combine based on weights
+			*/
 		}
 
 		inline int densePointCount() {
@@ -355,11 +364,12 @@ namespace ed {
 			}
 		}
 
-
 		inline void driversForSpan(const int spanIndex, EdgeDriverData& lower, EdgeDriverData& upper) {
 			lower = driverDatas[spanIndex];
 			upper = driverDatas[spanIndex + 1];
 		}
+
+
 	};
 
 
@@ -774,53 +784,59 @@ namespace ed {
 
 		/*
 		spatial functions
+		static for less coupling to this specific graph's buffers
 		*/
-		Status& pointPosAt(Status& s, Eigen::Vector3f& out, int elIndex, float uvn[3]) {
-			SPointData& p = pointDatas[elIndex];
-			//out = p.finalMatrix * MVector(uvn);			
-			out = p.finalMatrix * Eigen::Vector3f(uvn);
+		static Status& pointPosAt(Status& s, Eigen::Vector3f& out, const SPointData& d, const Eigen::Vector3f& uvn) {
+			out = d.finalMatrix * Eigen::Vector3f(uvn);
 			return s;
 		}
-		Status& edgePosAt(Status& s, Eigen::Vector3f& out, int elIndex, float uvn[3]) {
+		static Status& edgePosAt(Status& s, Eigen::Vector3f& out, const SEdgeData& d, const Eigen::Vector3f& uvn) {
 			/* as above, but just return position -
 			may allow faster sampling in future
 			
 			UVN is (curve param, rotation from normal, distance from curve)
 			*/
-			
-			SEdgeData& e = edgeDatas[elIndex];
-			Eigen::Affine3f amat;
-			//s = splineUVN(s, amat, e.posSpline, e.normalSpline, uvn);
-			//out = MVector(amat.translation().data());
-			out = Eigen::Vector3f(amat.translation().data());
+
+			// check if we need full matrix
+			if (EQ(uvn[1], 0.0f) && EQ(uvn[2], 0.0f)) {
+				out = d.parentDatas[0].parentCurve.eval(uvn[0]);
+				return s;
+			}
+			Eigen::Affine3f curveMat;
+			s = edgeDataMatrixAt(s, curveMat, d, uvn);
+			out = curveMat.translation();
 			return s;
 		}
-		Status& posAt(Status& s, Eigen::Vector3f& out, int globalIndex, float uvn[3]) {
+
+		Status& posAt(Status& s, Eigen::Vector3f& out, int globalIndex, Eigen::Vector3f& uvn)  {
 			/* as above, but just return position -
 			may allow faster sampling in future*/
 			SElement* el = getEl(globalIndex);
 			switch (el->elType) {
 			case StrataElType::point: {
-				return pointPosAt(s, out, el->elIndex, uvn);
+				SPointData& d = pointDatas.at(el->elIndex);
+				return pointPosAt(s, out, d, uvn);
 				break;
 			}
 			case StrataElType::edge: {
-				return edgePosAt( s, out, el->elIndex, uvn);
+				SEdgeData& d = edgeDatas.at(el->elIndex);
+				return edgePosAt( s, out, d, uvn);
 				break;
 			}
 			}
 			return s;
 		}
 		
-		Status& pointMatrixAt(Status& s, Eigen::Affine3f& out, int elIndex, Eigen::Vector3f uvn){
-			SPointData& d = pointDatas[elIndex];
+		static Status& pointMatrixAt(Status& s, Eigen::Affine3f& out, const SPointData& d, const Eigen::Vector3f& uvn){
 			out = d.finalMatrix;
 			out.translate(uvn);
 			return s;
 		}
-		Status& edgeMatrixAt(Status& s, Eigen::Affine3f& out, int elIndex, Eigen::Vector3f uvn) {
-			SEdgeData& d = edgeDatas[elIndex]; 
-			//s = splineUVN(s, out, d.posSpline, d.normalSpline, uvn);
+		static Status& edgeDataMatrixAt(Status& s, Eigen::Affine3f& out, const SEdgeData& d, const Eigen::Vector3f& uvn
+		) {
+			
+			
+			
 			return s;
 		}
 		Status& matrixAt(Status& s, Eigen::Affine3f& out, int globalIndex, Eigen::Vector3f uvn) {
@@ -828,10 +844,13 @@ namespace ed {
 			SElement* el = getEl(globalIndex);
 			switch (el->elType) {
 				case (StrataElType::point): {
-					return pointMatrixAt(s, out, el->elIndex, uvn);
+					SPointData& d = pointDatas[el->elIndex];
+					return pointMatrixAt(s, out, d, uvn);
 				}
 				case (StrataElType::edge): {
-					return edgeMatrixAt(s, out, el->elIndex, uvn);
+					SEdgeData& d = edgeDatas[el->elIndex];
+					//return edgeMatrixAt(s, out, el->elIndex, uvn);
+					return edgeDataMatrixAt(s, out, d, uvn);
 				}
 				default: STAT_ERROR(s, "Cannot eval matrix at UVN for type " + std::to_string(el->elType));
 			}

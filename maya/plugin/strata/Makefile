@@ -631,6 +631,30 @@ src\mayaNode\stratasurfacenode.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\strata.dir\build.make /nologo -$(MAKEFLAGS) CMakeFiles\strata.dir\src\mayaNode\stratasurfacenode.cpp.s
 .PHONY : src\mayaNode\stratasurfacenode.cpp.s
 
+src\mixin.obj: src\mixin.cpp.obj
+.PHONY : src\mixin.obj
+
+# target to build an object file
+src\mixin.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\strata.dir\build.make /nologo -$(MAKEFLAGS) CMakeFiles\strata.dir\src\mixin.cpp.obj
+.PHONY : src\mixin.cpp.obj
+
+src\mixin.i: src\mixin.cpp.i
+.PHONY : src\mixin.i
+
+# target to preprocess a source file
+src\mixin.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\strata.dir\build.make /nologo -$(MAKEFLAGS) CMakeFiles\strata.dir\src\mixin.cpp.i
+.PHONY : src\mixin.cpp.i
+
+src\mixin.s: src\mixin.cpp.s
+.PHONY : src\mixin.s
+
+# target to generate assembly for a file
+src\mixin.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\strata.dir\build.make /nologo -$(MAKEFLAGS) CMakeFiles\strata.dir\src\mixin.cpp.s
+.PHONY : src\mixin.cpp.s
+
 src\plugin.obj: src\plugin.cpp.obj
 .PHONY : src\plugin.obj
 
@@ -847,6 +871,9 @@ help:
 	@echo ... src/mayaNode/stratasurfacenode.obj
 	@echo ... src/mayaNode/stratasurfacenode.i
 	@echo ... src/mayaNode/stratasurfacenode.s
+	@echo ... src/mixin.obj
+	@echo ... src/mixin.i
+	@echo ... src/mixin.s
 	@echo ... src/plugin.obj
 	@echo ... src/plugin.i
 	@echo ... src/plugin.s

@@ -315,6 +315,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   <ItemGroup>
     <ClCompile Include="src\bezier\math\misc.cpp" />
     <ClCompile Include="src\bezier\math\tridiagonal.cpp" />
+    <ClCompile Include="src\mixin.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\MInclude.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\api.h" />
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\bezier\CubicSpline.cpp" />

@@ -112,9 +112,13 @@ namespace ed {
 		return b * t + (float(1.0f) - t) * b;
 	}
 
-	template<typename T>
-	inline T clamp(T in, T inMin, T inMax) {
-		return std::min(inMax, std::max(inMin, in));
+	template <typename T>
+	static inline T clamp(T low, T high, T x) {
+		return std::min(high, std::max(low, x));
+	}
+	template <typename T>
+	static inline T clamp01(T x) {
+		return std::min(static_cast<T>(0.0), std::max(static_cast<T>(1.0), x));
 	}
 
 	template<typename T>
@@ -301,6 +305,30 @@ namespace ed {
 	static inline T* lerpN(T* a, T* b, T* out, T t);
 
 	MMatrix interpolateMMatrixArray(std::vector<MMatrix>& mmatrixArr, MMatrix& out, float t);
+
+	template <typename T=float>
+	T lerpArray(const T* arr, const int nVals, float t) {
+		
+		t = clamp(0.0, 0.99999, t) * float(nVals);
+		int lower = floor(t);
+		return lerp(
+			arr[lower],
+			arr[lower + 1],
+			t - float(nVals)
+		);
+	}
+
+	//template <typename T = float>
+	//T lerpArray(const T* arr, const int nVals, float t) {
+
+	//	t = clamp(0.0, 0.99999, t) * float(nVals);
+	//	int lower = floor(t);
+	//	return lerp(
+	//		arr[lower],
+	//		arr[lower + 1],
+	//		t - float(nVals)
+	//	);
+	//}
 
 
 	/*

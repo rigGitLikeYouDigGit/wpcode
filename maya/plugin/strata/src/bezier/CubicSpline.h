@@ -33,16 +33,29 @@ namespace bez
 
     
 
-    class CubicBezierSpline : ed::StaticClonable<CubicBezierSpline>
+    class CubicBezierSpline : public ed::StaticClonable<CubicBezierSpline>
     {
     public:
         using thisT = CubicBezierSpline;
-
+        using T = CubicBezierSpline;
+        /*using uniquePtrT = std::unique_ptr<thisT>;
+        using sharedPtrT = std::shared_ptr<thisT>;*/
         //using thisT::thisT;
         DECLARE_DEFINE_CLONABLE_METHODS(thisT)
 
 
-        CubicBezierSpline(const WorldSpace* control_points);
+        //CubicBezierSpline(const WorldSpace* control_points);
+        thisT(const WorldSpace* control_points);
+        CubicBezierSpline(
+            const Eigen::Vector3f& a,
+            const Eigen::Vector3f& b,
+            const Eigen::Vector3f& c,
+            const Eigen::Vector3f& d);
+        CubicBezierSpline(
+            Eigen::Vector3f& a,
+            Eigen::Vector3f& b,
+            Eigen::Vector3f& c,
+            Eigen::Vector3f& d);
         float ClosestPointToSpline(const WorldSpace& position, const QuinticSolver* solver, WorldSpace& closest, float& u) const;
         float ClosestPointToSpline(const WorldSpace& position, const QuinticSolver* solver, WorldSpace& closest) const;
         WorldSpace EvaluateAt(const float t) const;
@@ -67,16 +80,28 @@ namespace bez
         ClosestPointEquation precomputed_coefficients_;
         float inv_leading_coefficient_;
 
+        // weights for matrix representation
+        static const Eigen::Matrix4f matrixWeights;
+
         Eigen::ArrayXf uToLengthMap(int nSamples);
+
+        void copyOther(const thisT& other) {
+            control_points_ = other.control_points_;
+            polynomial_form_ = other.polynomial_form_;
+            derivative_ = other.derivative_;
+            precomputed_coefficients_ = other.precomputed_coefficients_;
+            inv_leading_coefficient_ = other.inv_leading_coefficient_;
+        }
     };
 
 
     // A Bezier path is a set of Bezier splines which are connected.
     // (The last control point of a spline, is the first control pont of the next spline.)
-    struct CubicBezierPath : ed::StaticClonable<CubicBezierPath>
+    struct CubicBezierPath : public ed::StaticClonable<CubicBezierPath>
     {
     public:
         using thisT = CubicBezierPath;
+        using T = CubicBezierPath;
 
         //thisT& operator=(thisT&& other) {
         //    copyOther(other); return *this;
@@ -91,14 +116,31 @@ namespace bez
         //using thisT::thisT;
         DECLARE_DEFINE_CLONABLE_METHODS(thisT)
 
-        CubicBezierPath(const WorldSpace* control_points, const int num_points) {
+        //CubicBezierPath(const WorldSpace* control_points, const int num_points) {
+        thisT(const WorldSpace* control_points, const int num_points) {
             int num_splines = num_points / 3;
             for (int i = 0; i < num_splines; ++i)
             {
                 splines_.emplace_back(new CubicBezierSpline(&control_points[i * 3]));
             }
         }
+        CubicBezierPath(const Eigen::MatrixX3f& control_points) {
+            int num_points = control_points.rows();
+            int num_splines = num_points / 3;
+            for (int i = 0; i < num_splines; ++i)
+            {
+                splines_.emplace_back(new CubicBezierSpline(
+                    control_points.row(i * 3).matrix(),
+                    control_points.row(i * 3 + 1).matrix(),
+                    control_points.row(i * 3 + 2).matrix(),
+                    control_points.row(i * 3 + 3).matrix()
+                    )
+                );
+            }
+        }
         CubicBezierPath(std::vector < std::unique_ptr<CubicBezierSpline>> splines);
+        CubicBezierPath(std::vector < CubicBezierSpline> splines);
+        CubicBezierPath(std::vector < CubicBezierPath>& splines);
         WorldSpace ClosestPointToPath(const WorldSpace& position, const ClosestPointSolver* solver, float& u) const;
         Eigen::Vector3f ClosestPointToPath(const WorldSpace& position, const ClosestPointSolver* solver, float& u, Eigen::Vector3f& tan) const;
         WorldSpace ClosestPointToPath(const WorldSpace& position, const ClosestPointSolver* solver) const;

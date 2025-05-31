@@ -99,6 +99,14 @@ namespace bez
         std::vector < std::unique_ptr<CubicBezierSpline>> splines) : 
             splines_(std::move(splines)) {}
 
+    CubicBezierPath::CubicBezierPath(std::vector < CubicBezierPath>& splines) {
+        for (CubicBezierPath& path : splines) {
+            for (std::unique_ptr<CubicBezierSpline>& ptr : path.splines_) {
+                ptr->cloneUnique();
+                splines_.push_back(ptr->cloneUnique());
+            }
+        }
+    }
 
     CubicBezierPath::~CubicBezierPath() {}
 
@@ -523,9 +531,33 @@ namespace bez
         return num_real_roots;
     }
 
+    const Eigen::Matrix4f CubicBezierSpline::matrixWeights{
+        {1.0f,     0.f,    0.f,    0.0f},
+        { - 3.0f,      3.0f,  0.0f,  0.0f },
+        {3.0f,  -6.0f, 3.0f,  0.0f},
+        { -1.0f, 3.0f,  -3.0f, 1.0f}
+    };
+
     CubicBezierSpline::CubicBezierSpline(const WorldSpace* control_points)
+    //CubicBezierSpline::thisT::thisT(const WorldSpace* control_points)
     {
         std::copy(control_points, control_points + 4, control_points_.begin());
+
+        Initialize();
+    }
+
+    CubicBezierSpline::CubicBezierSpline(
+        const Eigen::Vector3f& a,
+        const Eigen::Vector3f& b,
+        const Eigen::Vector3f& c,
+        const Eigen::Vector3f& d
+        )
+    {
+        //std::copy(control_points, control_points + 4, control_points_.begin());
+        control_points_[0] = WorldSpace(a);
+        control_points_[1] = WorldSpace(b);
+        control_points_[2] = WorldSpace(c);
+        control_points_[3] = WorldSpace(d);
 
         Initialize();
     }

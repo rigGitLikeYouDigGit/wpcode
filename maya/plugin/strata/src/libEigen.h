@@ -113,6 +113,47 @@ namespace ed {
 		//int rootIterations
 	);
 
+
+	template <typename D=float>
+	inline auto pointLineDistanceSquared(
+		const Eigen::Vector3<D>& pt1,
+		const Eigen::Vector3<D>& pt2,
+		const Eigen::Vector3<D>& sample) {
+		return ((pt2 - pt1).cross(pt2 - sample)).squaredNorm() / (pt2 - pt1).squaredNorm();
+	}
+
+	template <typename D = float>
+	inline auto closestTAlongRay(
+		const Eigen::Vector3<D>& unitDir,
+		const Eigen::Vector3<D>& origin,
+		const Eigen::Vector3<D>& sample) {
+		return (sample - origin).dot(unitDir);
+	}
+
+
+
+	Status& closestPointInSegments(
+		Status& s,
+		const Eigen::MatrixX3f& pts,
+		const Eigen::Vector3f& samplePos,
+		const bool closed,
+		float& distance,
+		int& nearestPt,
+		float& u
+	) {
+		float minDist = 1000000.0f;
+		nearestPt = 0;
+
+		for (int i = 0; i < pts.rows() - 1; i++) {
+
+		}
+
+
+		return s;
+	}
+
+
+
 	//inline Eigen::ArrayXd uniformKnotsForCVs(Status& s, int nCvs, int degree) {
 	//	if (degree == 1) {
 	//		//Eigen::ArrayXd result()
@@ -650,7 +691,7 @@ namespace ed {
 	}
 
 	template <typename T, int N>
-	inline Eigen::Vector<T, N> lerpSampleMatrix(Eigen::MatrixX<T> arr, T t) {
+	inline Eigen::Vector<T, N> lerpSampleMatrix(const Eigen::MatrixX<T>& arr, T t) {
 		// sample array at a certain interval
 		//float& a;
 
@@ -665,6 +706,64 @@ namespace ed {
 		a = static_cast<int>(static_cast<float>(arr.size()) * t);
 		b = a + 1;
 		return lerp<Eigen::Vector<T, N>, T>(arr.row(a), arr.row(b), t - (arr.size() * t));
+	}
+
+	template <typename T>
+	inline T getArrayUValueNonNorm(const Eigen::VectorX<T>& arr, T searchVal) {
+		// get U value for a float in an equally spaced array
+		// brute force for now, not sure how you would do this kind of arg search in proper eigen
+		float u = 0.0f;
+		
+		int i = 0;
+		for ( i = 0; i < arr.size() - 1; i++) {
+			if (arr[i] > searchVal) {
+				break;
+			}
+			u += 1.0f;
+		}
+		if (i == 0) {
+			return T(0.0f);
+		}
+		return mapTo01(u, arr[i - 1], arr[i], true);
+	}
+
+	template <typename T>
+	inline T getArrayUValueNorm(const Eigen::VectorX<T>& arr, T searchVal) {
+		return (getArrayUValueNonNorm(arr, searchVal) / T(arr.size()));
+	}
+
+	/* tFox on techartists.org discovered awesome way to blend multiple quats together evenly - 
+	take log of each, add them up, then take exponential
+	*/
+	const float constE = 2.71828f;
+
+	inline Eigen::Quaternionf quatLogarithm(const Eigen::Quaternionf& q) {
+		Eigen::Vector3f v = (q.vec() / q.vec().norm()) * std::acos((q.w() / q.norm()));
+		return Eigen::Quaternionf{
+			std::log(q.norm()), v.x(), v.y(), v.z()
+		};
+	}
+
+	inline Eigen::Quaternionf quatExponential(const Eigen::Quaternionf& q) {
+		float ea = pow(constE, q.w());
+		Eigen::Vector3f v = (q.vec() / q.vec().norm()) * std::sin(q.vec().norm()) * ea;
+		return Eigen::Quaternionf{
+			std::cos(v.norm()) * ea, v.x(), v.y(), v.z()
+		};
+	}
+
+	inline Eigen::Quaternionf blendQuaternions(
+		//const Eigen::MatrixX4f& quats,
+		std::vector<Eigen::Quaternionf>& quats,
+		Eigen::VectorXf& weights
+	) {
+		/* convert each to log, add together, 
+		take exponential of result*/
+		Eigen::Vector4f result(0, 0, 0, 0);
+		for (int i = 0; i < quats.size(); i++) {
+			result += quatLogarithm(quats.at(i)).matrix() * weights(i);
+		}
+		return quatExponential(Eigen::Quaternionf(result));
 	}
 
 	inline float getAngleAroundAxis(
@@ -682,7 +781,25 @@ namespace ed {
 		//return 1.0 - sus(frameNormal.dot(v)) * 0.5;
 	}
 
+	/* subsampling, */
+	inline bez::CubicBezierPath subSampleBezSpline(bez::CubicBezierSpline& baseCrv, int nSpans) {
+		/* create a new bezier path with the given number of spans. 
+		
+		very basic approach, just sample the original curve at a few points and use those as points / tangents?
+		TODO: something less stupid
+		*/
+		Eigen::MatrixX3f points(nSpans * 3 + 1);
+		
+		float step = (1.0f / float(nSpans * 3 + 1));
+		for (int i = 0; i < nSpans * 3 + 1; i++) {
+			points.row(i) = baseCrv.eval(step * i);
+		}
+		return bez::CubicBezierPath(points);
+	}
 
+	inline bez::CubicBezierPath subSampleBezPath(bez::CubicBezierPath& baseCrv, int spansPerSpan) {
+		/* create a new bezier path with */
+	}
 
 	template<typename T>
 	Eigen::MatrixX3f makeRMFNormals(
