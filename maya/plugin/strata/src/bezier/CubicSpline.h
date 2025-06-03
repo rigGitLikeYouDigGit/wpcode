@@ -92,6 +92,17 @@ namespace bez
             precomputed_coefficients_ = other.precomputed_coefficients_;
             inv_leading_coefficient_ = other.inv_leading_coefficient_;
         }
+
+        Eigen::Matrix<float, 4, 3> pointsAsMatrix() {
+            /* return a copy, probably best*/
+            Eigen::Matrix<float, 4, 3> result;
+            
+            result.row(0) = toEig(control_points_.at(0));
+            result.row(1) = toEig(control_points_.at(1));
+            result.row(2) = toEig(control_points_.at(2));
+            result.row(3) = toEig(control_points_.at(3));
+            return result;
+        }
     };
 
 
@@ -125,7 +136,7 @@ namespace bez
             }
         }
         CubicBezierPath(const Eigen::MatrixX3f& control_points) {
-            int num_points = control_points.rows();
+            int num_points = static_cast<int>(control_points.rows());
             int num_splines = num_points / 3;
             for (int i = 0; i < num_splines; ++i)
             {

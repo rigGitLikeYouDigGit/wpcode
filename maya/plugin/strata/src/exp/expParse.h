@@ -1019,8 +1019,10 @@ namespace ed {
 
 
 			void setSource(const char* inSrcStr) {
-				lexer = Lexer(inSrcStr);
+				// only recompile if string has changed
+				if (strcmp(inSrcStr, srcStr.c_str())) { return; }
 				srcStr = inSrcStr;
+				lexer = Lexer(inSrcStr);
 				needsRecompile = true;
 			}
 

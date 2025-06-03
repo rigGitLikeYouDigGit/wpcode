@@ -27,37 +27,43 @@ namespace ed {
 	* 
 	* 
 	
-	struct Base
-{
-	//some stuff
-
-	auto clone() const { return std::unique_ptr<Base>(clone_impl()); }
-protected:
-	virtual Base* clone_impl() const = 0;
-};
-
-struct Derived : public Base
-{
-	//some stuff
-
-protected:
-	virtual Derived* clone_impl() const override { return new Derived(*this); };
-};
-
-struct Foo
-{
-	std::unique_ptr<Base> ptr;  //points to Derived or some other derived class
-
-	//rule of five
-	~Foo() = default;
-	Foo(Foo const& other) : ptr(other.ptr->clone()) {}
-	Foo(Foo && other) = default;
-	Foo& operator=(Foo const& other) { ptr = other.ptr->clone(); return *this; }
-	Foo& operator=(Foo && other) = default;
-};
-
 	*/
 
+	constexpr int SDELTAMODE_NONE = 0; // no change
+	constexpr int SDELTAMODE_WORLD = 1; // direct snap to given target in worldspace
+	constexpr int SDELTAMODE_LOCAL = 2; // local delta on top of original final matrix
+	//constexpr int SDELTAMODE_UVN = 2; // local vector delta in UVN?
+
+
+	/* worldspace snap can only act once, other wise it's an eternal pin in the graph - 
+	so all of these work out to saving to space data, 
+	but only affects how we gather matrices from Maya?
+	maybe the mode makes no difference here
+	*/
+
+	/* UVN should be allowed 
+	with separate flags?*/
+
+	struct SPointDataDelta {
+		SPointData data;
+		int matrixMode = SDELTAMODE_NONE;
+		int uvnMode = SDELTAMODE_NONE;
+		
+	};
+
 	struct StrataOpGraph : EvalGraph<StrataManifold>{
+		/* add OVERRIDE MAP of element data - 
+		this will only exist for a single graph object, and serves to 
+		override any element data 
+		from elements created as graph moves
+
+		does it matter that we override the entire data object? 
+		maybe in the future a finer breakup of attributes somehow
+
+		*/
+
+		std::map<std::string, SPointDataDelta> pointOverrideMap;
+
+
 	};
 }

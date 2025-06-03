@@ -71,7 +71,10 @@ namespace ed {
 		using graphT = StrataOpGraph;
 				
 		// dense map of { param string name : param object }
-		std::map<std::string, expns::Expression > paramNameExpMap;
+		//std::map<std::string, expns::Expression > paramNameExpMap;
+
+		// couldn't find any general way to define parametres here, just do it node by node for now
+
 
 		// parent node, if scope ever happens;
 		int parent = -1;
@@ -90,7 +93,14 @@ namespace ed {
 
 		bool paramsDirty = true; // param expressions have changed, need recompiling (later)
 
+		/* test saving created element data on the ops that create them????
+		*/
+		std::map<StrataName, SPointData> opPointDataMap;
+		std::map<StrataName, SEdgeData> opEdgeDataMap;
+
+
 		void signalIOChanged();
+
 
 		virtual void preReset() {
 			// before node value is reset in graph
@@ -101,7 +111,14 @@ namespace ed {
 		virtual Status evalData(StrataManifold& manifold, Status& s) { return s; }*/
 
 		virtual Status makeParams() { return Status(); }
-		
+
+		virtual graphT* getGraphPtr() { return reinterpret_cast<graphT*>(graphPtr); }
+
+
+		bool isOutputNode() {
+			StrataOpGraph* ptr = getGraphPtr();
+			return (ptr->outputIndex == index);
+		}
 
 	};
 

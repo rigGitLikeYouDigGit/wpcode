@@ -59,13 +59,8 @@ the whole structure for each generation of the operation graph
 using ints not pointers in topo types for easier copying, serialising if it comes to it etc
 
 
-using vectors for everything, I don't care for now
 
-// do we actually need separate types for elements? not for most things
-
-NO WE DON'T
-
-no SPoints, SEdges - only SElements, with int enum telling their type
+for interaction through maya, consider setting up attributes in a map, and entering the attr name you want to affect on the maya node?
 
 
 */
@@ -76,6 +71,8 @@ namespace ed {
 	so trying to alias name strings right now
 	to make it easier to update later */
 	using StrataName = std::string;
+
+	using namespace Eigen;
 
 //int a = seqIndex(-5, 3);
 
@@ -187,24 +184,28 @@ namespace ed {
 		int index = -1;
 	};
 
+	struct SPointDriverData {
+	/* may not be entirely irrelevant*/ 
+		int index = -1;
+	};
 
 	// parent datas always relative in parent space - when applied, recover the original shape of element
-	struct SPointParentData { // parent data FOR a point, driver could be any type
-		int index = -1;
+	struct SPointSpaceData { // parent data FOR a point, driver could be any type
+		//int index = -1;
+		std::string name; // name of parent space element
+		// has to be robust to storing/retrieving between graph iterations
 		float weight = 1.0;
-		float uvn[3] = { 0, 0, 0 }; // if parent is a point, this is just the literal vector in that point's space
-		// also this need only be an orient matrix
-		float orientMatrix[9] = {
-			1, 0, 0,
-			0, 1, 0,
-			0, 0, 1
-		};
+		Vector3f uvn = { 0, 0, 0 }; // uvn separate to offset in case point goes outside parent space area - 
+		// eg if point goes off edge of space surface
+		Affine3f offset = Eigen::Affine3f::Identity(); // translation is UVN, rotation is relative rotation from that position
 	};
 
 	struct SPointData : SElData {
-		std::array<SPointParentData, stMaxParents> parentDatas; // datas for each driver
+		SPointDriverData driverData;
+		std::vector<SPointSpaceData> spaceDatas; // datas for each driver
 		//MMatrix finalMatrix = MMatrix::identity; // final evaluated matrix in world space
 		Eigen::Affine3f finalMatrix = Eigen::Affine3f::Identity(); // final evaluated matrix in world space
+		std::string creatorNode;
 	};
 
 	/*edge system is quite messy, 
@@ -273,7 +274,7 @@ namespace ed {
 		Eigen::ArrayX3f cvs; // UVN bezier control points - ordered {pt, tanOut, tanIn, pt, tanOut...} etc
 		bez::CubicBezierPath parentCurve; // curve in UVN space of parent, used for final interpolation
 
-		Eigen::MatrixX3f finalNormals; // worldspace normals
+		Eigen::MatrixX3f finalNormals; // worldspace normals // hopefully smoothstep interpolation is good enough
 
 		inline bez::ClosestPointSolver* closestSolver() {
 			return parentCurve.getSolver();
@@ -288,8 +289,10 @@ namespace ed {
 		using thisT = SEdgeData;
 		using T = SEdgeData;
 		std::vector<EdgeDriverData> driverDatas; // drivers of this edge
-		std::array<SEdgeParentData, stMaxParents> parentDatas; // curves in space of each driver
-		int denseCount = 5; // number of dense sub-points in each segment
+		//std::array<SEdgeParentData, stMaxParents> parentDatas; // curves in space of each driver
+		std::vector<SEdgeParentData> parentDatas; // curves in space of each driver
+		
+		int denseCount = 5; // number of dense sub-spans in each segment
 
 		/* don't keep live splines, output from parent system etc - 
 		all temporary during construction
@@ -305,8 +308,8 @@ namespace ed {
 		// become caveman
 
 		//Eigen::MatrixX3d finalPositions; // dense worldspace positions
-		//bez::CubicBezierPath finalCurve; // dense? final curve
-		//Eigen::MatrixX3f finalNormals; // worldspace normals
+		bez::CubicBezierPath finalCurve; // dense? final curve // DENSE
+		Eigen::MatrixX3f finalNormals; // worldspace normals 
 
 		Eigen::MatrixX3f finalPoints; // densely sampled final points in worldspace - use for querying
 
@@ -440,6 +443,22 @@ namespace ed {
 		[ element index starting group] ,
 		[ node index to eval up to ]
 
+		NO because manifold WILL NOT KNOW how to compute every step of itself,
+		that's why we have separate op nodes.
+
+		element op to take on more logic for creating el data, maybe
+
+		register STORED el data against el name - COPY THIS WITH GRAPH
+		up to individual op nodes how they interpret STORED data?
+
+		data store just accumulates across graph iterations until something changes it - 
+		also lets you set direct atomic deltas against el names, regardless of 
+		whether they exist at that moment or not - probably quite good
+
+		memory coherence?
+		no. we don't do that here
+
+		could use topo connections to mark elements in manifold dirty, but not sure of the point, for now
 		
 		*/
 
@@ -450,15 +469,23 @@ namespace ed {
 		std::map<int, int> edgeIndexGlobalIndexMap;
 		std::map<int, int> faceIndexGlobalIndexMap;
 
+		std::unordered_map<std::string, SPointData> pDataMap;
 
-		std::vector<SPointData> pointDatas;
+		//std::vector<SPointData> pointDatas;
 		std::vector<SEdgeData> edgeDatas;
 		std::vector<SFaceData> faceDatas;
 
 
 		inline SElData* elData(int globalElId, StrataElType elT) {
 			switch (elT) {
-			case StrataElType::point: return &pointDatas[pointIndexGlobalIndexMap[globalElId]];
+			//case StrataElType::point: return &pointDatas[pointIndexGlobalIndexMap[globalElId]];
+			case StrataElType::point: {
+				//return &pointDatas[el.elIndex];
+				auto ptr = pDataMap.find(getEl(globalElId)->name);
+				if (ptr == pDataMap.end()) { return nullptr; }
+				return &(ptr->second);
+				break;
+			}
 			case StrataElType::edge: return &edgeDatas[edgeIndexGlobalIndexMap[globalElId]];
 			case StrataElType::face: return &faceDatas[faceIndexGlobalIndexMap[globalElId]];
 			default: return nullptr;
@@ -469,7 +496,13 @@ namespace ed {
 		}
 		inline SElData* elData(SElement& el) {
 			switch (el.elType) {
-			case StrataElType::point: return &pointDatas[el.elIndex];
+			case StrataElType::point: {
+				//return &pointDatas[el.elIndex];
+				auto ptr = pDataMap.find(el.name);
+				if (ptr == pDataMap.end()) {return nullptr;	}
+				return &(ptr->second);
+				break;
+			}
 			case StrataElType::edge: return &edgeDatas[el.elIndex];
 			case StrataElType::face: return &faceDatas[el.elIndex];
 			default: return nullptr;
@@ -487,7 +520,8 @@ namespace ed {
 
 			elements.clear();
 			nameGlobalIndexMap.clear();
-			pointDatas.clear();
+			//pointDatas.clear();
+			pDataMap.clear();
 			edgeDatas.clear();
 			faceDatas.clear();
 
@@ -550,8 +584,10 @@ namespace ed {
 			setting data of different types*/
 			switch (el->elType) {
 			case StrataElType::point: {
-				pointDatas[el->elIndex] = *static_cast<SPointData*>(data);
-				return &pointDatas[el->elIndex];
+				//pointDatas[el->elIndex] = *static_cast<SPointData*>(data);
+				pDataMap[el->name] = *static_cast<SPointData*>(data);
+				//return &pointDatas[el->elIndex];
+				return &pDataMap.at(el->name);
 			}
 			case StrataElType::edge: {
 				edgeDatas[el->elIndex] = *static_cast<SEdgeData*>(data);
@@ -570,7 +606,7 @@ namespace ed {
 			SElement*& outPtr
 		) {
 			Status s;
-			if (nameGlobalIndexMap.count(el.name)) {
+			if (nameGlobalIndexMap.find(el.name) != nameGlobalIndexMap.end()) {
 				STAT_ERROR(s, "Name " + el.name + " already found in manifold, halting");
 				//return nullptr;
 			}
@@ -583,7 +619,8 @@ namespace ed {
 			// get element-specific index map, add element data
 			switch (el.elType) {
 				case StrataElType::point: {
-					pointDatas.push_back(SPointData());
+					//pointDatas.push_back(SPointData());
+					pDataMap.insert({ el.name, SPointData() });
 					int elementIndex = static_cast<int>(pointIndexGlobalIndexMap.size()); // get current max key of element set
 					elP->elIndex = elementIndex;
 					pointIndexGlobalIndexMap[elementIndex] = globalIndex;
@@ -814,7 +851,8 @@ namespace ed {
 			SElement* el = getEl(globalIndex);
 			switch (el->elType) {
 			case StrataElType::point: {
-				SPointData& d = pointDatas.at(el->elIndex);
+				//SPointData& d = pointDatas.at(el->elIndex);
+				SPointData& d = pDataMap.at(el->name);
 				return pointPosAt(s, out, d, uvn);
 				break;
 			}
@@ -832,25 +870,61 @@ namespace ed {
 			out.translate(uvn);
 			return s;
 		}
-		static Status& edgeDataMatrixAt(Status& s, Eigen::Affine3f& out, const SEdgeData& d, const Eigen::Vector3f& uvn
-		) {
+		static inline Status& edgeDataMatrixAt(Status& s, Eigen::Affine3f& out, const SEdgeData& d, const Eigen::Vector3f& uvn
+		) {/* if we don't cache a final dense curve for edge data,
+			we would have to eval all parents here, then blend between them.
+			but in turn, each of those parents would need their parents eval'd - 
 			
+			so querying a single point at the end of a complex chain WOULD cause the 
+			entire manifold to be queried back to the source.
 			
+			maybe this could be useful, in the future,
+			but for now it is anti-Strata
+
+			we could also output the exact curve position? to save a sample?
+			*/
+
+			// first make frame
+			Vector3f pos = d.finalCurve.eval(uvn(0));
+			Vector3f tan = d.finalCurve.tangentAt(uvn(0), pos);
+		
+			// get normals
+			int a; int b; 
+			float t = getArrayIndicesTForU(static_cast<int>(d.finalNormals.size()), uvn(0), a, b);
+			Vector3f normal = lerp<Vector3f>(d.finalNormals.row(a), d.finalNormals.row(b), smoothstepCubic(t));
+
+			// make base frame
+			s = makeFrame(s, out, pos, 
+				tan.normalized(), 
+				normal.normalized()
+			);
+			out.translation() = pos;
+
+			// make angle axis describing twist around X
+			AngleAxisf baseAA(uvn(1), Vector3f::UnitX());
+			out.rotate(baseAA);
+			// translate out along twisted normal in Z
+			out.translate(Vector3f::UnitZ() * uvn(2));
 			
 			return s;
 		}
-		Status& matrixAt(Status& s, Eigen::Affine3f& out, int globalIndex, Eigen::Vector3f uvn) {
+		Status& matrixAt(Status& s, Eigen::Affine3f& outMat, int globalIndex, Eigen::Vector3f uvn) {
 			/* interpolate a spatial element to get a matrix in world space*/
+			if (globalIndex == -1) {
+				outMat = Affine3f::Identity();
+				return s;
+			}
 			SElement* el = getEl(globalIndex);
 			switch (el->elType) {
 				case (StrataElType::point): {
-					SPointData& d = pointDatas[el->elIndex];
-					return pointMatrixAt(s, out, d, uvn);
+					//SPointData& d = pointDatas[el->elIndex];
+					SPointData& d = pDataMap.at(el->name);
+					return pointMatrixAt(s, outMat, d, uvn);
 				}
 				case (StrataElType::edge): {
 					SEdgeData& d = edgeDatas[el->elIndex];
 					//return edgeMatrixAt(s, out, el->elIndex, uvn);
-					return edgeDataMatrixAt(s, out, d, uvn);
+					return edgeDataMatrixAt(s, outMat, d, uvn);
 				}
 				default: STAT_ERROR(s, "Cannot eval matrix at UVN for type " + std::to_string(el->elType));
 			}
@@ -858,8 +932,10 @@ namespace ed {
 		}
 		// am i overdoing the copium, or is this way of dispatching by type quite good?
 
-		Status& pointClosestMatrix(Status& s, Eigen::Affine3f& outMat, int elIndex, const Eigen::Vector3f& worldVec) {
-			outMat = pointDatas[elIndex].finalMatrix;
+		Status& pointClosestMatrix(Status& s, Eigen::Affine3f& outMat, SPointData& d, const Eigen::Vector3f& worldVec) {
+			//outMat = pointDatas[elIndex].finalMatrix;
+			outMat = d.finalMatrix;
+
 			return s;
 		}
 		Status& edgeClosestMatrix(Status& s, Eigen::Affine3f& outMat, int elIndex, const Eigen::Vector3f& worldVec) {
@@ -889,10 +965,14 @@ namespace ed {
 		Status& closestMatrix(Status& s, Eigen::Affine3f& outMat, const int globalIndex, const Eigen::Vector3f closePos) {
 			// localise a world transform into UVN coordinates in the space of given parent
 			// make another function to return a full transform, for point parents
+			if (globalIndex == -1) {
+				outMat = Affine3f::Identity();
+				return s;
+			}
 			SElement* el = getEl(globalIndex);
 			switch (el->elType) {
 			case (StrataElType::point): {
-				return pointClosestMatrix(s, outMat, el->elIndex, closePos);
+				return pointClosestMatrix(s, outMat, pDataMap.at(el->name), closePos);
 			}
 			case (StrataElType::edge): {
 				return edgeClosestMatrix(s, outMat, el->elIndex, closePos);
@@ -902,10 +982,10 @@ namespace ed {
 			return s;
 		}
 
-		Status& pointGetUVN(Status& s, Eigen::Vector3f& outUVN, int elIndex, const Eigen::Vector3f worldPos) {
+		Status& pointGetUVN(Status& s, Eigen::Vector3f& outUVN, SPointData& d, const Eigen::Vector3f worldPos) {
 			/* return UVN displacement from point matrix
 			*/
-			SPointData& d = pointDatas[elIndex];
+			//SPointData& d = pointDatas[elIndex];
 			//outUVN = (d.finalMatrix.inverse() * worldMat).translation();
 			outUVN = (d.finalMatrix.inverse() * worldPos);
 			return s;
@@ -954,7 +1034,7 @@ namespace ed {
 			SElement* el = getEl(globalIndex);
 			switch (el->elType) {
 			case (StrataElType::point): {
-				return pointGetUVN(s, uvn, el->elIndex, closePos);
+				return pointGetUVN(s, uvn, pDataMap.at(el->name), closePos);
 			}
 			case (StrataElType::edge): {
 				return edgeGetUVN(s, uvn, el->elIndex, closePos);
@@ -964,8 +1044,45 @@ namespace ed {
 			return s;
 		}
 
-		void tempFn(Eigen::Vector3f v) {
-			1;
+		Status& pointSpaceMatrix(Status& s, Affine3f& outMat, SPointData& data) {
+			/* get space matrix for point space datas
+			if space data EXISTS, it means something
+
+			todo: do we actually need to store names in space datas?
+			seems like we can just use integers, won't be dynamic unless we add a way
+			to edit structure of graph in history
+			*/
+			if (data.spaceDatas.size() == 0) {
+				outMat = Affine3f::Identity();
+				return s;
+			}
+			if (data.spaceDatas.size() == 1) { 
+				auto spaceEl = getEl(data.spaceDatas[0].name);
+				s = matrixAt(s, outMat, spaceEl->globalIndex, data.spaceDatas[0].uvn);
+				outMat = outMat * data.spaceDatas[0].offset;
+				return s;
+			}
+			VectorXf weights(data.spaceDatas.size());
+			std::vector<Affine3f> tfs(data.spaceDatas.size());
+			for (int i = 0; static_cast<int>(data.spaceDatas.size()); i++) {
+				auto spaceEl = getEl(data.spaceDatas[i].name);
+				weights(i) = data.spaceDatas[0].weight;
+				s = matrixAt(s, tfs[i], spaceEl->globalIndex, data.spaceDatas[i].uvn);
+				tfs[i] = tfs[i] * data.spaceDatas[i].offset;
+			}
+			outMat = blendTransforms(tfs, weights);
+			return s;
+		}
+
+		Status& computePointData(Status& s, SPointData& data) {
+			/* given all space data is built, find final matrix*/
+			if (data.spaceDatas.size() == 0) { // no parent, just literal data
+				//data.finalMatrix = data.parentDatas[0].offset;
+				////// we assume final matrix is already known
+				return s;
+			}
+			s = pointSpaceMatrix(s, data.finalMatrix, data);
+			return s;
 		}
 
 		Status& edgeParentDataFromDrivers(Status& s, SEdgeData& eData, SEdgeParentData& pData) 
@@ -979,7 +1096,6 @@ namespace ed {
 			Eigen::Affine3f outMat;
 			for (int i = 0; i < cvs.size(); i++) {
 				
-				tempFn(cvs.row(i));
 				//s = edgeInSpaceOf(s, cvs.row(i), parentElIndex, cvs.row(i));
 			}
 			
@@ -1050,8 +1166,7 @@ namespace ed {
 		}
 
 		Status& buildEdgeData(Status& s, SEdgeData& eData) {
-			/* construct final dense array for data, assuming all parents and drivers
-			are built
+			/* construct final dense array for data, assuming all parents and driver indices are set in data
 			
 			build base curve matrices in worldspace,
 			then get into space of each driver 
@@ -1066,6 +1181,24 @@ namespace ed {
 
 			return s;
 		}
+
+		Status& buildPointData(Status& s, SPointData& eData) {
+			/* construct final dense array for data, assuming all parents and driver indices are set in data
+
+			build base curve matrices in worldspace,
+			then get into space of each driver
+
+			but we can only work in worldspace when curve is freshly added, otherwise
+			we can only save driver-space versions
+			*/
+
+			// Bezier control points for each span
+
+			
+
+			return s;
+		}
+
 
 		Status getIntersection(const SElement& elA, const SElement& elB, MMatrix& matOut, bool& crossFound) {
 			/* return a single point where elements intersect.
@@ -1086,10 +1219,15 @@ namespace ed {
 			I suppose this would be where struct of arrays wins over struct of arrays
 			TODO: struct of arrays
 			*/
-			Float3Array result(static_cast<int>(pointDatas.size()));
-			for (int i = 0; i < static_cast<int>(pointDatas.size()); i++) {
-				result[i] = pointDatas[i].finalMatrix.translation().data();
+			Float3Array result(static_cast<int>(pDataMap.size()));
+			int i = 0;
+			for (auto& p : pointIndexGlobalIndexMap) {
+				result[i] = pDataMap.at(getEl(p.second)->name).finalMatrix.translation().data();
+				i += 1;
 			}
+			/*for (int i = 0; i < static_cast<int>(pointIndexGlobalIndexMap.size()); i++) { 
+				result[i] = pDataMap.at( getEl(pointIndexGlobalIndexMap.at)).finalMatrix.translation().data();
+			}*/
 			return result;
 		}
 
@@ -1121,13 +1259,16 @@ namespace ed {
 			* each point has 4 coords - point itself, and then 0.1 units in x, y, z of that point
 			*/
 
-			Float3Array result(pointDatas.size() * 4);
-
-			for (size_t i = 0; i < pointDatas.size(); i++) {
-				result[i * 4] = pointDatas[i].finalMatrix.translation().data();
-				result[i * 4 + 1] = pointDatas[i].finalMatrix * Eigen::Vector3f{ 1, 0, 0 };
-				result[i * 4 + 2] = pointDatas[i].finalMatrix * Eigen::Vector3f{ 0, 1, 0 };
-				result[i * 4 + 3] = pointDatas[i].finalMatrix * Eigen::Vector3f{ 0, 0, 1 };
+			Float3Array result(pDataMap.size() * 4);
+			int i = 0;
+			std::string name;
+			for (auto& p : pointIndexGlobalIndexMap) {
+				name = getEl(p.second)->name;
+				result[i * 4] = pDataMap.at(name).finalMatrix.translation().data();
+				result[i * 4 + 1] = pDataMap.at(name).finalMatrix * Eigen::Vector3f{ 1, 0, 0 };
+				result[i * 4 + 2] = pDataMap.at(name).finalMatrix * Eigen::Vector3f{ 0, 1, 0 };
+				result[i * 4 + 3] = pDataMap.at(name).finalMatrix * Eigen::Vector3f{ 0, 0, 1 };
+				i += 1;
 			}
 			return result;
 		}
@@ -1135,8 +1276,10 @@ namespace ed {
 			/* return index array for point gnomons
 			* intended to emit as separate lines, so half is duplication
 			*/
-			IndexList result(pointDatas.size() * 3 * 2);
-			for (int i = 0; i < static_cast<int>(pointDatas.size()); i++) {
+			IndexList result(pDataMap.size() * 3 * 2);
+			//int i = 0;
+			std::string name;
+			for (int i = 0; i < static_cast<int>(pDataMap.size()); i++) {
 				result[i * 4] = i * 4;
 				result[i * 4 + 1] = i * 4 + 1;
 				result[i * 4 + 2] = i * 4;
@@ -1158,7 +1301,7 @@ namespace ed {
 				u = 1.0f / float(d.densePointCount() - 1) * float(i);
 				uvn[0] = u;
 				uvn[1] = 0; uvn[2] = 0;
-				s = edgeMatrixAt(s, aff, elIndex, uvn);
+				s = edgeDataMatrixAt(s, aff, edgeDatas[elIndex], uvn);
 
 				outArr[n] = d.finalCurve.eval(u);
 				outArr[n + 1] = (aff * Eigen::Vector3f{ 1, 0, 0 }).data();

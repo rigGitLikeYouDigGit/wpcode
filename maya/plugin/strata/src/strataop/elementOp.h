@@ -27,6 +27,13 @@ each node in st graph should be able to ping "eval to here now" and have that be
 
 namespace ed {
 
+	struct ElOpParam {
+		StrataName name;
+		expns::Expression driverExp;
+		expns::Expression spaceExp;
+		SPointData pData;
+		SEdgeData eData;
+	};
 
 	struct StrataElementOp : StrataOp {
 		/* add one or more points to the graph
@@ -34,9 +41,11 @@ namespace ed {
 		*/
 		using StrataOp::StrataOp;
 
-		// populate these if literal worldspace inputs are given
-		std::map<StrataName, SPointData> namePointDataMap; 
-		std::map<StrataName, SEdgeData> nameEdgeDataMap; 
+		//// populate these if literal worldspace inputs are given
+		//std::map<StrataName, SPointData> namePointDataMap; 
+		//std::map<StrataName, SEdgeData> nameEdgeDataMap; 
+
+		std::map<StrataName, ElOpParam> paramMap;
 
 		virtual Status makeParams();
 

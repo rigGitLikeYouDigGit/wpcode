@@ -19,6 +19,8 @@ namespace ed {
 	adapting to Eigen types
 	*/
 
+	using namespace Eigen;
+
 	template<class T>
 	//inline void Quaternion<T>::computeAngleAxis(T& radians, Vector<3, T>& axis) const
 	inline void computeAngleAxis(Eigen::Quaternion<T>& q, T& radians, Eigen::Vector3<T>& axis)
@@ -476,6 +478,23 @@ namespace ed {
 		return s;
 	}
 
+	//inline Status& matrixAtU(
+	//	Status& s,
+	//	Eigen::Affine3f& mat,
+	//	const bez::CubicBezierPath,
+	//	const float u
+	//) {
+
+	//	s = makeFrame(s,
+	//		mat,
+	//		Eigen::Vector3f(posSpline(u).matrix()),
+	//		Eigen::Vector3f(posSpline.derivatives(u, 1).col(0).matrix()),
+	//		normalSpline(u).matrix()
+	//	);
+	//	return s;
+	//}
+
+
 	/*
 	curve functions from Pomax Bezier Primer
 
@@ -692,9 +711,7 @@ namespace ed {
 
 	template <typename T, int N>
 	inline Eigen::Vector<T, N> lerpSampleMatrix(const Eigen::MatrixX<T>& arr, T t) {
-		// sample array at a certain interval
-		//float& a;
-
+		// sample array at a certain interval - INTERVAL NOT NORMALISED
 		if (t >= 1.0) {
 			return arr.row(arr.rows()-1);
 		}
@@ -706,6 +723,42 @@ namespace ed {
 		a = static_cast<int>(static_cast<float>(arr.size()) * t);
 		b = a + 1;
 		return lerp<Eigen::Vector<T, N>, T>(arr.row(a), arr.row(b), t - (arr.size() * t));
+	}
+
+	template <typename T, int N>
+	inline Eigen::Vector<T, N> smoothSampleMatrix(const Eigen::MatrixX<T>& arr, T t) {
+		// sample array at a certain interval - INTERVAL NOT NORMALISED
+		if (t >= 1.0) {
+			return arr.row(arr.rows() - 1);
+		}
+		if (t <= 0.0) {
+			return arr.row(0);
+		}
+		int a;
+		int b;
+		a = static_cast<int>(static_cast<float>(arr.size()) * t);
+		b = a + 1;
+		return lerp<Eigen::Vector<T, N>, T>(arr.row(a), arr.row(b), 
+			smoothstepCubic( t - (arr.size() * t)));
+	}
+
+
+	inline float getArrayIndicesTForU(const int nEntries, const float u, int& a, int& b) {
+		/* get upper and lower indices and t value for final interpolation, 
+		from a 0-1 global u*/
+		a = floor(u * float(nEntries));
+		b = a + 1;
+		if (u >= 1.0f) {
+			a = nEntries - 1;
+			b = nEntries - 1;
+			return 1.0f;
+		}
+		if (u <= 0.0f) {
+			a = 0;
+			b = 0;
+			return 0.0f;
+		}
+		return u * float(nEntries) - float(a);
 	}
 
 	template <typename T>
@@ -760,10 +813,28 @@ namespace ed {
 		/* convert each to log, add together, 
 		take exponential of result*/
 		Eigen::Vector4f result(0, 0, 0, 0);
-		for (int i = 0; i < quats.size(); i++) {
-			result += quatLogarithm(quats.at(i)).matrix() * weights(i);
+		for (size_t i = 0; i < quats.size(); i++) {
+			auto scaled = quatLogarithm(quats.at(i)).matrix() * weights[i];
+			result += scaled; // mixed matrices of diff sizes
 		}
-		return quatExponential(Eigen::Quaternionf(result));
+		return quatExponential(Eigen::Quaternionf(result / weights.sum()));
+	}
+
+	inline Eigen::Affine3f blendTransforms(
+		//const Eigen::MatrixX4f& quats,
+		std::vector<Eigen::Affine3f>& tfs,
+		Eigen::VectorXf& weights
+	) {
+		std::vector<Quaternionf> quats(tfs.size());
+		Vector3f pos = { 0, 0, 0 };
+		for (size_t i = 0; i < quats.size(); i++) {
+			quats[i] = Quaternionf(tfs[i].rotation());
+			pos += tfs[i].translation() * weights(i);
+		}
+		Quaternionf qResult = blendQuaternions(quats, weights);
+		Affine3f result(qResult);
+		result.translation() = pos / weights.sum();
+		return result;
 	}
 
 	inline float getAngleAroundAxis(
@@ -782,23 +853,93 @@ namespace ed {
 	}
 
 	/* subsampling, */
-	inline bez::CubicBezierPath subSampleBezSpline(bez::CubicBezierSpline& baseCrv, int nSpans) {
-		/* create a new bezier path with the given number of spans. 
-		
-		very basic approach, just sample the original curve at a few points and use those as points / tangents?
-		TODO: something less stupid
+
+	struct BezSplitPts {
+		Eigen::Matrix<float, 4, 3> aPts;
+		Eigen::Matrix<float, 4, 3> bPts;
+	};
+
+	inline BezSplitPts splitBezSpline(
+		const Eigen::Matrix<float, 4, 3>& cvs,
+		const float z
+	) { /* from the pomax bezier page(where else)
+		using matrix formulation for control points - 
+		for now just copying the final derivation for control points
 		*/
-		Eigen::MatrixX3f points(nSpans * 3 + 1);
+		BezSplitPts result;
 		
-		float step = (1.0f / float(nSpans * 3 + 1));
-		for (int i = 0; i < nSpans * 3 + 1; i++) {
-			points.row(i) = baseCrv.eval(step * i);
-		}
-		return bez::CubicBezierPath(points);
+		result.aPts.row(0) = cvs.row(0);
+		result.aPts.row(1) = z * cvs.row(1) - 
+			(z - 1.0f) * cvs.row(0);
+		result.aPts.row(2) = z * z * cvs.row(2) - 
+			2.0f * z * (z - 1.0f) * cvs.row(1) + 
+			(z - 1.0f) * (z - 1.0f) * cvs.row(0);
+		result.aPts.row(3) = z * z * z * cvs.row(3) -
+			3.0f * z * z * (z - 1.0f) * cvs.row(2) +
+			3.0f * z * (z - 1.0f) * (z - 1.0f) * cvs.row(1) -
+			(z - 1.0f) * (z - 1.0f) * (z - 1.0f) * cvs.row(0);
+		
+		result.bPts.row(0) = result.aPts.row(3);
+		result.bPts.row(1) = z * z * cvs.row(3) - 
+			2.0f * z * (z - 1.0f) * cvs.row(2) + 
+			(z - 1.0f) * (z - 1.0f) * cvs.row(1);
+		result.bPts.row(2) = z * cvs.row(3) - 
+			(z - 1.0f) * cvs.row(2);
+		result.bPts.row(3) = cvs.row(3);
+		
+		return result;
 	}
 
-	inline bez::CubicBezierPath subSampleBezPath(bez::CubicBezierPath& baseCrv, int spansPerSpan) {
-		/* create a new bezier path with */
+	// TODO: template this?
+	inline Eigen::MatrixX3f subSampleBezSpline(bez::CubicBezierSpline& baseCrv, int nSpans) {
+		/* create control points for given number of segments on bezier spline. 
+		*/
+
+		Eigen::MatrixX3f resultPoints(nSpans * 3 + 1);
+
+		Eigen::Matrix<float, 4, 3> cvs = baseCrv.pointsAsMatrix();
+		
+		float step = (1.0f / float(nSpans * 3 + 1));
+		BezSplitPts splitPts;
+		for (int i = 0; i < nSpans - 1; i++) {
+			
+			splitPts = splitBezSpline(cvs, step * (i + 1));
+			resultPoints.row(i * 3) = splitPts.aPts.row(0);
+			resultPoints.row(i * 3 + 1) = splitPts.aPts.row(1);
+			resultPoints.row(i * 3 + 2) = splitPts.aPts.row(2);
+			
+			cvs = splitPts.bPts;
+
+			if (EQ(step * (i + 1), 1.0f)) {
+				resultPoints.row((i + 1) * 3) = splitPts.bPts.row(0);
+				resultPoints.row((i + 1) * 3 + 1) = splitPts.bPts.row(1);
+				resultPoints.row((i + 1) * 3 + 2) = splitPts.bPts.row(2);
+				resultPoints.row((i + 1) * 3 + 3) = splitPts.bPts.row(3);
+			}
+		}
+
+		return resultPoints;
+	}
+
+
+	inline Eigen::MatrixX3f subSampleBezPathPts(bez::CubicBezierPath& baseCrv, int spansPerSpan) {
+		/* create a new bezier path with given number of subspans, per-span
+		* TODO: parallel
+		*/
+		Eigen::MatrixX3f result(baseCrv.splines_.size() * spansPerSpan * 3 + 1, 3);
+
+		for (int i = 0; i < static_cast<int>(baseCrv.splines_.size()); i++) { // parallel
+			int startIndex = i * spansPerSpan * 3;
+			int indexSpan = 3 * spansPerSpan + 1;
+			bez::CubicBezierSpline& splineRef = *baseCrv.splines_[i].get();
+			Eigen::MatrixX3f segmentSpansResult = subSampleBezSpline(splineRef, spansPerSpan);
+			DEBUGS("BEFORE STD COPY")
+			std::copy(segmentSpansResult.data(), segmentSpansResult.data() + indexSpan,
+				result.data() + startIndex
+			) ;
+			DEBUGS("AFTER STD COPY")
+		}
+		return result;
 	}
 
 	template<typename T>

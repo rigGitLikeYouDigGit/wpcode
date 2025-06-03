@@ -135,7 +135,7 @@ probably, right?
 prefix MObject nodeT aStElement;\
 prefix MObject nodeT aStName;\
 prefix MObject nodeT aStDriverExp;\
-prefix MObject nodeT aStParentExp;\
+prefix MObject nodeT aStSpaceExp;\
 prefix MObject nodeT aStGlobalIndex;\
 prefix MObject nodeT aStElTypeIndex;\
 prefix MObject nodeT aStTypeOut;\

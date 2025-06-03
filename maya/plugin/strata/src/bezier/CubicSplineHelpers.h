@@ -60,6 +60,13 @@ namespace bez
         return Eigen::Map<Eigen::Vector3f>(&v.x);
     }
 
+    static const Eigen::Vector3f toEigConst(const WorldSpace& v) {
+        return Eigen::Map<const Eigen::Vector3f>(&v.x);
+    }
+
+    /*static const Eigen::Vector3f toEig(const WorldSpace& v) {
+        return  Eigen::Map<Eigen::Vector3f>(&v.x);
+    }*/
 
 
 }

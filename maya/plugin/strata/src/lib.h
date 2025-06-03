@@ -6,6 +6,13 @@
 #include "macro.h"
 #include "bezier/bezier.h"
 
+
+/* if C warns me about losing precision adding 2.0 to a float,
+* I don't care about it
+*/
+
+#pragma warning(push)
+#pragma warning( disable : 4244)
 namespace ed {
 
 	typedef unsigned int uint;
@@ -82,6 +89,7 @@ namespace ed {
 	inline T uss(T in) {
 		/* unsigned-to-signed conversion - 
 		[0,1] -> [-1,1] */
+		float a = 2.0;
 		return (2.0 * in) - 1.0;
 	}
 
@@ -111,6 +119,15 @@ namespace ed {
 	inline Eigen::Vector3f lerp(Eigen::Vector3f a, Eigen::Vector3f b, float t) {
 		return b * t + (float(1.0f) - t) * b;
 	}
+
+	/* test a way to pass in different modes of interpolation
+	to more complex functions -  
+	*/
+	template<typename T, typename N=float>
+	struct Lerp {
+		static T fn(T a, T b, N t) { return lerp<T, T, N>(a, b, t); }
+	};
+
 
 	template <typename T>
 	static inline T clamp(T low, T high, T x) {
@@ -209,22 +226,100 @@ namespace ed {
 	//		length(max(k - vec2(a, b), 0.0));
 	//}
 
-	template<typename T>
-	inline T smoothstepCubic(T x) {
+
+	/* smoothstep functions
+	any appearance of competence I exhibit is a thin bin bag over
+	the actual work of iq
+	*/
+	float smoothstepCubic(float x) // generally fine, cheap, c1, linear c2
+	{
 		return x * x * (3.0 - 2.0 * x);
 	}
+	float inv_smoothstepCubic(float x)
+	{
+		return 0.5 - sin(asin(1.0 - 2.0 * x) / 3.0);
+	}
 
-	template<typename T>
-	inline T smoothstepCubicRational(T x) {
+	
+
+	float smoothstepQuarticPolynomial(float x)
+	{
+		return x * x * (2.0 - x * x);
+	}
+	float inv_smoothstepQuarticPolynomial(float x)
+	{
+		return sqrt(1.0 - sqrt(1.0 - x));
+	}
+
+	float smoothstepQuinticPolynomial(float x)
+	{
+		return x * x * x * (x * (x * 6.0 - 15.0) + 10.0);
+	}
+
+	float smoothstepQuadraticRational(float x)
+	{ // slightly rounder than cubic, c1, sigmoid c2 
+		return x * x / (2.0 * x * x - 2.0 * x + 1.0);
+	}
+	float inv_smoothstepQuadraticRational(float x)
+	{
+		return (x - sqrt(x * (1.0 - x))) / (2.0 * x - 1.0);
+	}
+
+	float smoothstepCubicRational(float x)
+	{	/* smooth fillet, distinct straight regions in sigmoid,
+		c2 continuous*/
 		return x * x * x / (3.0 * x * x - 3.0 * x + 1.0);
 	}
-
-	template<typename T>
-	inline T invSmoothstepCubicRational(T x) {
-		T a = pow(x, 1.0 / 3.0);
-		return a / (a + pow(1.0 - x, 1.0 / 3.0));
-
+	float inv_smoothstepCubicRational(float x)
+	{		float a = pow(x, 1.0 / 3.0);
+		float b = pow(1.0 - x, 1.0 / 3.0);
+		return a / (a + b);
 	}
+
+
+	float smoothstepRational(float x, float n)
+	{		return pow(x, n) / (pow(x, n) + pow(1.0 - x, n));
+	}
+	float inv_smoothstepRational(float x, float n)
+	{		return smoothstepRational(x, 1.0 / n);
+	}
+
+	float smoothstepPiecewiseQuadratic(float x)
+	{
+		return (x < 0.5) ?
+			2.0 * x * x :
+			2.0 * x * (2.0 - x) - 1.0;
+	}
+	float inv_smoothstepPiecewiseQuadratic(float x)
+	{
+		return (x < 0.5) ?
+			sqrt(0.5 * x) :
+			1.0 - sqrt(0.5 - 0.5 * x);
+	}
+
+	float smoothstepPiecewisePolynomial(float x, float n)
+	{
+		return (x < 0.5) ?
+			0.5 * pow(2.0 * x, n) :
+			1.0 - 0.5 * pow(2.0 * (1.0 - x), n);
+	}
+	float inv_smoothstepPiecewisePolynomial(float x, float n)
+	{
+		return (x < 0.5) ?
+			0.5 * pow(2.0 * x, 1.0 / n) :
+			1.0 - 0.5 * pow(2.0 * (1.0 - x), 1.0 / n);
+	}
+
+	float smoothstepTrigonometric(float x)
+	{
+		return 0.5 - 0.5 * cos(PI * x);
+	}
+	float inv_smoothstepTrigonometric(float x)
+	{
+		return acos(1.0 - 2.0 * x) / PI;
+	}
+
+
 
 	/* FUNCTIONS TAKE QUATERNIONS OF FORM X-Y-Z-W
 
@@ -339,3 +434,5 @@ namespace ed {
 	*/
 
 }
+
+#pragma warning( pop )

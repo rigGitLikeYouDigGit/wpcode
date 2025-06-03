@@ -54,7 +54,7 @@ MStatus StrataElementOpNode::initialize() {
     tFn.setDefault(MFnStringData().create(""));
 
     /* expression for parents of given elements*/
-    aStParentExp = tFn.create("stParentExp", "stParentExp", MFnData::kString);
+    aStSpaceExp = tFn.create("stParentExp", "stParentExp", MFnData::kString);
     tFn.setDefault(MFnStringData().create(""));
 
     /* name of new element to create*/
@@ -72,7 +72,7 @@ MStatus StrataElementOpNode::initialize() {
     nFn.setWritable(false);
 
     cFn.addChild(aStDriverExp);
-    cFn.addChild(aStParentExp);
+    cFn.addChild(aStSpaceExp);
     cFn.addChild(aStName);
     cFn.addChild(aStGlobalIndex);
     cFn.addChild(aStElTypeIndex);
@@ -185,7 +185,7 @@ MStatus StrataElementOpNode::initialize() {
         //aStElement,
         aStName,
         aStDriverExp,
-        aStParentExp,
+        aStSpaceExp,
 
         aStMatchWorldSpaceIn,
         aStDriverWeightIn,
@@ -344,7 +344,7 @@ MStatus StrataElementOpNode::syncStrataParams(MObject& nodeObj, MDataBlock& data
         return MS::kFailure;
     }
 
-    opPtr->namePointDataMap.clear();
+    opPtr->paramMap.clear();
 
     // check names currently found, remove any missing
     std::unordered_set<std::string> foundNames;
@@ -354,6 +354,8 @@ MStatus StrataElementOpNode::syncStrataParams(MObject& nodeObj, MDataBlock& data
     for (unsigned int i = 0; i < elDH.elementCount(); i++) {
         s = jumpToElement(elDH, i);
         MCHECK(s, "could not jump to element" + std::to_string(i));
+
+        ElOpParam param;
         //MDataHandle iDH = 
         MDataHandle nameDH = elDH.inputValue().child(aStName);
         MDataHandle driverExpDH = elDH.inputValue().child(aStDriverExp);
@@ -365,55 +367,32 @@ MStatus StrataElementOpNode::syncStrataParams(MObject& nodeObj, MDataBlock& data
             continue;
         }
 
+        param.name = elName;
         // driver exp
         std::string driverExpStr(driverExpDH.asString().asChar());
         foundNames.insert(elName);
-        if (opPtr->paramNameExpMap.count(elName)) { // name found, check if exp text is different
-            if (opPtr->paramNameExpMap[elName].srcStr == driverExpStr) { // matches, all fine
-            }
-            else { // text has changed, recompile
-                opPtr->paramNameExpMap[elName].setSource(driverExpStr.c_str());
-            }
-        }
-        else { // not found, make new expression
-            opPtr->paramNameExpMap[elName] = expns::Expression(driverExpStr.c_str());
-        }
+        param.driverExp.setSource(driverExpStr.c_str());
 
         // parent exp
-        std::string parentExpStr = elDH.inputValue().child(aStParentExp).asString().asChar();
+        std::string spaceExpStr = elDH.inputValue().child(aStSpaceExp).asString().asChar();
+        param.spaceExp.setSource(spaceExpStr.c_str());
         std::string elParentName = elName + "!";
         foundNames.insert(elParentName);
-        if (opPtr->paramNameExpMap.count(elParentName)) { // name found, check if exp text is different
-            if (opPtr->paramNameExpMap[elParentName].srcStr == driverExpStr) { // matches, all fine
-            }
-            else { // text has changed, recompile
-                opPtr->paramNameExpMap[elParentName].setSource(driverExpStr.c_str());
-            }
-        }
-        else { // not found, make new expression
-            opPtr->paramNameExpMap[elParentName] = expns::Expression(driverExpStr.c_str());
-        }
 
-        // remove any params from op not found in names
-        for (auto& i : opPtr->paramNameExpMap) {
-            if (foundNames.find(i.first) == foundNames.end()) {
-                opPtr->paramNameExpMap.erase(i.first);
-            }
-        }
+
         // pull in element data
         float matchWorldSpace = elDH.inputValue().child(aStMatchWorldSpaceIn).asFloat();
         // always match in worldspace for now
-        switch (elName[0]) {
-            case 'p': { // points have no drivers
-                //opPtr->namePointDataMap[elName].finalMatrix = elDH.inputValue().child(aStPointWorldMatrixIn).asMatrix();
-                opPtr->namePointDataMap[elName].finalMatrix = toEigen(elDH.inputValue().child(aStPointWorldMatrixIn).asMatrix());
-                break;
-            }
-            case 'e': {
-                
-            }
+
+        param.pData.finalMatrix = toEigen(elDH.inputValue().child(aStPointWorldMatrixIn).asMatrix());
+
+
+    }
+    // remove any params from op not found in names
+    for (auto& i : opPtr->paramMap) {
+        if (foundNames.find(i.first) == foundNames.end()) {
+            opPtr->paramMap.erase(i.first);
         }
-        
     }
     return s;
 }

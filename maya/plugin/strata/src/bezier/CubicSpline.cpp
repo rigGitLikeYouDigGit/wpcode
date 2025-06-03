@@ -147,6 +147,7 @@ namespace bez
     Eigen::Vector3f CubicBezierPath::tangentAt(float t, Eigen::Vector3f& basePos) const {
         /* specialty treatment for 1.0 or 0.0 u values -
         * basePos should be original sampled position on curve
+        * NOT NORMALISED
         */
         auto r = global_to_local_param(t);
         if (t > 0.999) { // sample backwards, negate result vector

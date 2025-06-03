@@ -259,7 +259,7 @@ namespace ed {
 			indexErrorMap.insert(std::make_pair(index, errorMsg)
 			);
 		}
-		
+
 		const inline std::string outputNodeName() {
 			if (outputIndex == -1) {
 				return "";
