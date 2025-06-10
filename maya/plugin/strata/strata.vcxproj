@@ -99,7 +99,7 @@
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>WIN32;_WINDOWS;CMAKE_INTDIR="Debug";strata_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)</ObjectFileName>
-      <AdditionalOptions>/external:W0 /external:anglebrackets /external:W0 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/external:W0 /external:anglebrackets %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;CMAKE_INTDIR=\"Debug\";strata_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>

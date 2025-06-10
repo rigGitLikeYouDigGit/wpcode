@@ -59,12 +59,74 @@ namespace ed {
 
 	*/
 
+
+	/* BACK PROPAGATION
+	
+	*/
+
+	constexpr int SDELTAMODE_NONE = 0; // no change
+	constexpr int SDELTAMODE_WORLD = 1; // direct snap to given target in worldspace
+	constexpr int SDELTAMODE_LOCAL = 2; // local delta on top of original final matrix
+	//constexpr int SDELTAMODE_UVN = 2; // local vector delta in UVN?
+
+
+	/* worldspace snap can only act once, other wise it's an eternal pin in the graph -
+	so all of these work out to saving to space data,
+	but only affects how we gather matrices from Maya?
+	maybe the mode makes no difference here
+	*/
+
+	/* UVN should be allowed
+	with separate flags?*/
+
+	struct SPointDataDelta {
+		SPointData data;
+		int matrixMode = SDELTAMODE_NONE;
+		int uvnMode = SDELTAMODE_NONE;
+
+	};
+
+	struct SAtomMatchTarget {
+		int index;
+		int matrixMode = SDELTAMODE_NONE;
+		int uvnMode = SDELTAMODE_NONE;
+
+		Affine3f matrix;
+		Vector3f uvn;
+		/*std::vector<Affine3f> matrices;
+		std::vector<Vector3f> uvns;*/
+	};
+
+
+	// always use only relative matrices and deltas to match with previous components 
+	struct SAtomBackDeltaGroup {
+		/* overall thing representing wavefront of elements to backpropagate
+		*/
+
+		/* one element might have multiple outputs
+		and targets to match, from multiple following nodes
+		*/
+		std::map<int, std::vector<SAtomMatchTarget>> targetMap;
+
+
+		void mergeOther(SAtomBackDeltaGroup& other) {
+			for (auto& p : other.targetMap) {
+				targetMap.at(p.first).insert(
+					targetMap.at(p.first).end(),
+					p.second.begin(),
+					p.second.end()
+				);
+			}
+		}
+	};
+
+
+
 	struct StrataAuxData : EvalAuxData {
 
 	};
 
 	struct StrataOp : EvalNode<StrataManifold> {
-		// maybe later we try and split topological and smooth operations
 
 		using EvalNode::EvalNode;
 
@@ -93,6 +155,9 @@ namespace ed {
 
 		bool paramsDirty = true; // param expressions have changed, need recompiling (later)
 
+		//std::unordered_set<int> elements; // elements created by this node 
+		std::vector<int> elements; // elements created by this node 
+
 		/* test saving created element data on the ops that create them????
 		*/
 		std::map<StrataName, SPointData> opPointDataMap;
@@ -120,103 +185,122 @@ namespace ed {
 			return (ptr->outputIndex == index);
 		}
 
+		/* BACK-PROPAGATION */
+		SAtomBackDeltaGroup backDeltasToMatch;
+
+		/* 2 pass system - 
+		BACKWARDS fitting node parametres to given result, outputting required incoming geometry as
+		further geo in turn
+		
+		then
+		FORWARDS once all nodes have been fit as best as possible - add on local offsets on top of the incoming geo input
+		*/
+
+		/* initial gather will only run from head output node (which will probably be a
+		merge node, from a shape node in maya*/
+		virtual Status& gatherBackDeltas(Status& s, StrataManifold& finalManifold, SAtomBackDeltaGroup& result) {
+			/* get initial deltas from end node
+			*/
+			return s;
+		}
+
+			/* assume this will run parallel between nodes - each object should only know immediate components to affect,
+			and result will only be components taken in by this node*/
+		virtual SAtomBackDeltaGroup bestFitBackDeltas(Status* s, StrataManifold& finalManifold, SAtomBackDeltaGroup& front) {
+			/* pass in deltas to match -
+			
+			we work out what INPUTS (if any) would best match the given targets- 
+			return new AtomDeltaGroup representing that.
+
+			SAVE initial target deltas on this op to match later
+
+			those deltas may not be able to be matched exactly - 
+			subsequent method builds final offsets on this node, from previous node's best effort
+			*/
+
+			// save deltas on this node
+			backDeltasToMatch = front;
+			SAtomBackDeltaGroup result(front); // copy so we pass through any other elements
+			// erase any elements created by this node from result
+			for (int i : elements) { 
+				auto found = result.targetMap.find(i);
+				if (found != result.targetMap.end()) {
+					result.targetMap.erase(found->first);
+				}
+			}
+			return result;
+			}
+
+		virtual Status& setBackOffsetsAfterDeltas(Status& s) {
+			/* finalise offsets on top of fitted inputs to match 
+			saved deltas
+			this node will have been evaluated - make sure to 
+			edit the strata manifold element datas too?
+			or we just point back into these nodes to retrieve data
+
+			*/
+			return s;
+		}
+
+		Status& runBackPropagation(
+			Status& s, 
+			StrataOp* fromNode, 
+			StrataManifold& finalManifold, 
+			SAtomBackDeltaGroup deltaGrp,
+			StrataAuxData& auxData
+		) {
+			/* overall top-level back prop function
+			assume deltas have already been gathered outside of this
+
+			from that work out what nodes created the affected elements.
+			check nodes breadth-first from output node backwards,
+			calling prop methods on those nodes if they created elements in delta group
+			*/
+			//std::set<StrataOp*> toVisit({ fromNode });
+			//std::set<StrataOp*> nextToVisit; // don't know how to do breadth-first in leet code
+
+			// get generations in history of nodes
+			std::vector<std::vector<int>> generations = getGraphPtr()->nodesInHistory(fromNode->index, true);
+
+			/* backwards pass, getting target deltas for elements/ nodes to match
+			*/
+			for(int i = 0; i < static_cast<int>(generations.size()); i++) {
+
+				std::vector<int>& toVisit = generations[i];
+				std::vector<SAtomBackDeltaGroup> resultDeltas(toVisit.size()); // results of this iteration of back-prop
+				for (int n = 0; n < static_cast<int>(toVisit.size()); n++) { // parallel this
+					StrataOp* op = getGraphPtr()->getNode<StrataOp>(toVisit[n]);
+					resultDeltas[n] = op->bestFitBackDeltas(&s, finalManifold, deltaGrp);
+					CRMSG(s, "error running back propagation on node " + op->name);
+				}
+
+				// collate delta fronts
+				for (int n = 1; n < static_cast<int>(resultDeltas.size()); n++) {
+					resultDeltas[0].mergeOther(resultDeltas[n]);
+				}
+				deltaGrp = resultDeltas[0]; // need to do a copy here because we create the intermediate vals in the loop scope
+			}
+
+			/* now forwards pass, eval'ing nodes and setting final offsets
+			*/
+			for (int i = 0; i < static_cast<int>(generations.size()); i++) {
+				
+				std::vector<int>& toVisit = *(generations.rbegin() + i);
+				for (int n = 0; n < static_cast<int>(toVisit.size()); n++) { // parallel this
+					StrataOp* op = getGraphPtr()->getNode<StrataOp>(toVisit[n]);
+					s = getGraphPtr()->evalGraph(s, toVisit[n], &auxData); // eval node with new best-fit params
+					//StrataManifold& m = op->value();
+					s = op->setBackOffsetsAfterDeltas(s);
+					op->setDirty(true);
+				}
+			}
+
+			return s;
+		}
+
 	};
 
-	//struct AddEdgesOp : StrataOp {
-	//	// add hardcoded edges to the graph
-	//	// no support for complex inputs
-	//	// do we assume that each single input will be an array of points? 
 
-	//	std::vector<std::string> names;
-	//	std::vector<std::vector<int>> driverGlobalIds;
-
-	//	virtual void evalTopo(StrataManifold& manifold) {
-	//		manifold.edges.reserve(names.size());
-	//		for (size_t i = 0; i < names.size(); i++) {
-	//			SEdge el(names[i]);
-	//			SEdgeData elData;
-	//			//elData.matrix = matrices[i];
-	//			SEdge* resultEl = manifold.addEdge(el, elData);
-	//			//result.push_back(resultEl->globalIndex);
-
-
-
-	//			// update driver indices for this edge
-	//			std::copy(driverGlobalIds[i].begin(), driverGlobalIds[i].end(), resultEl->drivers.begin());
-	//			// add this edge to output edges of each driver
-	//			for (int driverGlobalId : driverGlobalIds[i]) {
-	//				StrataElement* driverPtr = manifold.getEl(driverGlobalId);
-
-	//				// check all drivers are points (for now)
-	//				if (int(driverPtr->elType) != int(SElType::point)) {
-	//					resultEl->isInvalid = true;;
-	//					resultEl->errorMsg = "driver " + driverPtr->name + " is not a point, not allowed in addEdgesOp";
-	//				}
-	//				// check if any of the drivers are already marked invalid
-	//				if (!driverPtr->isInvalid) { // an invalid source invalidates all elements after it, like a NaN
-	//					resultEl->isInvalid = true;
-	//					resultEl->errorMsg = "driver " + driverPtr->name + " is already invalid";
-	//				}
-	//				driverPtr->edges.push_back(resultEl->globalIndex);
-	//			}
-	//		}
-	//		//return &manifold;
-	//	}
-	//};
-
-	//struct AddFacesOp : StrataOp {
-	//	// explicitly add faces, explicitly supply border edges for each
-	//	std::vector<std::string> names;
-	//	std::vector<std::vector<int>> driverGlobalIds;
-
-	//	virtual void evalTopo(StrataManifold& manifold) {
-	//		manifold.faces.reserve(names.size());
-	//		for (size_t i = 0; i < names.size(); i++) {
-
-	//			// check that all these elements are edges (for now)
-	//			bool areEdges = true;
-
-	//			// how do we check that all these edges are contiguous?
-
-	//			SFace el(names[i]);
-	//			SFaceData elData;
-	//			//elData.matrix = matrices[i];
-	//			SFace* resultEl = manifold.addFace(el, elData);
-	//			//result.push_back(resultEl->globalIndex);
-
-
-	//			// update driver indices for this edge
-	//			std::copy(driverGlobalIds[i].begin(), driverGlobalIds[i].end(), resultEl->drivers.begin());
-
-	//			if (!manifold.edgesAreContiguousRing(resultEl->drivers)) {
-	//				el.isInvalid = true;
-	//				el.errorMsg = "driver edges for " + resultEl->name + " do not form contiguous ring, \
-	//				invalid border for face";
-	//			}
-
-	//			// add this edge to output edges of each driver
-	//			for (int driverGlobalId : driverGlobalIds[i]) {
-	//				StrataElement* driverPtr = manifold.getEl(driverGlobalId);
-
-	//				// check all drivers are edges
-	//				if (int(driverPtr->elType) != int(SElType::edge)) {
-	//					el.isInvalid = true;
-	//					el.errorMsg = "driver " + driverPtr->name + " is not an edge, not allowed in addFacesOp";
-	//				}
-	//				// check if any of the drivers are already marked invalid
-	//				if (!driverPtr->isInvalid) { // an invalid source invalidates all elements after it, like a NaN
-	//					el.isInvalid = true;
-	//					el.errorMsg = "driver " + driverPtr->name + " is already invalid";
-	//				}
-
-	//				driverPtr->faces.push_back(resultEl->globalIndex);
-	//			}
-
-	//		}
-	//		//return &manifold;
-	//	}
-
-	//};
 
 
 	//struct LoftFaceOp : StrataOp {

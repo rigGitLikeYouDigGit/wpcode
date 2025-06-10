@@ -746,7 +746,7 @@ namespace ed {
 	inline float getArrayIndicesTForU(const int nEntries, const float u, int& a, int& b) {
 		/* get upper and lower indices and t value for final interpolation, 
 		from a 0-1 global u*/
-		a = floor(u * float(nEntries));
+		a = static_cast<int>(u * float(nEntries));
 		b = a + 1;
 		if (u >= 1.0f) {
 			a = nEntries - 1;
@@ -814,7 +814,7 @@ namespace ed {
 		take exponential of result*/
 		Eigen::Vector4f result(0, 0, 0, 0);
 		for (size_t i = 0; i < quats.size(); i++) {
-			auto scaled = quatLogarithm(quats.at(i)).matrix() * weights[i];
+			auto scaled = quatLogarithm(quats.at(i)).coeffs() * weights[i];
 			result += scaled; // mixed matrices of diff sizes
 		}
 		return quatExponential(Eigen::Quaternionf(result / weights.sum()));

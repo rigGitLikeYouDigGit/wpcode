@@ -10,6 +10,7 @@
 
 #include "wpshared/enum.h"
 namespace ed {
+	using namespace Eigen;
 
 	// registering IDs of plugin nodes
 	const unsigned int pluginPrefix = 101997;
@@ -234,7 +235,48 @@ namespace ed {
 		return s;
 	}
 
+	inline MStatus jumpToLogicalIndex(MArrayDataHandle& hArray, int index) {
+		/* jumpToElement*/
+		MStatus s;
+		s = hArray.jumpToElement(index);
+		if (MFAIL(s)) {
+			MArrayDataBuilder builder = hArray.builder(&s);
+			if (s == MS::kInvalidParameter) {
+				MCHECK(s, "array handle does not support data builder, go fix it");
+			}
+			builder.addElement(index, &s);
+			MCHECK(s, "could not add element to arr builder");
+			s = hArray.set(builder);
+			MCHECK(s, "could not set builder back to array");
+			s = hArray.jumpToElement(index);
+			MCHECK(s, "could not finally jump to array element");
+		}
+		//CHECK_MSTATUS_AND_RETURN_IT(s);
+		return s;
+	}
 
+
+	inline MStatus jumpToPhysicalIndex(MArrayDataHandle& hArray, int index) {
+		/* jumpToARRAYElement 
+		know the difference
+		*/
+		MStatus s;
+		s = hArray.jumpToArrayElement(index);
+		if (MFAIL(s)) {
+			MArrayDataBuilder builder = hArray.builder(&s);
+			if (s == MS::kInvalidParameter) {
+				MCHECK(s, "array handle does not support data builder, go fix it");
+			}
+			builder.addElement(index, &s);
+			MCHECK(s, "could not add element to arr builder");
+			s = hArray.set(builder);
+			MCHECK(s, "could not set builder back to array");
+			s = hArray.jumpToArrayElement(index);
+			MCHECK(s, "could not finally jump to array element");
+		}
+		//CHECK_MSTATUS_AND_RETURN_IT(s);
+		return s;
+	}
 	template <typename UserNodeT>
 	static MStatus castToUserNode(MObject& nodeObj, UserNodeT*& ptr) {
 		// retrieve and cast full user-defined node for given MObject
@@ -351,6 +393,11 @@ namespace ed {
 			static_cast<D>(mat[2][0]), static_cast<D>(mat[2][1]), static_cast<D>(mat[2][2]), static_cast<D>(mat[2][3]),
 			static_cast<D>(mat[3][0]), static_cast<D>(mat[3][1]), static_cast<D>(mat[3][2]), static_cast<D>(mat[3][3]);
 		return m;
+	}
+
+	inline Eigen::Affine3f toAff(const MMatrix& mat) {
+		Matrix4f eMat = toEigen<float>(mat);
+		return Affine3f(eMat);
 	}
 	
 	template<typename D=float>

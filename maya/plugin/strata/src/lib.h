@@ -2,6 +2,10 @@
 
 #include <vector>
 #include <math.h>
+#include <set>
+#include <unordered_map>
+#include <unordered_set>
+#include <map>
 #include "api.h"
 #include "macro.h"
 #include "bezier/bezier.h"
@@ -20,6 +24,64 @@ namespace ed {
 	using std::max;
 
 	BETTER_ENUM(STDriverType, int, point, line, face) // used in maya enum attr
+	
+	template<typename mapT>
+	std::set<typename mapT::key_type> mapKeysToSet(mapT& m) {
+		std::set<typename mapT::key_type>result;
+		for (auto& p : m) {
+			result.insert(p.first);
+		}
+		return result;
+	}
+
+	template<typename mapT>
+	std::unordered_set<typename mapT::key_type> mapKeysToUSet(mapT& m) {
+		std::unordered_set<typename mapT::key_type>result;
+		for (auto& p : m) {
+			result.insert(p.first);
+		}
+		return result;
+	}
+
+	template<typename T>
+	bool anyIntersectionVectorUSet(std::vector<T> a, std::unordered_set<T> b) {
+		for (auto i : a) {
+			if (b.find(a) != b.end()) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	template<typename Key, typename Value>
+	using Map = std::map<Key, Value>;
+
+	template<typename Key, typename Value>
+	using MapIterator = typename Map<Key, Value>::iterator;
+
+	template<typename Key, typename Value>
+	class MapKeyIterator : public MapIterator<Key, Value> {
+
+	public:
+
+		MapKeyIterator() : MapIterator<Key, Value>() {};
+		MapKeyIterator(MapIterator<Key, Value> it_) : MapIterator<Key, Value>(it_) {};
+
+		Key* operator -> () { return (Key* const)&(MapIterator<Key, Value>::operator -> ()->first); }
+		Key operator * () { return MapIterator<Key, Value>::operator * ().first; }
+	};
+
+	template<typename Key, typename Value>
+	class MapValueIterator : public MapIterator<Key, Value> {
+
+	public:
+
+		MapValueIterator() : MapIterator<Key, Value>() {};
+		MapValueIterator(MapIterator<Key, Value> it_) : MapIterator<Key, Value>(it_) {};
+
+		Value* operator -> () { return (Value* const)&(MapIterator<Key, Value>::operator -> ()->second); }
+		Value operator * () { return MapIterator<Key, Value>::operator * ().second; }
+	};
 
 	/* handy way to work more easily with vertex buffer memory - cast
 	it to vector of float types like this */

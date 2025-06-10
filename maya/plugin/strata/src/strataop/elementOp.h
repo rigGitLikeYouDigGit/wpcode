@@ -23,6 +23,11 @@ otherwise we treat as new element, setting up parents, relations, el type etc
 
 each node in st graph should be able to ping "eval to here now" and have that be the cached result manifold 
 
+
+
+internally elementOp needs to track which elements depend on which, 
+then invert those sequences for back-propagation
+
 */
 
 namespace ed {

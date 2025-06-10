@@ -101,7 +101,9 @@ namespace ed {
 		//std::vector<int> parents; // weighted parent influences
 
 		std::vector<StrataName> drivers; // topological drivers, not parent spaces
-		std::vector<StrataName> parents; // weighted parent influences
+		std::vector<StrataName> spaces; // weighted parent influences
+
+		std::vector<std::string> opHistory;
 
 		/* i think we need name vectors for these instead
 		*/
@@ -129,7 +131,7 @@ namespace ed {
 		};
 
 		inline bool hasDrivers() { return (drivers.size() > 0); }
-		inline bool hasParents() { return (parents.size() > 0); }
+		inline bool hasParents() { return (spaces.size() > 0); }
 
 		// neighbours do not include child / driven elements
 		// topology functions only return raw ints from these structs - 
@@ -182,6 +184,7 @@ namespace ed {
 
 	struct SElData {
 		int index = -1;
+		std::string creatorNode;
 	};
 
 	struct SPointDriverData {
@@ -205,7 +208,7 @@ namespace ed {
 		std::vector<SPointSpaceData> spaceDatas; // datas for each driver
 		//MMatrix finalMatrix = MMatrix::identity; // final evaluated matrix in world space
 		Eigen::Affine3f finalMatrix = Eigen::Affine3f::Identity(); // final evaluated matrix in world space
-		std::string creatorNode;
+		//std::vector<std::string> nodeHistory; // each node that has affected this point, starting with creator
 	};
 
 	/*edge system is quite messy, 
@@ -784,6 +787,7 @@ namespace ed {
 			}
 			return &(groups[name]);
 		}
+
 
 		/*
 		merging

@@ -21,6 +21,9 @@ registering a new interactive shape class in maya, how hard can it be?
 # define NODE_STATIC_MEMBERS(prefix, nodeT) \
 prefix MObject nodeT aStDataIn;\
 prefix MObject nodeT aStExpIn;\
+prefix MObject nodeT aStSpaceModeIn;\
+prefix MObject nodeT aStSpaceIndexIn;\
+prefix MObject nodeT aStSpaceNameIn;\
 prefix MObject nodeT aStMatrixIn;\
 \
 prefix MObject nodeT aStDataOut;\
@@ -31,6 +34,14 @@ prefix MObject nodeT aStCurveOut;\
 prefix MObject nodeT aStShowPoints;\
 
 
+/* per-space stuff - 
+if space is -1, default, use either no space (if el has none)
+or the first space of the element -
+this should suffice for most of them.
+
+if space name is given, use that if found; no effect if not
+if space index is given, use that if found; no effect if not
+*/
 
 /* todo:
 for visibility, enabled, allow setting expression based overrides
@@ -72,6 +83,7 @@ public:
 	
 	using superT = StrataOpNodeBase;
 	using thisT = StrataShapeNode;
+	using thisStrataOpT = ed::StrataMergeOp;
 
 	// cached values used for drawing
 	float pointOpacity = 1.0;
@@ -106,6 +118,10 @@ public:
 
 	static MStatus initialize();
 
+	MStatus editPrevOpData(
+		MObject& nodeObj, MDataBlock& data, MDataHandle& elDH,
+		ed::StrataManifold* manifold, ed::SElement* finalEl, ed::StrataOp* targetOp
+	);
 	virtual MStatus syncStrataParams(MObject& nodeObj, MDataBlock& data);
 
 	virtual MStatus compute(const MPlug& plug, MDataBlock& data);

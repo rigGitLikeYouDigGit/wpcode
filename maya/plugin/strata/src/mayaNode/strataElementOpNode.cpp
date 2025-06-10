@@ -346,6 +346,8 @@ MStatus StrataElementOpNode::syncStrataParams(MObject& nodeObj, MDataBlock& data
 
     opPtr->paramMap.clear();
 
+    opPtr->opPointDataMap.clear();
+
     // check names currently found, remove any missing
     std::unordered_set<std::string> foundNames;
 

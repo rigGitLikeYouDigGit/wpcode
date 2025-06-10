@@ -35,18 +35,19 @@ Status& pointEvalParam(
 
 	s = value.addElement(SElement(param.name, StrataElType::point), outPtr);
 
-	//auto prevData = value.pDataMap.find(param.name);
+
+	/* we don't care about outputs etc - 
+	when this op is created afresh, its saved data will be empty,
+	so we just need to look if node has data saved on it*/
 	bool ALREADY_DATA = false;
-	if (op.isOutputNode()) {
-		ALREADY_DATA = true; // if not output node, use existing data
-	}
 	auto prevData = op.opPointDataMap.find(param.name);
-	ALREADY_DATA = ALREADY_DATA && (prevData != op.opPointDataMap.end());
-	// also only take existing data if this node isn't the output of the graph
+	ALREADY_DATA = (prevData != op.opPointDataMap.end());
+	
 	
 	if (ALREADY_DATA) {
-		prevData->second.finalMatrix = param.pData.finalMatrix;
+		//prevData->second.finalMatrix = param.pData.finalMatrix;
 		s = value.computePointData(s, prevData->second);
+		value.pDataMap[param.name] = prevData->second;
 	}
 	else { // no data found, make new
 

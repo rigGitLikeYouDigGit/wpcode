@@ -61,7 +61,15 @@ namespace ed {
 		std::vector<int> inputs; // manage connections yourself
 
 		// my python is showing - we use a map here for easier extensibility
-		std::map<const std::string, bool> dirtyMap = { {"main" , true} };
+		std::map<const std::string, bool> dirtyMap = { {"main" , true} }; // this is probably pointless
+		// TODO: get rid of the map once everything else works
+
+		inline bool setDirty(bool state) {
+			/* returns the previously set dirty state*/
+			bool oldState = dirtyMap["main"];
+			dirtyMap["main"] = state;
+			return oldState;
+		}
 
 		inline bool anyDirty() {
 			for (auto p : dirtyMap) {
@@ -232,16 +240,25 @@ namespace ed {
 			return nodes[index].get();
 		}
 		inline DirtyNode* getNode(const std::string& nodeName) const {
-			//return nodes[nameIndexMap[nodeName]].get();
-			//return nodes[nameIndexMap.find(nodeName)].get();
-			//return nodes.at(nameIndexMap.find(nodeName)).get();
 			
-			//return nodes[0].get();
-
 			auto check = nameIndexMap.find(nodeName);
 			if (check == nameIndexMap.end()) { return nullptr; }
 			return nodes[check->second].get();
 		}
+
+		template<typename NodeT>
+		inline NodeT* getNode(DirtyNode*& node) const {
+			return dynamic_cast<NodeT*>(getNode(node));
+		}
+		template<typename NodeT>
+		inline NodeT* getNode(const int& index) const {
+			return dynamic_cast<NodeT*>(getNode(index));
+		}
+		template<typename NodeT>
+		inline NodeT* getNode(const std::string& nodeName) const {
+			return dynamic_cast<NodeT*>(getNode(nodeName));
+		}
+
 
 		template<typename argT>
 		inline std::vector<DirtyNode*> getNodes(argT* start, argT* end) {
@@ -414,25 +431,39 @@ namespace ed {
 			return result;
 		}
 
-		//SmallList<std::unordered_set<int>, 8> nodesInHistory(int opIndex, bool returnGenerations) {
-		std::vector<std::unordered_set<int>> nodesInHistory(int opIndex, bool returnGenerations) {
-			/* generation list of nodes in history*/
-			//SmallList<std::unordered_set<int>, 8> result;
-			std::vector<std::unordered_set<int>> result;
+		std::vector<std::vector<int>> nodesInHistory(int opIndex, bool returnGenerations) {
+			/* generation list of nodes in history
+			return generations where latest nodes guaranteed to be included before deeper nodes
+			
+			*/
+			std::unordered_map<int, int> visited; // {index : highest degree}
+			std::stack<int> toCheck;
+			toCheck.push(opIndex);
 
-			std::unordered_set<int> toCheck = { opIndex };
+			visited[opIndex] = 0;
+
+			int maxDepth = 0;
 			while (toCheck.size()) {
-				std::unordered_set<int> newToCheck;
-				for (int checkNodeIndex : toCheck) {
-					DirtyNode* checkOp = getNode(checkNodeIndex);
-					newToCheck.insert(checkOp->inputs.begin(), checkOp->inputs.end());
+				int checkIndex = toCheck.top();
+				toCheck.pop();
+				for (int inIndex : getNode(checkIndex)->inputs) {
+					auto found = visited.find(inIndex);
+					if (found == visited.end()) {
+						visited[inIndex] = 0;
+						found = visited.find(inIndex);
+					}
+					int checkDepth = visited.find(checkIndex)->second + 1;
+					int foundDepth = std::max<int>({ found->second, checkDepth });
+					visited.insert_or_assign(inIndex, foundDepth);
+					
+					toCheck.push(inIndex);
+					maxDepth = std::max(maxDepth, foundDepth);
 				}
-				// add the inputs to this generation's result
-				result.push_back(
-					//std::unordered_set<int>(newToCheck.begin(), newToCheck.end())
-					newToCheck
-				);
-				toCheck = newToCheck;
+			}
+			// sort into vector of vectors
+			std::vector<std::vector<int>> result(maxDepth + 1);
+			for (auto p : visited) {
+				result[p.second].push_back(p.first);
 			}
 			return result;
 		}
@@ -982,9 +1013,9 @@ namespace ed {
 
 		virtual EvalGraph<VT>* getGraphPtr() { return reinterpret_cast<EvalGraph<VT>*>(graphPtr); }
 
-		VT* value() { // retrieve whatever node's current value is in graph
+		VT& value() { // retrieve whatever node's current value is in graph
 			//return &(graphPtr->results[index]);
-			return &(getGraphPtr()->results[index]);
+			return getGraphPtr()->results[index];
 		}
 
 	};
