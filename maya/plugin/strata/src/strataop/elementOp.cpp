@@ -75,10 +75,10 @@ Status& pointEvalParam(
 				// get final matrix in this space
 
 				SPointSpaceData sd;
-				s = value.getUVN(s, sd.uvn, i, pData.finalMatrix.translation());
+				s = value.getUVN(s, sd.uvn, spaceEl, pData.finalMatrix.translation());
 				sd.name = spaceEl->name;
 				Affine3f sampleMat;
-				s = value.matrixAt(s, sampleMat, spaceEl->globalIndex, sd.uvn);
+				s = value.matrixAt(s, sampleMat, spaceEl, sd.uvn);
 				sd.offset = sampleMat.inverse() * pData.finalMatrix;
 
 				pData.spaceDatas.push_back(sd);

@@ -103,6 +103,21 @@ namespace bez
             result.row(3) = toEig(control_points_.at(3));
             return result;
         }
+
+        void transform(Eigen::Affine3f& mat) {
+            /* transform this spline in place*/
+            control_points_[0] = mat * toEig(control_points_[0]);
+            control_points_[1] = mat * toEig(control_points_[1]);
+            control_points_[2] = mat * toEig(control_points_[2]);
+            control_points_[3] = mat * toEig(control_points_[3]);
+            Initialize();
+        }
+        CubicBezierSpline transformed(Eigen::Affine3f& mat) {
+            /* return a transformed copy of this spline*/
+            CubicBezierSpline result = cloneOnStack();
+            result.transform(mat);
+            return result;
+        }
     };
 
 
@@ -220,6 +235,12 @@ namespace bez
                 solver_ = std::make_unique<ClosestPointSolver>();
             }
             return solver_.get();
+        }
+
+        void transform(Eigen::Affine3f& mat) {
+            for (auto& i : splines_) {
+                i.get()->transform(mat);
+            }
         }
 
     };

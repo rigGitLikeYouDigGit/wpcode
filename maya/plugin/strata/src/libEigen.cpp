@@ -464,10 +464,10 @@ inline void MatrixSqrt<MATRIX>::solve(MATRIX& B, const MATRIX& A) const
 	integer portion of the power is always computed.
 *//***************************************************************************/
 template <typename MATRIX>
-class MatrixPower
+class FEMatrixPower
 {
 public:
-	MatrixPower(void) :
+	FEMatrixPower(void) :
 		m_iterations(16) {}
 
 	template <typename T>
@@ -482,7 +482,7 @@ private:
 
 template <typename MATRIX>
 template <typename T>
-inline void MatrixPower<MATRIX>::solve(MATRIX& B, const MATRIX& A,
+inline void FEMatrixPower<MATRIX>::solve(MATRIX& B, const MATRIX& A,
 	T a_power) const
 {
 	T absolute = a_power;

@@ -226,7 +226,7 @@ namespace ed {
 	/* Inigo Quilez smooth min functions - normally only need exp and quadratic */
 	// exponential
 	template<typename T>
-	T sminExp(T a, T b, T k)
+	inline T sminExp(T a, T b, T k)
 	{
 		k *= 1.0;
 		T r = exp2(-a / k) + exp2(-b / k);
@@ -234,7 +234,7 @@ namespace ed {
 	}
 	// root
 	template<typename T>
-	T sminRoot(T a, T b, T k)
+	inline T sminRoot(T a, T b, T k)
 	{
 		k *= 2.0;
 		T x = b - a;
@@ -242,7 +242,7 @@ namespace ed {
 	}
 	// sigmoid
 	template<typename T>
-	T sminSig(T a, T b, T k)
+	inline T sminSig(T a, T b, T k)
 	{
 		k *= log(2.0);
 		T x = b - a;
@@ -250,7 +250,7 @@ namespace ed {
 	}
 	// quadratic polynomial
 	template<typename T>
-	T sminQ(T a, T b, T k)
+	inline T sminQ(T a, T b, T k)
 	{
 		k *= 4.0;
 		T h = max(k - abs(a - b), T(0.0)) / k;
@@ -258,7 +258,7 @@ namespace ed {
 	}
 	// cubic polynomial
 	template<typename T>
-	T sminC(T a, T b, T k)
+	inline T sminC(T a, T b, T k)
 	{
 		k *= 6.0;
 		T h = max(k - abs(a - b), T(0.0)) / k;
@@ -266,7 +266,7 @@ namespace ed {
 	}
 	// quartic polynomial
 	template<typename T>
-	T sminQuart(T a, T b, T k)
+	inline T sminQuart(T a, T b, T k)
 	{
 		k *= T(16.0 / 3.0);
 		T h = max(k - abs(a - b), T(0.0)) / k;
@@ -274,7 +274,7 @@ namespace ed {
 	}
 	// circular
 	template<typename T>
-	T sminCirc(T a, T b, T k)
+	inline T sminCirc(T a, T b, T k)
 	{
 		k *= 1.0 / (1.0 - sqrt(0.5));
 		T h = max(k - abs(a - b), 0.0) / k;
@@ -293,90 +293,90 @@ namespace ed {
 	any appearance of competence I exhibit is a thin bin bag over
 	the actual work of iq
 	*/
-	float smoothstepCubic(float x) // generally fine, cheap, c1, linear c2
+	inline float smoothstepCubic(float x) // generally fine, cheap, c1, linear c2
 	{
 		return x * x * (3.0 - 2.0 * x);
 	}
-	float inv_smoothstepCubic(float x)
+	inline float inv_smoothstepCubic(float x)
 	{
 		return 0.5 - sin(asin(1.0 - 2.0 * x) / 3.0);
 	}
 
 	
 
-	float smoothstepQuarticPolynomial(float x)
+	inline float smoothstepQuarticPolynomial(float x)
 	{
 		return x * x * (2.0 - x * x);
 	}
-	float inv_smoothstepQuarticPolynomial(float x)
+	inline float inv_smoothstepQuarticPolynomial(float x)
 	{
 		return sqrt(1.0 - sqrt(1.0 - x));
 	}
 
-	float smoothstepQuinticPolynomial(float x)
+	inline float smoothstepQuinticPolynomial(float x)
 	{
 		return x * x * x * (x * (x * 6.0 - 15.0) + 10.0);
 	}
 
-	float smoothstepQuadraticRational(float x)
+	inline float smoothstepQuadraticRational(float x)
 	{ // slightly rounder than cubic, c1, sigmoid c2 
 		return x * x / (2.0 * x * x - 2.0 * x + 1.0);
 	}
-	float inv_smoothstepQuadraticRational(float x)
+	inline float inv_smoothstepQuadraticRational(float x)
 	{
 		return (x - sqrt(x * (1.0 - x))) / (2.0 * x - 1.0);
 	}
 
-	float smoothstepCubicRational(float x)
+	inline float smoothstepCubicRational(float x)
 	{	/* smooth fillet, distinct straight regions in sigmoid,
 		c2 continuous*/
 		return x * x * x / (3.0 * x * x - 3.0 * x + 1.0);
 	}
-	float inv_smoothstepCubicRational(float x)
+	inline float inv_smoothstepCubicRational(float x)
 	{		float a = pow(x, 1.0 / 3.0);
 		float b = pow(1.0 - x, 1.0 / 3.0);
 		return a / (a + b);
 	}
 
 
-	float smoothstepRational(float x, float n)
+	inline float smoothstepRational(float x, float n)
 	{		return pow(x, n) / (pow(x, n) + pow(1.0 - x, n));
 	}
-	float inv_smoothstepRational(float x, float n)
+	inline float inv_smoothstepRational(float x, float n)
 	{		return smoothstepRational(x, 1.0 / n);
 	}
 
-	float smoothstepPiecewiseQuadratic(float x)
+	inline float smoothstepPiecewiseQuadratic(float x)
 	{
 		return (x < 0.5) ?
 			2.0 * x * x :
 			2.0 * x * (2.0 - x) - 1.0;
 	}
-	float inv_smoothstepPiecewiseQuadratic(float x)
+	inline float inv_smoothstepPiecewiseQuadratic(float x)
 	{
 		return (x < 0.5) ?
 			sqrt(0.5 * x) :
 			1.0 - sqrt(0.5 - 0.5 * x);
 	}
 
-	float smoothstepPiecewisePolynomial(float x, float n)
+	inline float smoothstepPiecewisePolynomial(float x, float n)
 	{
 		return (x < 0.5) ?
 			0.5 * pow(2.0 * x, n) :
 			1.0 - 0.5 * pow(2.0 * (1.0 - x), n);
 	}
-	float inv_smoothstepPiecewisePolynomial(float x, float n)
+	inline float inv_smoothstepPiecewisePolynomial(float x, float n)
 	{
 		return (x < 0.5) ?
 			0.5 * pow(2.0 * x, 1.0 / n) :
 			1.0 - 0.5 * pow(2.0 * (1.0 - x), 1.0 / n);
 	}
 
-	float smoothstepTrigonometric(float x)
+	inline float smoothstepTrigonometric(float x)
 	{
 		return 0.5 - 0.5 * cos(PI * x);
 	}
-	float inv_smoothstepTrigonometric(float x)
+	inline float inv_smoothstepTrigonometric(float x)
 	{
 		return acos(1.0 - 2.0 * x) / PI;
 	}
@@ -388,7 +388,7 @@ namespace ed {
 	*/
 
 	template<typename T>
-	T* quatTo4x4Mat(T* q, T* m);
+	inline T* quatTo4x4Mat(T* q, T* m);
 		// from the id software paper SIMD-From-Quaternion-to-Matrix-and-Back
 
 		// we expect m to be 4x4, no interaction with 4th row or column
@@ -403,7 +403,7 @@ namespace ed {
 	}
 
 	template<typename T>
-	T* quatTo3x3Mat(T* quat, T* m);
+	inline T* quatTo3x3Mat(T* quat, T* m);
 		// from the id software paper SIMD-From-Quaternion-to-Matrix-and-Back
 		// quat is X-Y-Z-W
 
@@ -418,7 +418,7 @@ namespace ed {
 	}
 
 	template<typename T>
-	T ReciprocalSqrt(T x) {
+	inline T ReciprocalSqrt(T x) {
 		long i;
 		T y, r;
 		y = x * 0.5f;
@@ -464,7 +464,7 @@ namespace ed {
 	MMatrix interpolateMMatrixArray(std::vector<MMatrix>& mmatrixArr, MMatrix& out, float t);
 
 	template <typename T=float>
-	T lerpArray(const T* arr, const int nVals, float t) {
+	inline T lerpArray(const T* arr, const int nVals, float t) {
 		
 		t = clamp(0.0, 0.99999, t) * float(nVals);
 		int lower = floor(t);

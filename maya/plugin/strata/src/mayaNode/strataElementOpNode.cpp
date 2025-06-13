@@ -429,9 +429,9 @@ MStatus StrataElementOpNode::compute(const MPlug& plug, MDataBlock& data) {
             elGlobalIndex
         );
         elArrDH.outputValue().child(aStTypeOut).setInt(
-            opPtr->value()->getEl(elGlobalIndex)->elType);
+            opPtr->value().getEl(elGlobalIndex)->elType);
         elArrDH.outputValue().child(aStElTypeIndex).setInt(
-            opPtr->value()->getEl(elGlobalIndex)->elIndex);
+            opPtr->value().getEl(elGlobalIndex)->elIndex);
 
     }
 

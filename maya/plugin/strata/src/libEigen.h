@@ -134,7 +134,7 @@ namespace ed {
 
 
 
-	Status& closestPointInSegments(
+	inline Status& closestPointInSegments(
 		Status& s,
 		const Eigen::MatrixX3f& pts,
 		const Eigen::Vector3f& samplePos,
@@ -692,7 +692,7 @@ namespace ed {
 
 
 	template <typename T>
-	 T lerpSampleScalarArr(Eigen::VectorX<T> arr, T t) {
+	inline T lerpSampleScalarArr(Eigen::VectorX<T> arr, T t) {
 		// sample array at a certain interval
 		//float& a;
 		
@@ -895,7 +895,7 @@ namespace ed {
 		/* create control points for given number of segments on bezier spline. 
 		*/
 
-		Eigen::MatrixX3f resultPoints(nSpans * 3 + 1);
+		Eigen::MatrixX3f resultPoints(nSpans * 3 + 1, 3);
 
 		Eigen::Matrix<float, 4, 3> cvs = baseCrv.pointsAsMatrix();
 		
@@ -943,7 +943,7 @@ namespace ed {
 	}
 
 	template<typename T>
-	Eigen::MatrixX3f makeRMFNormals(
+	inline Eigen::MatrixX3f makeRMFNormals(
 		const bez::CubicBezierPath& crv,
 		const Eigen::MatrixX3f& targetNormals,
 		const Eigen::VectorXf& normalUVals,

@@ -20,6 +20,8 @@ namespace ed {
 		*/
 		using StrataOp::StrataOp;
 
+		Affine3f worldMat = Affine3f::Identity(); // matrix to tack on to transform manifold data
+
 		virtual Status makeParams();
 
 		///template <typename AuxT>

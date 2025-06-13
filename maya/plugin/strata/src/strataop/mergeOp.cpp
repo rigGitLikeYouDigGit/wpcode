@@ -28,6 +28,10 @@ Status StrataMergeOp::eval(StrataManifold& value,
 		CWRSTAT(s, "Error merging strata manifold " + std::to_string(i) + " on op " + name);
 	}
 	
+	// transform if needed
+	if (!worldMat.isApprox(Affine3f::Identity())) {
+		value.transform(worldMat);
+	}
 
 	return s;
 }

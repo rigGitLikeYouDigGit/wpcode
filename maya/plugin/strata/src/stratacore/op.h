@@ -64,11 +64,9 @@ namespace ed {
 	
 	*/
 
-	constexpr int SDELTAMODE_NONE = 0; // no change
+	constexpr int SDELTAMODE_LOCAL = 0; // local on top of original final matrix - by default, adding empty matrix does nothing
 	constexpr int SDELTAMODE_WORLD = 1; // direct snap to given target in worldspace
-	constexpr int SDELTAMODE_LOCAL = 2; // local delta on top of original final matrix
-	//constexpr int SDELTAMODE_UVN = 2; // local vector delta in UVN?
-
+	
 
 	/* worldspace snap can only act once, other wise it's an eternal pin in the graph -
 	so all of these work out to saving to space data,
@@ -81,15 +79,15 @@ namespace ed {
 
 	struct SPointDataDelta {
 		SPointData data;
-		int matrixMode = SDELTAMODE_NONE;
-		int uvnMode = SDELTAMODE_NONE;
+		int matrixMode = SDELTAMODE_LOCAL;
+		int uvnMode = SDELTAMODE_LOCAL;
 
 	};
 
 	struct SAtomMatchTarget {
-		int index;
-		int matrixMode = SDELTAMODE_NONE;
-		int uvnMode = SDELTAMODE_NONE;
+		//int index;
+		int matrixMode = SDELTAMODE_LOCAL;
+		int uvnMode = SDELTAMODE_LOCAL;
 
 		Affine3f matrix;
 		Vector3f uvn;
@@ -106,7 +104,7 @@ namespace ed {
 		/* one element might have multiple outputs
 		and targets to match, from multiple following nodes
 		*/
-		std::map<int, std::vector<SAtomMatchTarget>> targetMap;
+		std::map<StrataName, std::vector<SAtomMatchTarget>> targetMap;
 
 
 		void mergeOther(SAtomBackDeltaGroup& other) {
@@ -223,7 +221,8 @@ namespace ed {
 			SAtomBackDeltaGroup result(front); // copy so we pass through any other elements
 			// erase any elements created by this node from result
 			for (int i : elements) { 
-				auto found = result.targetMap.find(i);
+				auto name = finalManifold.getEl(i)->name;
+				auto found = result.targetMap.find(name);
 				if (found != result.targetMap.end()) {
 					result.targetMap.erase(found->first);
 				}
@@ -292,6 +291,7 @@ namespace ed {
 					//StrataManifold& m = op->value();
 					s = op->setBackOffsetsAfterDeltas(s);
 					op->setDirty(true);
+					getGraphPtr()->nodePropagateDirty(op->index);
 				}
 			}
 

@@ -211,10 +211,6 @@ namespace ed {
 		//std::vector<std::string> nodeHistory; // each node that has affected this point, starting with creator
 	};
 
-	/*edge system is quite messy, 
-	bits of the main data object depend on drivers, and on parents,
-	but those also depend back and forth during construction
-	*/
 
 	// data for discrete hard connections between elements
 	struct EdgeDriverData {
@@ -437,22 +433,6 @@ namespace ed {
 
 	struct StrataManifold {
 		/*
-		manifold will have to include more live graph behaviour - 
-		whole point is to set up persistent relationships between elements,
-		so changing an input by default updates the whole mesh.
-
-		it's not insurmountable.
-		consider storing 
-		[ element index starting group] ,
-		[ node index to eval up to ]
-
-		NO because manifold WILL NOT KNOW how to compute every step of itself,
-		that's why we have separate op nodes.
-
-		element op to take on more logic for creating el data, maybe
-
-		register STORED el data against el name - COPY THIS WITH GRAPH
-		up to individual op nodes how they interpret STORED data?
 
 		data store just accumulates across graph iterations until something changes it - 
 		also lets you set direct atomic deltas against el names, regardless of 
@@ -473,10 +453,15 @@ namespace ed {
 		std::map<int, int> faceIndexGlobalIndexMap;
 
 		std::unordered_map<std::string, SPointData> pDataMap;
+		std::unordered_map<std::string, SEdgeData> eDataMap;
+		std::unordered_map<std::string, SFaceData> fDataMap;
+
+		// world matrix transform of this manifold
+		Affine3f worldMat = Affine3f::Identity();
 
 		//std::vector<SPointData> pointDatas;
-		std::vector<SEdgeData> edgeDatas;
-		std::vector<SFaceData> faceDatas;
+		//std::vector<SEdgeData> edgeDatas;
+		//std::vector<SFaceData> faceDatas;
 
 
 		inline SElData* elData(int globalElId, StrataElType elT) {
@@ -489,14 +474,28 @@ namespace ed {
 				return &(ptr->second);
 				break;
 			}
-			case StrataElType::edge: return &edgeDatas[edgeIndexGlobalIndexMap[globalElId]];
-			case StrataElType::face: return &faceDatas[faceIndexGlobalIndexMap[globalElId]];
+			//case StrataElType::edge: return &edgeDatas[edgeIndexGlobalIndexMap[globalElId]];
+			case StrataElType::edge: {
+				auto ptr = eDataMap.find(getEl(globalElId)->name);
+				if (ptr == eDataMap.end()) { return nullptr; }
+				return &(ptr->second);
+				break;
+			}
+			case StrataElType::face: {
+				auto ptr = fDataMap.find(getEl(globalElId)->name);
+				if (ptr == fDataMap.end()) { return nullptr; }
+				return &(ptr->second);
+				break;
+			}
 			default: return nullptr;
 			}
 		}
 		inline SElData* elData(int globalElId) {
 			return elData(globalElId, elements[globalElId].elType);
 		}
+		//inline SElData* elData(std::string elName) {
+		//	return elData(globalElId, elements[globalElId].elType);
+		//}
 		inline SElData* elData(SElement& el) {
 			switch (el.elType) {
 			case StrataElType::point: {
@@ -506,8 +505,19 @@ namespace ed {
 				return &(ptr->second);
 				break;
 			}
-			case StrataElType::edge: return &edgeDatas[el.elIndex];
-			case StrataElType::face: return &faceDatas[el.elIndex];
+			//case StrataElType::edge: return &edgeDatas[el.elIndex];
+			case StrataElType::edge: {
+				auto ptr = eDataMap.find(el.name);
+				if (ptr == eDataMap.end()) { return nullptr; }
+				return &(ptr->second);
+				break;
+			}
+			case StrataElType::face: {
+				auto ptr = fDataMap.find(el.name);
+				if (ptr == fDataMap.end()) { return nullptr; }
+				return &(ptr->second);
+				break;
+			}
 			default: return nullptr;
 			}
 		}
@@ -525,8 +535,8 @@ namespace ed {
 			nameGlobalIndexMap.clear();
 			//pointDatas.clear();
 			pDataMap.clear();
-			edgeDatas.clear();
-			faceDatas.clear();
+			eDataMap.clear();
+			fDataMap.clear();
 
 			attrs.clear();
 			groups.clear();
@@ -593,12 +603,12 @@ namespace ed {
 				return &pDataMap.at(el->name);
 			}
 			case StrataElType::edge: {
-				edgeDatas[el->elIndex] = *static_cast<SEdgeData*>(data);
-				return &edgeDatas[el->elIndex];
+				eDataMap[el->name] = *static_cast<SEdgeData*>(data);
+				return &eDataMap[el->name];
 			}
 			case StrataElType::face: {
-				faceDatas[el->elIndex] = *static_cast<SFaceData*>(data);
-				return &faceDatas[el->elIndex];
+				fDataMap[el->name] = *static_cast<SFaceData*>(data);
+				return &fDataMap[el->name];
 			}
 			default: return nullptr;
 			}
@@ -630,13 +640,14 @@ namespace ed {
 
 				}
 				case StrataElType::edge: {
-					edgeDatas.push_back(SEdgeData());
+					//edgeDatas.push_back(SEdgeData());
+					eDataMap.insert({ el.name, SEdgeData() });
 					int elementIndex = static_cast<int>(edgeIndexGlobalIndexMap.size());
 					elP->elIndex = elementIndex;
 					edgeIndexGlobalIndexMap[elementIndex] = globalIndex;
 				}
 				case StrataElType::face: { 
-					faceDatas.push_back(SFaceData());
+					fDataMap.insert({ el.name, SFaceData() });
 					int elementIndex = static_cast<int>(faceIndexGlobalIndexMap.size());
 					elP->elIndex = elementIndex;
 					faceIndexGlobalIndexMap[elementIndex] = globalIndex;
@@ -801,6 +812,8 @@ namespace ed {
 			* if names are found, update according to merge mode - 
 			*	MERGE_OVERWRITE - overwrite this graph's data with matching names in other
 			*	MERGE_LEAVE - leave matching names as they are
+			* 
+			*
 			*/
 			
 			// add any elements not already known by name
@@ -827,6 +840,44 @@ namespace ed {
 		spatial functions
 		static for less coupling to this specific graph's buffers
 		*/
+
+		void transform(Affine3f& mat) {
+			/* transform entire contents of manifold by given matrix - 
+			we still transform final results of elements with drivers,
+			this alone mutates a strata manifold
+			all our relative offsets are still valid
+
+			it might be worth later on caching all driverless data like this,
+			but for now brute force it
+
+			Strata is immutable, EXCEPT for this
+			special-case it, and invert transform during backpropagation, wherever it's applied
+			*/
+			for (auto& el : elements) {
+				//if (el.drivers.size()) { // skip elements with drivers
+				//	continue;
+				//}
+				switch (el.elType) {
+				case StrataElType::point: {
+					SPointData& data = pDataMap[el.name];
+					data.finalMatrix = mat * data.finalMatrix;
+					break;
+				}
+				case StrataElType::edge: {
+					SEdgeData& data = eDataMap[el.name];
+					data.finalCurve.transform(mat);
+					for (int i = 0; i < static_cast<int>(data.finalNormals.rows()); i++) {
+						data.finalNormals.row(i) = mat * Vector3f(data.finalNormals.row(i));
+					}
+					//data.finalNormals = mat * data.finalNormals;
+					break;
+				}
+				}
+
+			}
+		
+		}
+
 		static Status& pointPosAt(Status& s, Eigen::Vector3f& out, const SPointData& d, const Eigen::Vector3f& uvn) {
 			out = d.finalMatrix * Eigen::Vector3f(uvn);
 			return s;
@@ -861,7 +912,7 @@ namespace ed {
 				break;
 			}
 			case StrataElType::edge: {
-				SEdgeData& d = edgeDatas.at(el->elIndex);
+				SEdgeData& d = eDataMap.at(el->name);
 				return edgePosAt( s, out, d, uvn);
 				break;
 			}
@@ -912,13 +963,13 @@ namespace ed {
 			
 			return s;
 		}
-		Status& matrixAt(Status& s, Eigen::Affine3f& outMat, int globalIndex, Eigen::Vector3f uvn) {
+		Status& matrixAt(Status& s, Eigen::Affine3f& outMat, SElement* el, Eigen::Vector3f uvn) {
 			/* interpolate a spatial element to get a matrix in world space*/
-			if (globalIndex == -1) {
+			if (el == nullptr) {
 				outMat = Affine3f::Identity();
 				return s;
 			}
-			SElement* el = getEl(globalIndex);
+			//SElement* el = getEl(globalIndex);
 			switch (el->elType) {
 				case (StrataElType::point): {
 					//SPointData& d = pointDatas[el->elIndex];
@@ -926,7 +977,7 @@ namespace ed {
 					return pointMatrixAt(s, outMat, d, uvn);
 				}
 				case (StrataElType::edge): {
-					SEdgeData& d = edgeDatas[el->elIndex];
+					SEdgeData& d = eDataMap[el->name];
 					//return edgeMatrixAt(s, out, el->elIndex, uvn);
 					return edgeDataMatrixAt(s, outMat, d, uvn);
 				}
@@ -942,12 +993,13 @@ namespace ed {
 
 			return s;
 		}
-		Status& edgeClosestMatrix(Status& s, Eigen::Affine3f& outMat, int elIndex, const Eigen::Vector3f& worldVec) {
+		Status& edgeClosestMatrix(Status& s, Eigen::Affine3f& outMat, SElement* el, const Eigen::Vector3f& worldVec) {
 			/* localise matrix by point parent -
 			how do we handle local rotations?
 			get nearest point to curve
 			*/
-			SEdgeData& d = edgeDatas[elIndex];
+			//SEdgeData& d = edgeDatas[elIndex];
+			SEdgeData& d = eDataMap[ el->name ];
 
 			float u;
 			Eigen::Vector3f tan;
@@ -963,23 +1015,23 @@ namespace ed {
 			
 			return s;
 		}
-		Status& edgeClosestMatrix(Status& s, Eigen::Affine3f& outMat, int elIndex, const Eigen::Affine3f& worldMat) {
-			return edgeClosestMatrix(s, outMat, elIndex, worldMat.translation());
+		Status& edgeClosestMatrix(Status& s, Eigen::Affine3f& outMat, SElement* el, const Eigen::Affine3f& worldMat) {
+			return edgeClosestMatrix(s, outMat, el, worldMat.translation());
 		}
-		Status& closestMatrix(Status& s, Eigen::Affine3f& outMat, const int globalIndex, const Eigen::Vector3f closePos) {
+		Status& closestMatrix(Status& s, Eigen::Affine3f& outMat, SElement* el, const Eigen::Vector3f closePos) {
 			// localise a world transform into UVN coordinates in the space of given parent
 			// make another function to return a full transform, for point parents
-			if (globalIndex == -1) {
+			if (el == nullptr) {
 				outMat = Affine3f::Identity();
 				return s;
 			}
-			SElement* el = getEl(globalIndex);
+			//SElement* el = getEl(globalIndex);
 			switch (el->elType) {
 			case (StrataElType::point): {
 				return pointClosestMatrix(s, outMat, pDataMap.at(el->name), closePos);
 			}
 			case (StrataElType::edge): {
-				return edgeClosestMatrix(s, outMat, el->elIndex, closePos);
+				return edgeClosestMatrix(s, outMat, el, closePos);
 			}
 			default: STAT_ERROR(s, "Cannot eval matrix at UVN for type " + std::to_string(el->elType));
 			}
@@ -995,7 +1047,8 @@ namespace ed {
 			return s;
 		}
 
-		Status& edgeGetUVN(Status& s, Eigen::Vector3f& uvn, int elIndex, const Eigen::Vector3f& worldVec) {
+		
+		Status& edgeGetUVN(Status& s, Eigen::Vector3f& uvn, SElement* el, const Eigen::Vector3f& worldVec) {
 			/* NEED POLAR / CYLINDRICAL conversion for UVN 
 			* 
 			* for blending, we should probably blend along shortest paths positive or negative, 
@@ -1005,9 +1058,10 @@ namespace ed {
 
 			// first get closest matrix on curve
 			Eigen::Affine3f curveMat;
-			s = edgeClosestMatrix(s, curveMat, elIndex, worldVec);
+			s = edgeClosestMatrix(s, curveMat, el, worldVec);
 
-			SEdgeData& d = edgeDatas[elIndex];
+			//SEdgeData& d = edgeDatas[elIndex];
+			SEdgeData& d = eDataMap[el->name];
 
 			float u;
 			Eigen::Vector3f tan;
@@ -1032,16 +1086,16 @@ namespace ed {
 		}
 
 
-		Status& getUVN(Status& s, Eigen::Vector3f& uvn, const int globalIndex, const Eigen::Vector3f closePos) {
+		Status& getUVN(Status& s, Eigen::Vector3f& uvn, SElement* el, const Eigen::Vector3f closePos) {
 			// localise a world transform into UVN coordinates in the space of given parent
 			// make another function to return a full transform, for point parents
-			SElement* el = getEl(globalIndex);
+			
 			switch (el->elType) {
 			case (StrataElType::point): {
 				return pointGetUVN(s, uvn, pDataMap.at(el->name), closePos);
 			}
 			case (StrataElType::edge): {
-				return edgeGetUVN(s, uvn, el->elIndex, closePos);
+				return edgeGetUVN(s, uvn, el, closePos);
 			}
 			default: STAT_ERROR(s, "Cannot get UVN for type " + std::to_string(el->elType));
 			}
@@ -1062,7 +1116,7 @@ namespace ed {
 			}
 			if (data.spaceDatas.size() == 1) { 
 				auto spaceEl = getEl(data.spaceDatas[0].name);
-				s = matrixAt(s, outMat, spaceEl->globalIndex, data.spaceDatas[0].uvn);
+				s = matrixAt(s, outMat, spaceEl, data.spaceDatas[0].uvn);
 				outMat = outMat * data.spaceDatas[0].offset;
 				return s;
 			}
@@ -1071,7 +1125,7 @@ namespace ed {
 			for (int i = 0; static_cast<int>(data.spaceDatas.size()); i++) {
 				auto spaceEl = getEl(data.spaceDatas[i].name);
 				weights(i) = data.spaceDatas[0].weight;
-				s = matrixAt(s, tfs[i], spaceEl->globalIndex, data.spaceDatas[i].uvn);
+				s = matrixAt(s, tfs[i], spaceEl, data.spaceDatas[i].uvn);
 				tfs[i] = tfs[i] * data.spaceDatas[i].offset;
 			}
 			outMat = blendTransforms(tfs, weights);
@@ -1142,7 +1196,7 @@ namespace ed {
 			for (int i = 0; i < static_cast<int>(eData.driverDatas.size()); i++) {
 				matrixAt(s,
 					eData.driverDatas[i].finalMatrix,
-					eData.driverDatas[i].index,
+					getEl(eData.driverDatas[i].index),
 					eData.driverDatas[i].uvn
 				);
 				driverPoints.row(i) = eData.driverDatas[i].finalMatrix.translation();
@@ -1229,9 +1283,6 @@ namespace ed {
 				result[i] = pDataMap.at(getEl(p.second)->name).finalMatrix.translation().data();
 				i += 1;
 			}
-			/*for (int i = 0; i < static_cast<int>(pointIndexGlobalIndexMap.size()); i++) { 
-				result[i] = pDataMap.at( getEl(pointIndexGlobalIndexMap.at)).finalMatrix.translation().data();
-			}*/
 			return result;
 		}
 
@@ -1241,9 +1292,11 @@ namespace ed {
 			I suppose this would be where struct of arrays wins over struct of arrays
 			TODO: struct of arrays
 			*/
-			arrT result(static_cast<int>(pointDatas.size()));
-			for (int i = 0; i < static_cast<int>(pointDatas.size()); i++) {
-				result[i] = pointDatas[i].finalMatrix.translation().data();
+			arrT result(static_cast<int>(pDataMap.size()));
+			int i = 0;
+			for (auto& p : pointIndexGlobalIndexMap) {
+				result[i] = pDataMap.at(getEl(p.second)->name).finalMatrix.translation().data();
+				i += 1;
 			}
 			return result;
 		}
@@ -1294,8 +1347,8 @@ namespace ed {
 			return result;
 		}
 
-		Status& getWireframeSingleEdgeGnomonVertexPositionArray(Status& s, Float3Array& outArr, int elIndex, int arrStartIndex) {
-			SEdgeData& d = edgeDatas[elIndex];
+		Status& getWireframeSingleEdgeGnomonVertexPositionArray(Status& s, Float3Array& outArr, SElement* el, int arrStartIndex) {
+			SEdgeData& d = eDataMap[el->name];
 			int n;
 			float u;
 			Eigen::Affine3f aff;
@@ -1305,7 +1358,7 @@ namespace ed {
 				u = 1.0f / float(d.densePointCount() - 1) * float(i);
 				uvn[0] = u;
 				uvn[1] = 0; uvn[2] = 0;
-				s = edgeDataMatrixAt(s, aff, edgeDatas[elIndex], uvn);
+				s = edgeDataMatrixAt(s, aff, eDataMap[el->name], uvn);
 
 				outArr[n] = d.finalCurve.eval(u);
 				outArr[n + 1] = (aff * Eigen::Vector3f{ 1, 0, 0 }).data();
@@ -1328,19 +1381,21 @@ namespace ed {
 			// return all edge 
 			int totalPositionEntries = 0;
 			int totalIndexEntries = 0;
-			for (auto& edata : edgeDatas) {
+			for (auto& p : eDataMap) {
+				SEdgeData& edata = p.second;
 				totalPositionEntries += edata.densePointCount();
 				totalIndexEntries += edata.densePointCount() * 4;
 			}
 			Float3Array posResult(totalPositionEntries);
 			IndexList indexResult(totalIndexEntries);
 			int posStartIndex = 0;
-			for (auto& edata : edgeDatas) {
+			for (auto& p : eDataMap) {
+				SEdgeData& edata = p.second;
 				SElement& el = elements[edata.index];
 				getWireframeSingleEdgeGnomonVertexPositionArray(
 					s,
 					posResult,
-					el.elIndex,
+					&el,
 					posStartIndex
 				);
 				posStartIndex += edata.densePointCount() * 4;
@@ -1351,12 +1406,14 @@ namespace ed {
 
 		inline IndexList getWireframeEdgeGnomonVertexIndexList(Status& s) {
 			int totalIndexEntries = 0;
-			for (auto& edata : edgeDatas) {
+			for (auto& p : eDataMap) {
+				SEdgeData& edata = p.second;
 				totalIndexEntries += edata.densePointCount() * 4;
 			}
 			IndexList indexResult(totalIndexEntries);
 			int posStartIndex = 0;
-			for (auto& edata : edgeDatas) {
+			for (auto& p : eDataMap) {
+				SEdgeData& edata = p.second;
 				SElement& el = elements[edata.index];
 				for (unsigned int n = 0; n < static_cast<unsigned int>(edata.densePointCount()); n++) {
 					setGnomonIndexList(indexResult.data(), posStartIndex);

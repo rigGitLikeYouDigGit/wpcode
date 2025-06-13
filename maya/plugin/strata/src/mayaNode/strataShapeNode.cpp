@@ -41,14 +41,13 @@ MStatus StrataShapeNode::initialize() {
 
 
     aStDataIn = cFn.create("stDataIn", "stDataIn");
-    cFn.setArray(true);
+    cFn.setUsesArrayDataBuilder(true);
     aStExpIn = tFn.create("stExpIn", "stExpIn", MFnData::kString);
     tFn.setDefault(MFnStringData().create(""));
     cFn.addChild(aStExpIn);
     aStSpaceModeIn = eFn.create("stSpaceModeIn", "stSpaceModeIn", 0);
-    eFn.addField("world", 0); // snap element to data specified
-    eFn.addField("localOnFinal", 1); // apply param in local space on top of final element
-    eFn.addField("uvn", 2); // modify UVN in parent space by local vector - how does this work with multiple spaces?
+    eFn.addField("local", 0); // snap element to data specified
+    eFn.addField("world", 1); // apply param in local space on top of final element
     cFn.addChild(aStSpaceModeIn);
     aStSpaceNameIn = tFn.create("stSpaceNameIn", "stSpaceNameIn", MFnData::kString);
     tFn.setDefault(MFnStringData().create(""));
@@ -59,9 +58,17 @@ MStatus StrataShapeNode::initialize() {
     aStMatrixIn = mFn.create("stMatrixIn", "stMatrixIn");
     mFn.setDefault(MMatrix::identity);
     cFn.addChild(aStMatrixIn);
+    // you wouldn't specify a local UVN and a world matrix within the same entry, second mode attr not needed
+    //aStUVNModeIn = eFn.create("stUVNModeIn", "stUVNModeIn", 0); 
+    //eFn.addField("local", 0); // snap element to data specified
+    //eFn.addField("world", 1); // apply param in local space on top of final element
+    //cFn.addChild(aStUVNModeIn);
+    aStUVNIn = nFn.createPoint("stUVNIn", "stUVNIn");
+    cFn.addChild(aStUVNIn);
 
     aStDataOut = cFn.create("stDataOut", "stDataOut");
     cFn.setArray(true);
+    cFn.setUsesArrayDataBuilder(true);
     aStExpOut = tFn.create("stExpOut", "stExpOut", MFnData::kString);
     tFn.setDefault(MFnStringData().create(""));
     cFn.addChild(aStExpOut);
@@ -81,6 +88,7 @@ MStatus StrataShapeNode::initialize() {
         aStExpIn,
         aStSpaceModeIn,
         aStMatrixIn,
+        aStUVNIn,
         aStSpaceNameIn,
         aStSpaceIndexIn,
 
@@ -204,64 +212,57 @@ int getSpaceIndex(
     return spaceIndex;
 }
 
-MStatus StrataShapeNode::editPrevOpData(
+MStatus StrataShapeNode::addDeltaTarget(
     MObject& nodeObj, MDataBlock& data, MDataHandle& elDH,
-    StrataManifold* manifold, SElement* finalEl, StrataOp* targetOp
+    ed::StrataManifold& manifold, ed::SElement* finalEl, ed::SAtomBackDeltaGroup& deltaGrp
 ) {
-    /* finalEl is element in latest value of graph
+    /* 
+    * add a delta to be matched - 
     * 
-    * for more complex ops, we might need to have invert() method
-    * for each one - here just modify the data for now
+    * for merge op, only add new elements from copied graphs.
+    * then for backpropagation, any deltas required of those elements
+    * are transferred directly into the incoming aux streams
     */
     MStatus s;
 
-    int spaceIndex = getSpaceIndex<StrataShapeNode>(nodeObj, data, elDH,
-        manifold, finalEl, targetOp);
-    if (spaceIndex == -2) {
-        DEBUGSL("specified space that doesn't exist for " + finalEl->name)
-        return s;
-    }
-
+    //int spaceIndex = getSpaceIndex<StrataShapeNode>(nodeObj, data, elDH,
+    //    manifold, finalEl, targetOp);
+    //if (spaceIndex == -2) {
+    //    DEBUGSL("specified space that doesn't exist for " + finalEl->name)
+    //    return s;
+    //}
+    SAtomMatchTarget matchTarget;
     switch (finalEl->elType) {
         case StrataElType::point: {
             // check data is found
             //Affine3f tf = toAff(MFnMatrixData(elDH.child(aStMatrixIn).data()).matrix());
             Affine3f tf = toAff(elDH.child(aStMatrixIn).asMatrix());
-            auto elDataPair = targetOp->opPointDataMap.find(finalEl->name);
-            if (elDataPair == targetOp->opPointDataMap.end()) {
-                DEBUGS("could not find data for point " + finalEl->name + " in op " + targetOp->name);
-                return s;
-            }
+            //matchTarget. = finalEl->globalIndex;
+            matchTarget.matrix = tf;
             
             int spaceMode = elDH.child(aStSpaceModeIn).asInt();
-            switch (spaceMode) {
-            case 0: { // worldspace snap
-
-                break;
-            }
-            }
+            matchTarget.matrixMode = spaceMode;
 
         }
     }
-    
+    deltaGrp.targetMap[finalEl->name].push_back(matchTarget);
+    return s;
 }
 
 
 MStatus StrataShapeNode::syncStrataParams(MObject& nodeObj, MDataBlock& data) {
-    /* pull in any attributes to update element information in graph -
-    * 
-    * look up latest (???) node in element's history and modify its data
-    * latest node is this shape/merge op, which hasn't run yet - 
-    * - need to check incoming streams in reverse order for element name
-    * - look at that el's history
-    * - get op in graph
-    * - edit 
-    * - add this op to history
-    * 
-    * later modifications will send deltas to this op by default
-    * or not? maybe we try to send as far back as possible instead
+    /* gather any parametres needed to do merge of incoming streams
     */
     MS s;
+
+
+    return s;
+}
+
+MStatus StrataShapeNode::runShapeBackPropagation(MObject& nodeObj, MDataBlock& data) {
+
+    MS mStat;
+    // check for DELTAS, or directed changes to graph data
     MArrayDataHandle inArrDH = data.inputArrayValue(aStDataIn);
 
     // build up a group of deltas to match
@@ -274,7 +275,6 @@ MStatus StrataShapeNode::syncStrataParams(MObject& nodeObj, MDataBlock& data) {
         if (inExpStr.isEmpty()) {
             continue;
         }
-        SElement* el;
         StrataManifold& manifold = StrataManifold();
         thisStrataOpT* opPtr = getStrataOp<StrataShapeNode>(data);
         if (opPtr == nullptr) {
@@ -282,39 +282,42 @@ MStatus StrataShapeNode::syncStrataParams(MObject& nodeObj, MDataBlock& data) {
                 return MS::kFailure;
         }
 
-        StrataOp* targetNode = nullptr;
-        // check through op inputs
-        for (auto& n : opPtr->inputNodes()) {
-            StrataOp* inOpPtr = static_cast<StrataOp*>(n);
-            el = inOpPtr->value().getEl(inExpStr.asChar());
-            if (el != nullptr) {
-                manifold = inOpPtr->value();
-                break;
-            }
-        }
+        manifold = opPtr->value();
+        auto el = manifold.getEl(inExpStr.asChar());
         // if no element found of this name, just move on
         if (el == nullptr) {
             continue;
         }
-        
-        StrataOp* opToModify = nullptr;
-        // get element history
-        std::string opName = el->opHistory[0];
-        opToModify = opPtr->getGraphPtr()->getNode<StrataOp>(opName);
-        if (opToModify == nullptr) { // this shouldn't be possible
-            DEBUGSL("element " + el->name + "modified by node " + opName + " which was not found in graph")
-            return MS::kFailure;
-        }
-        // finally actually change the saved op data, from this 
-        editPrevOpData(nodeObj, data, elDH,
-            manifold, el, opToModify);
 
-        // flag op as dirty
-        opToModify->dirtyMap["main"] = true;
-        opPtr->getGraphPtr()->nodePropagateDirty(opToModify->index);
+        // add delta from data handle
+        addDeltaTarget(thisMObject(), data, elDH,
+            manifold, el, deltaGrp);
     }
 
-    return s;
+    if (!deltaGrp.targetMap.size()) {
+        DEBUGSL("no targets gathered in shape node, skipping");
+        return mStat;
+    }
+
+    // back-propagate errors to re-eval the graph with any dirty nodes re-eval'd
+    StrataMergeOp* opPtr = getStrataOp<StrataShapeNode>(data);
+    Status st;
+    StrataAuxData auxData;
+    st = opPtr->runBackPropagation(
+        st,
+        opPtr,
+        opPtr->value(),
+        deltaGrp,
+        auxData
+    );
+
+    if (st.val) {
+        DEBUGSL("ERROR IN BACKPROPAGATION") ;
+        DEBUGS(st.msg);
+        return MStatus::kFailure;
+    }
+
+    return mStat;
 }
 
 MStatus StrataShapeNode::compute(const MPlug& plug, MDataBlock& data) {
@@ -333,45 +336,65 @@ MStatus StrataShapeNode::compute(const MPlug& plug, MDataBlock& data) {
     // run strata op merge
     superT::compute<StrataShapeNode>(thisMObject(), plug, data);
 
-    ///*/////////// copying eval logic from parent class ////////////*/
-    //auto& nodeObj = thisMObject();
-    //if (plug.attribute() == aStOpNameOut) {
-    //    syncOpNameOut<StrataShapeNode>(nodeObj, data);
-    //    data.setClean(plug);
-    //    return s;
-    //}
-
-    //// copy graph data if it's dirty
-    //if (!data.isClean(aStInput)) {
-    //    s = syncIncomingGraphData<StrataShapeNode>(nodeObj, data);
-    //    DEBUGS("syncIncoming graph complete")
-    //        MCHECK(s, "error syncing incoming graph data");
-    //}
-    //s = syncStrataParams(nodeObj, data);
-    //DEBUGSL("base synced strata params")
-    //    MCHECK(s, "error syncing strata params");
-
-    //Status graphS;
-    //int upToNode = getOpIndexFromNode<StrataShapeNode>(data);
-    //DEBUGSL("base got index from node")
-    //    opGraphPtr.get()->evalGraph(graphS, upToNode);
-    //DEBUGSL("base graph eval'd");
-
-    //data.setClean(aStOutput);
-    //data.setClean(aStOpName);
-    ////////////////////////
-
+    // back propagate if necessary
+    runShapeBackPropagation(thisMObject(), data);
 
     /* pull in drawing values to cache*/
     pointOpacity = data.inputValue(aStShowPoints).asFloat();
 
-
+    s = populateOutputs(data);
 
     data.setClean(plug);
 
     return s;
 }
 
+
+MStatus StrataShapeNode::populateOutputs(MDataBlock& data) {
+    /* for each output compound entry, look at which element it's
+    requesting, and populate it
+    consider also adding space data?
+    */
+    MStatus s = MS::kSuccess;
+
+    thisStrataOpT* opPtr = getStrataOp<StrataShapeNode>(data);
+
+    MArrayDataHandle outArrDH = data.outputArrayValue(aStDataOut);
+    for (unsigned int i = 0; i < outArrDH.elementCount(); i++) {
+        s = jumpToPhysicalIndex(outArrDH, i);
+        MCHECK(s, "error jumping to out arr element " + std::to_string(i));
+
+        MString expOut = outArrDH.outputValue(&s).child(aStExpOut).asString();
+        MCHECK(s, "error retrieving expOut from arr element " + std::to_string(i));
+
+        if (expOut.isEmpty()) { continue; } // skip if empty
+
+        // find matching element in this node's value manifold
+        SElement* el = opPtr->value().getEl(expOut.asChar());
+        if (el == nullptr) { // skip if not found
+            continue;
+        }
+
+        switch (el->elType) {
+        case StrataElType::point :{ // set matrices
+            SPointData& d = opPtr->value().pDataMap[el->name];
+            outArrDH.outputValue().child(aStMatrixOut).setMMatrix(
+                toMMatrix(d.finalMatrix)
+            );
+            break;
+            }
+        case StrataElType::edge: {
+            break;
+        }
+        case StrataElType::face: {
+            break;
+        }
+        }
+
+    }
+
+    return s;
+}
 
 //MStatus StrataShapeNode::legalConnection(
 //    const MPlug& plug,

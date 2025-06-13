@@ -25,6 +25,7 @@ prefix MObject nodeT aStSpaceModeIn;\
 prefix MObject nodeT aStSpaceIndexIn;\
 prefix MObject nodeT aStSpaceNameIn;\
 prefix MObject nodeT aStMatrixIn;\
+prefix MObject nodeT aStUVNIn;\
 \
 prefix MObject nodeT aStDataOut;\
 prefix MObject nodeT aStExpOut;\
@@ -118,10 +119,15 @@ public:
 
 	static MStatus initialize();
 
-	MStatus editPrevOpData(
+	MStatus addDeltaTarget(
 		MObject& nodeObj, MDataBlock& data, MDataHandle& elDH,
-		ed::StrataManifold* manifold, ed::SElement* finalEl, ed::StrataOp* targetOp
+		ed::StrataManifold& manifold, ed::SElement* finalEl, ed::SAtomBackDeltaGroup& deltaGrp
 	);
+
+	MStatus runShapeBackPropagation(MObject& nodeObj, MDataBlock& data);
+
+	MStatus populateOutputs(MDataBlock& data);
+
 	virtual MStatus syncStrataParams(MObject& nodeObj, MDataBlock& data);
 
 	virtual MStatus compute(const MPlug& plug, MDataBlock& data);
