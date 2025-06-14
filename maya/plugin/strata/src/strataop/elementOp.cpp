@@ -272,20 +272,6 @@ Status StrataElementOp::eval(StrataManifold& value,
 				break;
 			}
 
-		//case 'e': {
-		//	/* eval expression to get list of driving elements */
-		//	s = edgeEvalDriverExpression(s, op, outPtr, value, expAuxData,
-		//		resultVals,
-		//		paramName, exp);
-		//	break;
-		//}
-		//case 'f': {
-		//	/* eval expression to get list of driving elements */
-		//	s = faceEvalDriverExpression(s, outPtr, value, expAuxData,
-		//		resultVals,
-		//		paramName, exp);
-		//	break;
-		//}
 			default: {
 				STAT_ERROR(s, "INVALID ELEMENT PREFIX: " + p.first + "; must begin with one of p, e, f");
 			}
@@ -294,7 +280,8 @@ Status StrataElementOp::eval(StrataManifold& value,
 		if (outPtr == nullptr) {
 			STAT_ERROR(s, "outPtr not set correctly when adding element: " + p.first + ", halting");
 		}
-		elementsAdded.push_back(outPtr->globalIndex);
+		elementsAdded.push_back(outPtr->name);
+
 		/* eval parent expression*/		
 	}
 	DEBUGSL("EL EVAL COMPLETE");
@@ -304,7 +291,134 @@ Status StrataElementOp::eval(StrataManifold& value,
 /* should we RE-RUN driver stuff after parents built?
 if points need to be snapped back to driver curves, 
 curves to surfaces etc.
+
+we don't use delta matrices here yet, might be worth changing that
 */
+
+Status& StrataElementOp::pointProcessTargets(Status& s, StrataManifold& finalManifold, SAtomBackDeltaGroup& deltaGrp, SElement* el) {
+	/* blend any target matrices given*/
+	int nTargets = static_cast<int>(deltaGrp.targetMap[el->name].size());
+	VectorXf weights(nTargets);
+	std::vector<Affine3f> mats(nTargets);
+
+	/* for now just average weights
+	later on maybe weight it more towards larger deltas
+	*/
+	float w = 1.0f / float(nTargets);
+	for (int i = 0; i < nTargets; i++) {
+		weights(i) = w;
+		mats[i] = deltaGrp.targetMap[el->name][i].matrix;
+	}
+	// blend matrices together
+	Affine3f targetMat = blendTransforms(mats, weights);
+	
+	// save target matrix,
+	deltaGrp.targetMap[el->name][0].matrix = targetMat;
+	
+	// if this point has no drivers or spaces, just move it
+	if ((!el->drivers.size()) && (!el->spaces.size())) {
+		paramMap[el->name].pData.finalMatrix = targetMat;
+		return s;
+	}
+
+	// if spaces, invert the current uvn + offset
+	if (el->spaces.size()) {
+		for (int i = 0; i < static_cast<int>(el->spaces.size()); i++) {
+			SAtomMatchTarget target;
+			SElement* spaceEl = finalManifold.getEl(el->spaces[i]);
+			SPointSpaceData& spaceData = finalManifold.pDataMap[el->name].spaceDatas[i];
+			Vector3f uvn = spaceData.uvn;
+
+			target.matrix = targetMat * spaceData.offset.inverse();
+			deltaGrp.targetMap[el->spaces[i]].push_back(target);
+		}
+	}
+
+
+	if (el->drivers.size()) {
+		for (int i = 0; i < static_cast<int>(el->drivers.size()); i++) {
+			SAtomMatchTarget target;
+			target.matrix = targetMat;
+			// get nearest UVN for driver?
+			SElement* driverEl = finalManifold.getEl(el->drivers[i]);
+			
+			// don't change any set UVN coords here, need to maintain the offset here
+			//finalManifold.getUVN(s, target.uvn, driverEl, targetMat.translation()); /* ?????*/
+			///* this is IMMEDIATELY susceptible to nearest-point jumping within a driver element - do we care? */
+
+			deltaGrp.targetMap[el->drivers[i]].push_back(target);
+		}
+	}
+
+	return s;
+}
+
+SAtomBackDeltaGroup StrataElementOp::bestFitBackDeltas(Status* s, StrataManifold& finalManifold, SAtomBackDeltaGroup& front) {
+
+	/* work backwards through elements added by this op, check if each name appears
+	* in delta front
+	* if it does, process it, and add any drivers (even within this node) 
+	* to the front as well
+	*/
+	Status& stat = *s;
+	for (int i = 0; i < static_cast<int>(elementsAdded.size()); i++) {
+		std::string& name = elementsAdded.rbegin()[i];
+		auto found = front.targetMap.find(name);
+		if (found == front.targetMap.end()) {
+			continue;
+		}
+		
+		SElement* el = finalManifold.getEl(name);
+		ElOpParam& param = paramMap[name];
+		switch (el->elType) {
+			case StrataElType::point: {
+				stat = pointProcessTargets(stat, finalManifold, front, el);
+			}
+		}
+
+	}
+	backDeltasToMatch = front; // save deltas to match for later
+
+	return front;
+}
+
+Status& StrataElementOp::setBackOffsetsAfterDeltas(Status& s, StrataManifold& manifold) {
+	/* iterate over elements created in CORRECT order this time - compare offsets,
+	add offsets to matrices, then snap to drivers where needed*/
+
+	for (int i = 0; i < static_cast<int>(elementsAdded.size()); i++) {
+		std::string& name = elementsAdded[i];
+		SElement* el = manifold.getEl(name);
+
+		ElOpParam& param = paramMap[name];
+
+		switch (el->elType) {
+		case StrataElType::point: {
+			SAtomMatchTarget& target = backDeltasToMatch.targetMap[name][0];
+			SPointData& pData = manifold.pDataMap[name];
+			
+			// get final offset
+			Affine3f offset = pData.finalMatrix.inverse() * target.matrix;
+			param.pOffset = offset;
+
+			// ideally we just match the target here
+			pData.finalMatrix = target.matrix;
+			
+			// project to drivers if any
+			if (el->drivers.size()) {
+				s = manifold.pointProjectToDrivers(s, pData.finalMatrix, el);
+			}
+
+		}
+		}
+
+	}
+	return s;
+}
+
+//Status& StrataElementOp::pointSetBackOffsetsAfterDeltas(Status& s) {
+//	return s;
+//}
 
 
 

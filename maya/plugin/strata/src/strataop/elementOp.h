@@ -37,6 +37,7 @@ namespace ed {
 		expns::Expression driverExp;
 		expns::Expression spaceExp;
 		SPointData pData;
+		Affine3f pOffset; // I DON'T KNOW WHERE THIS GOES
 		SEdgeData eData;
 	};
 
@@ -54,10 +55,15 @@ namespace ed {
 
 		virtual Status makeParams();
 
-		std::vector<int> elementsAdded; // temp, used to pass information back out of op compute to maya
+		std::vector<StrataName> elementsAdded; // temp, used to pass information back out of op compute to maya
 
 		///template <typename AuxT>
 		virtual Status eval(StrataManifold& value, EvalAuxData* auxData, Status& s);
+
+		virtual SAtomBackDeltaGroup bestFitBackDeltas(Status* s, StrataManifold& finalManifold, SAtomBackDeltaGroup& front);
+		Status& pointProcessTargets(Status& s, StrataManifold& finalManifold, SAtomBackDeltaGroup& deltaGrp, SElement* el);
+		
+		virtual Status& setBackOffsetsAfterDeltas(Status& s, StrataManifold& manifold);
 
 	};
 

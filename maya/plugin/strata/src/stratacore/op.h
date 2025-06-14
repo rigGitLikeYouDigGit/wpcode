@@ -230,7 +230,8 @@ namespace ed {
 			return result;
 			}
 
-		virtual Status& setBackOffsetsAfterDeltas(Status& s) {
+		virtual Status& setBackOffsetsAfterDeltas(
+			Status& s, StrataManifold& manifold) {
 			/* finalise offsets on top of fitted inputs to match 
 			saved deltas
 			this node will have been evaluated - make sure to 
@@ -289,7 +290,7 @@ namespace ed {
 					StrataOp* op = getGraphPtr()->getNode<StrataOp>(toVisit[n]);
 					s = getGraphPtr()->evalGraph(s, toVisit[n], &auxData); // eval node with new best-fit params
 					//StrataManifold& m = op->value();
-					s = op->setBackOffsetsAfterDeltas(s);
+					s = op->setBackOffsetsAfterDeltas(s, op->value());
 					op->setDirty(true);
 					getGraphPtr()->nodePropagateDirty(op->index);
 				}

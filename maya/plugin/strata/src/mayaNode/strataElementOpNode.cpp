@@ -424,15 +424,15 @@ MStatus StrataElementOpNode::compute(const MPlug& plug, MDataBlock& data) {
         //continue;
         s = jumpToElement(elArrDH, i);
         MCHECK(s, NODENAME + "ERROR setting outputs, could not jump to element: " + std::to_string(i).c_str());
-        int elGlobalIndex = opPtr->elementsAdded[i];
+        StrataName& elName = opPtr->elementsAdded[i];
+        SElement* el = opPtr->value().getEl(elName);
         elArrDH.outputValue().child(aStGlobalIndex).setInt(
-            elGlobalIndex
+            el->globalIndex
         );
         elArrDH.outputValue().child(aStTypeOut).setInt(
-            opPtr->value().getEl(elGlobalIndex)->elType);
+            el->elType);
         elArrDH.outputValue().child(aStElTypeIndex).setInt(
-            opPtr->value().getEl(elGlobalIndex)->elIndex);
-
+            el->elIndex);
     }
 
     /* set everything clean*/

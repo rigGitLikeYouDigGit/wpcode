@@ -201,6 +201,7 @@ namespace ed {
 		Vector3f uvn = { 0, 0, 0 }; // uvn separate to offset in case point goes outside parent space area - 
 		// eg if point goes off edge of space surface
 		Affine3f offset = Eigen::Affine3f::Identity(); // translation is UVN, rotation is relative rotation from that position
+
 	};
 
 	struct SPointData : SElData {
@@ -1141,6 +1142,23 @@ namespace ed {
 			}
 			s = pointSpaceMatrix(s, data.finalMatrix, data);
 			return s;
+		}
+
+		Status& pointProjectToDrivers(Status& s, Affine3f& mat, SElement* el) {
+			/* project/snap given matrix to driver of point
+			(there should of course be a maximum of 1 driver for a point)
+			*/
+			SElement* driverEl = getEl(el->drivers[0]);
+			switch (driverEl->elType) {
+			case StrataElType::point: {
+				SPointData& driverData = pDataMap[driverEl->name];
+				mat.translation() = driverData.finalMatrix.translation();
+				break;
+
+			}
+			}
+			return s;
+
 		}
 
 		Status& edgeParentDataFromDrivers(Status& s, SEdgeData& eData, SEdgeParentData& pData) 

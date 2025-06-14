@@ -805,14 +805,29 @@ namespace ed {
 		};
 	}
 
+	//inline Quaternionf blend2Quater
+
 	inline Eigen::Quaternionf blendQuaternions(
 		//const Eigen::MatrixX4f& quats,
 		std::vector<Eigen::Quaternionf>& quats,
 		Eigen::VectorXf& weights
 	) {
 		/* convert each to log, add together, 
-		take exponential of result*/
+		take exponential of result
+		
+		if only 2 quats given, just slerp
+		*/
 		Eigen::Vector4f result(0, 0, 0, 0);
+
+		if (quats.size() == 1) {
+			return quats[0];
+		}
+
+		if (quats.size() == 2) {
+			float weight = weights(1) / (weights(0) + weights(1));
+			return quats[0].slerp(weight, quats[1]);
+		}
+
 		for (size_t i = 0; i < quats.size(); i++) {
 			auto scaled = quatLogarithm(quats.at(i)).coeffs() * weights[i];
 			result += scaled; // mixed matrices of diff sizes
@@ -851,6 +866,9 @@ namespace ed {
 		//}
 		//return 1.0 - sus(frameNormal.dot(v)) * 0.5;
 	}
+
+
+
 
 	/* subsampling, */
 
