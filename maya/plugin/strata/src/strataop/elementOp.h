@@ -55,6 +55,7 @@ namespace ed {
 
 		virtual Status makeParams();
 
+		//std::vector<StrataName> elementsAdded = {}; // temp, used to pass information back out of op compute to maya
 		std::vector<StrataName> elementsAdded; // temp, used to pass information back out of op compute to maya
 
 		///template <typename AuxT>

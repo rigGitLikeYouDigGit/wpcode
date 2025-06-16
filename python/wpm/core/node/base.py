@@ -888,6 +888,41 @@ class WN( # short for WePresentNode
 		raise TypeError("invalid arg type to index into node")
 
 	#def __getattribute__(self, item:str)->Plug:
+
+	def _plugAttrLookup(self, plugAttrName:str):
+		"""using a secondary method to avoid infinite loop when delegating lookups
+		between shape/transform
+
+		if not a plugAttr name, returns none
+		if a plugAttr name and plug found, returns plug
+		if plugAttr and not found, raises TypeError
+		"""
+		if (plugAttrName[-1] == "_" and plugAttrName[0] != "_"):
+			if (foundPlug := self.plug(plugAttrName[:-1])) is not None:
+				return foundPlug
+			raise TypeError("no maya plug found for ", plugAttrName)
+		return None
+
+	def _shapeTfPlugAttrLookup(self, plugAttrName:str)->Plug:
+		""" outer layer of plug lookup, wrapping tf->shape
+		and shape->tf delegation logic"""
+		try:
+			if (foundPlug := self._plugAttrLookup(plugAttrName)) is not None:
+				return foundPlug
+		except TypeError as e: # first level of error, try delegating to transform/shape
+			if self.isShape():
+				try:
+					return self.tf()._plugAttrLookup(plugAttrName)
+				except TypeError:
+					raise TypeError(self.pathStr + ": no maya plug found for", plugAttrName, "looked at shape, then at transform")
+			if self.isTransform() and self.shape():
+				try:
+					return self.shape()._plugAttrLookup(plugAttrName)
+				except TypeError:
+					raise TypeError(self.pathStr + ": no maya plug found for", plugAttrName, "looked at transform, then at shape ", self.shape().pathStr)
+			# errored once and no second node to check - just raise error
+			raise e
+		return None
 	def __getattr__(self, item:str)->Plug:
 		"""check if plug has been accessed directly by name -
 		always has a trailing underscore
@@ -895,30 +930,22 @@ class WN( # short for WePresentNode
 		We emulate the maya cmds behaviour for forgiving shape or transform
 		plug lookups
 		"""
-		if(item[-1] == "_" and item[0] != "_"):
-			if (foundPlug := self.plug(item[:-1])) is not None:
-				return foundPlug
-			if self.shape():
-				try:
-					return self.shape().__getattribute__(item)
-				except TypeError:
-					raise TypeError("no maya plug found for", item, "on transform or shape")
-			if self.isShape():
-				try:
-					return self.tf().__getattribute__(item)
-				except TypeError:
-					raise TypeError("no maya plug found for", item, "on transform or shape")
-			raise TypeError("no maya plug found for ", item)
+		if (result := self._shapeTfPlugAttrLookup(item)) is not None:
+			return result
 		return super().__getattr__(item)
 
-	def __setattr__(self, item:str, val):
-		"""check if plug has been accessed directly by name -
-		always has a trailing underscore"""
-		if(item[-1] == "_" and item[0] != "_"):
-			if (foundPlug := self.plug(item[:-1])) is not None:
-				foundPlug.set(val)
-			raise TypeError("no maya plug found to set ", item)
-		return super().__setattr__(item, val)
+	""" we don't override __setattr__ anymore now that we have
+	plug descriptors 
+	"""
+
+	# def __setattr__(self, item:str, val):
+	# 	"""check if plug has been accessed directly by name -
+	# 	always has a trailing underscore"""
+	# 	if(item[-1] == "_" and item[0] != "_"):
+	# 		if (foundPlug := self.plug(item[:-1])) is not None:
+	# 			foundPlug.set(val)
+	# 		raise TypeError("no maya plug found to set ", item)
+	# 	return super().__setattr__(item, val)
 
 	# region convenience auxProperties
 

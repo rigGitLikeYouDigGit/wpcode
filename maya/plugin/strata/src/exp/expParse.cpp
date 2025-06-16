@@ -328,7 +328,7 @@ Status Expression::parse() {
 }
 
 Status Expression::result( 
-	std::vector<ExpValue>*&outResult,
+	std::vector<ExpValue>*outResult,
 	//ExpStatus * expStatus,
 	ExpAuxData* auxData
 

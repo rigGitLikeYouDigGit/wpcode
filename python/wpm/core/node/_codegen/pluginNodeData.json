@@ -858,6 +858,16 @@
           "parentName": "stElement"
         },
         {
+          "name": "stEdgeCurveIn",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stEdgeCurveIn",
+          "parentName": "stElement"
+        },
+        {
           "name": "stEdgeCurveOut",
           "type": 574,
           "typeName": "kTypedAttribute",
@@ -865,17 +875,17 @@
           "isInput": true,
           "isOutput": true,
           "shortName": "stEdgeCurveOut",
-          "parentName": "stElement"
+          "parentName": "stElementOut"
         },
         {
           "name": "stElTypeIndex",
           "type": 566,
           "typeName": "kNumericAttribute",
           "isArray": false,
-          "isInput": false,
+          "isInput": true,
           "isOutput": true,
           "shortName": "stElTypeIndex",
-          "parentName": "stElement"
+          "parentName": "stElementOut"
         },
         {
           "name": "stElement",
@@ -883,8 +893,18 @@
           "typeName": "kCompoundAttribute",
           "isArray": true,
           "isInput": true,
-          "isOutput": true,
+          "isOutput": false,
           "shortName": "stElement",
+          "parentName": ""
+        },
+        {
+          "name": "stElementOut",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "stElementOut",
           "parentName": ""
         },
         {
@@ -892,10 +912,10 @@
           "type": 566,
           "typeName": "kNumericAttribute",
           "isArray": false,
-          "isInput": false,
+          "isInput": true,
           "isOutput": true,
           "shortName": "stGlobalIndex",
-          "parentName": "stElement"
+          "parentName": "stElementOut"
         },
         {
           "name": "stInput",
@@ -926,6 +946,16 @@
           "isOutput": true,
           "shortName": "stName",
           "parentName": "stElement"
+        },
+        {
+          "name": "stNameOut",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stNameOut",
+          "parentName": "stElementOut"
         },
         {
           "name": "stOpName",
@@ -985,17 +1015,17 @@
           "isInput": true,
           "isOutput": true,
           "shortName": "stPointDriverMatrixOut",
-          "parentName": "stElement"
+          "parentName": "stElementOut"
         },
         {
           "name": "stPointFinalWorldMatrixOut",
           "type": 578,
           "typeName": "kMatrixAttribute",
           "isArray": false,
-          "isInput": false,
+          "isInput": true,
           "isOutput": true,
           "shortName": "stPointFinalWorldMatrixOut",
-          "parentName": "stElement"
+          "parentName": "stElementOut"
         },
         {
           "name": "stPointWeightedDriverMatrixOut",
@@ -1005,7 +1035,7 @@
           "isInput": true,
           "isOutput": true,
           "shortName": "stPointWeightedDriverMatrixOut",
-          "parentName": "stElement"
+          "parentName": "stElementOut"
         },
         {
           "name": "stPointWeightedLocalOffsetMatrixOut",
@@ -1015,7 +1045,7 @@
           "isInput": true,
           "isOutput": true,
           "shortName": "stPointWeightedLocalOffsetMatrixOut",
-          "parentName": "stElement"
+          "parentName": "stElementOut"
         },
         {
           "name": "stPointWorldMatrixIn",
@@ -1035,7 +1065,7 @@
           "isInput": true,
           "isOutput": true,
           "shortName": "stTypeOut",
-          "parentName": "stElement"
+          "parentName": "stElementOut"
         }
       ]
     }
@@ -16050,7 +16080,7 @@
           "name": "stDataIn",
           "type": 576,
           "typeName": "kCompoundAttribute",
-          "isArray": true,
+          "isArray": false,
           "isInput": true,
           "isOutput": true,
           "shortName": "stDataIn",
@@ -16155,6 +16185,76 @@
           "isOutput": true,
           "shortName": "stShowPoints",
           "parentName": ""
+        },
+        {
+          "name": "stSpaceIndexIn",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stSpaceIndexIn",
+          "parentName": "stDataIn"
+        },
+        {
+          "name": "stSpaceModeIn",
+          "type": 572,
+          "typeName": "kEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stSpaceModeIn",
+          "parentName": "stDataIn"
+        },
+        {
+          "name": "stSpaceNameIn",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stSpaceNameIn",
+          "parentName": "stDataIn"
+        },
+        {
+          "name": "stUVNIn",
+          "type": 566,
+          "typeName": "kAttribute3Float",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stUVNIn",
+          "parentName": "stDataIn"
+        },
+        {
+          "name": "stUVNInX",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stUVNInx",
+          "parentName": "stUVNIn"
+        },
+        {
+          "name": "stUVNInY",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stUVNIny",
+          "parentName": "stUVNIn"
+        },
+        {
+          "name": "stUVNInZ",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stUVNInz",
+          "parentName": "stUVNIn"
         },
         {
           "name": "template",

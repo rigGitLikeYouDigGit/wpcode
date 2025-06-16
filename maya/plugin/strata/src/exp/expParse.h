@@ -1013,9 +1013,12 @@ namespace ed {
 
 			~Expression() = default; Expression(Expression const& other) {
 				copyOther(other);
-			} Expression(Expression&& other) = default; Expression& operator=(Expression const& other) {
+			} Expression(Expression&& other) = default; 
+			Expression& operator=(Expression const& other) {
 				copyOther(other);
-			} Expression& operator=(Expression&& other) = default;;
+				return *this;
+			} 
+			Expression& operator=(Expression&& other) = default;;
 
 
 			void setSource(const char* inSrcStr) {
@@ -1028,7 +1031,7 @@ namespace ed {
 
 			Status parse();
 
-			Status result(std::vector<ExpValue>*& outResult,
+			Status result(std::vector<ExpValue>* outResult,
 				//ExpStatus* expStatus,
 				ExpAuxData* auxData
 			);

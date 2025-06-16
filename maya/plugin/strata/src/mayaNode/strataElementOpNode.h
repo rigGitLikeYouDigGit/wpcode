@@ -136,22 +136,27 @@ prefix MObject nodeT aStElement;\
 prefix MObject nodeT aStName;\
 prefix MObject nodeT aStDriverExp;\
 prefix MObject nodeT aStSpaceExp;\
-prefix MObject nodeT aStGlobalIndex;\
-prefix MObject nodeT aStElTypeIndex;\
-prefix MObject nodeT aStTypeOut;\
 \
 prefix MObject nodeT aStDriverWeightIn;\
 prefix MObject nodeT aStMatchWorldSpaceIn;\
 \
 prefix MObject nodeT aStPointWorldMatrixIn;\
 prefix MObject nodeT aStPointDriverLocalMatrixIn;\
+\
+prefix MObject nodeT aStEdgeCurveIn; \
+\
+prefix MObject nodeT aStElementOut;\
+prefix MObject nodeT aStNameOut;\
+prefix MObject nodeT aStGlobalIndex;\
+prefix MObject nodeT aStElTypeIndex;\
+prefix MObject nodeT aStTypeOut;\
 prefix MObject nodeT aStPointDriverMatrixOut; \
 prefix MObject nodeT aStPointWeightedDriverMatrixOut; \
 prefix MObject nodeT aStPointWeightedLocalOffsetMatrixOut; \
 prefix MObject nodeT aStPointFinalWorldMatrixOut; \
-\
-prefix MObject nodeT aStEdgeCurveIn;\
 prefix MObject nodeT aStEdgeCurveOut;\
+\
+
 
 
 /*

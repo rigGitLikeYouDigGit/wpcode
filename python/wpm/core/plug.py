@@ -567,6 +567,11 @@ def setPlugValue(plug:om.MPlug, data:T.Union[T.List, object],
 	if plugHType(plug) == HType.Leaf:
 		return _setLeafPlugValue(plug, data)
 
+	log("plug", plug.name(), plugHType(plug))
+
+	if not isinstance(data, (list, tuple)):
+		data = [data]
+
 	if errorOnFormatMismatch:
 		assert len(subPlugs) == len(data), "incorrect format passed to setPlugData - \n length of {} \n and {} \n must match".format(subPlugs, data)
 	# copy out last array value if insufficient length

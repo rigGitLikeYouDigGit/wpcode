@@ -658,20 +658,23 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 
 		// look up linked graphs, connect their output ops to this op's inputs
 		std::vector<int> inputKeys = mapKeys(incomingGraphPtrs);
-		opPtr->inputs.reserve(
-			*std::max_element(inputKeys.begin(), inputKeys.end())
-		);
-		for (int i = 0; i < static_cast<int>(incomingGraphPtrs.size()); i++) {
-			if (!incomingGraphPtrs.count(i)) {
-				opPtr->inputs.push_back(-1);
-				continue;
+		int maxIndex = 0;
+		if (inputKeys.size()) {
+			maxIndex = *std::max_element(inputKeys.begin(), inputKeys.end());
+			opPtr->inputs.reserve(maxIndex);
+			for (int i = 0; i < static_cast<int>(incomingGraphPtrs.size()); i++) {
+				if (!incomingGraphPtrs.count(i)) {
+					opPtr->inputs.push_back(-1);
+					continue;
+				}
+				opPtr->inputs.push_back(
+					opGraphPtr->nameIndexMap.at(
+						incomingGraphPtrs.at(i).lock().get()->outputNodeName()
+					)
+				);
 			}
-			opPtr->inputs.push_back(
-				opGraphPtr->nameIndexMap.at(
-					incomingGraphPtrs.at(i).lock().get()->outputNodeName()
-				)
-			);
-		}
+		} 
+		
 		return s;
 	}
 

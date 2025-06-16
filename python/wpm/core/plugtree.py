@@ -773,12 +773,16 @@ class StringArrayPlug(TypedPlug):
 
 class PlugDescriptor:
 	"""descriptor for plugs -
-	declare whole attr hierarchy in one go"""
+	declare whole attr hierarchy in one go
+	TODO: consider putting valid value types here as well to warn
+		if you try and set an int plug to a string or something
+	"""
 	def __init__(self, name:str):
 		self.name = name
 
 	# TEMP get and set
 	def __get__(self,  instance:(Plug, WN), owner)->Plug:
+		#log("pd _get_", instance, type(instance), owner, type(owner))
 		return instance.plug(self.name)
 	# # TEMP
 	def __set__(self, instance:(Plug, WN),
@@ -788,7 +792,7 @@ class PlugDescriptor:
 
 			instance.plug(self.name) << pluglib.getMPlug(value)
 			return
-		except AttributeError:
+		except (AttributeError, TypeError):
 			pass
 		instance.plug(self.name).set(value)
 

@@ -1,4 +1,3 @@
-#pragma once
 //#include <bezier/math/tridiagonal.h>
 #include "tridiagonal.h"
 
@@ -69,7 +68,7 @@ namespace bez {
         }
 
         // check that all rhs matrices have same number of columns
-        long col_size = rhs[0].cols();
+        long col_size = static_cast<long>(rhs[0].cols());
         for (const auto & r : rhs) {
             if (r.cols() != col_size){
                 throw std::invalid_argument("Invalid matrix dimensions. All right hand side matrices must"
@@ -113,7 +112,7 @@ namespace bez {
         rhs_el_prime = diagonal[0].inverse() * rhs[0];
         rhs_prime[0] = rhs_el_prime;
 
-        for(int i = 1; i < diagonal.size(); i++){
+        for(int i = 1; i < static_cast<int>(diagonal.size()); i++){
             rhs_el_prime = (diagonal[i] - lower_diagonal[i - 1] * upper_diagonal_prime[i - 1]).inverse()
                            * (rhs[i] - lower_diagonal[i - 1] * rhs_prime[i - 1]);
             rhs_prime[i] = rhs_el_prime;
@@ -123,7 +122,7 @@ namespace bez {
         x = rhs_prime.at(diagonal.size()-1);
         solution[solution.size() - 1] = x;
 
-        for(int i = diagonal.size() - 2; i >= 0; i--){
+        for(int i = static_cast<int>(diagonal.size() - 2); i >= 0; i--){
             x = rhs_prime[i] - upper_diagonal_prime[i] * solution[i+1];
             solution[i] = x;
         }
@@ -185,7 +184,7 @@ namespace bez {
                 throw std::invalid_argument("Invalid number of block matrix elements");
             }
 
-            unsigned long size = diagonal.size();
+            unsigned long size = static_cast<unsigned long>(diagonal.size());
 
             // upper left corner
             if(
@@ -222,7 +221,7 @@ namespace bez {
         }
 
         // check that all rhs matrices have same number of columns
-        long col_size = rhs[0].cols();
+        long col_size = static_cast<long>(rhs[0].cols());
         for (const auto & r : rhs) {
             if (r.cols() != col_size){
                 throw std::invalid_argument("Invalid matrix dimensions. All right hand side matrices must"

@@ -161,7 +161,7 @@ MStatus StrataPointNode::initialize() {
     nFn.setAffectsWorldSpace(true);
 
 	// radius only affects visuals for now
-    aStRadius = nFn.create("stRadius", "stRadius", MFnNumericData::kFloat, 0.1);
+    aStRadius = nFn.create("stRadius", "stRadius", MFnNumericData::kFloat, 0.2);
 	nFn.setAffectsAppearance(true);
     nFn.setAffectsWorldSpace(true);
     nFn.setMin(0.0);

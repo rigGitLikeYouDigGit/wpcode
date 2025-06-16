@@ -1,7 +1,7 @@
 
 from __future__ import annotations
 import typing as T
-
+from wplib import log
 
 """
 """
@@ -28,8 +28,8 @@ thisFilePath = Path(strata.__file__).parent / "plugin" / "__init__.py"
 # construct overall plugin object, register any python plugin nodes
 pluginAid = WpPluginAid(
 	"strata",
-	pluginPath=str(WP_ROOT_PATH/"code"/"maya"/"plugin"/"strata"/"Debug"/"strata.mll"),
-	#pluginPath=str(WP_ROOT_PATH/"code"/"maya"/"plugin"/"output"/"Maya2023"/"plug-ins"/"strata.mll"),
+	#pluginPath=str(WP_ROOT_PATH/"code"/"maya"/"plugin"/"strata"/"Debug"/"strata.mll"),
+	pluginPath=str(WP_ROOT_PATH/"code"/"maya"/"plugin"/"output"/"Maya2023"/"plug-ins"/"strata.mll"),
 	# nodeClasses={
 	# 	1 : StrataPoint
 	# }
@@ -89,49 +89,60 @@ def reloadPluginTest():
 	# update node class wrappers
 	pluginAid.updateGeneratedNodeClasses()
 
-	# test out the matrixCurve node
-	crv = WN.NurbsCurve.create("matrixRoot_CRV")
-	#return # works when run multiple times
-
-	matCrv = WN.MatrixCurve.create("matrixCurve")
-	matCrv.curveOut_.con(crv.shape().worldIn)
-	return
+	# # test out the matrixCurve node
+	# crv = WN.NurbsCurve.create("matrixRoot_CRV")
+	# #return # works when run multiple times
+	#
+	# matCrv = WN.MatrixCurve.create("matrixCurve")
+	# matCrv.curveOut_.con(crv.shape().worldIn)
+	# return
 
 	#return
 	# test creating a single face of strataSurface
 	ptA = makeStrataPoint("ptA").tf()
-	cmds.setAttr(ptA.tf() + ".translate", -3, 2, -3)
 
+	ptB = makeStrataPoint("ptB").tf()
+	ptB.translateX_ = 3
 
-	ptB = makeStrataPoint("strataPointB").tf()
-	ptC = makeStrataPoint("strataPointC").tf()
-	ptD = makeStrataPoint("strataPointD").tf()
-	# # move points
-	cmds.setAttr(ptA.translate_, -3, 2, -3)
-	cmds.setAttr(ptB.tf().translate_, 2, 3, -3)
-	#
-	cmds.setAttr(ptC + ".translate", 2, -1, -3)
-	cmds.setAttr(ptD + ".translate", 3, -1, -3)
+	ptC = makeStrataPoint("ptC").tf()
+	ptC.translateX_ = 6
 
-	ptA.worldOut.con(matCrv.matrixStartIn_)
-	ptD.worldOut.con(matCrv.matrixEndIn_)
+	#elOp = cmds.createNode("strataElementOp")
+	elOp : WN.StrataElementOp = WN.createNode("strataElementOp", "newElOp")
+	log(elOp.stElement_, elOp, type(elOp))
+	elOp.stElement_[0].stName_ = "pShoulder"
+	elOp.stElement_[0].stPointWorldMatrixIn_ = ptA.worldMatrix_[0]
+	elOp.stElement_[1].stName_ = "pElbow"
+	elOp.stElement_[1].stPointWorldMatrixIn_ = ptB.worldMatrix_[0]
+	elOp.stElement_[2].stName_ = "pWrist"
+	elOp.stElement_[2].stPointWorldMatrixIn_ = ptC.worldMatrix_[0]
 
-	ptB.worldOut.con(matCrv.matrixMidIn_[0].matrixMidInMatrix_)
-	#ptC.worldOut.con(matCrv.matrixMidIn_[1].matrixMidInMatrix_)
+	# elOp.stElement_[2].stName_ = "pLowPt"
+	# elOp.stElement_[3].stName_ = "eCentre"
+	# elOp.stElement_[3].stExp_ = "pTopPt, pMidPt, pLowPt"
 
 	return
+
+	# # move points
+	# cmds.setAttr(ptA.translate_, -3, 2, -3)
+	# cmds.setAttr(ptB.tf().translate_, 2, 3, -3)
+	# #
+	# cmds.setAttr(ptC + ".translate", 2, -1, -3)
+	# cmds.setAttr(ptD + ".translate", 3, -1, -3)
+	#
+	# ptA.worldOut.con(matCrv.matrixStartIn_)
+	# ptD.worldOut.con(matCrv.matrixEndIn_)
+	#
+	# ptB.worldOut.con(matCrv.matrixMidIn_[0].matrixMidInMatrix_)
+	# #ptC.worldOut.con(matCrv.matrixMidIn_[1].matrixMidInMatrix_)
+	#
+	# return
 
 
 	# localIn, localOut, worldIn, worldOut
 
 	#return
-	#elOp = cmds.createNode("strataElementOp")
-	elOp = WN.createNode("strataElementOp", "newElOp")
-	elOp.stElement_[0].stName_ = "pTopPt"
-	elOp.stElement_[1].stName_ = "pMidPt"
-	# elOp.stElement_[2].stName_ = "pLowPt"
-	# elOp.stElement_[3].stName_ = "eCentre"
-	# elOp.stElement_[3].stExp_ = "pTopPt, pMidPt, pLowPt"
+
 
 
 	return

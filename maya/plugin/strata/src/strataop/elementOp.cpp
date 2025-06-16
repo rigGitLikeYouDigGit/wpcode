@@ -31,7 +31,7 @@ Status& pointEvalParam(
 		(maybe then snap to drivers)
 		done
 	*/
-	std::vector<ExpValue>* resultVals;
+	std::vector<ExpValue> resultVals;
 
 	s = value.addElement(SElement(param.name, StrataElType::point), outPtr);
 
@@ -56,8 +56,8 @@ Status& pointEvalParam(
 		pData.creatorNode = op.name; // this op created this data
 
 		// check if point has a driver - if it's a point, snap to it
-		s = param.driverExp.result(resultVals, &expAuxData);
-		std::vector<int> drivers = expAuxData.expValuesToElements(*resultVals, s);
+		s = param.driverExp.result(&resultVals, &expAuxData);
+		std::vector<int> drivers = expAuxData.expValuesToElements(resultVals, s);
 		if (drivers.size()) {
 			auto driverEl = value.getEl(drivers[0]);
 			pData.driverData.index = drivers[0];
@@ -67,8 +67,8 @@ Status& pointEvalParam(
 		}
 
 		// check for spaces
-		s = param.spaceExp.result(resultVals, &expAuxData);
-		std::vector<int> spaces = expAuxData.expValuesToElements(*resultVals, s);
+		s = param.spaceExp.result(&resultVals, &expAuxData);
+		std::vector<int> spaces = expAuxData.expValuesToElements(resultVals, s);
 		if (spaces.size()) {
 			for (auto i : spaces) {
 				auto spaceEl = value.getEl(i);

@@ -47,6 +47,7 @@ MStatus StrataElementOpNode::initialize() {
     aStElement = cFn.create("stElement", "stElement");
     cFn.setArray(true);
     cFn.setUsesArrayDataBuilder(true);
+    cFn.setReadable(false);
 
     /*expression to generate given elements - leave blank for raw points
     */
@@ -60,28 +61,11 @@ MStatus StrataElementOpNode::initialize() {
     /* name of new element to create*/
     aStName = tFn.create("stName", "stName", MFnData::kString);
     tFn.setDefault(MFnStringData().create(""));
-    /* global index of new element created */ 
-    aStGlobalIndex = nFn.create("stGlobalIndex", "stGlobalIndex", MFnNumericData::kInt, -1);
-    nFn.setKeyable(false);
-    nFn.setMin(-1);
-    nFn.setWritable(false);
-    /* component-type-specific index of element created */
-    aStElTypeIndex = nFn.create("stElTypeIndex", "stElTypeIndex", MFnNumericData::kInt, -1);
-    nFn.setKeyable(false);
-    nFn.setMin(-1);
-    nFn.setWritable(false);
+    
 
     cFn.addChild(aStDriverExp);
     cFn.addChild(aStSpaceExp);
     cFn.addChild(aStName);
-    cFn.addChild(aStGlobalIndex);
-    cFn.addChild(aStElTypeIndex);
-
-    aStTypeOut = eFn.create("stTypeOut", "stTypeOut", 0);
-    eFn.addField("point", 0);
-    eFn.addField("edge", 1);
-    eFn.addField("face", 2);
-    cFn.addChild(aStTypeOut);
 
     //// element attributes
     aStMatchWorldSpaceIn = nFn.create("stMatchWorldSpaceIn", "stMatchWorldSpaceIn", MFnNumericData::kFloat, 1.0);
@@ -102,9 +86,39 @@ MStatus StrataElementOpNode::initialize() {
     mFn.setUsesArrayDataBuilder(true);
     cFn.addChild(aStPointDriverLocalMatrixIn);
 
+    //// edge attributes
+    aStEdgeCurveIn = tFn.create("stEdgeCurveIn", "stEdgeCurveIn", MFnData::kNurbsCurve);
+    tFn.setDefault(MFnNurbsCurveData().create());
+    cFn.addChild(aStEdgeCurveIn);
+
+
+    ///// OUTPUTS
+    aStElementOut = cFn.create("stElementOut", "stElementOut");
+    cFn.setWritable(false);
+    cFn.setArray(true);
+    cFn.setUsesArrayDataBuilder(true);
+
+    aStNameOut = tFn.create("stNameOut", "stNameOut", MFnData::kString);
+    tFn.setDefault(MFnStringData().create(""));
+    cFn.addChild(aStNameOut);
+    /* global index of new element created */
+    aStGlobalIndex = nFn.create("stGlobalIndex", "stGlobalIndex", MFnNumericData::kInt, -1);
+    nFn.setKeyable(false);
+    nFn.setMin(-1);
+    cFn.addChild(aStGlobalIndex);
+    /* component-type-specific index of element created */
+    aStElTypeIndex = nFn.create("stElTypeIndex", "stElTypeIndex", MFnNumericData::kInt, -1);
+    nFn.setKeyable(false);
+    nFn.setMin(-1);
+    cFn.addChild(aStElTypeIndex);
+    aStTypeOut = eFn.create("stTypeOut", "stTypeOut", 0);
+    eFn.addField("point", 0);
+    eFn.addField("edge", 1);
+    eFn.addField("face", 2);
+    cFn.addChild(aStTypeOut);
+
     aStPointFinalWorldMatrixOut = mFn.create("stPointFinalWorldMatrixOut", "stPointFinalWorldMatrixOut");
     mFn.setDefault(MMatrix());
-    mFn.setWritable(false);
     cFn.addChild(aStPointFinalWorldMatrixOut);
 
     aStPointWeightedDriverMatrixOut = mFn.create("stPointWeightedDriverMatrixOut", "stPointWeightedDriverMatrixOut");
@@ -122,10 +136,7 @@ MStatus StrataElementOpNode::initialize() {
     cFn.addChild(aStPointDriverMatrixOut);
 
 
-    //// edge attributes
-    aStEdgeCurveIn = tFn.create("stEdgeCurveIn", "stEdgeCurveIn", MFnData::kNurbsCurve);
-    tFn.setDefault(MFnNurbsCurveData().create());
-    cFn.addChild(aStEdgeCurveOut);
+
 
     aStEdgeCurveOut = tFn.create("stEdgeCurveOut", "stEdgeCurveOut", MFnData::kNurbsCurve);
     tFn.setDefault(MFnNurbsCurveData().create());
@@ -182,7 +193,7 @@ MStatus StrataElementOpNode::initialize() {
     //);
 
     std::vector<MObject> drivers{
-        //aStElement,
+        aStElement,
         aStName,
         aStDriverExp,
         aStSpaceExp,
@@ -192,13 +203,15 @@ MStatus StrataElementOpNode::initialize() {
 
         aStPointWorldMatrixIn,
         aStPointDriverLocalMatrixIn,
-        aStPointWeightedDriverMatrixOut,
-        aStPointWeightedLocalOffsetMatrixOut,
-        aStPointFinalWorldMatrixOut,
+        //aStPointWeightedDriverMatrixOut,
+        //aStPointWeightedLocalOffsetMatrixOut,
+        //aStPointFinalWorldMatrixOut,
 
         aStEdgeCurveIn
     };
     std::vector<MObject> driven{
+        aStElementOut,
+        aStNameOut,
         aStGlobalIndex,
         aStElTypeIndex,
         aStTypeOut,
@@ -209,7 +222,8 @@ MStatus StrataElementOpNode::initialize() {
     };
 
     std::vector<MObject> toAdd{
-        aStElement
+        aStElement,
+        aStElementOut
     };
 
     s = addStrataAttrs<thisT>(drivers, driven, toAdd);
@@ -217,6 +231,33 @@ MStatus StrataElementOpNode::initialize() {
 
     addAttributes<thisT>(toAdd);
     setAttributesAffect<thisT>(drivers, driven);
+
+    DEBUGSL("BEFORE TEST PARAM MAP");
+    std::map<StrataName, ElOpParam> testParamMap;
+    ElOpParam testParam;
+    DEBUGSL("INSERT EMPTY");
+    testParamMap.insert({ "tasd", testParam });
+
+    DEBUGSL("BEFORE PARAM MAP ITERATION");
+
+    for (auto& i : testParamMap) { 
+        DEBUGSL( "empty: " + std::to_string(i.second.name.empty()));
+    }
+
+    DEBUGSL("BEFORE TEST PARAM MAP2");
+    std::map<StrataName, ElOpParam> testParamMap2;
+    for (int i = 0; i < 3; i++) {
+        ElOpParam testParam2;
+        DEBUGSL("INSERT NAMED");
+        testParam2.name = "testName";
+        trimEnds(testParam2.name);
+        testParamMap.insert_or_assign( testParam2.name, testParam );
+    }
+    DEBUGSL("BEFORE PARAM MAP ITERATION");
+
+    for (auto& i : testParamMap) { 
+        DEBUGSL("empty: " + std::to_string(i.second.name.empty()));
+    }
 
     CHECK_MSTATUS_AND_RETURN_IT(s);
     DEBUGS("end element initialize")
@@ -353,28 +394,35 @@ MStatus StrataElementOpNode::syncStrataParams(MObject& nodeObj, MDataBlock& data
 
     MArrayDataHandle elDH = data.inputArrayValue(aStElement, &s);
     MCHECK(s, NODENAME + "error getting input array value");
+    DEBUGSL("n array params to sync: " + std::to_string(elDH.elementCount()));
+
     for (unsigned int i = 0; i < elDH.elementCount(); i++) {
         s = jumpToElement(elDH, i);
         MCHECK(s, "could not jump to element" + std::to_string(i));
 
         ElOpParam param;
-        //MDataHandle iDH = 
         MDataHandle nameDH = elDH.inputValue().child(aStName);
         MDataHandle driverExpDH = elDH.inputValue().child(aStDriverExp);
 
         // check if name is empty
-        std::string elName(nameDH.asString().asChar());
+        std::string elName = nameDH.asString().asChar();
         trimEnds(elName);
         if (elName.empty()) { // empty name
             continue;
         }
 
         param.name = elName;
-        // driver exp
-        std::string driverExpStr(driverExpDH.asString().asChar());
+
+        opPtr->paramMap.insert_or_assign(std::string(param.name), param); // crashes
+
+        //continue;
+
+
+        //// driver exp
+        std::string driverExpStr = driverExpDH.asString().asChar();
         foundNames.insert(elName);
         param.driverExp.setSource(driverExpStr.c_str());
-
+        continue;
         // parent exp
         std::string spaceExpStr = elDH.inputValue().child(aStSpaceExp).asString().asChar();
         param.spaceExp.setSource(spaceExpStr.c_str());
@@ -388,10 +436,26 @@ MStatus StrataElementOpNode::syncStrataParams(MObject& nodeObj, MDataBlock& data
 
         param.pData.finalMatrix = toEigen(elDH.inputValue().child(aStPointWorldMatrixIn).asMatrix());
 
+        //opPtr->paramMap.insert({ param.name, param }); // crashes
+        opPtr->paramMap.insert_or_assign( param.name, param ); // crashes
+        //opPtr->paramMap.insert({ "test", param }); // no crash
 
     }
+
     // remove any params from op not found in names
-    for (auto& i : opPtr->paramMap) {
+    /*auto keys = MapKeyIterator<StrataName, ElOpParam>()*/
+
+    //auto pairIter = opPtr->paramMap.begin();
+    /*for (int i = 0; i < static_cast<int>(opPtr->paramMap.size()); i++) {
+        
+        std::pair<const StrataName, ElOpParam>& p = *pairIter;
+
+        if (foundNames.find(p.first) == foundNames.end()) {
+            opPtr->paramMap.erase(p.first);
+        }
+    }*/
+
+    for (auto& i : opPtr->paramMap) { // crashes on iteration
         if (foundNames.find(i.first) == foundNames.end()) {
             opPtr->paramMap.erase(i.first);
         }
@@ -417,7 +481,7 @@ MStatus StrataElementOpNode::compute(const MPlug& plug, MDataBlock& data) {
     //return s;
     // update index attrs from op elements
     thisStrataOpT* opPtr = getStrataOp<thisT>(data);
-    MArrayDataHandle elArrDH = data.outputArrayValue (aStElement);
+    MArrayDataHandle elArrDH = data.outputArrayValue (aStElementOut);
     //for (unsigned int i = 0; i < elArrDH.elementCount(); i++){
     for (unsigned int i = 0; i < static_cast<unsigned int>(opPtr->elementsAdded.size()); i++){
         DEBUGS("try jump to output element: " + std::to_string(i));
@@ -425,6 +489,7 @@ MStatus StrataElementOpNode::compute(const MPlug& plug, MDataBlock& data) {
         s = jumpToElement(elArrDH, i);
         MCHECK(s, NODENAME + "ERROR setting outputs, could not jump to element: " + std::to_string(i).c_str());
         StrataName& elName = opPtr->elementsAdded[i];
+        elArrDH.outputValue().child(aStNameOut).setString(MString(elName.c_str()));
         SElement* el = opPtr->value().getEl(elName);
         elArrDH.outputValue().child(aStGlobalIndex).setInt(
             el->globalIndex
