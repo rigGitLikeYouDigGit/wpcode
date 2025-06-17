@@ -487,30 +487,6 @@ src\mayaNode\strataElementOpNode.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\strata.dir\build.make /nologo -$(MAKEFLAGS) CMakeFiles\strata.dir\src\mayaNode\strataElementOpNode.cpp.s
 .PHONY : src\mayaNode\strataElementOpNode.cpp.s
 
-src\mayaNode\strataGraphNode.obj: src\mayaNode\strataGraphNode.cpp.obj
-.PHONY : src\mayaNode\strataGraphNode.obj
-
-# target to build an object file
-src\mayaNode\strataGraphNode.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\strata.dir\build.make /nologo -$(MAKEFLAGS) CMakeFiles\strata.dir\src\mayaNode\strataGraphNode.cpp.obj
-.PHONY : src\mayaNode\strataGraphNode.cpp.obj
-
-src\mayaNode\strataGraphNode.i: src\mayaNode\strataGraphNode.cpp.i
-.PHONY : src\mayaNode\strataGraphNode.i
-
-# target to preprocess a source file
-src\mayaNode\strataGraphNode.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\strata.dir\build.make /nologo -$(MAKEFLAGS) CMakeFiles\strata.dir\src\mayaNode\strataGraphNode.cpp.i
-.PHONY : src\mayaNode\strataGraphNode.cpp.i
-
-src\mayaNode\strataGraphNode.s: src\mayaNode\strataGraphNode.cpp.s
-.PHONY : src\mayaNode\strataGraphNode.s
-
-# target to generate assembly for a file
-src\mayaNode\strataGraphNode.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\strata.dir\build.make /nologo -$(MAKEFLAGS) CMakeFiles\strata.dir\src\mayaNode\strataGraphNode.cpp.s
-.PHONY : src\mayaNode\strataGraphNode.cpp.s
-
 src\mayaNode\strataOpNodeBase.obj: src\mayaNode\strataOpNodeBase.cpp.obj
 .PHONY : src\mayaNode\strataOpNodeBase.obj
 
@@ -534,30 +510,6 @@ src\mayaNode\strataOpNodeBase.s: src\mayaNode\strataOpNodeBase.cpp.s
 src\mayaNode\strataOpNodeBase.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\strata.dir\build.make /nologo -$(MAKEFLAGS) CMakeFiles\strata.dir\src\mayaNode\strataOpNodeBase.cpp.s
 .PHONY : src\mayaNode\strataOpNodeBase.cpp.s
-
-src\mayaNode\strataPointNode.obj: src\mayaNode\strataPointNode.cpp.obj
-.PHONY : src\mayaNode\strataPointNode.obj
-
-# target to build an object file
-src\mayaNode\strataPointNode.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\strata.dir\build.make /nologo -$(MAKEFLAGS) CMakeFiles\strata.dir\src\mayaNode\strataPointNode.cpp.obj
-.PHONY : src\mayaNode\strataPointNode.cpp.obj
-
-src\mayaNode\strataPointNode.i: src\mayaNode\strataPointNode.cpp.i
-.PHONY : src\mayaNode\strataPointNode.i
-
-# target to preprocess a source file
-src\mayaNode\strataPointNode.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\strata.dir\build.make /nologo -$(MAKEFLAGS) CMakeFiles\strata.dir\src\mayaNode\strataPointNode.cpp.i
-.PHONY : src\mayaNode\strataPointNode.cpp.i
-
-src\mayaNode\strataPointNode.s: src\mayaNode\strataPointNode.cpp.s
-.PHONY : src\mayaNode\strataPointNode.s
-
-# target to generate assembly for a file
-src\mayaNode\strataPointNode.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\strata.dir\build.make /nologo -$(MAKEFLAGS) CMakeFiles\strata.dir\src\mayaNode\strataPointNode.cpp.s
-.PHONY : src\mayaNode\strataPointNode.cpp.s
 
 src\mayaNode\strataShapeNode.obj: src\mayaNode\strataShapeNode.cpp.obj
 .PHONY : src\mayaNode\strataShapeNode.obj
@@ -606,6 +558,54 @@ src\mayaNode\stratacurvenode.s: src\mayaNode\stratacurvenode.cpp.s
 src\mayaNode\stratacurvenode.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\strata.dir\build.make /nologo -$(MAKEFLAGS) CMakeFiles\strata.dir\src\mayaNode\stratacurvenode.cpp.s
 .PHONY : src\mayaNode\stratacurvenode.cpp.s
+
+src\mayaNode\stratagraphnode.obj: src\mayaNode\stratagraphnode.cpp.obj
+.PHONY : src\mayaNode\stratagraphnode.obj
+
+# target to build an object file
+src\mayaNode\stratagraphnode.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\strata.dir\build.make /nologo -$(MAKEFLAGS) CMakeFiles\strata.dir\src\mayaNode\stratagraphnode.cpp.obj
+.PHONY : src\mayaNode\stratagraphnode.cpp.obj
+
+src\mayaNode\stratagraphnode.i: src\mayaNode\stratagraphnode.cpp.i
+.PHONY : src\mayaNode\stratagraphnode.i
+
+# target to preprocess a source file
+src\mayaNode\stratagraphnode.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\strata.dir\build.make /nologo -$(MAKEFLAGS) CMakeFiles\strata.dir\src\mayaNode\stratagraphnode.cpp.i
+.PHONY : src\mayaNode\stratagraphnode.cpp.i
+
+src\mayaNode\stratagraphnode.s: src\mayaNode\stratagraphnode.cpp.s
+.PHONY : src\mayaNode\stratagraphnode.s
+
+# target to generate assembly for a file
+src\mayaNode\stratagraphnode.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\strata.dir\build.make /nologo -$(MAKEFLAGS) CMakeFiles\strata.dir\src\mayaNode\stratagraphnode.cpp.s
+.PHONY : src\mayaNode\stratagraphnode.cpp.s
+
+src\mayaNode\stratapointnode.obj: src\mayaNode\stratapointnode.cpp.obj
+.PHONY : src\mayaNode\stratapointnode.obj
+
+# target to build an object file
+src\mayaNode\stratapointnode.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\strata.dir\build.make /nologo -$(MAKEFLAGS) CMakeFiles\strata.dir\src\mayaNode\stratapointnode.cpp.obj
+.PHONY : src\mayaNode\stratapointnode.cpp.obj
+
+src\mayaNode\stratapointnode.i: src\mayaNode\stratapointnode.cpp.i
+.PHONY : src\mayaNode\stratapointnode.i
+
+# target to preprocess a source file
+src\mayaNode\stratapointnode.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\strata.dir\build.make /nologo -$(MAKEFLAGS) CMakeFiles\strata.dir\src\mayaNode\stratapointnode.cpp.i
+.PHONY : src\mayaNode\stratapointnode.cpp.i
+
+src\mayaNode\stratapointnode.s: src\mayaNode\stratapointnode.cpp.s
+.PHONY : src\mayaNode\stratapointnode.s
+
+# target to generate assembly for a file
+src\mayaNode\stratapointnode.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\strata.dir\build.make /nologo -$(MAKEFLAGS) CMakeFiles\strata.dir\src\mayaNode\stratapointnode.cpp.s
+.PHONY : src\mayaNode\stratapointnode.cpp.s
 
 src\mayaNode\stratasurfacenode.obj: src\mayaNode\stratasurfacenode.cpp.obj
 .PHONY : src\mayaNode\stratasurfacenode.obj
@@ -853,21 +853,21 @@ help:
 	@echo ... src/mayaNode/strataElementOpNode.obj
 	@echo ... src/mayaNode/strataElementOpNode.i
 	@echo ... src/mayaNode/strataElementOpNode.s
-	@echo ... src/mayaNode/strataGraphNode.obj
-	@echo ... src/mayaNode/strataGraphNode.i
-	@echo ... src/mayaNode/strataGraphNode.s
 	@echo ... src/mayaNode/strataOpNodeBase.obj
 	@echo ... src/mayaNode/strataOpNodeBase.i
 	@echo ... src/mayaNode/strataOpNodeBase.s
-	@echo ... src/mayaNode/strataPointNode.obj
-	@echo ... src/mayaNode/strataPointNode.i
-	@echo ... src/mayaNode/strataPointNode.s
 	@echo ... src/mayaNode/strataShapeNode.obj
 	@echo ... src/mayaNode/strataShapeNode.i
 	@echo ... src/mayaNode/strataShapeNode.s
 	@echo ... src/mayaNode/stratacurvenode.obj
 	@echo ... src/mayaNode/stratacurvenode.i
 	@echo ... src/mayaNode/stratacurvenode.s
+	@echo ... src/mayaNode/stratagraphnode.obj
+	@echo ... src/mayaNode/stratagraphnode.i
+	@echo ... src/mayaNode/stratagraphnode.s
+	@echo ... src/mayaNode/stratapointnode.obj
+	@echo ... src/mayaNode/stratapointnode.i
+	@echo ... src/mayaNode/stratapointnode.s
 	@echo ... src/mayaNode/stratasurfacenode.obj
 	@echo ... src/mayaNode/stratasurfacenode.i
 	@echo ... src/mayaNode/stratasurfacenode.s

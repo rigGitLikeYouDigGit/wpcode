@@ -19,6 +19,7 @@ register all plugins
 #include "mayaNode/strataPointNode.h"
 #include "mayaNode/strataElementOpNode.h"
 #include "mayaNode/strataShapeNode.h"
+#include "mayaNode/strataShapeGeometryOverride.h"
 
 #include "mayaNode/matrixCurve.h"
 
@@ -135,8 +136,8 @@ MStatus initializePlugin( MObject obj ){
         StrataShapeNode::kNODE_ID,
         StrataShapeNode::creator,
         StrataShapeNode::initialize,
-        //StrataShapeUI::creator,
-        nullptr, // apparently don't need the dumb legacy creator after all
+        StrataShapeUI::creator,
+        //nullptr, // apparently don't need the dumb legacy creator after all
         &StrataShapeNode::drawDbClassification
     );
     MCHECK(s, "ERROR registering Strata shape node");

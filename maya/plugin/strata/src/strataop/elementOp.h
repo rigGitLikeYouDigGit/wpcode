@@ -52,6 +52,8 @@ namespace ed {
 		//std::map<StrataName, SEdgeData> nameEdgeDataMap; 
 
 		std::map<StrataName, ElOpParam> paramMap;
+		// is this the best way to iterate over dictionary in creation order?
+		std::vector<StrataName> paramNames;
 
 		virtual Status makeParams();
 

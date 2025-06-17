@@ -232,35 +232,8 @@ MStatus StrataElementOpNode::initialize() {
     addAttributes<thisT>(toAdd);
     setAttributesAffect<thisT>(drivers, driven);
 
-    DEBUGSL("BEFORE TEST PARAM MAP");
-    std::map<StrataName, ElOpParam> testParamMap;
-    ElOpParam testParam;
-    DEBUGSL("INSERT EMPTY");
-    testParamMap.insert({ "tasd", testParam });
-
-    DEBUGSL("BEFORE PARAM MAP ITERATION");
-
-    for (auto& i : testParamMap) { 
-        DEBUGSL( "empty: " + std::to_string(i.second.name.empty()));
-    }
-
-    DEBUGSL("BEFORE TEST PARAM MAP2");
-    std::map<StrataName, ElOpParam> testParamMap2;
-    for (int i = 0; i < 3; i++) {
-        ElOpParam testParam2;
-        DEBUGSL("INSERT NAMED");
-        testParam2.name = "testName";
-        trimEnds(testParam2.name);
-        testParamMap.insert_or_assign( testParam2.name, testParam );
-    }
-    DEBUGSL("BEFORE PARAM MAP ITERATION");
-
-    for (auto& i : testParamMap) { 
-        DEBUGSL("empty: " + std::to_string(i.second.name.empty()));
-    }
-
     CHECK_MSTATUS_AND_RETURN_IT(s);
-    DEBUGS("end element initialize")
+    //DEBUGS("end element initialize")
     return s;
 }
 
@@ -298,11 +271,12 @@ MStatus StrataElementOpNode::connectionMade(
             otherPlug,
             asSrc
         );
-    return MPxNode::connectionMade(
-        plug,
-        otherPlug,
-        asSrc
-    );
+    return s;
+    //return MPxNode::connectionMade(
+    //    plug,
+    //    otherPlug,
+    //    asSrc
+    //);
 }
 
 MStatus StrataElementOpNode::connectionBroken(
@@ -386,6 +360,7 @@ MStatus StrataElementOpNode::syncStrataParams(MObject& nodeObj, MDataBlock& data
     }
 
     opPtr->paramMap.clear();
+    opPtr->paramNames.clear();
 
     opPtr->opPointDataMap.clear();
 
@@ -395,6 +370,8 @@ MStatus StrataElementOpNode::syncStrataParams(MObject& nodeObj, MDataBlock& data
     MArrayDataHandle elDH = data.inputArrayValue(aStElement, &s);
     MCHECK(s, NODENAME + "error getting input array value");
     DEBUGSL("n array params to sync: " + std::to_string(elDH.elementCount()));
+
+    MArrayDataHandle elOutDH = data.outputArrayValue(aStElementOut, &s);
 
     for (unsigned int i = 0; i < elDH.elementCount(); i++) {
         s = jumpToElement(elDH, i);
@@ -414,15 +391,12 @@ MStatus StrataElementOpNode::syncStrataParams(MObject& nodeObj, MDataBlock& data
         param.name = elName;
 
         opPtr->paramMap.insert_or_assign(std::string(param.name), param); // crashes
-
-        //continue;
-
-
+        opPtr->paramNames.push_back(std::string(param.name));
         //// driver exp
         std::string driverExpStr = driverExpDH.asString().asChar();
         foundNames.insert(elName);
         param.driverExp.setSource(driverExpStr.c_str());
-        continue;
+        //continue;
         // parent exp
         std::string spaceExpStr = elDH.inputValue().child(aStSpaceExp).asString().asChar();
         param.spaceExp.setSource(spaceExpStr.c_str());
@@ -441,19 +415,6 @@ MStatus StrataElementOpNode::syncStrataParams(MObject& nodeObj, MDataBlock& data
         //opPtr->paramMap.insert({ "test", param }); // no crash
 
     }
-
-    // remove any params from op not found in names
-    /*auto keys = MapKeyIterator<StrataName, ElOpParam>()*/
-
-    //auto pairIter = opPtr->paramMap.begin();
-    /*for (int i = 0; i < static_cast<int>(opPtr->paramMap.size()); i++) {
-        
-        std::pair<const StrataName, ElOpParam>& p = *pairIter;
-
-        if (foundNames.find(p.first) == foundNames.end()) {
-            opPtr->paramMap.erase(p.first);
-        }
-    }*/
 
     for (auto& i : opPtr->paramMap) { // crashes on iteration
         if (foundNames.find(i.first) == foundNames.end()) {
@@ -480,8 +441,9 @@ MStatus StrataElementOpNode::compute(const MPlug& plug, MDataBlock& data) {
 
     //return s;
     // update index attrs from op elements
-    thisStrataOpT* opPtr = getStrataOp<thisT>(data);
+    thisStrataOpT* opPtr = getStrataOp<thisT>(data); /* this can be null?????*/
     MArrayDataHandle elArrDH = data.outputArrayValue (aStElementOut);
+    StrataManifold& manifold = opPtr->value();
     //for (unsigned int i = 0; i < elArrDH.elementCount(); i++){
     for (unsigned int i = 0; i < static_cast<unsigned int>(opPtr->elementsAdded.size()); i++){
         DEBUGS("try jump to output element: " + std::to_string(i));
@@ -490,7 +452,8 @@ MStatus StrataElementOpNode::compute(const MPlug& plug, MDataBlock& data) {
         MCHECK(s, NODENAME + "ERROR setting outputs, could not jump to element: " + std::to_string(i).c_str());
         StrataName& elName = opPtr->elementsAdded[i];
         elArrDH.outputValue().child(aStNameOut).setString(MString(elName.c_str()));
-        SElement* el = opPtr->value().getEl(elName);
+        SElement* el = manifold.getEl(elName);
+        
         elArrDH.outputValue().child(aStGlobalIndex).setInt(
             el->globalIndex
         );
@@ -498,6 +461,23 @@ MStatus StrataElementOpNode::compute(const MPlug& plug, MDataBlock& data) {
             el->elType);
         elArrDH.outputValue().child(aStElTypeIndex).setInt(
             el->elIndex);
+
+        /* matrices*/
+        elArrDH.outputValue().child(aStPointFinalWorldMatrixOut).setMMatrix(
+            toMMatrix(manifold.pDataMap[elName].finalMatrix)
+        );
+
+        ///* parent info*/
+        //MArrayDataHandle parentDH = elArrDH.outputValue().child(aStSpace)
+        //switch (el->elType) {
+        //case StrataElType::point :{
+        //
+        //    SPointData& pData = manifold.pDataMap[el->name];
+        //    for (int n = 0; n < static_cast<int>(pData.spaceDatas.size()); n++) {
+        //        
+        //    }
+        //    }
+        //}
     }
 
     /* set everything clean*/

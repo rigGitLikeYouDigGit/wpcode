@@ -19,6 +19,11 @@
 #pragma warning( disable : 4244)
 namespace ed {
 
+	template<typename T>
+	inline std::string str(T any) {
+		return std::to_string(any);
+	}
+
 	typedef unsigned int uint;
 	using std::min;
 	using std::max;

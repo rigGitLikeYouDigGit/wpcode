@@ -168,24 +168,6 @@ struct StrataOpNodeBase {
 		return s;
 	}
 
-	//template<typename NodeT>
-	//static MStatus cacheOpIndexOnNodeObject(MObject& nodeObj, int index) {
-	//	MStatus s;
-	//	if (nodeObj.isNull()) {
-	//		DEBUGSL("cacheOpIndex nodeObj is null");
-	//		return MS::kFailure;
-	//	}
-	//	MFnDependencyNode nodeFn(nodeObj);
-	//	NodeT* userPtr = dynamic_cast<NodeT*>(nodeFn.userNode());
-	//	if (userPtr == nullptr) {
-	//		//STAT_ERROR(s, "USERPTR in dynamic cast is null");
-	//		DEBUGSL("USERPTR in dynamic cast is null");
-	//		return MS::kFailure;
-	//	}
-	//	userPtr->outputOpIndex = index;
-	//	return s;
-	//}
-
 	MStatus setFreshGraph(MObject& nodeObj);
 	MStatus setFreshGraph(MObject& nodeObj, MDataBlock& data);
 
@@ -203,8 +185,10 @@ struct StrataOpNodeBase {
 		however usually it is enough to supply the op indices to op inputs (if
 		we're working within only one strata graph) and the rest will be taken care of
 		*/
+		
 		MS s = MS::kSuccess;
 		MFnDependencyNode depFn(nodeObj);
+		DEBUGS("SYNC INCOMING CONNECTIONS: " + depFn.name());
 		//MPlug graphInPlug = depFn.findPlug(NodeT::aStGraph, true, &s);
 		//MCHECK(s, "Could not find plug for aStGraph for node" + depFn.name());
 		//if (graphInPlug.isConnected()) { // cast the input node to StrataNodeBase
@@ -261,7 +245,7 @@ struct StrataOpNodeBase {
 		* check through incoming map - if 0 entry found, copy it to a new object
 		*/
 		Status strataS;
-		DEBUGS("base sync incoming")
+		DEBUGS("SYNC INCOMING DATA: " + MFnDependencyNode(nodeObj).name());
 			MS s = MS::kSuccess;
 		if (incomingGraphPtrs.find(0) == incomingGraphPtrs.end()) {
 			// 0 not found, make new graph
@@ -479,7 +463,23 @@ struct StrataOpNodeBase {
 	) {
 		// check that an input to the array only comes from another strata maya node - 
 		// can't just connect a random integer
-		DEBUGS("Base legalConnection")
+		MFnDependencyNode depFn(plug.node());
+		if (!asSrc) {
+			DEBUGS(depFn.name() + " Base legalConnection from " + otherPlug.name() + " to " + plug.name());
+		}
+		else {
+			DEBUGS(depFn.name() + "Base legalConnection from " + plug.name() + " to " + otherPlug.name());
+		}
+
+		/* for some bizarre reason on node creation I get calls trying to connect a node's
+		message attribute to itself*/
+		if (plug.node() == otherPlug.node()) {
+			if (plug.attribute() == otherPlug.attribute()) {
+				DEBUGSL("prevented self-connection on plug: " + plug.name());
+				isLegal = false;
+				return MS::kSuccess;
+			}
+		}
 
 		if (plug.attribute() == NodeT::aStInput) { // main graph input
 			if (otherPlug.node() == plug.node()) { // no feedback loops
@@ -518,12 +518,13 @@ struct StrataOpNodeBase {
 
 		DEBUGS("other plug name" + plug.name());
 
-		DEBUGS("plug is null" + std::to_string(plug.isNull()));
-		DEBUGS("plug name" + plug.name());
-		DEBUGS("other plug name" + plug.name());
+		DEBUGS("plug is null: " + std::to_string(plug.isNull()));
+		DEBUGS("plug name: " + plug.name());
+		DEBUGS("other plug name: " + plug.name());
 
 		// we only care about stInput
 		if (MFnAttribute(plug.attribute()).name() != "stInput") {
+			DEBUGS("returning non-input connection")
 			return s;
 		}
 
@@ -586,10 +587,6 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 	*/
 
 	using thisStrataOpT = StrataOpT;
-//
-//	// pointer to this node's op
-//// retrieve anytime the node or graph changes
-	//StrataOpT* opPtr = nullptr;
 
 	template<typename NodeT>
 	StrataOpT* getStrataOp(const MObject& nodeObj) {
@@ -705,7 +702,7 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 		MS s = StrataOpNodeBase::setFreshGraph(nodeObj);
 		MCHECK(s, "Error setting fresh graph, halting before adding op");
 		StrataOpT* opOutPtr;
-		s = createNewOp(nodeObj, data, opOutPtr);
+		s = createNewOp<NodeT>(nodeObj, data, opOutPtr);
 		MCHECK(s, "Error adding new op to graph");
 		DEBUGSL("created new op, added to graph");
 		return s;
@@ -739,17 +736,26 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 	MStatus compute(MObject& nodeObj, const MPlug& plug, MDataBlock& data) {
 		MS s(MS::kSuccess);
 
+		/* check first if op pointer is null - if yes, we're somehow computing before
+		running postConstructor*/
+		StrataOpT* opPtr = getStrataOp<NodeT>(data); 
+		if (opPtr == nullptr) {
+			setFreshGraph<NodeT>(nodeObj, data);
+		}
+		// did that fix it?
+		opPtr = getStrataOp<NodeT>(data);
+		if (opPtr == nullptr) {
+			/* man this program sucks*/
+			DEBUGSL("opPtr is still null after setting fresh graph");
+			return MS::kFailure;
+		}
 		// sync op name
 		if (plug.attribute() == NodeT::aStOpNameOut) {
 			syncOpNameOut<NodeT>(nodeObj, data);
 			data.setClean(plug);
 			return s;
 		}
-		StrataOpT* opPtr = getStrataOp<NodeT>(data);
-		// create op if none
-		if (opPtr == nullptr) {
-			createNewOp<NodeT>(nodeObj, data, opPtr);
-		}
+		
 
 		// copy graph data if it's dirty
 		//if (!data.isClean(NodeT::aStGraph)) {

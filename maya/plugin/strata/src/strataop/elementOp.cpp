@@ -256,29 +256,31 @@ Status StrataElementOp::eval(StrataManifold& value,
 	// use one data struct throughout to allow reusing variables between params
 	ExpAuxData expAuxData;
 
-	for (auto& p : paramMap) {
-		
+	//for (auto& p : paramMap) {
+	for( auto paramName : paramNames){
+		//auto p = std::make_pair(paramName, paramMap[paramName]);
+		ElOpParam& param = paramMap[paramName];
 		SElement* outPtr = nullptr;
 		expAuxData.manifold = &value;
 		std::vector<ExpValue>* resultVals = nullptr;
 		auto& op = *this;
 
-		switch (p.first[0]) { // get the type of element to add by the first letter of the name
+		switch (paramName[0]) { // get the type of element to add by the first letter of the name
 			case 'p': { // a point has no drivers (yet, later allow declaring points as the direct output of topo operations
 				DEBUGS("adding new point");
 				s = pointEvalParam(s, op, outPtr, value, expAuxData,
-					p.second
+					param
 				);
 				break;
 			}
 
 			default: {
-				STAT_ERROR(s, "INVALID ELEMENT PREFIX: " + p.first + "; must begin with one of p, e, f");
+				STAT_ERROR(s, "INVALID ELEMENT PREFIX: " + paramName + "; must begin with one of p, e, f");
 			}
 		}
 
 		if (outPtr == nullptr) {
-			STAT_ERROR(s, "outPtr not set correctly when adding element: " + p.first + ", halting");
+			STAT_ERROR(s, "outPtr not set correctly when adding element: " + paramName + ", halting");
 		}
 		elementsAdded.push_back(outPtr->name);
 

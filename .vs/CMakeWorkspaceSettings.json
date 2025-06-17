@@ -1,0 +1,4 @@
+{
+  "enableCMake": true,
+  "sourceDirectory": "maya\\plugin\\strata"
+}

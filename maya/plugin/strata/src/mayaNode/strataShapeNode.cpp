@@ -123,7 +123,8 @@ MStatus StrataShapeNode::initialize() {
 
 
 void StrataShapeNode::postConstructor() {
-    /* no post needed*/
+    DEBUGS("shape postConstructor");
+    superT::postConstructor<thisT>(thisMObject());
 }
 
 MStatus StrataShapeNode::legalConnection(
@@ -132,7 +133,7 @@ MStatus StrataShapeNode::legalConnection(
     bool 	asSrc,
     bool& isLegal
 ) const {
-    DEBUGSL("element legalConnection")
+    DEBUGSL("shape legalConnection")
         return superT::legalConnection<thisT>(
             plug,
             otherPlug,
@@ -146,17 +147,14 @@ MStatus StrataShapeNode::connectionMade(
     const MPlug& otherPlug,
     bool 	asSrc
 ) {
-    return StrataOpNodeBase::connectionMade<StrataShapeNode>(
+    DEBUGSL("shape connectionMade");
+    return superT::connectionMade<thisT>(
         thisMObject(),
         plug,
         otherPlug,
         asSrc
     );
-    //return MPxNode::connectionMade(
-    //    plug,
-    //    otherPlug,
-    //    asSrc
-    //);
+
 }
 
 MStatus StrataShapeNode::connectionBroken(
@@ -164,18 +162,13 @@ MStatus StrataShapeNode::connectionBroken(
     const MPlug& otherPlug,
     bool 	asSrc
 ) {
-    //DEBUGSL("el connection broken")
-        return StrataOpNodeBase::connectionBroken<StrataShapeNode>(
+    DEBUGSL("shape connection broken")
+        return superT::connectionBroken<thisT>(
             thisMObject(),
             plug,
             otherPlug,
             asSrc
         );
-    /*return MPxNode::connectionBroken(
-        plug,
-        otherPlug,
-        asSrc
-    );*/
 }
 
 template <typename NodeT>
@@ -334,7 +327,8 @@ MStatus StrataShapeNode::compute(const MPlug& plug, MDataBlock& data) {
     }
     DEBUGS("shape compute");
     // run strata op merge
-    superT::compute<StrataShapeNode>(thisMObject(), plug, data);
+    s = superT::compute<StrataShapeNode>(thisMObject(), plug, data);
+    MCHECK(s, "ERROR in template node compute");
 
     // back propagate if necessary
     runShapeBackPropagation(thisMObject(), data);
