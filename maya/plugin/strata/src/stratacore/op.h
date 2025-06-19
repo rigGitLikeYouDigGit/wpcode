@@ -180,7 +180,7 @@ namespace ed {
 
 		bool isOutputNode() {
 			StrataOpGraph* ptr = getGraphPtr();
-			return (ptr->outputIndex == index);
+			return (ptr->_outputIndex == index);
 		}
 
 		/* BACK-PROPAGATION */

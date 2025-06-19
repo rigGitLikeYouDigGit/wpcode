@@ -102,8 +102,8 @@ class StrataPointNodeUserData : public MUserData
 {
 public:
 	MColor       fColor{ 1.f, 0.f, 0.f, 1.f };
-	unsigned int fDepthPriority;
-	float size;
+	unsigned int fDepthPriority = 1;
+	float size = 1.0f;
 	MVector pos{ 0, 0, 0 };
 };
 class StrataPointNodeDrawOverride : public MHWRender::MPxDrawOverride
@@ -112,7 +112,7 @@ public:
 
 	// need a pointer to the transform, so we can get an MObject for setGeometryDirty
 	// feels strange to hold a pointer in this override class, but apparently it's fine
-	StrataPointNode* pointNodePtr;
+	StrataPointNode* pointNodePtr = nullptr;
 
 	static MHWRender::MPxDrawOverride* creator(const MObject& obj) {
 		StrataPointNodeDrawOverride* ptr = new StrataPointNodeDrawOverride(

@@ -24,6 +24,12 @@ namespace ed {
 		return std::to_string(any);
 	}
 
+	inline std::string str(std::string any) {
+		return any;
+	}
+
+
+
 	typedef unsigned int uint;
 	using std::min;
 	using std::max;

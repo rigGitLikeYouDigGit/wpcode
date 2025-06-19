@@ -13,6 +13,7 @@
 
 #include "status.h"
 #include "macro.h"
+#include "lib.h"
 
 #include "iterator.h"
 
@@ -44,8 +45,8 @@ namespace ed {
 
 
 	struct DirtyNode {
-		int index;
-		std::string name;
+		int index = -1;
+		std::string name = "";
 		DirtyGraph* graphPtr = nullptr;
 
 		using graphT = DirtyGraph;
@@ -117,7 +118,7 @@ namespace ed {
 		/* MEMBERS TO COPY / SERIALISE */
 		std::vector<std::unique_ptr<DirtyNode>> nodes;
 		std::unordered_map<std::string, int> nameIndexMap;
-		int outputIndex = -1; // houdini-esque tracking which node is 
+		int _outputIndex = -1; // houdini-esque tracking which node is 
 		// designated as the output of the graph
 
 		
@@ -133,8 +134,16 @@ namespace ed {
 		std::map<int, std::string> indexErrorMap;
 
 		inline void setOutputNode(int index) {
-			outputIndex = index;
+			_outputIndex = index;
 			graphChanged = true;
+		}
+		inline int getOutputIndex() {
+			/* return the output if set,
+			or just the last node added if -1*/
+			if (_outputIndex < 0) {
+				return static_cast<int>(nodes.size() - 1);
+			}
+			return _outputIndex;
 		}
 
 		///////////////// COPYING ////////
@@ -148,9 +157,10 @@ namespace ed {
 			}
 		}
 		virtual void copyOther(const DirtyGraph& other) {
+			DEBUGSL("GRAPH COPY OTHER, other out index:" + str(other._outputIndex));
 			copyOtherNodesVector(other);
-			nameIndexMap = nameIndexMap;
-			outputIndex = other.outputIndex;
+			nameIndexMap = other.nameIndexMap;
+			_outputIndex = other._outputIndex;
 		}
 
 		DirtyGraph() {}
@@ -186,7 +196,8 @@ namespace ed {
 			Status s;
 			int index = nameIndexMap[nodePtr->name];
 			nameIndexMap.erase(nodePtr->name);
-			nameIndexMap[newName] = index;
+			//nameIndexMap[newName] = index;
+			nameIndexMap.insert({ std::string(newName), index });
 			nodePtr->name = newName;
 			return s;
 		}
@@ -203,7 +214,8 @@ namespace ed {
 
 			should we convert all this to return status code?
 			*/
-			if (nameIndexMap.count(name) != 0) {
+			//if (nameIndexMap.count(name) != 0) {
+			if (nameIndexMap.find(name) != nameIndexMap.end()) {
 				Status s;
 				CWMSG(s, "Name " + name + " already found in dirty graph, returning nullptr");
 				return nullptr;
@@ -214,7 +226,9 @@ namespace ed {
 			nodes.push_back(std::move(nodePtr));
 
 			NodeT* newNodePtr = static_cast<NodeT*>(nodes[newIndex].get());
-			nameIndexMap[newNodePtr->name] = newIndex;
+			//nameIndexMap[std::string(newNodePtr->name)] = newIndex;
+			nameIndexMap.insert({ std::string(newNodePtr->name), newIndex });
+			
 			newNodePtr->graphPtr = this;
 			graphChanged = true;
 
@@ -278,10 +292,7 @@ namespace ed {
 		}
 
 		const inline std::string outputNodeName() {
-			if (outputIndex == -1) {
-				return "";
-			}
-			return nodes[outputIndex]->name;
+			return nodes[getOutputIndex()]->name;
 		}
 
 		/*template<typename seqT>
@@ -374,9 +385,11 @@ namespace ed {
 		Status rebuildGraphStructure(Status& s) {
 			/* rebuild graph tables and caches from current ops in vector*/
 			nameIndexMap.clear();
-			nameIndexMap.reserve(nodes.size());
+			int nodesSize = static_cast<int>(nodes.size());
+			//nameIndexMap.reserve(nodesSize);
 			for (size_t i = 0; i < nodes.size(); i++) {
-				nameIndexMap[nodes[i]->name] = static_cast<int>(i);
+				std::string nodeName(nodes[i]->name);
+				nameIndexMap[nodeName] = static_cast<int>(i);
 			}
 			std::vector<std::unordered_set<int>> result;
 			s = getTopologicalGenerations(result, s);
@@ -896,7 +909,7 @@ namespace ed {
 			DOES NOT CHECK EDGES / CONNECTIONS*/
 			nodes.push_back(other.nodes[thatIndex]->clone());
 			nodes.back().get()->index = static_cast<int>(nodes.size()) - 1;
-			nameIndexMap[nodes.back().get()->name] = static_cast<int>(nodes.size()) - 1;
+			nameIndexMap.insert({std::string( nodes.back().get()->name), static_cast<int>(nodes.size()) - 1 });
 			return nodes.back().get();
 		}
 
@@ -1047,7 +1060,6 @@ namespace ed {
 		this is SEPARATE to nodes being enabled/disabled, all this affects is the critical path
 		in the graph
 		*/
-		int outNodeIndex = -1;
 		
 		std::vector<NodeData> nodeDatas; 
 
@@ -1068,7 +1080,7 @@ namespace ed {
 			else { // only copy result of output node
 				results.clear();
 				results.resize(other.results.size());
-				results[outputIndex] = other.results[outputIndex];
+				results[getOutputIndex()] = other.results[getOutputIndex()];
 			}
 		}
 
@@ -1097,14 +1109,14 @@ namespace ed {
 			}
 			// if we want to merge all results or the other graph has no output index set,
 			// copy everything
-			if (mergeAllResults || (other.outputIndex == -1)) {
+			if (mergeAllResults || (other._outputIndex == -1)) {
 				for (int i = result; i < static_cast<int>(nodes.size()); i++) {
 					int otherIndex = other.nameIndexMap.at(getNode(i)->name);
 					results[i] = other.results[otherIndex];
 				}
 			}
 			else { // copy only the value of the result node
-				DirtyNode* otherOutNode = other.getNode(outputIndex);
+				DirtyNode* otherOutNode = other.getNode(_outputIndex);
 				results[nameIndexMap[otherOutNode->name]] = other.results[otherOutNode->index];
 			}
 			return result;
@@ -1257,13 +1269,18 @@ namespace ed {
 				
 				for (auto& nodeId : generation) {
 					EvalNode<VT>* node = static_cast<EvalNode<VT>*>(getNode(nodeId));
+					DEBUGSL("consider node: " + str(node->name) + ", " + str(node->index));
 					// check if anything on node is dirty - if so, continue
 					if (!node->anyDirty()) {
+						DEBUGS("node is not dirty, skip");
 						continue;
 					}
 					// eval whole node
 					evalNode(node, auxData, s);
 					CRMSG(s, "ERROR eval-ing op " + node->name + ", halting Strata graph ");
+
+					// set node clean
+					node->setDirty(false);
 
 					// if node's index is given as breakpoint to eval to, end
 					if (node->index == upToNodeId) {
@@ -1283,7 +1300,7 @@ namespace ed {
 			/* merge in a new node, and add entry in results for it?*/
 			nodes.push_back(other.nodes[thatIndex]->clone());
 			nodes.back().get()->index = static_cast<int>(nodes.size()) - 1;
-			nameIndexMap[nodes.back().get()->name] = static_cast<int>(nodes.size()) - 1;
+			nameIndexMap.insert({ std::string(nodes.back().get()->name), static_cast<int>(nodes.size()) - 1 });
 			return nodes.back().get();
 		}
 

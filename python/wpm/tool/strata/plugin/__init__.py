@@ -98,8 +98,8 @@ def reloadPluginTest():
 	# return
 
 	# create single strata shape
-	shape = WN.StrataShape.create("newShape")
-	return 
+	shape : WN.StrataShape = WN.StrataShape.create("newShape")
+	#return
 	#return
 	# test creating a single face of strataSurface
 	ptA = makeStrataPoint("ptA").tf()
@@ -120,49 +120,9 @@ def reloadPluginTest():
 	elOp.stElement_[2].stName_ = "pWrist"
 	elOp.stElement_[2].stPointWorldMatrixIn_ = ptC.worldMatrix_[0]
 
-	# elOp.stElement_[2].stName_ = "pLowPt"
-	# elOp.stElement_[3].stName_ = "eCentre"
-	# elOp.stElement_[3].stExp_ = "pTopPt, pMidPt, pLowPt"
+	# connect up element to shape
+	shape.stInput_[0] = elOp.stOutput_
 
-	return
-
-	# # move points
-	# cmds.setAttr(ptA.translate_, -3, 2, -3)
-	# cmds.setAttr(ptB.tf().translate_, 2, 3, -3)
-	# #
-	# cmds.setAttr(ptC + ".translate", 2, -1, -3)
-	# cmds.setAttr(ptD + ".translate", 3, -1, -3)
-	#
-	# ptA.worldOut.con(matCrv.matrixStartIn_)
-	# ptD.worldOut.con(matCrv.matrixEndIn_)
-	#
-	# ptB.worldOut.con(matCrv.matrixMidIn_[0].matrixMidInMatrix_)
-	# #ptC.worldOut.con(matCrv.matrixMidIn_[1].matrixMidInMatrix_)
-	#
-	# return
-
-
-	# localIn, localOut, worldIn, worldOut
-
-	#return
-
-
-
-	return
-	#graphNode = cmds.createNode("strataGraph")
-
-	# addPointsNode = cmds.createNode("strataAddPointsOp")
-	# cmds.connectAttr(graphNode + ".stGraph", addPointsNode + ".stGraph")
-	# addPointsNode2 = cmds.createNode("strataAddPointsOp")
-	# cmds.connectAttr(graphNode + ".stGraph", addPointsNode2 + ".stGraph")
-	# addPointsNode3 = cmds.createNode("strataAddPointsOp")
-	# cmds.connectAttr(graphNode + ".stGraph", addPointsNode3 + ".stGraph")
-
-	return
-	dgNode, crvTf = makeStrataCurve("strataCurveA", ptA, ptB)
-
-	dgNodeB, crvTf = makeStrataCurve("strataCurveB", ptC, ptD)
-	#
 
 
 

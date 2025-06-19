@@ -348,11 +348,17 @@ class Plug(PlugBase,
 				return Plug(self.MPlug.elementByLogicalIndex(first))[address[1:]]
 		raise NotImplementedError
 
-	def __setitem__(self, *address:(str, tuple), value,
-	                **kwargs):
+	def __setitem__(self, *address:(str, tuple)#, value,
+	                #**kwargs
+	                ):
 		"""override normal tree behaviour on getitem and setitem
 		to return full Plug objects - just to get closer to normal Maya syntax
+
+		TODO: work out rules around dispatching to deeper addresses, broadcasting etc -
+			I think there's still a case for deep addressing and wildcarding in plugs,
+			but it's likely not worth the effort
 		"""
+		address, value = address[:-1], address[-1]
 		first = address[0]
 		nextPlug : Plug = None
 		if isinstance(first, int):

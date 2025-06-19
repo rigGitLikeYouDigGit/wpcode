@@ -217,12 +217,12 @@ namespace bez
                 : min(_min), max(_max), sign_min(_sign_min), sign_max(_sign_max), id(_id), expected_roots(_roots)
             {}
 
-            float min;
-            float max;
-            int sign_min; // Sign changes for the minimum bound.
-            int sign_max; // Sign changes for the max bound.
-            int id; // Id shared between this interval and its sibling.
-            int expected_roots; // Total roots expected in this interval and its sibling.
+            float min = 0.0f;
+            float max = 1.0f;
+            int sign_min = 0; // Sign changes for the minimum bound.
+            int sign_max = 1; // Sign changes for the max bound.
+            int id = 0; // Id shared between this interval and its sibling.
+            int expected_roots = 2; // Total roots expected in this interval and its sibling.
         };
 
         struct Interval

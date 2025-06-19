@@ -88,6 +88,12 @@ static const MString sDrawRegistrantId("strataShapeNodeOverridePlugin");
 
 MStatus initializePlugin( MObject obj ){
 
+    DEBUGS("")
+    DEBUGS("")
+    DEBUGS("")
+    DEBUGS("_")
+    DEBUGS("_")
+    DEBUGS("___")
     DEBUGS("initialising strata")
     MFnPlugin fnPlugin( obj, kAUTHOR, kVERSION, kREQUIRED_API_VERSION);
     MStatus s = MStatus::kSuccess;
@@ -134,19 +140,33 @@ MStatus initializePlugin( MObject obj ){
     s = fnPlugin.registerShape(
         StrataShapeNode::kNODE_NAME,
         StrataShapeNode::kNODE_ID,
-        StrataShapeNode::creator,
-        StrataShapeNode::initialize,
+        &StrataShapeNode::creator,
+        &StrataShapeNode::initialize,
         StrataShapeUI::creator,
         //nullptr, // apparently don't need the dumb legacy creator after all
         &StrataShapeNode::drawDbClassification
     );
     MCHECK(s, "ERROR registering Strata shape node");
 
-    s = MHWRender::MDrawRegistry::registerGeometryOverrideCreator(sDrawDbClassification,
+    if (!s)
+    {
+        std::cerr << "Failed to register geometryOverrideExample2_shape." << std::endl;
+        return s;
+    }
+
+    s = MHWRender::MDrawRegistry::registerGeometryOverrideCreator(
+        //sDrawDbClassification,
+        StrataShapeNode::drawDbClassification,
         sDrawRegistrantId,
-        StrataShapeGeometryOverride::Creator);
+        StrataShapeGeometryOverride::Creator
+    );
     MCHECK(s, "ERROR registering Strata shape geometry override");
 
+    if (!s)
+    {
+        std::cerr << "Failed to register Viewport 2.0 geometry override." << std::endl;
+        return s;
+    }
 
     /// bonus matrix curve node
     REGISTER_NODE(MatrixCurveNode);
@@ -161,13 +181,17 @@ MStatus uninitializePlugin( MObject obj ){
     s = MS::kSuccess;
     MFnPlugin fnPlugin(obj);
 
-    s = MHWRender::MDrawRegistry::deregisterGeometryOverrideCreator(sDrawDbClassification, sDrawRegistrantId);
+    s = MHWRender::MDrawRegistry::deregisterGeometryOverrideCreator(
+       // sDrawDbClassification, 
+        StrataShapeNode::drawDbClassification,
+        sDrawRegistrantId);
     MCHECK(s, "could not deregister drawOverrideCreator for Strata shape");
 
     s = MHWRender::MDrawRegistry::deregisterDrawOverrideCreator(
         StrataPointNode::drawDbClassification,
         StrataPointNode::drawRegistrantId);
     MCHECK(s, "could not deregister drawOverride for StrataPoint");
+
 
     DEREGISTER_NODE(StrataPointNode);
 

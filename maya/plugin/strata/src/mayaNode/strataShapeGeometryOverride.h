@@ -51,18 +51,6 @@ public:
 	bool selectableEdges = false;
 	bool selectableFaces = false;
 
-	inline Status syncManifold() {
-		/* eval manifold if its final out node is dirty*/
-		DEBUGSL("SYNC MANIFOLD");
-		Status s;
-		int outIndex = shapeNodePtr->opGraphPtr.get()->outNodeIndex;
-		if (shapeNodePtr->opGraphPtr.get()->getNode(outIndex)->anyDirty()) {
-			s = shapeNodePtr->opGraphPtr.get()->evalGraph(s, outIndex);
-			CWRSTAT(s, "error eval-ing manifold to draw with strataShape node");
-		}
-		manifold = shapeNodePtr->opGraphPtr.get()->results[outIndex];
-		return s;
-	}
 
 	/*static const char* sActiveWireframeRenderItemName;
 	static const char* sDormantWireframeRenderItemName;
@@ -82,15 +70,54 @@ public:
 	}
 
 
+	inline Status syncManifold() {
+		/* eval manifold if its final out node is dirty*/
+		DEBUGSL("SYNC MANIFOLD");
+		Status s;
+		ed::StrataOpGraph* graphP = shapeNodePtr->getOpGraphPtr();
+		DEBUGSL("geo o got graphP");
+		if (!graphP) {
+			CWRSTAT(s, "graphPtr is null, returning");
+		}
+		int outIndex = graphP->_outputIndex;
+		DEBUGSL("geo o outindex:" + std::to_string(outIndex));
+		ed::StrataMergeOp* opPtr = shapeNodePtr->getStrataOp<StrataShapeNode>(shapeNodePtr->thisMObject());
+		if (!opPtr) {
+			CWRSTAT(s, "opPtr is null, returning");
+		}
+		DEBUGS("geo o opPtr index: " + ed::str(opPtr->index) + "dirty: " + ed::str(opPtr->anyDirty()));
+		if (opPtr->anyDirty()) {
+			s = graphP->evalGraph(s, outIndex);
+			CWRSTAT(s, "error eval-ing manifold to draw with strataShape node");
+		}
+		manifold.clear();
+		DEBUGSL("geo o outindex after eval:" + std::to_string(graphP->_outputIndex));
+		manifold = graphP->results[graphP->_outputIndex];
+		return s;
+	}
+
+	void updateDG() override {
+		/* check here if the linked shape node has dirty items*/
+		DEBUGSL("UPDATE DG");
+		if (!shapeNodePtr) {
+			DEBUGS("no shape node ptr in geo O, returning");
+			return;
+		}
+
+		Status s = syncManifold();
+		CWMSG(s, "Error on syncManifold in updateDG() for strataShape");
+		return;
+	}
 
 	static MHWRender::MPxGeometryOverride* Creator(const MObject& obj)
 	{
+		DEBUGSL("GEO O CREATOR()")
 		return new StrataShapeGeometryOverride(obj);
 	}
 
 	~StrataShapeGeometryOverride() override {}
 	MHWRender::DrawAPI supportedDrawAPIs() const override {
-		return MHWRender::kOpenGL | MHWRender::kOpenGLCoreProfile;
+		return MHWRender::kOpenGLCoreProfile;
 	}
 
 
@@ -100,17 +127,15 @@ public:
 		/* this is actually really complicated, skip for now*/
 	}
 
-	void updateDG() override {
-		/* check here if the linked shape node has dirty items*/
-		DEBUGSL("UPDATE DG")
-			Status s = syncManifold();
-		CWMSG(s, "Error on syncManifold in updateDG() for strataShape");
-		return;
-	}
 
 	virtual bool supportsEvaluationManagerParallelUpdate()	const {
 		return true;
 		//return false;
+	}
+
+	bool requiresGeometryUpdate() const {
+		DEBUGSL("GEO O REQ GEOMETRY UPDATE()");
+		return true;
 	}
 
 	/* UI drawing - for now just dots on points, as well as the gnomon lines -
@@ -147,6 +172,7 @@ public:
 	}
 
 	inline MVertexBufferDescriptor getCurvePositionVertexBufferDescriptor() {
+		DEBUGSL("get curve buffer descriptor()")
 		return MVertexBufferDescriptor(
 			"stEdgePosVBD",
 			MGeometry::kPosition,
@@ -237,7 +263,8 @@ public:
 		}
 	}
 
-	void populateGeometry(const MHWRender::MGeometryRequirements& requirements, const MHWRender::MRenderItemList& renderItems, MHWRender::MGeometry& data)
+	void populateGeometry(
+		const MHWRender::MGeometryRequirements& requirements, const MHWRender::MRenderItemList& renderItems, MHWRender::MGeometry& data)
 	{
 		/* we deviate a bit from the example here:
 		all edges are curves, sampled at ed::CURVE_SHAPE_RES intervals
@@ -459,22 +486,25 @@ public:
 		}
 	}
 	void cleanUp() override {
-		/* null the pointers just in case?*/
+		/* so it seems the sequence goes:
+		geo o create
+		cleanUp()
+		updateDG()
+		cleanUp()
+
+		seems cleanup() is explicitly only to wipe changes made in updateDG
+		testing just doing nothing here
+		*/
 		DEBUGSL("CLEANUP()")
-			shapeNodePtr = nullptr;
-		manifold.clear();
+		//shapeNodePtr = nullptr;
+		//manifold.clear();
 	}
 
-
-
-
-
-private:
 	StrataShapeGeometryOverride(const MObject& obj)
 		: MHWRender::MPxGeometryOverride(obj)
 	{
 		// get the real mesh object from the MObject
-		DEBUGSL("geo override init");
+		DEBUGSL("GEO O INIT");
 		MStatus status;
 		MFnDependencyNode node(obj, &status);
 		if (status)

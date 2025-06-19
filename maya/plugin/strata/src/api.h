@@ -44,16 +44,16 @@ namespace ed {
 	static MObject makeVectorAttr(
 		MString name,
 		MFnNumericAttribute& nFn,
-		const double default[3] = defaultNeutral)
+		const double defaultVal[3] = defaultNeutral)
 	{
 		MObject xObj = nFn.create(name + "X", name + "X",
-			MFnNumericData::kDouble, default[0]);
+			MFnNumericData::kDouble, defaultVal[0]);
 
 		MObject yObj = nFn.create(name + "Y", name + "Y",
-			MFnNumericData::kDouble, default[1]);
+			MFnNumericData::kDouble, defaultVal[1]);
 
 		MObject zObj = nFn.create(name + "Z", name + "Z",
-			MFnNumericData::kDouble, default[2]);
+			MFnNumericData::kDouble, defaultVal[2]);
 
 		MObject parentObj = nFn.create(name, name,
 			xObj, yObj, zObj);
@@ -195,24 +195,24 @@ namespace ed {
 		return s;
 	}
 
-	static std::vector<MPlug> getAllChildPlugs(MPlug& parent) {
-		// return depth-first list of all plugs under parent
-		std::vector<MPlug> result{ parent };
-		//parent.evaluateNumElements();
-		if (parent.isArray()) {
-			for (unsigned int i = 0; i < parent.numElements(); i++) {
-				auto childResult = getAllChildPlugs(parent.elementByPhysicalIndex(i));
-				joinVectors(result, childResult);
-			}
-		}
-		else if (parent.isCompound()) {
-			for (unsigned int i = 0; i < parent.numChildren(); i++) {
-				auto childResult = getAllChildPlugs(parent.child(i));
-				joinVectors(result, childResult);
-			}
-		}
-		return result;
-	}
+	//static std::vector<MPlug> getAllChildPlugs(MPlug& parent) {
+	//	// return depth-first list of all plugs under parent
+	//	std::vector<MPlug> result{ parent };
+	//	//parent.evaluateNumElements();
+	//	if (parent.isArray()) {
+	//		for (unsigned int i = 0; i < parent.numElements(); i++) {
+	//			auto childResult = getAllChildPlugs(parent.elementByPhysicalIndex(i));
+	//			joinVectors(result, childResult);
+	//		}
+	//	}
+	//	else if (parent.isCompound()) {
+	//		for (unsigned int i = 0; i < parent.numChildren(); i++) {
+	//			auto childResult = getAllChildPlugs(parent.child(i));
+	//			joinVectors(result, childResult);
+	//		}
+	//	}
+	//	return result;
+	//}
 
 	inline MStatus jumpToElement(MArrayDataHandle& hArray, int index) {
 		// safer system for array plugs
@@ -294,7 +294,7 @@ namespace ed {
 
 		// black science
 		UserNodeT* sinkPtr = dynamic_cast<UserNodeT*>(mpxPtr);
-		if ((sinkPtr == NULL) || (sinkPtr == nullptr)) {
+		if (sinkPtr == nullptr) {
 			cerr << "failed dynamic cast to sink instance " << endl;
 			s = MS::kFailure;
 			ptr = nullptr;

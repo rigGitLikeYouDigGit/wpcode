@@ -80,6 +80,7 @@ struct StrataOpNodeBase {
 	// pointer to an incoming graph, so we don't have to constantly walk the DG
 	// this is also nulled by hand when connection is broken
 
+
 	// weak pointer to the graph we need to copy 
 	std::weak_ptr<ed::StrataOpGraph> sourceGraphPtr;
 
@@ -141,7 +142,7 @@ struct StrataOpNodeBase {
 			DEBUGS("error getting op index field for node " + depFn.name());
 			return -1;
 		}
-
+		// THIS WILL TRIGGER COMPUTE IF DIRTY
 		return opNameFieldPlug.asInt(); // NB - this might cause loops - if so, don't put it in driven.
 	};
 	template<typename NodeT>
@@ -588,11 +589,25 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 
 	using thisStrataOpT = StrataOpT;
 
+	//template<typename NodeT>
+	//StrataOpT* getStrataOp() {
+	//	if (!opGraphPtr) {
+	//		return nullptr;
+	//	}
+	//	if()
+	//}
+
 	template<typename NodeT>
-	StrataOpT* getStrataOp(const MObject& nodeObj) {
+	StrataOpT* getStrataOp(MObject& nodeObj) {
 		// return pointer to the current op, in this node's graph
-		//ed::DirtyNode* nodePtr = opGraphPtr.get()->getNode(strataOpIndex);
-		ed::DirtyNode* nodePtr = opGraphPtr.get()->getNode(getOpIndexFromNode<NodeT>(nodeObj));
+		// add graph if null
+		/* consider lookup to user MPx node here to avoid forcing compute - 
+		SEEMS better and less active for a simple getter function*/
+		if (!opGraphPtr) {
+			return nullptr;
+		}
+		int nodeIndex = getOpIndexFromNode<NodeT>(nodeObj);
+		ed::DirtyNode* nodePtr = opGraphPtr.get()->getNode(nodeIndex);
 		if (nodePtr == nullptr) {
 			return nullptr;
 		}
@@ -651,7 +666,8 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 		MCHECK(s, "ERROR creating new op, could not cache op index on node");*/
 
 		// set graph's output index to this node
-		opGraphPtr->outputIndex = opPtr->index;
+		//opGraphPtr->_outputIndex = opPtr->index;
+		opGraphPtr->setOutputNode(opPtr->index);
 
 		// look up linked graphs, connect their output ops to this op's inputs
 		std::vector<int> inputKeys = mapKeys(incomingGraphPtrs);
@@ -674,6 +690,68 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 		
 		return s;
 	}
+
+	template<typename NodeT>
+	MStatus createNewOp(MObject& mayaNodeMObject, StrataOpT*& opPtrOut) {
+		/* create new op, and if we have incoming nodes, make new connections to it
+		*
+		* I KNOW THE TEMPLATING HERE SUCKS
+		* we have to template this with the final real class
+		* i'll fix it someday i swear
+		*
+		* check if op name already exists in graph - if yes, for now, ERROR
+		* get it working then make it fancy
+		*/
+		DEBUGS("createNewOp")
+			MS s(MS::kSuccess);
+
+		MFnDependencyNode depFn(mayaNodeMObject);
+		const char* nodeName = depFn.findPlug(NodeT::aStOpNameOut, false).asString().asChar();
+
+		// check existing
+		if (opGraphPtr.get()->nameIndexMap.count(nodeName)) {
+			MGlobal::displayError("strata op node " + MFnDependencyNode(mayaNodeMObject).name() + " tried to add a strata op with a name already found in incoming graph: " + nodeName + " -- halting.");
+			return MS::kInvalidParameter;
+		}
+
+		opPtrOut = nullptr;
+		StrataOpT* opPtr = opGraphPtr.get()->addNode<StrataOpT>(
+			nodeName
+		);
+		opPtrOut = opPtr;
+		DEBUGSL("added new op to graph")
+			// set op index on node output
+			s = setOpIndexOnNode<NodeT>(mayaNodeMObject, opPtr->index);
+		MCHECK(s, "ERROR creating new op, could not set op index on node");
+		/*s = cacheOpIndexOnNodeObject<NodeT>(mayaNodeMObject, opPtr->index);
+		MCHECK(s, "ERROR creating new op, could not cache op index on node");*/
+
+		// set graph's output index to this node
+		//opGraphPtr->_outputIndex = opPtr->index;
+		opGraphPtr->setOutputNode(opPtr->index);
+
+		// look up linked graphs, connect their output ops to this op's inputs
+		std::vector<int> inputKeys = mapKeys(incomingGraphPtrs);
+		int maxIndex = 0;
+		if (inputKeys.size()) {
+			maxIndex = *std::max_element(inputKeys.begin(), inputKeys.end());
+			opPtr->inputs.reserve(maxIndex);
+			for (int i = 0; i < static_cast<int>(incomingGraphPtrs.size()); i++) {
+				if (!incomingGraphPtrs.count(i)) {
+					opPtr->inputs.push_back(-1);
+					continue;
+				}
+				opPtr->inputs.push_back(
+					opGraphPtr->nameIndexMap.at(
+						incomingGraphPtrs.at(i).lock().get()->outputNodeName()
+					)
+				);
+			}
+		}
+
+		return s;
+	}
+
 
 	Status syncOp(StrataOpT* op, MDataBlock& data) {
 		/* update op from maya node datablock -
@@ -776,7 +854,7 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 		Status graphS;
 		int upToNode = getOpIndexFromNode<NodeT>(data);
 		//DEBUGSL("template got index from node")
-		graphS = opGraphPtr.get()->evalGraph(graphS, opGraphPtr->outputIndex);
+		graphS = opGraphPtr.get()->evalGraph(graphS, opGraphPtr->_outputIndex);
 		CWSTAT(graphS);
 		DEBUGSL("template graph eval'd");
 

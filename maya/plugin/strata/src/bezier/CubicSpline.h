@@ -77,8 +77,8 @@ namespace bez
         // Dot(p, derivative_) - Dot(polynomial_form_, derivative) = 0
         // precomputed_coefficients_ stores -Dot(polynomial_form_, derivative) so that only
         // Dot(p, derivative_) needs to be computed for each position.
-        ClosestPointEquation precomputed_coefficients_;
-        float inv_leading_coefficient_;
+        ClosestPointEquation precomputed_coefficients_ = { 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f };
+        float inv_leading_coefficient_ = 1.0f;
 
         // weights for matrix representation
         static const Eigen::Matrix4f matrixWeights;

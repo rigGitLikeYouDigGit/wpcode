@@ -329,14 +329,20 @@ MStatus StrataShapeNode::compute(const MPlug& plug, MDataBlock& data) {
     // run strata op merge
     s = superT::compute<StrataShapeNode>(thisMObject(), plug, data);
     MCHECK(s, "ERROR in template node compute");
+    DEBUGS("shape compute complete");
+
 
     // back propagate if necessary
     runShapeBackPropagation(thisMObject(), data);
+    DEBUGS("shape backProp complete");
+
 
     /* pull in drawing values to cache*/
     pointOpacity = data.inputValue(aStShowPoints).asFloat();
 
     s = populateOutputs(data);
+    DEBUGS("shape populate outputs complete");
+
 
     data.setClean(plug);
 

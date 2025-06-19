@@ -78,6 +78,18 @@ public:
 		return newObj;
 	}
 
+	ed::StrataOpGraph* getOpGraphPtr() {
+		/* return pointer to current graph,
+		if it doesn't exist set fresh graph*/
+		if (opGraphPtr) {
+			return opGraphPtr.get();
+		}
+		DEBUGSL("creating new graph on getOpGraphPtr");
+		setFreshGraph<StrataShapeNode>(thisMObject());
+		return opGraphPtr.get();
+	}
+
+
 	DECLARE_STATIC_NODE_H_MEMBERS(STRATABASE_STATIC_MEMBERS);
 	DECLARE_STATIC_NODE_H_MEMBERS(NODE_STATIC_MEMBERS);
 
