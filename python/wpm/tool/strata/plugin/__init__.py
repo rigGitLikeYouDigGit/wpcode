@@ -97,12 +97,39 @@ def reloadPluginTest():
 	# matCrv.curveOut_.con(crv.shape().worldIn)
 	# return
 
+	# # check graph update functions
+	# elOp1 = WN.StrataElementOp.create("elOp1")
+	# #return
+	# #elOp2 = WN.StrataElementOp("elOp2", new=1) # only gives transform, fix
+	# elOp2 = WN.StrataElementOp.create("elOp2")
+	# elOp2.stInput_[0] = elOp1.stOutput_
+	#
+	# elOp3 = WN.StrataElementOp.create("elOp3")
+	# elOp2.stInput_[1] = elOp3.stOutput_
+	#
+	# shape : WN.StrataShape = WN.StrataShape.create("newShape")
+	# shape.stInput_[0] = elOp2.stOutput_
+	#
+	# shape.stInput_[1] = elOp1.stOutput_ # unhinged, just a stress test of the connection / merging logic
+	#
+	# # delete first shape input, then check shape node
+	#
+	# return
+
 	# create single strata shape
+	elOp: WN.StrataElementOp = WN.createNode("strataElementOp", "newElOp")
+	log(elOp.stElement_, elOp, type(elOp))
+	# connect up element to shape
 	shape : WN.StrataShape = WN.StrataShape.create("newShape")
-	#return
-	#return
-	# test creating a single face of strataSurface
-	ptA = makeStrataPoint("ptA").tf()
+	shape.stInput_[0] = elOp.stOutput_
+
+	return
+
+	# ptA = makeStrataPoint("ptA").tf()
+	#
+	# elOp.stElement_[0].stName_ = "pShoulder"
+	# elOp.stElement_[0].stPointWorldMatrixIn_ = ptA.worldMatrix_[0]
+	return
 
 	ptB = makeStrataPoint("ptB").tf()
 	ptB.translateX_ = 3
@@ -111,17 +138,12 @@ def reloadPluginTest():
 	ptC.translateX_ = 6
 
 	#elOp = cmds.createNode("strataElementOp")
-	elOp : WN.StrataElementOp = WN.createNode("strataElementOp", "newElOp")
-	log(elOp.stElement_, elOp, type(elOp))
-	elOp.stElement_[0].stName_ = "pShoulder"
-	elOp.stElement_[0].stPointWorldMatrixIn_ = ptA.worldMatrix_[0]
+
 	elOp.stElement_[1].stName_ = "pElbow"
 	elOp.stElement_[1].stPointWorldMatrixIn_ = ptB.worldMatrix_[0]
 	elOp.stElement_[2].stName_ = "pWrist"
 	elOp.stElement_[2].stPointWorldMatrixIn_ = ptC.worldMatrix_[0]
 
-	# connect up element to shape
-	shape.stInput_[0] = elOp.stOutput_
 
 
 

@@ -17,6 +17,8 @@
 
 #include "iterator.h"
 
+#include "logger.h"
+
 /* abstracting pure topo structure of dependency graph - 
 assuming that all nodes have a global unique name
 (but disregard this if not useful)
@@ -46,7 +48,7 @@ namespace ed {
 
 	struct DirtyNode {
 		int index = -1;
-		std::string name = "";
+		std::string name = "_";
 		DirtyGraph* graphPtr = nullptr;
 
 		using graphT = DirtyGraph;
@@ -125,10 +127,10 @@ namespace ed {
 		/* TRANSIENT MEMBERS */
 		bool graphChanged = true; // if true, needs full rebuild of topo generations
 		// topo maps
-		std::vector<std::unordered_set<int>> generations;
+		std::vector<std::vector<int>> generations = { {} };
 		// transient map for topology
-		std::unordered_map<int, std::unordered_set<int>> nodeDirectDependentsMap;
-		std::unordered_map<int, std::unordered_set<int>> nodeAllDependentsMap;
+		std::unordered_map<int, std::vector<int>> nodeDirectDependentsMap;
+		std::unordered_map<int, std::vector<int>> nodeAllDependentsMap;
 
 		// map to track nodes that have errored
 		std::map<int, std::string> indexErrorMap;
@@ -157,7 +159,7 @@ namespace ed {
 			}
 		}
 		virtual void copyOther(const DirtyGraph& other) {
-			DEBUGSL("GRAPH COPY OTHER, other out index:" + str(other._outputIndex));
+			LOG("GRAPH COPY OTHER, other out index:" + str(other._outputIndex));
 			copyOtherNodesVector(other);
 			nameIndexMap = other.nameIndexMap;
 			_outputIndex = other._outputIndex;
@@ -295,6 +297,10 @@ namespace ed {
 			return nodes[getOutputIndex()]->name;
 		}
 
+		inline bool hasOutputNode() {
+			return (nodes.size() && (_outputIndex > -1));
+		}
+
 		/*template<typename seqT>
 		inline seqT<int> namesToIndices(seqT<str> names) {
 		}*/
@@ -318,40 +324,49 @@ namespace ed {
 		}
 
 
-		Status getTopologicalGenerations(std::vector<std::unordered_set<int>>& result, Status& s) {
+		Status getTopologicalGenerations(std::vector<std::vector<int>>& result, Status& s) {
 			/* get sets of nodes guaranteed not to depend on each other
 			// use for priority in scheduling work, but too restrictive to rely
 			// on totally for execution
 			( eval-ing generations one-by-one means each will always be waiting on the last node in that generation, which might not be useful)
 			*/
-			std::unordered_set<int> zeroDegree;
+			std::vector<int> zeroDegree;
 			nodeDirectDependentsMap.clear();
 			nodeAllDependentsMap.clear();
-			DEBUGS("gather nodes no inputs");
+			LOG("gather nodes no inputs");
 			// first gather all nodes with no inputs
 			for (auto& node : nodes) {
+				l("check node " + node->name + " inputs: ");
+				DEBUGVI(node->inputs);
 				node->temp_inDegree = static_cast<int>(node->inputs.size());
 				// build topology outputs
+				int inputCount = 0;
 				for (int inputId : node->inputs) {
+					if (inputId < 0) {
+						continue;
+					}
 					// add this node to the dependents of all its inputs
-					nodeDirectDependentsMap[inputId].insert(node->index);
+					nodeDirectDependentsMap[inputId].push_back(node->index);
+					inputCount += 1;
 				}
 				// if node has no inputs, put it in first generation
-				if (!node->inputs.size()) {
-					zeroDegree.insert(node->index);
+				if (!inputCount) {
+					zeroDegree.push_back(node->index);
 				}
 			}
-			DEBUGS("gathered seed nodes");
+			l("gathered seed nodes:");
+			DEBUGVI(zeroDegree);
 			/* build generations
 			*
 			*/
+			
 			while (zeroDegree.size()) {
-				DEBUGS("seed outer iter, zdegree:" + std::to_string(zeroDegree.size()) + "result: " + std::to_string(result.size()));
+				l("seed outer iter, zdegree:" + std::to_string(zeroDegree.size()) + "result: " + std::to_string(result.size()));
 				result.push_back(zeroDegree); // add all zero degree generation to result
 				zeroDegree.clear();
 
 				// check over all direct children of current generation
-				for (auto& nodeId : result[seqIndex(-1, result.size())]) {
+				for (auto nodeId : result[seqIndex(-1, result.size())]) {
 					// can parallelise this
 					DirtyNode* node = getNode(nodeId);
 					// all outputs of this node - decrement their inDegree by 1
@@ -360,12 +375,12 @@ namespace ed {
 						dependent->temp_inDegree -= 1;
 						// if no in_degree left, add this node to the next generation
 						if (dependent->temp_inDegree < 1) {
-							zeroDegree.insert(dependent->index);
+							zeroDegree.push_back(int(dependent->index));
 						}
 					}
 				}
 			}
-			DEBUGS("built generations");
+			l("built generations");
 			// set generation ids on all nodes
 			int i = 0;
 			for (auto& nodeIdSet : result) {
@@ -376,7 +391,7 @@ namespace ed {
 				i += 1;
 			}
 			generations = result;
-			DEBUGS("set generation ids");
+			l("set generation ids");
 			//return result;
 			return s;
 		}
@@ -384,14 +399,24 @@ namespace ed {
 
 		Status rebuildGraphStructure(Status& s) {
 			/* rebuild graph tables and caches from current ops in vector*/
-			nameIndexMap.clear();
+			
+			LOG("clearing if size:" + str(nameIndexMap.size()));
+			if (nameIndexMap.size()) {
+				l("rebuild, nodes are:");
+
+				for (auto p : nameIndexMap) {
+					l(p.first + str(p.second));
+				}
+				nameIndexMap.clear();
+			}
+			
 			int nodesSize = static_cast<int>(nodes.size());
 			//nameIndexMap.reserve(nodesSize);
 			for (size_t i = 0; i < nodes.size(); i++) {
 				std::string nodeName(nodes[i]->name);
 				nameIndexMap[nodeName] = static_cast<int>(i);
 			}
-			std::vector<std::unordered_set<int>> result;
+			std::vector<std::vector<int>> result;
 			s = getTopologicalGenerations(result, s);
 			graphChanged = false;
 			return s;
@@ -405,7 +430,7 @@ namespace ed {
 			}
 		}
 
-		inline std::unordered_set<int>* nodeOutputs(const int opIndex) {
+		inline std::vector<int>* nodeOutputs(const int opIndex) {
 			if (graphChanged) {
 				Status s;
 				rebuildGraphStructure(s);
@@ -413,7 +438,7 @@ namespace ed {
 			return &nodeDirectDependentsMap[opIndex];
 		}
 
-		inline std::unordered_set<int>* nodeOutputs(const DirtyNode* node) {
+		inline std::vector<int>* nodeOutputs(const DirtyNode* node) {
 			return nodeOutputs(node->index);
 		}
 
@@ -421,25 +446,33 @@ namespace ed {
 		TODO: maybe cache these? but they only matter in graph editing,
 		I don't think there's any point in it
 		*/
-		std::unordered_set<int> nodesInHistory(int opIndex) {
+		//std::unordered_set<int> nodesInHistory(int opIndex) {
+		std::vector<int> nodesInHistory(int opIndex) {
 			/* flat set of all nodes found in history*/
-			DEBUGSL("nodesInHistory flat " + std::to_string(opIndex));
-			std::unordered_set<int> result;
+			LOG("nodesInHistory flat " + std::to_string(opIndex));
+			std::vector<int> result;
 
-			std::unordered_set<int> toCheck = { opIndex };
+			std::vector<int> toCheck = { opIndex };
 			while (toCheck.size()) {
-				std::unordered_set<int> newToCheck;
+				std::vector<int> newToCheck;
 				for (int checkNodeIndex : toCheck) {
+					if (checkNodeIndex < 0) {
+						continue;
+					}
 					DirtyNode* checkOp = getNode(checkNodeIndex);
-					newToCheck.insert(checkOp->inputs.begin(), checkOp->inputs.end());
+					
+					//newToCheck.insert(checkOp->inputs.begin(), checkOp->inputs.end());
+					//newToCheck.emplace_back(checkOp->inputs.begin(), checkOp->inputs.end());
+					newToCheck.insert(newToCheck.end(), checkOp->inputs.begin(), checkOp->inputs.end());
 
 					// add the inputs to result this iteration to
-					result.insert(checkNodeIndex);
+					//result.insert(checkNodeIndex);
+					result.push_back(checkNodeIndex);
 					//result.insert(checkOp->inputs.begin(), checkOp->inputs.end());
 				}
 				toCheck = newToCheck;
 			}
-			DEBUGSL("nodesInHistory result");
+			l("nodesInHistory result");
 			DEBUGVI(result);
 			return result;
 		}
@@ -481,19 +514,19 @@ namespace ed {
 			return result;
 		}
 
-		std::unordered_set<int> nodesInFuture(int opIndex) {
+		std::vector<int> nodesInFuture(int opIndex) {
 			/* flat set of all nodes found in future*/
-			std::unordered_set<int> result;
+			std::vector<int> result;
 
-			std::unordered_set<int> toCheck = { opIndex };
+			std::vector<int> toCheck = { opIndex };
 			while (toCheck.size()) {
-				std::unordered_set<int> newToCheck;
+				std::vector<int> newToCheck;
 				for (int checkNodeIndex : toCheck) {
-					std::unordered_set<int>* outputIds = nodeOutputs(checkNodeIndex);
-					newToCheck.insert(outputIds->begin(), outputIds->end());
+					std::vector<int>* outputIds = nodeOutputs(checkNodeIndex);
+					newToCheck.insert(newToCheck.end(), outputIds->begin(), outputIds->end());
 
 					// add the outputs to the result of this iteration
-					result.insert(outputIds->begin(), outputIds->end());
+					result.insert(result.end(), outputIds->begin(), outputIds->end());
 				}
 				toCheck = newToCheck;
 			}
@@ -501,17 +534,17 @@ namespace ed {
 		}
 
 		//SmallList<std::unordered_set<int>, 8> nodesInFuture(int opIndex, bool returnGenerations) {
-		std::vector<std::unordered_set<int>> nodesInFuture(int opIndex, bool returnGenerations) {
+		std::vector<std::vector<int>> nodesInFuture(int opIndex, bool returnGenerations) {
 			/* generation list of nodes in future*/
 			//SmallList<std::unordered_set<int>, 8> result;
-			std::vector<std::unordered_set<int>> result;
+			std::vector<std::vector<int>> result;
 
-			std::unordered_set<int> toCheck = { opIndex };
+			std::vector<int> toCheck = { opIndex };
 			while (toCheck.size()) {
-				std::unordered_set<int> newToCheck;
+				std::vector<int> newToCheck;
 				for (int checkNodeIndex : toCheck) {
-					std::unordered_set<int>* outputIds = nodeOutputs(checkNodeIndex);
-					newToCheck.insert(outputIds->begin(), outputIds->end());
+					std::vector<int>* outputIds = nodeOutputs(checkNodeIndex);
+					newToCheck.insert(newToCheck.end(), outputIds->begin(), outputIds->end());
 				}
 				// add the inputs to result this iteration to
 				result.push_back(
@@ -791,8 +824,8 @@ namespace ed {
 			if (opIndex == testDriverOpIndex) { // can't connect to itself
 				return 1;
 			}
-			std::unordered_set<int> futureOps = nodesInFuture(opIndex);
-			if (futureOps.count(testDriverOpIndex)) {
+			std::vector<int> futureOps = nodesInFuture(opIndex);
+			if (std::find(futureOps.begin(), futureOps.end(), testDriverOpIndex) != futureOps.end()) {
 				// node found in future, illegal feedback loop
 				return 2;
 			}
@@ -832,19 +865,18 @@ namespace ed {
 			*/
 			NodeDelta result;
 			std::vector<std::string> thisSortedKeys = mapKeys(nameIndexMap);
-			//std::vector<std::string> otherSortedKeys(key_begin(other.nameIndexMap), key_end(other.nameIndexMap));
 
 			std::sort(thisSortedKeys.begin(), thisSortedKeys.end());
 			std::sort(otherNamesToCheck.begin(), otherNamesToCheck.end());
 			std::set_difference(
 				otherNamesToCheck.begin(), otherNamesToCheck.end(),
 				thisSortedKeys.begin(), thisSortedKeys.end(),
-				result.nodesToAdd.begin()
-			);
+				std::inserter(result.nodesToAdd, result.nodesToAdd.begin())
+			); 
 			std::set_difference(
 				thisSortedKeys.begin(), thisSortedKeys.end(),
 				otherNamesToCheck.begin(), otherNamesToCheck.end(),
-				result.nodesToRemove.begin()
+				std::inserter(result.nodesToRemove, result.nodesToRemove.begin())
 			);
 			return result;
 		}
@@ -924,15 +956,26 @@ namespace ed {
 
 			returns FIRST INDEX of added nodes, or -1 if none have been added
 			*/
+			LOG("dirtyGraph mergeOther");
 			int resultIndex = -1;
 			NodeDelta nDelta = getNodeDelta(other);
 			// copy nodes to add (required for correct edge delta
 			for (std::string nodeName : nDelta.nodesToAdd) {
+				l("adding other node:" + nodeName);
+				if (nodeName.empty()) {
+					l("other had an empty node name, exiting");
+					return -1;
+				}
 				//importNode(other, other.nameIndexMap.find(nodeName))
 				int otherIndex = other.nameIndexMap.at(nodeName);
 				DirtyNode* importedNode = importNode(other, otherIndex );
 				if (resultIndex == -1) {
 					resultIndex = importedNode->index;
+				}
+				/* check that imported node has a name*/
+				if (importedNode->name.empty()) {
+					l("imported node name is empty, exiting");
+					return -1;
 				}
 			}
 			EdgeDelta eDelta = getEdgeDelta(other, nDelta.nodesToAdd);
@@ -1049,7 +1092,7 @@ namespace ed {
 		// adding mechanisms for evaluation and caching results
 
 		VT baseValue; // use to copy and reset node result entries
-		std::vector<VT> results;
+		std::vector<VT> results = {};
 
 		// this set should go in the strataGraph subclass, but this is
 		// easier for now
@@ -1061,10 +1104,11 @@ namespace ed {
 		in the graph
 		*/
 		
-		std::vector<NodeData> nodeDatas; 
+		std::vector<NodeData> nodeDatas = {};
 
 		template <typename T>
 		auto cloneShared(bool copyAllResults) const { return std::shared_ptr<T>(static_cast<T*>(clone_impl(copyAllResults))); }
+		//auto cloneShared(bool copyAllResults) const { return std::shared_ptr<T>(dynamic_cast<T*>(clone_impl(copyAllResults))); }
 		virtual EvalGraph<VT>* clone_impl(bool copyAllResults) const {
 			auto newPtr = new EvalGraph<VT>(*this);
 			newPtr->copyOther(*this, copyAllResults);
@@ -1074,6 +1118,10 @@ namespace ed {
 		virtual void copyOther(const EvalGraph& other, bool copyAllResults=true) {
 			DirtyGraph::copyOther(other);
 			nodeDatas = other.nodeDatas;
+			/* if graph is empty, it doesn't matter*/
+			if (!nodes.size()) {
+				return;
+			}
 			if (copyAllResults) {
 				results = other.results;
 			}
@@ -1103,21 +1151,33 @@ namespace ed {
 			* 
 			* maybe this should be an extension of ImportNode instead
 			*/
+			LOG("EVAL GRAPH merge other, other n nodes: " + str(other.nodes.size()));
 			int result = DirtyGraph::mergeOther(other, s);
 			if (s) {
+				l("error in dirtyGraph merge, exiting ");
 				return result;
 			}
+			if (!other.nodes.size()) {
+				l("other graph has no nodes, exiting");
+				return result;
+			}
+			results.resize(nodes.size());
+
 			// if we want to merge all results or the other graph has no output index set,
 			// copy everything
 			if (mergeAllResults || (other._outputIndex == -1)) {
+				l("merging all values");
+				// start iteration at first node added from other graph
 				for (int i = result; i < static_cast<int>(nodes.size()); i++) {
 					int otherIndex = other.nameIndexMap.at(getNode(i)->name);
 					results[i] = other.results[otherIndex];
 				}
 			}
 			else { // copy only the value of the result node
-				DirtyNode* otherOutNode = other.getNode(_outputIndex);
-				results[nameIndexMap[otherOutNode->name]] = other.results[otherOutNode->index];
+				
+				DirtyNode* otherOutNode = other.getNode(other._outputIndex);
+				l("merge single result value from node: " + otherOutNode->name + " " + str(otherOutNode->index));
+				results[nameIndexMap[otherOutNode->name]] = other.results[other._outputIndex];
 			}
 			return result;
 		}
@@ -1128,6 +1188,7 @@ namespace ed {
 			typename NodeT::EvalFnT evalFnPtr = nullptr) 
 		{
 			NodeT* baseResult = DirtyGraph::addNode<NodeT>(name, false);
+			if (baseResult == nullptr) { return nullptr; };
 			//if (defaultValue == nullptr) { // if default is given, add it to graph
 			//	defaultValue = VT();
 			//}
@@ -1163,7 +1224,7 @@ namespace ed {
 			* of writing if statements
 			* to only evaluate the bits of the nodes they need
 			*/
-			DEBUGSL("evalNode begin");
+			LOG("evalNode begin");
 			// reset node state
 			op->preReset();
 			// copy base geo into node's result, if it has inputs
@@ -1192,7 +1253,7 @@ namespace ed {
 
 			op->preEval("main", s);
 			CWRSTAT(s, "error in preEval for node: " + op->name);
-			DEBUGS("pre eval nResults, " + std::to_string(results.size()));
+			l("pre eval nResults, " + std::to_string(results.size()));
 			op->eval( results[op->index], auxData, s); // illegal read on this line apparently
 			CWRSTAT(s, "error in EVAL for node: " + op->name);
 
@@ -1221,58 +1282,60 @@ namespace ed {
 			*/
 
 			// sort topo generations in nodes if graph has changed
-			DEBUGSL("EvalGraph begin eval to node: " + std::to_string(upToNodeId));
+			LOG("EvalGraph begin eval to node: " + std::to_string(upToNodeId));
 			//return s;
 			if (graphChanged) {
-				DEBUGS("rebuilding graph structure")
+				l("rebuilding graph structure");
 				rebuildGraphStructure(s);
-				DEBUGS("structure rebuild complete")
+				l("structure rebuild complete");
 			}
 			CWRSTAT(s, "ERROR rebuilding graph structure ahead of graph eval, halting");
 
 			// if specific node given, 
-			std::unordered_set<int> toEval;
+			std::vector<int> toEval;
 			if (upToNodeId > -1) {
 				toEval = nodesInHistory(upToNodeId);
 			}
 			else { // run everything
 				toEval.reserve(nodes.size());
 				for (int n = 0; n < nodes.size(); n++) { // does c++ have a linear space
-					toEval.insert(n);
+					toEval.push_back(n);
 				}
 			}
-			DEBUGSL("toEval: ");
+			l("toEval: ");
 			DEBUGVI(toEval);
-			DEBUGS("nGenerations " + std::to_string(generations.size()));
+			l("nGenerations " + std::to_string(generations.size()));
 
 			bool foundEndNode = false;
 			// for now just work in generations
 			// go through generations in sequence
 			for (auto generation : generations) {
-				DEBUGSL("generation");
+				l("generation");
 				DEBUGVI(generation);
 				// go through each node in generation
 				// this is the bit that can be parallelised
 				if (upToNodeId > -1) {
-					DEBUGS("doing intersection")
-					std::unordered_set<int> baseGeneration(generation);
+					l("doing intersection");
+					std::vector<int> baseGeneration(generation);
 					generation.clear();
+					std::sort(baseGeneration.begin(), baseGeneration.end());
+					std::sort(toEval.begin(), toEval.end());
 					std::set_intersection(
 						baseGeneration.begin(), baseGeneration.end(),
 						toEval.begin(), toEval.end(),
 						std::inserter(generation, generation.begin())
 					); // god c++ is so complicated
-					DEBUGS("generation after intersection");
+					l("generation after intersection");
 					DEBUGVI(generation);
 				}
 				
 				
 				for (auto& nodeId : generation) {
 					EvalNode<VT>* node = static_cast<EvalNode<VT>*>(getNode(nodeId));
-					DEBUGSL("consider node: " + str(node->name) + ", " + str(node->index));
+					l("consider node: " + str(node->name) + ", " + str(node->index));
 					// check if anything on node is dirty - if so, continue
 					if (!node->anyDirty()) {
-						DEBUGS("node is not dirty, skip");
+						l("node is not dirty, skip");
 						continue;
 					}
 					// eval whole node

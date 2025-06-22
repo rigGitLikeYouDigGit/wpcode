@@ -501,11 +501,12 @@ class WN( # short for WePresentNode
 			mfn = self.MFnCls(self.dagPath())
 		else:
 			mfn = self.MFnCls(self.object())
-		try:
-			mfn.name()
-		except:
-			log("mfn init error, retrying")
-			raise RuntimeError
+		# try:
+		# 	mfn.name()
+		# except:
+		# 	log("mfn init error, retrying")
+		# 	raise RuntimeError
+		mfn.name() # if this errors we are brusquely screwed
 		return mfn
 		#import maya.api.OpenMaya as om
 		baseFn = om.MFnDependencyNode(self.object())

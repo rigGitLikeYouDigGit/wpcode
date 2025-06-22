@@ -78,14 +78,14 @@ public:
 		return newObj;
 	}
 
-	ed::StrataOpGraph* getOpGraphPtr() {
+	ed::StrataOpGraph* syncOpGraphPtr(MDataBlock& data) {
 		/* return pointer to current graph,
 		if it doesn't exist set fresh graph*/
 		if (opGraphPtr) {
 			return opGraphPtr.get();
 		}
 		DEBUGSL("creating new graph on getOpGraphPtr");
-		setFreshGraph<StrataShapeNode>(thisMObject());
+		setFreshGraph<StrataShapeNode>(thisMObject(), data);
 		return opGraphPtr.get();
 	}
 

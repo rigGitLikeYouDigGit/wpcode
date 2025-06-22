@@ -3,6 +3,7 @@ register all plugins
 */
 #pragma once
 #include "macro.h"
+#include "logger.h"
 
 #include <maya/MFnPlugin.h>
 #include <maya/MObject.h>
@@ -94,7 +95,7 @@ MStatus initializePlugin( MObject obj ){
     DEBUGS("_")
     DEBUGS("_")
     DEBUGS("___")
-    DEBUGS("initialising strata")
+    LOG("initialising strata")
     MFnPlugin fnPlugin( obj, kAUTHOR, kVERSION, kREQUIRED_API_VERSION);
     MStatus s = MStatus::kSuccess;
 
@@ -171,7 +172,7 @@ MStatus initializePlugin( MObject obj ){
     /// bonus matrix curve node
     REGISTER_NODE(MatrixCurveNode);
 
-
+    l("initialised Strata");
     return s;
 }
 
@@ -179,6 +180,8 @@ MStatus uninitializePlugin( MObject obj ){
 
     MStatus s;
     s = MS::kSuccess;
+    LOG("uninitialising strata");
+
     MFnPlugin fnPlugin(obj);
 
     s = MHWRender::MDrawRegistry::deregisterGeometryOverrideCreator(
@@ -201,7 +204,7 @@ MStatus uninitializePlugin( MObject obj ){
 
     DEREGISTER_NODE(MatrixCurveNode);
 
-    DEBUGS("uninitialised strata")
+    l("uninitialised strata");
     return s;
 
 }

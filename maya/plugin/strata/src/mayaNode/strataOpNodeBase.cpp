@@ -74,15 +74,15 @@ int StrataOpNodeBase::strataAttrsDefined = 0;
 MStatus StrataOpNodeBase::setFreshGraph(MObject& nodeObj//, MDataBlock& data
 ) {
 	MS s;
-	DEBUGS("base set fresh graph")
+	LOG("base set fresh graph");
 	opGraphPtr = std::make_shared<StrataOpGraph>();
 	// need to extend in templated class to add a new node to the graph
 	return s;
 }
 MStatus StrataOpNodeBase::setFreshGraph(MObject& nodeObj, MDataBlock& data) {
 	MS s;
-	DEBUGS("base set fresh graph")
-		opGraphPtr = std::make_shared<StrataOpGraph>();
+	LOG("base set fresh graph");
+	opGraphPtr = std::make_shared<StrataOpGraph>();
 	// need to extend in templated class to add a new node to the graph
 	return s;
 }

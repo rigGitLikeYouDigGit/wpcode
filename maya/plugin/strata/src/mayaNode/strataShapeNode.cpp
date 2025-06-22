@@ -15,6 +15,8 @@
 #include "../stringLib.h"
 #include "../strataop/elementOp.h"
 
+#include "../logger.h"
+
 using namespace ed;
 
 MTypeId StrataShapeNode::kNODE_ID(0x00122CA3);
@@ -29,7 +31,7 @@ DEFINE_STATIC_NODE_CPP_MEMBERS(NODE_STATIC_MEMBERS, StrataShapeNode)
 
 
 MStatus StrataShapeNode::initialize() {
-    DEBUGSL("shape initialize")
+    LOG("shape initialize")
         MStatus s = MS::kSuccess;
     MFnNumericAttribute nFn;
     MFnCompoundAttribute cFn;
@@ -123,7 +125,9 @@ MStatus StrataShapeNode::initialize() {
 
 
 void StrataShapeNode::postConstructor() {
-    DEBUGS("shape postConstructor");
+    LOG("shape postConstructor");
+    setExistWithoutInConnections(true);
+    setExistWithoutOutConnections(true);
     superT::postConstructor<thisT>(thisMObject());
 }
 
@@ -133,7 +137,7 @@ MStatus StrataShapeNode::legalConnection(
     bool 	asSrc,
     bool& isLegal
 ) const {
-    DEBUGSL("shape legalConnection")
+    LOG("shape legalConnection")
         return superT::legalConnection<thisT>(
             plug,
             otherPlug,
@@ -147,7 +151,7 @@ MStatus StrataShapeNode::connectionMade(
     const MPlug& otherPlug,
     bool 	asSrc
 ) {
-    DEBUGSL("shape connectionMade");
+    LOG("shape connectionMade");
     return superT::connectionMade<thisT>(
         thisMObject(),
         plug,
@@ -162,7 +166,7 @@ MStatus StrataShapeNode::connectionBroken(
     const MPlug& otherPlug,
     bool 	asSrc
 ) {
-    DEBUGSL("shape connection broken")
+    LOG("shape connection broken")
         return superT::connectionBroken<thisT>(
             thisMObject(),
             plug,
@@ -255,7 +259,8 @@ MStatus StrataShapeNode::syncStrataParams(MObject& nodeObj, MDataBlock& data) {
 MStatus StrataShapeNode::runShapeBackPropagation(MObject& nodeObj, MDataBlock& data) {
 
     MS mStat;
-    // check for DELTAS, or directed changes to graph data
+    LOG("shape node BACK PROPAGATION");
+    // check for DELTAS, or directed chang;es to graph data
     MArrayDataHandle inArrDH = data.inputArrayValue(aStDataIn);
 
     // build up a group of deltas to match
@@ -269,9 +274,9 @@ MStatus StrataShapeNode::runShapeBackPropagation(MObject& nodeObj, MDataBlock& d
             continue;
         }
         StrataManifold& manifold = StrataManifold();
-        thisStrataOpT* opPtr = getStrataOp<StrataShapeNode>(data);
+        thisStrataOpT* opPtr = getStrataOp<StrataShapeNode>(nodeObj);
         if (opPtr == nullptr) {
-            DEBUGSL("SHAPE NODE OP PTR IS NULL ")
+            l("SHAPE NODE OP PTR IS NULL ");
                 return MS::kFailure;
         }
 
@@ -288,12 +293,12 @@ MStatus StrataShapeNode::runShapeBackPropagation(MObject& nodeObj, MDataBlock& d
     }
 
     if (!deltaGrp.targetMap.size()) {
-        DEBUGSL("no targets gathered in shape node, skipping");
+        l("no targets gathered in shape node, skipping");
         return mStat;
     }
 
     // back-propagate errors to re-eval the graph with any dirty nodes re-eval'd
-    StrataMergeOp* opPtr = getStrataOp<StrataShapeNode>(data);
+    StrataMergeOp* opPtr = getStrataOp<StrataShapeNode>(nodeObj);
     Status st;
     StrataAuxData auxData;
     st = opPtr->runBackPropagation(
@@ -305,8 +310,8 @@ MStatus StrataShapeNode::runShapeBackPropagation(MObject& nodeObj, MDataBlock& d
     );
 
     if (st.val) {
-        DEBUGSL("ERROR IN BACKPROPAGATION") ;
-        DEBUGS(st.msg);
+        l("ERROR IN BACKPROPAGATION") ;
+        l(st.msg);
         return MStatus::kFailure;
     }
 
@@ -325,23 +330,40 @@ MStatus StrataShapeNode::compute(const MPlug& plug, MDataBlock& data) {
     if (data.isClean(plug)) {
         return s;
     }
-    DEBUGS("shape compute");
+
+    //// sync op name // VERY important this doesn't call back into strata graph, otherwise it loops
+    if (plug.attribute() == aStOpNameOut) {
+        syncOpNameOut<StrataShapeNode>(thisMObject(), data);
+        data.setClean(plug);
+        return MS::kSuccess;
+    }
+    //return s;
+    LOG("shape compute");
+
+    syncOpGraphPtr(data);
     // run strata op merge
     s = superT::compute<StrataShapeNode>(thisMObject(), plug, data);
-    MCHECK(s, "ERROR in template node compute");
-    DEBUGS("shape compute complete");
+    if (data.isClean(plug)) {
+        return MS::kSuccess;
+    }
+    if (s == MS::kEndOfFile) {
+        return MS::kSuccess;
+    }
+    MCHECK(s, NODENAME + " ERROR in strata bases compute, halting");
+    //DEBUGSL("strata base computed, back to elOp scope");
+    l("shape node compute complete");
 
 
     // back propagate if necessary
     runShapeBackPropagation(thisMObject(), data);
-    DEBUGS("shape backProp complete");
+    l("shape backProp complete");
 
 
     /* pull in drawing values to cache*/
     pointOpacity = data.inputValue(aStShowPoints).asFloat();
 
     s = populateOutputs(data);
-    DEBUGS("shape populate outputs complete");
+    l("shape populate outputs complete");
 
 
     data.setClean(plug);
@@ -356,8 +378,8 @@ MStatus StrataShapeNode::populateOutputs(MDataBlock& data) {
     consider also adding space data?
     */
     MStatus s = MS::kSuccess;
-
-    thisStrataOpT* opPtr = getStrataOp<StrataShapeNode>(data);
+    LOG("shape POPULATE OUTPUTS");
+    thisStrataOpT* opPtr = getStrataOp<StrataShapeNode>(thisMObject());
 
     MArrayDataHandle outArrDH = data.outputArrayValue(aStDataOut);
     for (unsigned int i = 0; i < outArrDH.elementCount(); i++) {

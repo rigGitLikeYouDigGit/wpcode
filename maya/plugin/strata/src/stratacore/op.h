@@ -154,7 +154,7 @@ namespace ed {
 		bool paramsDirty = true; // param expressions have changed, need recompiling (later)
 
 		//std::unordered_set<int> elements; // elements created by this node 
-		std::vector<int> elements; // elements created by this node 
+		std::vector<int> elements = {}; // elements created by this node 
 
 		/* test saving created element data on the ops that create them????
 		*/
@@ -325,16 +325,3 @@ namespace ed {
 	//};
 
 }
-//
-//template<>
-//struct std::hash<ed::StrataOp>
-//{
-//	std::size_t operator()(const ed::StrataOp& s) const noexcept
-//	{
-//		return std::hash<int>{}(s.index);
-//
-//		//std::size_t h1 = std::hash<std::string>{}(s.first_name);
-//		//std::size_t h2 = std::hash<std::string>{}(s.last_name);
-//		//return h1 ^ (h2 << 1); // or use boost::hash_combine
-//	}
-//};

@@ -386,6 +386,7 @@ class Plug(PlugBase,
 		"""top-level method to set this plug's value,
 		or connect another live plug to it"""
 		if otherPlug := pluglib.getMPlug(val, default=None):
+			log("CON", otherPlug, "TO", self.MPlug)
 			pluglib.con(otherPlug, self.MPlug)
 		else:
 			pluglib.setPlugValue(self.MPlug, val)

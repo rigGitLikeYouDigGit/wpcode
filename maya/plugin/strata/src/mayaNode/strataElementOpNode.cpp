@@ -240,7 +240,11 @@ MStatus StrataElementOpNode::initialize() {
 
 
 void StrataElementOpNode::postConstructor() {
-    DEBUGS("element postConstructor");
+    LOG("element postConstructor");
+    setExistWithoutInConnections(true);
+    setExistWithoutOutConnections(true);
+    /* cache starting name? */
+
     superT::postConstructor<thisT>(thisMObject());
 }
 
@@ -264,7 +268,7 @@ MStatus StrataElementOpNode::connectionMade(
     const MPlug& otherPlug,
     bool 	asSrc
 ) {
-    DEBUGSL("el connection made")
+    LOG("el connection made")
         MStatus s = superT::connectionMade<thisT>(
             thisMObject(),
             plug,
@@ -352,7 +356,7 @@ MStatus StrataElementOpNode::syncStrataParams(MObject& nodeObj, MDataBlock& data
     /* build map of element names to expressions, from maya node
     */
     MS s;
-    thisStrataOpT* opPtr = getStrataOp<thisT>(data);
+    thisStrataOpT* opPtr = getStrataOp<thisT>(nodeObj);
     if (opPtr == nullptr) {
         MGlobal::displayError(NODENAME + "COULD NOT RETRIEVE OP to sync");
         //NODELOG("COULD NOT RETRIEVE OP to sync");
@@ -426,7 +430,7 @@ MStatus StrataElementOpNode::syncStrataParams(MObject& nodeObj, MDataBlock& data
 
 MStatus StrataElementOpNode::compute(const MPlug& plug, MDataBlock& data) {
 
-    DEBUGS("element compute")
+    LOG("element compute");
         MS s(MS::kSuccess);
 
     // check if plug is already computed
@@ -436,21 +440,40 @@ MStatus StrataElementOpNode::compute(const MPlug& plug, MDataBlock& data) {
 
     // pass to bases, compute strata op
     s = superT::compute<thisT>(thisMObject(), plug, data);
+    if (data.isClean(plug)) {
+        return MS::kSuccess;
+    }
+    if (s == MS::kEndOfFile) {
+        return MS::kSuccess;
+    }
     MCHECK(s, NODENAME + " ERROR in strata bases compute, halting");
     //DEBUGSL("strata base computed, back to elOp scope");
 
+    
+
     //return s;
     // update index attrs from op elements
-    thisStrataOpT* opPtr = getStrataOp<thisT>(data); /* this can be null?????*/
+    thisStrataOpT* opPtr = getStrataOp<thisT>(thisMObject()); /* this can be null?????*/
+    if (opPtr == nullptr) {
+        l("OP PTR IS NULL AFTER EL OP COMPUTE, halting");
+        return MS::kFailure;
+    }
+    l("after compute op get size: " + std::to_string(opPtr->elementsAdded.size()));
     MArrayDataHandle elArrDH = data.outputArrayValue (aStElementOut);
     StrataManifold& manifold = opPtr->value();
     //for (unsigned int i = 0; i < elArrDH.elementCount(); i++){
     for (unsigned int i = 0; i < static_cast<unsigned int>(opPtr->elementsAdded.size()); i++){
-        DEBUGS("try jump to output element: " + std::to_string(i));
+        l("try jump to output element: " + std::to_string(i));
         //continue;
         s = jumpToElement(elArrDH, i);
         MCHECK(s, NODENAME + "ERROR setting outputs, could not jump to element: " + std::to_string(i).c_str());
-        StrataName& elName = opPtr->elementsAdded[i];
+        StrataName elName = opPtr->elementsAdded[i];
+        if (elName.empty()) {
+            l("element " + str(i) + " has empty name, skipping");
+        }
+        l("test error name");
+        l(elName);
+        l(elName.c_str());
         elArrDH.outputValue().child(aStNameOut).setString(MString(elName.c_str()));
         SElement* el = manifold.getEl(elName);
         
@@ -485,7 +508,7 @@ MStatus StrataElementOpNode::compute(const MPlug& plug, MDataBlock& data) {
     data.setClean(aStGlobalIndex);
     data.setClean(aStElTypeIndex);
     data.setClean(aStTypeOut);
-    return s;
+    return MS::kSuccess;
 }
 
 

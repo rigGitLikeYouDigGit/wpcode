@@ -53,12 +53,12 @@ namespace ed {
 
 		std::map<StrataName, ElOpParam> paramMap;
 		// is this the best way to iterate over dictionary in creation order?
-		std::vector<StrataName> paramNames;
+		std::vector<StrataName> paramNames = {};
 
 		virtual Status makeParams();
 
 		//std::vector<StrataName> elementsAdded = {}; // temp, used to pass information back out of op compute to maya
-		std::vector<StrataName> elementsAdded; // temp, used to pass information back out of op compute to maya
+		std::vector<StrataName> elementsAdded = {}; // temp, used to pass information back out of op compute to maya
 
 		///template <typename AuxT>
 		virtual Status eval(StrataManifold& value, EvalAuxData* auxData, Status& s);

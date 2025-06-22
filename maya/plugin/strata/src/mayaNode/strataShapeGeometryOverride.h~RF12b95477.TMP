@@ -128,7 +128,7 @@ public:
 		MFnDependencyNode depFn(shapeNodePtr->thisMObject());
 		volatile int outInt = depFn.findPlug(StrataShapeNode::aStOutput, false).asInt();
 
-		l("got outInt:" + ed::str(outInt));
+		l("got outInt:" + str(outInt));
 		Status s = syncManifold();
 		//CWMSG(s, "Error on syncManifold in updateDG() for strataShape");
 		return;

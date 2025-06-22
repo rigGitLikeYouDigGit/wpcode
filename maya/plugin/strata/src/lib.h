@@ -27,8 +27,12 @@ namespace ed {
 	inline std::string str(std::string any) {
 		return any;
 	}
-
-
+	inline std::string str(const char* any) {
+		return std::string(any);
+	}
+	//inline std::string str(const char** any) {
+	//	return std::string(any);
+	//}
 
 	typedef unsigned int uint;
 	using std::min;
