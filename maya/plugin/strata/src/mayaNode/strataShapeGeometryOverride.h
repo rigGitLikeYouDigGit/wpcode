@@ -6,7 +6,8 @@
 #include "../strataop/mergeOp.h"
 #include "strataOpNodeBase.h"
 #include "../logger.h"
-
+#include "../macro.h"
+#include "../lib.h"
 #include "../exp/expParse.h"
 
 #include "strataShapeNode.h"
@@ -214,19 +215,22 @@ public:
 		* each edge
 		* each sub-patch
 		*/
-		LOG("UPDATE RENDER ITEMS");
-		if (!path.isValid())
+		LOG("UPDATE RENDER ITEMS: " + std::string(path.fullPathName().asChar()) + " " + ed::str(renderItems.length()));
+		if (!path.isValid()) {
 			l("returning invalid path");
-				return;
+			return;
+		}
 		MRenderer* renderer = MRenderer::theRenderer();
-		if (!renderer)
+		if (!renderer) {
 			l("returning no renderer");
 			return;
+		}
 		const MShaderManager* shaderManager = renderer->getShaderManager();
-		if (!shaderManager)
+		if (!shaderManager) {
 			l("returning no shader manager");
 			return;
-		return;
+		}
+		//return;
 		// Get the inherited DAG display properties.
 		auto wireframeColor = MHWRender::MGeometryUtilities::wireframeColor(path);
 		auto displayStatus = MHWRender::MGeometryUtilities::displayStatus(path);
@@ -247,6 +251,7 @@ public:
 		l("point render item index:" + std::to_string(renderItemIndex));
 		if (renderItemIndex < 0)
 		{
+			l("create render item: " + ed::str(renderItemIndex));
 			// Create the new render item with the given name.
 			// We designate this item as a UI "decoration" and will not be
 			// involved in rendering aspects such as casting shadows
@@ -260,12 +265,15 @@ public:
 			renderItem->depthPriority(depthPriority);
 			// Get an instance of a 3dSolidShader from the shader manager.
 			MShaderInstance* shader = shaderManager->getStockShader(MShaderManager::k3dSolidShader);
-			if (shader)
+			if (shader != nullptr)
 			{
 				l("found shader");
 				renderItem->setShader(shader);
 				// Once assigned, no need to hold on to shader instance
 				shaderManager->releaseShader(shader);
+			}
+			else {
+				l("no shader found");
 			}
 			// The item must be added to the persistent list to be considered
 			// for update / rendering
@@ -273,9 +281,10 @@ public:
 		}
 		else
 		{
+			l("retrieving render item");
 			renderItem = renderItems.itemAt(renderItemIndex);
 		}
-		if (renderItem)
+		if (renderItem != nullptr)
 		{
 			MHWRender::MShaderInstance* shader = renderItem->getShader();
 			if (shader)
@@ -286,8 +295,12 @@ public:
 			//renderItem->enable(isEnable); 
 			renderItem->enable(true);
 		}
+		else {
+			l("renderItem is still null");
+		}
 	}
-
+	/* where do we actually build the requirements,
+	need to properly call for vertex / index buffers there*/
 	void populateGeometry(
 		const MHWRender::MGeometryRequirements& requirements, const MHWRender::MRenderItemList& renderItems, MHWRender::MGeometry& data)
 	{
@@ -314,24 +327,33 @@ public:
 		names are set on RENDER ITEMS before this
 		*/
 
-		LOG("PopulateGeometry");
-		return;
+		LOG("PopulateGeometry on render items:");
+		for (int i = 0; i < renderItems.length(); i++) {
+			const MRenderItem* item = renderItems.itemAt(i);
+			l(ed::str(item->name().asChar()) + " ");
+
+		}
+		//return;
 		Status s;
 		MS ms(MS::kSuccess);
 		const MVertexBufferDescriptorList& vertexBufferDescriptorList = requirements.vertexRequirements();
 		for (int i = 0; i < vertexBufferDescriptorList.length(); i++)
 		{
+			l("vertexBuffer index: " + ed::str(i));
 			MVertexBufferDescriptor desc{};
-			if (!vertexBufferDescriptorList.getDescriptor(i, desc))
+			if (!vertexBufferDescriptorList.getDescriptor(i, desc)) {
+				l("descriptor not found, continuing");
 				continue;
-			std::cout << desc.semanticName().asChar() << std::endl;
+			}
+			l(desc.semanticName().asChar());
 
-			l("VertexBufferDescriptor in list: " + desc.name());
+			l("VertexBufferDescriptor in list: " + desc.name()); // name seems empty here
 
 			switch (desc.semantic())
 			{
 			case MGeometry::kPosition:
 			{
+				l("vertex buffer position");
 				// Create and fill the vertex position buffer
 				MHWRender::MVertexBuffer* positionBuffer = data.createVertexBuffer(desc);
 				if (!positionBuffer) {
@@ -362,13 +384,15 @@ public:
 
 				}
 				else {
-					DEBUGSL("unknown desc name: " + desc.name() + " requested position vertex buffer");
+					l("unknown desc name: " + desc.name() + " requested position vertex buffer");
 				}
 
 			}
 			break;
 			case MGeometry::kNormal:
 			{
+				l("vertex buffer normal");
+
 				break;
 				////
 				//// Create and fill the vertex normal buffer
@@ -391,6 +415,8 @@ public:
 			break;
 			case MGeometry::kTangent:
 			{
+				l("vertex buffer tangent");
+
 				break;
 				//MHWRender::MVertexBuffer* tangentBuffer = data.createVertexBuffer(desc);
 				//if (tangentBuffer)
@@ -410,6 +436,8 @@ public:
 			break;
 			case MGeometry::kBitangent:
 			{
+				l("vertex buffer bitangent");
+
 				break;
 				//MHWRender::MVertexBuffer* tangentBuffer = data.createVertexBuffer(desc);
 				//if (tangentBuffer)
@@ -429,6 +457,8 @@ public:
 			break;
 			case MGeometry::kTexture:
 			{
+				l("vertex buffer texture");
+
 				////
 				//// Create and fill the vertex texture coords buffer
 				////
@@ -446,26 +476,39 @@ public:
 				//		texCoordsBuffer->commit(buffer);
 				//	}
 				//}
+				break;
+
 			}
-			break;
-			case MGeometry::kColor:
-			case MGeometry::kTangentWithSign:
-			case MGeometry::kInvalidSemantic:   // avoid compiling error
-				//
-				// In this example, we don't need to used those vertex informantions.
-				//
+			case MGeometry::kColor: {
+				l("vertex buffer colour");
+			}
+			case MGeometry::kTangentWithSign: {
+				l("vertex buffer tangentWithSign");
+			}
+			case MGeometry::kInvalidSemantic: {
+				l("vertex buffer invalidSemantic");
+				// avoid compiling error
+								//
+								// In this example, we don't need to used those vertex informantions.
+								//
 				break;
 			}
+			}
+				
 		}
 
 
-
+		// what are we actually meant to do here?
 		const MIndexBufferDescriptorList& indexBufferDescriptorList = requirements.indexingRequirements();
+		l("get indexBufferDescriptors : " + ed::str(indexBufferDescriptorList.length()));
 		for (int i = 0; i < indexBufferDescriptorList.length(); i++) {
 
 			MIndexBufferDescriptor desc{};
-			if (!indexBufferDescriptorList.getDescriptor(i, desc))
+			if (!indexBufferDescriptorList.getDescriptor(i, desc)) {
+				l("descriptor: " + ed::str(i) + " not found, skipping");
+
 				continue;
+			}
 
 			l("IndexBufferDescriptor in list: " + desc.name());
 
@@ -473,15 +516,21 @@ public:
 
 		//   Update indexing data for all appropriate render items
 		const int numItems = renderItems.length();
+		l("update indexing all render items: " + ed::str(numItems));
 		for (int i = 0; i < numItems; i++)
 		{
 			const MHWRender::MRenderItem* item = renderItems.itemAt(i);
-			if (!item)
+			if (!item) {
+				l("item: " + ed::str(i) + "not found, skipping");
 				continue;
+
+			}
+				
 
 			l("RenderItem name: " + item->name());
 
 			if (item->name() == sStPointRenderItemName) {
+				l("point renderItem");
 				// make index buffer to render point gnomons
 				MHWRender::MIndexBuffer* indexBuffer = data.createIndexBuffer(MHWRender::MGeometry::kUnsignedInt32);
 				if (indexBuffer == nullptr) {
@@ -493,7 +542,7 @@ public:
 					l("ERROR getting wireframe point index array, aborting");
 					return;
 				}
-
+				l("got point indices: " + ed::str(indices.size()));
 				void* buffer = indexBuffer->acquire(static_cast<unsigned int>(indices.size()), true /*writeOnly*/);
 				if (!buffer) {
 					l("could not acquire index buffer for points");
@@ -502,11 +551,15 @@ public:
 
 				const std::size_t bufferSizeInByte =
 					sizeof(ed::IndexList::value_type) * indices.size();
+				l("before mcpy");
 				memcpy(buffer, indices.data(), bufferSizeInByte);
+				l("before commit");
 				// Transfer from CPU to GPU memory.
 				indexBuffer->commit(buffer);
+				l("before associate");
 				// Associate index buffer with render item
 				item->associateWithIndexBuffer(indexBuffer);
+				l("render item done");
 			}
 		}
 	}

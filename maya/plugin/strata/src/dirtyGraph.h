@@ -333,7 +333,7 @@ namespace ed {
 			std::vector<int> zeroDegree;
 			nodeDirectDependentsMap.clear();
 			nodeAllDependentsMap.clear();
-			LOG("gather nodes no inputs");
+			LOG("gather nodes no inputs, n nodes:" + str(nodes.size()));
 			// first gather all nodes with no inputs
 			for (auto& node : nodes) {
 				l("check node " + node->name + " inputs: ");
@@ -410,7 +410,7 @@ namespace ed {
 				nameIndexMap.clear();
 			}
 			
-			int nodesSize = static_cast<int>(nodes.size());
+			//int nodesSize = static_cast<int>(nodes.size());
 			//nameIndexMap.reserve(nodesSize);
 			for (size_t i = 0; i < nodes.size(); i++) {
 				std::string nodeName(nodes[i]->name);
@@ -448,7 +448,10 @@ namespace ed {
 		*/
 		//std::unordered_set<int> nodesInHistory(int opIndex) {
 		std::vector<int> nodesInHistory(int opIndex) {
-			/* flat set of all nodes found in history*/
+			/* flat set of all nodes found in history
+			we also include final op index - if not desired, iterate only
+			up to last value
+			*/
 			LOG("nodesInHistory flat " + std::to_string(opIndex));
 			std::vector<int> result;
 
@@ -1104,7 +1107,7 @@ namespace ed {
 		in the graph
 		*/
 		
-		std::vector<NodeData> nodeDatas = {};
+		//std::vector<NodeData> nodeDatas = {};
 
 		template <typename T>
 		auto cloneShared(bool copyAllResults) const { return std::shared_ptr<T>(static_cast<T*>(clone_impl(copyAllResults))); }
@@ -1117,7 +1120,7 @@ namespace ed {
 
 		virtual void copyOther(const EvalGraph& other, bool copyAllResults=true) {
 			DirtyGraph::copyOther(other);
-			nodeDatas = other.nodeDatas;
+			//nodeDatas = other.nodeDatas;
 			/* if graph is empty, it doesn't matter*/
 			if (!nodes.size()) {
 				return;
@@ -1161,7 +1164,7 @@ namespace ed {
 				l("other graph has no nodes, exiting");
 				return result;
 			}
-			results.resize(nodes.size());
+			results.resize(std::max(nodes.size(), other.nodes.size()));
 
 			// if we want to merge all results or the other graph has no output index set,
 			// copy everything
@@ -1193,7 +1196,7 @@ namespace ed {
 			//	defaultValue = VT();
 			//}
 			results.push_back(defaultValue);
-			nodeDatas.push_back(NodeData());
+			//nodeDatas.push_back(NodeData());
 			baseResult->postConstructor();
 
 			//if (evalFnPtr != nullptr) {// if evalFn is given, set it on node
@@ -1205,7 +1208,7 @@ namespace ed {
 		void clear() {
 			nodes.clear();
 			results.clear();
-			nodeDatas.clear();
+			//nodeDatas.clear();
 			graphChanged = true;
 		}
 
@@ -1224,14 +1227,20 @@ namespace ed {
 			* of writing if statements
 			* to only evaluate the bits of the nodes they need
 			*/
-			LOG("evalNode begin");
+			LOG("evalNode begin: " + op->name + " " + str(op->index) + " n results: " + str(results.size()) );
+			l("op inputs:");
+				DEBUGVI(op->inputs);
 			// reset node state
 			op->preReset();
 			// copy base geo into node's result, if it has inputs
+			int resultSet = 0;
 			if (op->inputs.size()) {
-				results[op->index] = results[op->inputs[0]];
+				if (op->inputs[0] > -1) {
+					results[op->index] = results[op->inputs[0]];
+					resultSet = 1;
+				}				
 			}
-			else { // if no inputs, copy graph's baseValue
+			if(!resultSet) { // if no inputs, copy graph's baseValue
 				results[op->index] = baseValue;
 			}
 			op->postReset();

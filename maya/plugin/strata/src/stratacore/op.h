@@ -168,7 +168,7 @@ namespace ed {
 		virtual void preReset() {
 			// before node value is reset in graph
 			// reset node data
-			static_cast<EvalGraph<StrataManifold>*>(graphPtr)->nodeDatas[index] = NodeData();
+			//static_cast<EvalGraph<StrataManifold>*>(graphPtr)->nodeDatas[index] = NodeData();
 		}
 		/*virtual Status evalTopo(StrataManifold& manifold, Status& s) { return s; }
 		virtual Status evalData(StrataManifold& manifold, Status& s) { return s; }*/

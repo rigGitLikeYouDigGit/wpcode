@@ -28,6 +28,8 @@
 #include "../api.h"
 #include "../lib.h"
 #include "../libEigen.h"
+
+#include "../logger.h"
 /*
 smooth topological manifold, made of points, edges and partial edges
 
@@ -278,6 +280,14 @@ namespace ed {
 
 		inline bez::ClosestPointSolver* closestSolver() {
 			return parentCurve.getSolver();
+		}
+
+		void initEmpty() {
+			/*initialise variables */
+			weights = Eigen::ArrayXf();
+			cvs = Eigen::ArrayX3f();
+			//parentCurve = bez::CubicBezierPath();
+			finalNormals = MatrixX3f();
 		}
 	};
 
@@ -1333,7 +1343,7 @@ namespace ed {
 			/* return flat float3 array for gnomon positions only on points
 			* each point has 4 coords - point itself, and then 0.1 units in x, y, z of that point
 			*/
-
+			LOG("Wireframe gnomon pos array");
 			Float3Array result(pDataMap.size() * 4);
 			int i = 0;
 			std::string name;
@@ -1351,6 +1361,7 @@ namespace ed {
 			/* return index array for point gnomons
 			* intended to emit as separate lines, so half is duplication
 			*/
+			LOG("Wireframe point index list array");
 			IndexList result(pDataMap.size() * 3 * 2);
 			//int i = 0;
 			std::string name;

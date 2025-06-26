@@ -3,6 +3,7 @@
 #include "../stringLib.h"
 #include "../lib.h"
 #include "../libEigen.h"
+#include "../logger.h"
 
 using namespace ed;
 using namespace ed::expns;
@@ -18,7 +19,7 @@ Status StrataMergeOp::eval(StrataManifold& value,
 {
 	/*
 	*/
-	DEBUGSL("MERGE OP EVAL");
+	LOG("MERGE OP EVAL");
 	auto graph = getGraphPtr();
 
 	//StrataOpGraph* graphPtr = static_cast<StrataOpGraph*>( graphPtr) ;

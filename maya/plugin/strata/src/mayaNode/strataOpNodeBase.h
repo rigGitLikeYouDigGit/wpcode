@@ -363,6 +363,8 @@ struct StrataOpNodeBase {
 		nFn.setWritable(false);
 		nFn.setChannelBox(false);
 		nFn.setKeyable(false);
+		nFn.setAffectsAppearance(true);
+		//nFn.setAffectsWorldSpace(true);
 
 		// PARAMETRES
 		/* we add the top one first, and assume each one will have a string expression?

@@ -1,6 +1,7 @@
 
 #include "elementOp.h"
 #include "../stringLib.h"
+#include "../logger.h"
 
 using namespace ed;
 using namespace ed::expns;
@@ -246,12 +247,12 @@ Status StrataElementOp::eval(StrataManifold& value,
 
 
 	*/
-	DEBUGSL("EL OP EVAL");
+	LOG("EL OP EVAL");
 	//StrataElementOp* opPtr = static_cast<StrataElementOp*>(node);
 	elementsAdded.clear();
 	elementsAdded.reserve(paramMap.size());
 	StrataElementOp* opPtr = this;
-	DEBUGS("n params to eval: " + std::to_string(paramMap.size()));
+	l("n params to eval: " + std::to_string(paramMap.size()));
 
 	// use one data struct throughout to allow reusing variables between params
 	ExpAuxData expAuxData;
@@ -267,7 +268,7 @@ Status StrataElementOp::eval(StrataManifold& value,
 
 		switch (paramName[0]) { // get the type of element to add by the first letter of the name
 			case 'p': { // a point has no drivers (yet, later allow declaring points as the direct output of topo operations
-				DEBUGS("adding new point");
+				l("adding new point");
 				s = pointEvalParam(s, op, outPtr, value, expAuxData,
 					param
 				);
@@ -286,7 +287,7 @@ Status StrataElementOp::eval(StrataManifold& value,
 
 		/* eval parent expression*/		
 	}
-	DEBUGSL("EL EVAL COMPLETE");
+	l("EL EVAL COMPLETE");
 	return s;
 }
 

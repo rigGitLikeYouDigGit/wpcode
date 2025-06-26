@@ -123,13 +123,16 @@ def reloadPluginTest():
 	shape : WN.StrataShape = WN.StrataShape.create("newShape")
 	shape.stInput_[0] = elOp.stOutput_
 
-	return
+	# el2 = WN.createNode("strataElementOp", "el2Op")
+	# shape.stInput_[1] = el2.stOutput_
+	# shape.stInput_[2] = elOp.stOutput_
 
-	# ptA = makeStrataPoint("ptA").tf()
-	#
-	# elOp.stElement_[0].stName_ = "pShoulder"
-	# elOp.stElement_[0].stPointWorldMatrixIn_ = ptA.worldMatrix_[0]
-	return
+	#return
+
+	ptA = makeStrataPoint("ptA").tf()
+
+	elOp.stElement_[0].stName_ = "pShoulder"
+	elOp.stElement_[0].stPointWorldMatrixIn_ = ptA.worldMatrix_[0]
 
 	ptB = makeStrataPoint("ptB").tf()
 	ptB.translateX_ = 3
@@ -137,12 +140,17 @@ def reloadPluginTest():
 	ptC = makeStrataPoint("ptC").tf()
 	ptC.translateX_ = 6
 
-	#elOp = cmds.createNode("strataElementOp")
 
 	elOp.stElement_[1].stName_ = "pElbow"
 	elOp.stElement_[1].stPointWorldMatrixIn_ = ptB.worldMatrix_[0]
 	elOp.stElement_[2].stName_ = "pWrist"
 	elOp.stElement_[2].stPointWorldMatrixIn_ = ptC.worldMatrix_[0]
+
+	return
+
+
+	#elOp = cmds.createNode("strataElementOp")
+
 
 
 
