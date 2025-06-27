@@ -115,14 +115,26 @@ MStatus StrataShapeNode::initialize() {
     MCHECK(s, "could not add Strata attrs to StrataShape");
 
     addAttributes<thisT>(toAdd);
-    setAttributesAffect<thisT>(drivers, driven);
+    setAttributesAffect<thisT>(drivers, driven) ;
+
+    attributeAffects(aStInput, aStOutput);
 
     CHECK_MSTATUS_AND_RETURN_IT(s);
     DEBUGS("end shape initialize");
         return s;
 }
 
-
+//MStatus StrataShapeNode::setDependentsDirty(const MPlug& plugBeingDirtied,
+//    MPlugArray& affectedPlugs
+//) {
+//    MStatus s(MS::kSuccess);
+//    LOG("SHAPE DIRTY: " + plugBeingDirtied.name());
+//    if (plugBeingDirtied.attribute() == aStInput) {
+//        affectedPlugs.append(MPlug(thisMObject(), aStOutput));
+//    }
+//
+//    return s;
+//}
 
 void StrataShapeNode::postConstructor() {
     LOG("shape postConstructor");
@@ -152,12 +164,13 @@ MStatus StrataShapeNode::connectionMade(
     bool 	asSrc
 ) {
     LOG("shape connectionMade");
-    return superT::connectionMade<thisT>(
+    MStatus s = superT::connectionMade<thisT>(
         thisMObject(),
         plug,
         otherPlug,
         asSrc
     );
+    return MPxSurfaceShape::connectionMade(plug, otherPlug, asSrc);
 
 }
 
@@ -167,12 +180,15 @@ MStatus StrataShapeNode::connectionBroken(
     bool 	asSrc
 ) {
     LOG("shape connection broken")
-        return superT::connectionBroken<thisT>(
+        MStatus s = superT::connectionBroken<thisT>(
             thisMObject(),
             plug,
             otherPlug,
             asSrc
         );
+    return MPxSurfaceShape::connectionBroken(
+        plug, otherPlug, asSrc
+    );
 }
 
 template <typename NodeT>
@@ -247,7 +263,8 @@ MStatus StrataShapeNode::addDeltaTarget(
 }
 
 
-MStatus StrataShapeNode::syncStrataParams(MObject& nodeObj, MDataBlock& data) {
+MStatus StrataShapeNode::syncStrataParams(MObject& nodeObj, MDataBlock& data,
+    StrataOp* opPtr, StrataOpGraph* graphPtr) {
     /* gather any parametres needed to do merge of incoming streams
     */
     MS s;
@@ -325,6 +342,8 @@ MStatus StrataShapeNode::compute(const MPlug& plug, MDataBlock& data) {
     If shape node is hidden, only evaluate ops in history of expOut attributes.
     If visible, need to eval the whole graph
     */
+    LOG("SHAPE COMPUTE: " + MFnDependencyNode(thisMObject()).name() + " plug:" + plug.name());
+    l("isClean? " + str(data.isClean(plug)));
     MS s(MS::kSuccess);
     // check if plug is already computed
     if (data.isClean(plug)) {
@@ -338,14 +357,12 @@ MStatus StrataShapeNode::compute(const MPlug& plug, MDataBlock& data) {
         return MS::kSuccess;
     }
     //return s;
-    LOG("shape compute");
+    l("shape compute");
 
     syncOpGraphPtr(data);
     // run strata op merge
     s = superT::compute<StrataShapeNode>(thisMObject(), plug, data);
-    if (data.isClean(plug)) {
-        return MS::kSuccess;
-    }
+
     if (s == MS::kEndOfFile) {
         return MS::kSuccess;
     }

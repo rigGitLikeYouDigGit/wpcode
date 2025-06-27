@@ -99,8 +99,8 @@ namespace ed {
 	template <typename T>
 	inline void setAttributesAffect(std::vector<MObject>& drivers, std::vector<MObject>& driven) {
 		// sets driver to affect all driven
-		for (auto i : drivers) {
-			for (auto j : driven) {
+		for (auto& i : drivers) {
+			for (auto& j : driven) {
 				T::attributeAffects(i, j);
 			}
 		}

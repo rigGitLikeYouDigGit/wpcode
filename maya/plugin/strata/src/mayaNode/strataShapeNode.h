@@ -112,7 +112,12 @@ public:
 
 	MStatus populateOutputs(MDataBlock& data);
 
-	virtual MStatus syncStrataParams(MObject& nodeObj, MDataBlock& data);
+	virtual MStatus syncStrataParams(MObject& nodeObj, MDataBlock& data,
+		ed::StrataOp* opPtr, ed::StrataOpGraph* graphPtr);
+
+	//virtual MStatus setDependentsDirty(const MPlug& plugBeingDirtied,
+	//	MPlugArray& affectedPlugs
+	//);
 
 	virtual MStatus compute(const MPlug& plug, MDataBlock& data);
 

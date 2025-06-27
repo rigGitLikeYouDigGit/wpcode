@@ -118,6 +118,12 @@ def reloadPluginTest():
 
 	# create single strata shape
 	elOp: WN.StrataElementOp = WN.createNode("strataElementOp", "newElOp")
+	elOp.stElement_[0].stName_ = "pShoulder"
+	ptA = makeStrataPoint("ptA").tf()
+
+
+	elOp.stElement_[0].stPointWorldMatrixIn_ = ptA.worldMatrix_[0]
+	#return
 	log(elOp.stElement_, elOp, type(elOp))
 	# connect up element to shape
 	shape : WN.StrataShape = WN.StrataShape.create("newShape")
@@ -129,10 +135,6 @@ def reloadPluginTest():
 
 	#return
 
-	ptA = makeStrataPoint("ptA").tf()
-
-	elOp.stElement_[0].stName_ = "pShoulder"
-	elOp.stElement_[0].stPointWorldMatrixIn_ = ptA.worldMatrix_[0]
 
 	ptB = makeStrataPoint("ptB").tf()
 	ptB.translateX_ = 3

@@ -139,7 +139,7 @@ namespace ed {
 			_outputIndex = index;
 			graphChanged = true;
 		}
-		inline int getOutputIndex() {
+		inline int getOutputIndex() const {
 			/* return the output if set,
 			or just the last node added if -1*/
 			if (_outputIndex < 0) {
@@ -159,7 +159,7 @@ namespace ed {
 			}
 		}
 		virtual void copyOther(const DirtyGraph& other) {
-			LOG("GRAPH COPY OTHER, other out index:" + str(other._outputIndex));
+			LOG("GRAPH COPY OTHER, other out index:" + str(other.getOutputIndex()));
 			copyOtherNodesVector(other);
 			nameIndexMap = other.nameIndexMap;
 			_outputIndex = other._outputIndex;
@@ -1119,6 +1119,7 @@ namespace ed {
 		};
 
 		virtual void copyOther(const EvalGraph& other, bool copyAllResults=true) {
+			LOG("EVAL GRAPH COPY OTHER, other nodes: " + str(other.nodes.size()))
 			DirtyGraph::copyOther(other);
 			//nodeDatas = other.nodeDatas;
 			/* if graph is empty, it doesn't matter*/

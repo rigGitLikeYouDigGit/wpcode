@@ -193,7 +193,7 @@ MStatus StrataElementOpNode::initialize() {
     //);
 
     std::vector<MObject> drivers{
-        aStElement,
+        //aStElement,
         aStName,
         aStDriverExp,
         aStSpaceExp,
@@ -210,7 +210,7 @@ MStatus StrataElementOpNode::initialize() {
         aStEdgeCurveIn
     };
     std::vector<MObject> driven{
-        aStElementOut,
+        //aStElementOut,
         aStNameOut,
         aStGlobalIndex,
         aStElTypeIndex,
@@ -226,7 +226,7 @@ MStatus StrataElementOpNode::initialize() {
         aStElementOut
     };
 
-    s = addStrataAttrs<thisT>(drivers, driven, toAdd);
+    s = addStrataAttrs<StrataElementOpNode>(drivers, driven, toAdd);
     MCHECK(s, "could not add Strata attrs");
 
     addAttributes<thisT>(toAdd);
@@ -237,6 +237,16 @@ MStatus StrataElementOpNode::initialize() {
     return s;
 }
 
+//MStatus StrataElementOpNode::setDependentsDirty(const MPlug& plugBeingDirtied,
+//    MPlugArray& affectedPlugs
+//) {
+//    LOG("EL DEPENDENTS DIRTY: " + plugBeingDirtied.name());
+//    MS s(MS::kSuccess);
+//    
+//    affectedPlugs.append(MPlug(thisMObject(), aStOutput));
+//
+//    return s;
+//}
 
 
 void StrataElementOpNode::postConstructor() {
@@ -275,7 +285,8 @@ MStatus StrataElementOpNode::connectionMade(
             otherPlug,
             asSrc
         );
-    return s;
+    return MPxNode::connectionMade(
+        plug, otherPlug, asSrc);
     //return MPxNode::connectionMade(
     //    plug,
     //    otherPlug,
@@ -352,11 +363,13 @@ MStatus StrataElementOpNode::edgeDataFromRawCurve(MStatus& ms, MObject& nodeObj,
     return ms;
 }
 
-MStatus StrataElementOpNode::syncStrataParams(MObject& nodeObj, MDataBlock& data) {
+MStatus StrataElementOpNode::syncStrataParams(MObject& nodeObj, MDataBlock& data,
+    StrataOp* thisOpPtr, StrataOpGraph* graphPtr) {
     /* build map of element names to expressions, from maya node
     */
     MS s;
-    thisStrataOpT* opPtr = getStrataOp<thisT>(nodeObj);
+    //thisStrataOpT* opPtr = getStrataOp<thisT>(nodeObj);
+    thisStrataOpT* opPtr = static_cast<thisStrataOpT*>(thisOpPtr);
     if (opPtr == nullptr) {
         MGlobal::displayError(NODENAME + "COULD NOT RETRIEVE OP to sync");
         //NODELOG("COULD NOT RETRIEVE OP to sync");
@@ -430,8 +443,9 @@ MStatus StrataElementOpNode::syncStrataParams(MObject& nodeObj, MDataBlock& data
 
 MStatus StrataElementOpNode::compute(const MPlug& plug, MDataBlock& data) {
 
-    LOG("element compute");
-        MS s(MS::kSuccess);
+    LOG("EL COMPUTE: " + MFnDependencyNode(thisMObject()).name() + " plug:" + plug.name());
+    l("isClean? " + str(data.isClean(plug)));
+    MS s(MS::kSuccess);
 
     // check if plug is already computed
     if (data.isClean(plug)) {
@@ -440,16 +454,17 @@ MStatus StrataElementOpNode::compute(const MPlug& plug, MDataBlock& data) {
 
     // pass to bases, compute strata op
     s = superT::compute<thisT>(thisMObject(), plug, data);
-    if (data.isClean(plug)) {
-        return MS::kSuccess;
-    }
+    //if (data.isClean(plug)) {
+    //    l("plug marked clean, returning");
+    //    return MS::kSuccess;
+    //}
     if (s == MS::kEndOfFile) {
         return MS::kSuccess;
     }
     MCHECK(s, NODENAME + " ERROR in strata bases compute, halting");
     //DEBUGSL("strata base computed, back to elOp scope");
 
-    
+    l("el op comput complete, setting outputs");
 
     //return s;
     // update index attrs from op elements

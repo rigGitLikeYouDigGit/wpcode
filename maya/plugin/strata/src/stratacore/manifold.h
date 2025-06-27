@@ -1361,7 +1361,7 @@ namespace ed {
 			/* return index array for point gnomons
 			* intended to emit as separate lines, so half is duplication
 			*/
-			LOG("Wireframe point index list array");
+			LOG("Wireframe point index list array: " + str(pDataMap.size()));
 			IndexList result(pDataMap.size() * 3 * 2);
 			//int i = 0;
 			std::string name;

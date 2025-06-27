@@ -77,7 +77,7 @@ public:
 		LOG("SYNC MANIFOLD");
 		Status s;
 		ed::StrataOpGraph* graphP = shapeNodePtr->opGraphPtr.get();
-		l("geo o got graphP");
+		l("geo o got graphP, nNodes: " + ed::str(graphP->nodes.size()));
 		if (graphP == nullptr) {
 			STAT_ERROR(s, "graphPtr is null, returning");
 		}
@@ -111,9 +111,11 @@ public:
 			s = graphP->evalGraph(s, outIndex);
 			STAT_ERROR(s, "error eval-ing manifold to draw with strataShape node");
 		}
+		ed::StrataManifold& otherManifold = graphP->results[graphP->getOutputIndex()];
+		l("got manifold after eval: " + ed::str(otherManifold.elements.size()) + " " + ed::str(otherManifold.pDataMap.size()));
 		manifold.clear();
 		l("geo o outindex after eval:" + std::to_string(graphP->_outputIndex));
-		manifold = graphP->results[graphP->_outputIndex];
+		manifold = graphP->results[graphP->getOutputIndex()];
 		return s;
 	}
 
@@ -127,10 +129,20 @@ public:
 
 		/* pull op output to ensure it gets eval'd*/
 		MFnDependencyNode depFn(shapeNodePtr->thisMObject());
-		volatile int outInt = depFn.findPlug(StrataShapeNode::aStOutput, false).asInt();
+
+		/* directly getting input plug DOES force eval - 
+		why doesn't this work with data handles?*/
+		/*l("before get input plug ints");
+		volatile int inInt = depFn.findPlug(StrataShapeNode::aStInput, true).elementByPhysicalIndex(0).asInt();
+		l("input val:" + ed::str(inInt));*/
+		l("before get output plug int");
+		//volatile int outInt = depFn.findPlug(StrataShapeNode::aStOutput, false).asInt();
+		volatile int outInt = depFn.findPlug(StrataShapeNode::aStOutput, true).asInt();
+
 
 		l("got outInt:" + ed::str(outInt));
 		Status s = syncManifold();
+		l("shape node manifold after sync: " + ed::str(manifold.elements.size()));
 		//CWMSG(s, "Error on syncManifold in updateDG() for strataShape");
 		return;
 	}
@@ -155,8 +167,8 @@ public:
 
 
 	virtual bool supportsEvaluationManagerParallelUpdate()	const {
-		//return true;
-		return false;
+		return true;
+		//return false;
 	}
 
 	bool requiresGeometryUpdate() const {
@@ -535,14 +547,18 @@ public:
 				MHWRender::MIndexBuffer* indexBuffer = data.createIndexBuffer(MHWRender::MGeometry::kUnsignedInt32);
 				if (indexBuffer == nullptr) {
 					l("invalid semantic used to create index buffer, aborting");
-					return;
+					continue;
 				}
 				ed::IndexList indices = manifold.getWireframePointIndexArray(s);
 				if (s) {
 					l("ERROR getting wireframe point index array, aborting");
-					return;
+					continue;
 				}
 				l("got point indices: " + ed::str(indices.size()));
+				if (!indices.size()) {
+					l("got zero-length point indices, skipping");
+					continue;
+				}
 				void* buffer = indexBuffer->acquire(static_cast<unsigned int>(indices.size()), true /*writeOnly*/);
 				if (!buffer) {
 					l("could not acquire index buffer for points");

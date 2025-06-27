@@ -231,9 +231,14 @@ public:
 
 	MStatus StrataElementOpNode::edgeDataFromRawCurve(MStatus& ms, MObject& nodeObj, MDataBlock& data, MDataHandle& elDH, ed::SEdgeData& eData);
 
-	virtual MStatus syncStrataParams(MObject& nodeObj, MDataBlock& data);
+	virtual MStatus syncStrataParams(MObject& nodeObj, MDataBlock& data, ed::StrataOp* opPtr, ed::StrataOpGraph* graphPtr);
 
 	virtual MStatus compute(const MPlug& plug, MDataBlock& data);
+
+	//virtual MStatus setDependentsDirty(const MPlug& plugBeingDirtied,
+	//	MPlugArray& affectedPlugs
+	//);
+
 
 	// override base class static strata objects, so each leaf class still has attributes
 	// initialised separately to the base
