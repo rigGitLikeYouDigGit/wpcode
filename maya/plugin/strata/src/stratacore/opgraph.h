@@ -7,6 +7,7 @@
 #include "../dirtyGraph.h"
 #include "manifold.h"
 
+
 namespace ed {
 	/// do we need to keep entire manifolds? can we eval the whole graph live at all times?
 	// how does that work with inheriting values and geometry? - if an element op doesn't OVERRIDE the value, that
@@ -42,6 +43,8 @@ namespace ed {
 		*/
 
 		
+		int newTemplateAttr = 0;
 
+		inline void copyOtherNodesVector(const StrataOpGraph& other);
 	};
 }

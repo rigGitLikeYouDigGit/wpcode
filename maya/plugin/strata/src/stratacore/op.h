@@ -161,6 +161,11 @@ namespace ed {
 		std::map<StrataName, SPointData> opPointDataMap;
 		std::map<StrataName, SEdgeData> opEdgeDataMap;
 
+		/* BACK-PROPAGATION */
+		SAtomBackDeltaGroup backDeltasToMatch;
+
+
+		virtual StrataOp* clone_impl() const { return new StrataOp(*this); };
 
 		void signalIOChanged();
 
@@ -183,8 +188,6 @@ namespace ed {
 			return (ptr->_outputIndex == index);
 		}
 
-		/* BACK-PROPAGATION */
-		SAtomBackDeltaGroup backDeltasToMatch;
 
 		/* 2 pass system - 
 		BACKWARDS fitting node parametres to given result, outputting required incoming geometry as
@@ -242,62 +245,13 @@ namespace ed {
 			return s;
 		}
 
-		Status& runBackPropagation(
-			Status& s, 
-			StrataOp* fromNode, 
-			StrataManifold& finalManifold, 
+		virtual Status& runBackPropagation(
+			Status& s,
+			StrataOp* fromNode,
+			StrataManifold& finalManifold,
 			SAtomBackDeltaGroup deltaGrp,
 			StrataAuxData& auxData
-		) {
-			/* overall top-level back prop function
-			assume deltas have already been gathered outside of this
-
-			from that work out what nodes created the affected elements.
-			check nodes breadth-first from output node backwards,
-			calling prop methods on those nodes if they created elements in delta group
-			*/
-			//std::set<StrataOp*> toVisit({ fromNode });
-			//std::set<StrataOp*> nextToVisit; // don't know how to do breadth-first in leet code
-
-			// get generations in history of nodes
-			std::vector<std::vector<int>> generations = getGraphPtr()->nodesInHistory(fromNode->index, true);
-
-			/* backwards pass, getting target deltas for elements/ nodes to match
-			*/
-			for(int i = 0; i < static_cast<int>(generations.size()); i++) {
-
-				std::vector<int>& toVisit = generations[i];
-				std::vector<SAtomBackDeltaGroup> resultDeltas(toVisit.size()); // results of this iteration of back-prop
-				for (int n = 0; n < static_cast<int>(toVisit.size()); n++) { // parallel this
-					StrataOp* op = getGraphPtr()->getNode<StrataOp>(toVisit[n]);
-					resultDeltas[n] = op->bestFitBackDeltas(&s, finalManifold, deltaGrp);
-					CRMSG(s, "error running back propagation on node " + op->name);
-				}
-
-				// collate delta fronts
-				for (int n = 1; n < static_cast<int>(resultDeltas.size()); n++) {
-					resultDeltas[0].mergeOther(resultDeltas[n]);
-				}
-				deltaGrp = resultDeltas[0]; // need to do a copy here because we create the intermediate vals in the loop scope
-			}
-
-			/* now forwards pass, eval'ing nodes and setting final offsets
-			*/
-			for (int i = 0; i < static_cast<int>(generations.size()); i++) {
-				
-				std::vector<int>& toVisit = *(generations.rbegin() + i);
-				for (int n = 0; n < static_cast<int>(toVisit.size()); n++) { // parallel this
-					StrataOp* op = getGraphPtr()->getNode<StrataOp>(toVisit[n]);
-					s = getGraphPtr()->evalGraph(s, toVisit[n], &auxData); // eval node with new best-fit params
-					//StrataManifold& m = op->value();
-					s = op->setBackOffsetsAfterDeltas(s, op->value());
-					op->setDirty(true);
-					getGraphPtr()->nodePropagateDirty(op->index);
-				}
-			}
-
-			return s;
-		}
+		);
 
 	};
 

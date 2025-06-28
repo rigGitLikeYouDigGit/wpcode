@@ -1158,14 +1158,19 @@ namespace ed {
 			/* project/snap given matrix to driver of point
 			(there should of course be a maximum of 1 driver for a point)
 			*/
+			LOG("point project to drivers: " + el->name);
 			SElement* driverEl = getEl(el->drivers[0]);
-			switch (driverEl->elType) {
-			case StrataElType::point: {
-				SPointData& driverData = pDataMap[driverEl->name];
-				mat.translation() = driverData.finalMatrix.translation();
-				break;
-
+			if (driverEl == nullptr) {
+				l("driver ptr not found, skipping");
+				return s;
 			}
+			switch (driverEl->elType) {
+				case StrataElType::point: {
+					SPointData& driverData = pDataMap[driverEl->name];
+					mat.translation() = driverData.finalMatrix.translation();
+					break;
+
+				}
 			}
 			return s;
 

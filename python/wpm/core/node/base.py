@@ -483,9 +483,10 @@ class WN( # short for WePresentNode
 
 	def object(self, checkValid=False)->om.MObject:
 		"""same interface as MFnBase"""
-		if checkValid:
-			assert not self.MObjectHandle.object().isNull()
-		return self.MObjectHandle.object()
+		# if checkValid:
+		# 	assert not self.MObjectHandle.object().isNull()
+		# return self.MObjectHandle.object()
+		return self._mobj
 
 	def exists(self)->bool:
 		"""check MObject is valid"""

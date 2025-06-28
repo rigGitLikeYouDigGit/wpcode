@@ -55,8 +55,8 @@ MStatus StrataElementOpNode::initialize() {
     aStDriverExp = tFn.create("stDriverExp", "stDriverExp", MFnData::kString); 
     tFn.setDefault(MFnStringData().create(""));
 
-    /* expression for parents of given elements*/
-    aStSpaceExp = tFn.create("stParentExp", "stParentExp", MFnData::kString);
+    /* expression for spaces of given elements*/
+    aStSpaceExp = tFn.create("stSpaceExp", "stSpaceExp", MFnData::kString);
     tFn.setDefault(MFnStringData().create(""));
 
     /* name of new element to create*/

@@ -988,16 +988,6 @@
           "parentName": ""
         },
         {
-          "name": "stParentExp",
-          "type": 574,
-          "typeName": "kTypedAttribute",
-          "isArray": false,
-          "isInput": true,
-          "isOutput": true,
-          "shortName": "stParentExp",
-          "parentName": "stElement"
-        },
-        {
           "name": "stPointDriverLocalMatrixIn",
           "type": 578,
           "typeName": "kMatrixAttribute",
@@ -1055,6 +1045,16 @@
           "isInput": true,
           "isOutput": true,
           "shortName": "stPointWorldMatrixIn",
+          "parentName": "stElement"
+        },
+        {
+          "name": "stSpaceExp",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stSpaceExp",
           "parentName": "stElement"
         },
         {
@@ -16080,9 +16080,9 @@
           "name": "stDataIn",
           "type": 576,
           "typeName": "kCompoundAttribute",
-          "isArray": false,
+          "isArray": true,
           "isInput": true,
-          "isOutput": true,
+          "isOutput": false,
           "shortName": "stDataIn",
           "parentName": ""
         },
@@ -16091,7 +16091,7 @@
           "type": 576,
           "typeName": "kCompoundAttribute",
           "isArray": true,
-          "isInput": true,
+          "isInput": false,
           "isOutput": true,
           "shortName": "stDataOut",
           "parentName": ""

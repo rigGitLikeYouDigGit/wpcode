@@ -243,7 +243,6 @@ public:
 			l("returning no shader manager");
 			return;
 		}
-		//return;
 		// Get the inherited DAG display properties.
 		auto wireframeColor = MHWRender::MGeometryUtilities::wireframeColor(path);
 		auto displayStatus = MHWRender::MGeometryUtilities::displayStatus(path);
@@ -277,7 +276,9 @@ public:
 			// Set selection priority: on top of everything
 			renderItem->depthPriority(depthPriority);
 			// Get an instance of a 3dSolidShader from the shader manager.
-			MShaderInstance* shader = shaderManager->getStockShader(MShaderManager::k3dSolidShader);
+			//MShaderInstance* shader = shaderManager->getStockShader(MShaderManager::k3dSolidShader);
+			//MShaderInstance* shader = shaderManager->getStockShader(MShaderManager::k3dCPVSolidShader);
+			MShaderInstance* shader = shaderManager->getStockShader(MShaderManager::k3dFloat3NumericShader);
 			if (shader != nullptr)
 			{
 				l("found shader");
@@ -382,13 +383,7 @@ public:
 					return;
 				}
 				l("position array:" + ed::str(positions.size()) + " : ");
-				//for (size_t ki = 0; ki < positions.size(); ki++) {
-				//	l(float(positions[ki].x));
-				//	//std::printf("%f", float(positions[ki].x));
-				//	l(positions[ki].y);
-				//	l(positions[ki].z);
-				//	l("  ");
-				//}
+
 				void* buffer = positionBuffer->acquire(static_cast<unsigned int>(positions.size()), true /*writeOnly */);
 				if (buffer)
 				{
@@ -401,13 +396,6 @@ public:
 				else {
 					l("could not acquire point position buffer");
 				}
-
-				//// check if this is for point positions
-				//if (desc.name() == sStPointRenderItemName) {
-				//}
-				//else {
-				//	l("unknown desc name: " + desc.name() + " requested position vertex buffer");
-				//}
 
 			}
 			break;
@@ -434,7 +422,6 @@ public:
 				//	}
 				//}
 			}
-			break;
 			case MGeometry::kTangent:
 			{
 				l("vertex buffer tangent");
@@ -455,7 +442,6 @@ public:
 				//	}
 				//}
 			}
-			break;
 			case MGeometry::kBitangent:
 			{
 				l("vertex buffer bitangent");
@@ -476,7 +462,6 @@ public:
 				//	}
 				//}
 			}
-			break;
 			case MGeometry::kTexture:
 			{
 				l("vertex buffer texture");
@@ -503,6 +488,35 @@ public:
 			}
 			case MGeometry::kColor: {
 				l("vertex buffer colour");
+				MVertexBufferDescriptor desc{};
+				if (!vertexBufferDescriptorList.getDescriptor(i, desc)) {
+					l("descriptor not found, continuing");
+					continue;
+				}
+				MHWRender::MVertexBuffer* colourBuffer = data.createVertexBuffer(desc);
+				if (!colourBuffer) {
+					l("could not create colourBuffer for vertex data");
+					return;
+				}
+				ed::Float3Array colours(manifold.pDataMap.size() * 4);
+				for (int n = 0; n < static_cast<int>(manifold.pDataMap.size()); n++) {
+					colours[n * 4] = ed::Float3(1.0f, 1.0f, 1.0f);
+					colours[n * 4 + 1] = ed::Float3(1.0f, 0.0f, 0.0f);
+					colours[n * 4 + 2] = ed::Float3(0.0f, 1.0f, 0.0f);
+					colours[n * 4 + 3] = ed::Float3(0.0f, 0.0f, 1.0f);
+				}
+				void* buffer = colourBuffer->acquire(static_cast<unsigned int>(colours.size()), true /*writeOnly */);
+				if (buffer)
+				{
+					const std::size_t bufferSizeInByte =
+						sizeof(ed::Float3Array::value_type) * colours.size();
+					memcpy(buffer, colours.data(), bufferSizeInByte);
+					// Transfer from CPU to GPU memory.
+					colourBuffer->commit(buffer);
+				}
+				else {
+					l("could not acquire point colour buffer");
+				}
 			}
 			case MGeometry::kTangentWithSign: {
 				l("vertex buffer tangentWithSign");

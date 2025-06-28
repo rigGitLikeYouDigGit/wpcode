@@ -302,6 +302,7 @@ we don't use delta matrices here yet, might be worth changing that
 
 Status& StrataElementOp::pointProcessTargets(Status& s, StrataManifold& finalManifold, SAtomBackDeltaGroup& deltaGrp, SElement* el) {
 	/* blend any target matrices given*/
+	LOG("EL OP point process targets: " + el->name);
 	int nTargets = static_cast<int>(deltaGrp.targetMap[el->name].size());
 	VectorXf weights(nTargets);
 	std::vector<Affine3f> mats(nTargets);
@@ -365,6 +366,7 @@ SAtomBackDeltaGroup StrataElementOp::bestFitBackDeltas(Status* s, StrataManifold
 	* if it does, process it, and add any drivers (even within this node) 
 	* to the front as well
 	*/
+	LOG("EL OP best fit back deltas, " + str(front.targetMap.size()));
 	Status& stat = *s;
 	for (int i = 0; i < static_cast<int>(elementsAdded.size()); i++) {
 		std::string& name = elementsAdded.rbegin()[i];
@@ -390,7 +392,7 @@ SAtomBackDeltaGroup StrataElementOp::bestFitBackDeltas(Status* s, StrataManifold
 Status& StrataElementOp::setBackOffsetsAfterDeltas(Status& s, StrataManifold& manifold) {
 	/* iterate over elements created in CORRECT order this time - compare offsets,
 	add offsets to matrices, then snap to drivers where needed*/
-
+	LOG("EL OP setBackOffsets");
 	for (int i = 0; i < static_cast<int>(elementsAdded.size()); i++) {
 		std::string& name = elementsAdded[i];
 		SElement* el = manifold.getEl(name);
@@ -398,23 +400,24 @@ Status& StrataElementOp::setBackOffsetsAfterDeltas(Status& s, StrataManifold& ma
 		ElOpParam& param = paramMap[name];
 
 		switch (el->elType) {
-		case StrataElType::point: {
-			SAtomMatchTarget& target = backDeltasToMatch.targetMap[name][0];
-			SPointData& pData = manifold.pDataMap[name];
+			case StrataElType::point: {
+				l("point offsets:" + el->name);
+				SAtomMatchTarget& target = backDeltasToMatch.targetMap[name][0];
+				SPointData& pData = manifold.pDataMap[name];
 			
-			// get final offset
-			Affine3f offset = pData.finalMatrix.inverse() * target.matrix;
-			param.pOffset = offset;
+				// get final offset
+				Affine3f offset = pData.finalMatrix.inverse() * target.matrix;
+				param.pOffset = offset;
 
-			// ideally we just match the target here
-			pData.finalMatrix = target.matrix;
+				// ideally we just match the target here
+				pData.finalMatrix = target.matrix;
 			
-			// project to drivers if any
-			if (el->drivers.size()) {
-				s = manifold.pointProjectToDrivers(s, pData.finalMatrix, el);
+				// project to drivers if any
+				if (el->drivers.size()) {
+					s = manifold.pointProjectToDrivers(s, pData.finalMatrix, el);
+				}
+
 			}
-
-		}
 		}
 
 	}

@@ -145,8 +145,19 @@ def reloadPluginTest():
 
 	elOp.stElement_[1].stName_ = "pElbow"
 	elOp.stElement_[1].stPointWorldMatrixIn_ = ptB.worldMatrix_[0]
+	# set parents
+	elOp.stElement_[1].stSpaceExp = "pShoulder"
+
 	elOp.stElement_[2].stName_ = "pWrist"
 	elOp.stElement_[2].stPointWorldMatrixIn_ = ptC.worldMatrix_[0]
+	elOp.stElement_[2].stSpaceExp_ = "pElbow"
+
+
+	# connect elbow driver to test space driving, and FK
+	driverLoc = WN.Locator.create("elbowDriver_LOC")
+	shape.stDataIn_[0].stExpIn_ = "pWrist"
+	shape.stDataIn_[0].stSpaceNameIn_ = "pElbow"
+	shape.stDataIn_[0].stMatrixIn_ = driverLoc.matrix_
 
 	return
 

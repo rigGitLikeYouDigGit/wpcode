@@ -17,6 +17,7 @@
 
 #include "iterator.h"
 
+#include "mixin.h"
 #include "logger.h"
 
 /* abstracting pure topo structure of dependency graph - 
@@ -46,7 +47,8 @@ namespace ed {
 	// override flag type in node type to control how many dirty flags?
 
 
-	struct DirtyNode {
+	//struct DirtyNode : public StaticClonable<DirtyNode> {
+	struct DirtyNode  {
 		int index = -1;
 		std::string name = "_";
 		DirtyGraph* graphPtr = nullptr;
@@ -61,7 +63,10 @@ namespace ed {
 
 		//virtual DirtyGraph* getGraphPtr() { return graphPtr; }
 
-		std::vector<int> inputs; // manage connections yourself
+		std::vector<int> inputs = {}; // manage connections yourself
+
+		int temp_inDegree = 0;
+		int temp_generation = 0;
 
 		// my python is showing - we use a map here for easier extensibility
 		std::map<const std::string, bool> dirtyMap = { {"main" , true} }; // this is probably pointless
@@ -87,14 +92,16 @@ namespace ed {
 
 		std::vector<std::string> inputNames();
 
-		int temp_inDegree = 0;
-		int temp_generation = 0;
 
 		DirtyNode() {}
 		DirtyNode(int index, std::string name) : index(index), name(name) {}
 		virtual ~DirtyNode(){}
 
 		auto clone() const { return std::unique_ptr<DirtyNode>(clone_impl()); }
+		template<typename T>
+		std::unique_ptr<T> clone() { 
+			return std::unique_ptr<T>(static_cast<T*>(clone_impl()));
+		}
 		virtual DirtyNode* clone_impl() const { return new DirtyNode(*this); };
 
 		virtual Status postConstructor() {
@@ -155,9 +162,11 @@ namespace ed {
 			nodes.clear();
 			nodes.reserve(other.nodes.size());
 			for (auto& ptr : other.nodes) {
-				nodes.push_back(std::unique_ptr<DirtyNode>(ptr.get()->clone()));
+				//nodes.push_back(std::unique_ptr<DirtyNode>(ptr.get()->clone()));
+				nodes.push_back(ptr.get()->clone<DirtyNode>());
 			}
 		}
+
 		virtual void copyOther(const DirtyGraph& other) {
 			LOG("GRAPH COPY OTHER, other out index:" + str(other.getOutputIndex()));
 			copyOtherNodesVector(other);
@@ -485,6 +494,7 @@ namespace ed {
 			return generations where latest nodes guaranteed to be included before deeper nodes
 			
 			*/
+			LOG("nodesInHistory generations");
 			std::unordered_map<int, int> visited; // {index : highest degree}
 			std::stack<int> toCheck;
 			toCheck.push(opIndex);
@@ -496,6 +506,9 @@ namespace ed {
 				int checkIndex = toCheck.top();
 				toCheck.pop();
 				for (int inIndex : getNode(checkIndex)->inputs) {
+					if (inIndex < 0) {
+						continue;
+					}
 					auto found = visited.find(inIndex);
 					if (found == visited.end()) {
 						visited[inIndex] = 0;
@@ -600,8 +613,8 @@ namespace ed {
 
 			pointer _origNode;
 
-			std::stack<DirtyNode*> nodeStack;
-			std::unordered_set<DirtyNode*> discoveredSet;
+			std::stack<DirtyNode*> nodeStack = {};
+			std::unordered_set<DirtyNode*> discoveredSet = {};
 
 			//std::stack<DirtyNode*> parentStack;
 
@@ -675,7 +688,12 @@ namespace ed {
 				// do single step to move iterator forwards
 				// this is almost all we do in increment function
 							// check if the iterator has just been created 
-
+								// if stack is empty, iterator has concluded
+				// set ptr to null and return
+				if (nodeStack.size() <= 0) {
+					nodePtr = nullptr;
+					return;
+				}
 				if (forwards) {// backwards is tracked explicitly by nodes, don't need full graph rebuild
 					// if forwards, we need to check graph for rebuilds
 					if (itGraph->graphChanged) {
@@ -685,6 +703,7 @@ namespace ed {
 					// don't change graph structure during iteration please
 				}
 
+
 				// check through stack to find the last undiscovered node?
 				while (discoveredSet.count(nodeStack.top()) && nodeStack.size()) {
 					nodeStack.pop();
@@ -692,7 +711,7 @@ namespace ed {
 
 				// if stack is empty, iterator has concluded
 				// set ptr to null and return
-				if (nodeStack.size() == 0) {
+				if (nodeStack.size() <= 0) {
 					nodePtr = nullptr;
 					return;
 				}
@@ -704,7 +723,7 @@ namespace ed {
 
 				//if (!discoveredSet.count(ptr)) {
 
-				// if the set has stuff in it OR if it's empty, and we includeSelf, yield
+				// if the set has stuff in it OR if it's empty, yield
 				discoveredSet.insert(ptr);
 				if (forwards) {
 					if (itGraph->nodeDirectDependentsMap.count(ptr->index)) {
@@ -775,7 +794,8 @@ namespace ed {
 			} // either direction begins at the original node
 			Iterator end() {
 				return Iterator(nullptr, itGraph,
-					forwards, depthFirst, includeSelf);
+					forwards, depthFirst, true
+				);
 			} // 200 is out of bounds
 		};
 
@@ -784,36 +804,7 @@ namespace ed {
 			return Iterator(sourceNode, this, forwards, depthFirst, includeSelf);
 		}
 
-		void nodePropagateDirty(int opIndex) {
-			/* manually set dirty flags on node before calling this function -
-			all flags set dirty will be propagated to nodes in future*/
-			// propagate dirty stuff forwards to all nodes
-			// we add bools to the base state - 
-			// can't use false arguments to set clean with this function
-			DirtyNode* seedNode = getNode(opIndex);
-
-			// if all flags match in dirty map, we consider this node has been visited, and skip tree
-			Iterator it = iterNodes(seedNode, true, true, false);
-			//for (auto nextNode : it) {
-			while (it != it.end()) {
-				DirtyNode* nextNode = *it;
-				bool allMatch = true;
-				for (auto pair : seedNode->dirtyMap) {
-					if (!(nextNode->dirtyMap.count(pair.first))) { // propagate if not found
-						allMatch = false;
-						nextNode->dirtyMap[pair.first] = pair.second;
-						continue;
-					}
-					if (nextNode->dirtyMap[pair.first] != pair.second) {
-						allMatch = false;
-						nextNode->dirtyMap[pair.first] = (nextNode->dirtyMap[pair.first] || pair.second); // if either is dirty, keep that value
-					}
-				}
-				if (allMatch) { // all dirty flags match on this node, skip this tree
-					it.skipTree();
-				}
-			}
-		}
+		void nodePropagateDirty(int opIndex);
 
 
 		void nodeInputsChanged(int opIndex) {
@@ -948,56 +939,7 @@ namespace ed {
 			return nodes.back().get();
 		}
 
-		virtual int mergeOther(const DirtyGraph& other, Status& s) {
-			/* copy nodes from other not found in this graph - 
-			works by NAME ONLY
-			indices of merged nodes WILL BE DIFFERENT
-			we also pull in any edge connections from them
-
-			LATER add in some way to check / add from only nodes in the critical path of the output
-			(but with this system, that's guaranteed to be all nodes in the graph?)
-
-			returns FIRST INDEX of added nodes, or -1 if none have been added
-			*/
-			LOG("dirtyGraph mergeOther");
-			int resultIndex = -1;
-			NodeDelta nDelta = getNodeDelta(other);
-			// copy nodes to add (required for correct edge delta
-			for (std::string nodeName : nDelta.nodesToAdd) {
-				l("adding other node:" + nodeName);
-				if (nodeName.empty()) {
-					l("other had an empty node name, exiting");
-					return -1;
-				}
-				//importNode(other, other.nameIndexMap.find(nodeName))
-				int otherIndex = other.nameIndexMap.at(nodeName);
-				DirtyNode* importedNode = importNode(other, otherIndex );
-				if (resultIndex == -1) {
-					resultIndex = importedNode->index;
-				}
-				/* check that imported node has a name*/
-				if (importedNode->name.empty()) {
-					l("imported node name is empty, exiting");
-					return -1;
-				}
-			}
-			EdgeDelta eDelta = getEdgeDelta(other, nDelta.nodesToAdd);
-
-			// node inputs need to be re-indexed based on names
-			for (auto& nodeInputsPair : eDelta.edgesToAdd) {
-				DirtyNode* thisNode = getNode(nodeInputsPair.first);
-				thisNode->inputs.clear();
-				thisNode->inputs.reserve(eDelta.edgesToAdd[thisNode->name].size());
-				for (auto inputNodeName : eDelta.edgesToAdd[thisNode->name]) {
-					thisNode->inputs.push_back(nameIndexMap[inputNodeName]);
-				}
-				nodeInputsChanged(thisNode->index);
-				
-			}
-			graphChanged = true;
-			return resultIndex;
-		}
-
+		virtual int mergeOther(const DirtyGraph& other, Status& s);
 
 
 	};
@@ -1338,6 +1280,11 @@ namespace ed {
 					l("generation after intersection");
 					DEBUGVI(generation);
 				}
+
+				if (!generation.size()) {
+					l("generation empty, skipping");
+					continue;
+				}
 				
 				
 				for (auto& nodeId : generation) {
@@ -1363,9 +1310,11 @@ namespace ed {
 				}
 				// stop all eval if end node reached
 				if (foundEndNode) {
+					l("found end node, ending eval");
 					break;
 				}
 			}
+			l("end graph eval");
 			return s;
 		}
 

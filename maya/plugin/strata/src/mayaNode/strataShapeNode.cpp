@@ -43,7 +43,10 @@ MStatus StrataShapeNode::initialize() {
 
 
     aStDataIn = cFn.create("stDataIn", "stDataIn");
+    cFn.setArray(true);
     cFn.setUsesArrayDataBuilder(true);
+    cFn.setReadable(false);
+    cFn.setAffectsAppearance(true);
     aStExpIn = tFn.create("stExpIn", "stExpIn", MFnData::kString);
     tFn.setDefault(MFnStringData().create(""));
     cFn.addChild(aStExpIn);
@@ -71,6 +74,7 @@ MStatus StrataShapeNode::initialize() {
     aStDataOut = cFn.create("stDataOut", "stDataOut");
     cFn.setArray(true);
     cFn.setUsesArrayDataBuilder(true);
+    cFn.setWritable(false);
     aStExpOut = tFn.create("stExpOut", "stExpOut", MFnData::kString);
     tFn.setDefault(MFnStringData().create(""));
     cFn.addChild(aStExpOut);
@@ -101,7 +105,7 @@ MStatus StrataShapeNode::initialize() {
     };
     std::vector<MObject> driven{
         aStMatrixOut,
-        aStCurveOut,
+        aStCurveOut
         
     };
 
@@ -236,6 +240,7 @@ MStatus StrataShapeNode::addDeltaTarget(
     * then for backpropagation, any deltas required of those elements
     * are transferred directly into the incoming aux streams
     */
+    LOG("add delta target: " + finalEl->name);
     MStatus s;
 
     //int spaceIndex = getSpaceIndex<StrataShapeNode>(nodeObj, data, elDH,
@@ -247,6 +252,7 @@ MStatus StrataShapeNode::addDeltaTarget(
     SAtomMatchTarget matchTarget;
     switch (finalEl->elType) {
         case StrataElType::point: {
+            
             // check data is found
             //Affine3f tf = toAff(MFnMatrixData(elDH.child(aStMatrixIn).data()).matrix());
             Affine3f tf = toAff(elDH.child(aStMatrixIn).asMatrix());
@@ -301,6 +307,7 @@ MStatus StrataShapeNode::runShapeBackPropagation(MObject& nodeObj, MDataBlock& d
         auto el = manifold.getEl(inExpStr.asChar());
         // if no element found of this name, just move on
         if (el == nullptr) {
+            l("no element found matching " + str(inExpStr.asChar()) + " , skipping backprop");
             continue;
         }
 
@@ -308,7 +315,7 @@ MStatus StrataShapeNode::runShapeBackPropagation(MObject& nodeObj, MDataBlock& d
         addDeltaTarget(thisMObject(), data, elDH,
             manifold, el, deltaGrp);
     }
-
+    l("added all delta targets");
     if (!deltaGrp.targetMap.size()) {
         l("no targets gathered in shape node, skipping");
         return mStat;
