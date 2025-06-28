@@ -928,17 +928,26 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 		//	ed::jumpToPhysicalIndex(inArrDH, i);
 		//	l("in input value at index: " + ed::str(i) + ": " + ed::str(inArrDH.inputValue().asInt()));
 		//}
+		l("input is clean? " + ed::str(data.isClean(NodeT::aStInput)));
 
-		if (!data.isClean(NodeT::aStInput)) {
-			s = syncIncomingGraphData<NodeT>(nodeObj, data);
-			l("syncIncoming graph complete");
-				MCHECK(s, "error syncing incoming graph data");
-
-			//// add new op to graph, set as graph output
-			//StrataOpT* opPtr = nullptr;
-			//s = createNewOp<NodeT>(nodeObj, data, opPtr);
-			//MCHECK(s, "failed to add new op to graph for node " )
+		MArrayDataHandle inArrDH = data.inputArrayValue(NodeT::aStInput);
+		for (unsigned int i = 0; i < inArrDH.elementCount(); i++) {
+			ed::jumpToPhysicalIndex(inArrDH, i);
+			MDataHandle inputDH = inArrDH.inputValue();
 		}
+		s = syncIncomingGraphData<NodeT>(nodeObj, data);
+
+
+		//if (!data.isClean(NodeT::aStInput)) {
+		//	s = syncIncomingGraphData<NodeT>(nodeObj, data);
+		//	l("syncIncoming graph complete");
+		//		MCHECK(s, "error syncing incoming graph data");
+
+		//	//// add new op to graph, set as graph output
+		//	//StrataOpT* opPtr = nullptr;
+		//	//s = createNewOp<NodeT>(nodeObj, data, opPtr);
+		//	//MCHECK(s, "failed to add new op to graph for node " )
+		//}
 
 		StrataOpT* opPtr = getStrataOp<NodeT>(nodeObj);
 		if (opPtr == nullptr) {

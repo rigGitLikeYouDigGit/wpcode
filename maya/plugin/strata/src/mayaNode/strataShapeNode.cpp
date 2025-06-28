@@ -335,6 +335,24 @@ MStatus StrataShapeNode::runShapeBackPropagation(MObject& nodeObj, MDataBlock& d
     return mStat;
 }
 
+MSelectionMask StrataShapeNode::getShapeSelectionMask() const
+{
+    MSelectionMask::SelectionType selType = MSelectionMask::kSelectMeshes;
+    MSelectionMask mask(selType);
+    //mask = mask |
+    //    MSelectionMask::kSelectMeshes | MSelectionMask::kSelectMeshLines | MSelectionMask::kSelectMeshFreeEdges |
+    //    MSelectionMask::kSelectMeshComponents |
+    //    MSelectionMask::kSelectEdges |
+    //    MSelectionMask::kSelectCurves | MSelectionMask::kSelectNurbsCurves |
+    //    MSelectionMask::kSelectHulls |
+    //    MSelectionMask::kSelectHandles | MSelectionMask::kSelectLocators | MSelectionMask::kSelectIkHandles |
+    //    MSelectionMask::kSelectLattices |
+    //    MSelectionMask::kSelectObjectsMask
+    //    ;
+    return mask;
+}
+
+
 MStatus StrataShapeNode::compute(const MPlug& plug, MDataBlock& data) {
     /* pull in any data overrides set as this node's params,
     then populate out attributes with data from op graph
@@ -384,6 +402,8 @@ MStatus StrataShapeNode::compute(const MPlug& plug, MDataBlock& data) {
 
 
     data.setClean(plug);
+    data.setClean(aStInput);
+    data.setClean(aStOutput);
 
     return s;
 }

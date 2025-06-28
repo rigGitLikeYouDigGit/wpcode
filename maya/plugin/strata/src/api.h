@@ -386,12 +386,13 @@ namespace ed {
 	template<typename D=float>
 	inline Eigen::Matrix4<D> toEigen(const MMatrix& mat) {
 		//return Eigen::Matrix4f(mat.matrix);
+		//MMatrix mat = mmat.transpose();
 		Eigen::Matrix4<D> m;
 		m <<
-			static_cast<D>(mat[0][0]), static_cast<D>(mat[0][1]), static_cast<D>(mat[0][2]), static_cast<D>(mat[0][3]),
-			static_cast<D>(mat[1][0]), static_cast<D>(mat[1][1]), static_cast<D>(mat[1][2]), static_cast<D>(mat[1][3]),
-			static_cast<D>(mat[2][0]), static_cast<D>(mat[2][1]), static_cast<D>(mat[2][2]), static_cast<D>(mat[2][3]),
-			static_cast<D>(mat[3][0]), static_cast<D>(mat[3][1]), static_cast<D>(mat[3][2]), static_cast<D>(mat[3][3]);
+			static_cast<D>(mat[0][0]), static_cast<D>(mat[1][0]), static_cast<D>(mat[2][0]), static_cast<D>(mat[3][0]),
+			static_cast<D>(mat[0][1]), static_cast<D>(mat[1][1]), static_cast<D>(mat[2][1]), static_cast<D>(mat[3][1]),
+			static_cast<D>(mat[0][2]), static_cast<D>(mat[1][2]), static_cast<D>(mat[2][2]), static_cast<D>(mat[3][2]),
+			static_cast<D>(mat[0][3]), static_cast<D>(mat[1][3]), static_cast<D>(mat[2][3]), static_cast<D>(mat[3][3]);
 		return m;
 	}
 

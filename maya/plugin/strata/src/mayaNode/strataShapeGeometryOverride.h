@@ -1,6 +1,6 @@
 #pragma once
 
-
+#include <stdio.h>
 #include "../MInclude.h"
 #include "strataMayaLib.h"
 #include "../strataop/mergeOp.h"
@@ -166,6 +166,7 @@ public:
 	}
 
 
+
 	virtual bool supportsEvaluationManagerParallelUpdate()	const {
 		return true;
 		//return false;
@@ -298,6 +299,7 @@ public:
 		}
 		if (renderItem != nullptr)
 		{
+			l("found render item, updating it");
 			MHWRender::MShaderInstance* shader = renderItem->getShader();
 			if (shader)
 			{
@@ -339,7 +341,7 @@ public:
 		names are set on RENDER ITEMS before this
 		*/
 
-		LOG("PopulateGeometry on render items:");
+		LOG("POPULATE_GEOMETRY on render items:");
 		for (int i = 0; i < renderItems.length(); i++) {
 			const MRenderItem* item = renderItems.itemAt(i);
 			l(ed::str(item->name().asChar()) + " ");
@@ -364,7 +366,9 @@ public:
 			switch (desc.semantic())
 			{
 			case MGeometry::kPosition:
-			{
+			{ // descriptor names aren't set by default - 
+				/* unsure if this function might be called with point and edge renderItems in the same list,
+				*/
 				l("vertex buffer position");
 				// Create and fill the vertex position buffer
 				MHWRender::MVertexBuffer* positionBuffer = data.createVertexBuffer(desc);
@@ -372,32 +376,38 @@ public:
 					l("could not create positionBuffer for vertex data");
 					return;
 				}
-
-				// check if this is for point positions
-				if (desc.name() == sStPointRenderItemName) {
-
-					ed::Float3Array positions = manifold.getWireframePointGnomonVertexPositionArray(s);
-					if (s) {
-						l("ERROR getting position vertex buffer for manifold points");
-						return;
-					}
-					void* buffer = positionBuffer->acquire(static_cast<unsigned int>(positions.size()), true /*writeOnly */);
-					if (buffer)
-					{
-						const std::size_t bufferSizeInByte =
-							sizeof(ed::Float3Array::value_type) * positions.size();
-						memcpy(buffer, positions.data(), bufferSizeInByte);
-						// Transfer from CPU to GPU memory.
-						positionBuffer->commit(buffer);
-					}
-					else {
-						l("could not acquire point position buffer");
-					}
-
+				ed::Float3Array positions = manifold.getWireframePointGnomonVertexPositionArray(s);
+				if (s) {
+					l("ERROR getting position vertex buffer for manifold points");
+					return;
+				}
+				l("position array:" + ed::str(positions.size()) + " : ");
+				//for (size_t ki = 0; ki < positions.size(); ki++) {
+				//	l(float(positions[ki].x));
+				//	//std::printf("%f", float(positions[ki].x));
+				//	l(positions[ki].y);
+				//	l(positions[ki].z);
+				//	l("  ");
+				//}
+				void* buffer = positionBuffer->acquire(static_cast<unsigned int>(positions.size()), true /*writeOnly */);
+				if (buffer)
+				{
+					const std::size_t bufferSizeInByte =
+						sizeof(ed::Float3Array::value_type) * positions.size();
+					memcpy(buffer, positions.data(), bufferSizeInByte);
+					// Transfer from CPU to GPU memory.
+					positionBuffer->commit(buffer);
 				}
 				else {
-					l("unknown desc name: " + desc.name() + " requested position vertex buffer");
+					l("could not acquire point position buffer");
 				}
+
+				//// check if this is for point positions
+				//if (desc.name() == sStPointRenderItemName) {
+				//}
+				//else {
+				//	l("unknown desc name: " + desc.name() + " requested position vertex buffer");
+				//}
 
 			}
 			break;
@@ -554,7 +564,8 @@ public:
 					l("ERROR getting wireframe point index array, aborting");
 					continue;
 				}
-				l("got point indices: " + ed::str(indices.size()));
+				l("got point indices: ");
+				DEBUGVI(indices);
 				if (!indices.size()) {
 					l("got zero-length point indices, skipping");
 					continue;

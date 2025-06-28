@@ -85,6 +85,8 @@ Status& pointEvalParam(
 				pData.spaceDatas.push_back(sd);
 			}
 		}
+		value.pDataMap[param.name].finalMatrix = param.pData.finalMatrix;
+
 	}
 
 

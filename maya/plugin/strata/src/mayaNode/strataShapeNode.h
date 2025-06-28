@@ -119,6 +119,9 @@ public:
 	//	MPlugArray& affectedPlugs
 	//);
 
+	virtual MSelectionMask getShapeSelectionMask() const;
+
+
 	virtual MStatus compute(const MPlug& plug, MDataBlock& data);
 
 	void postConstructor();

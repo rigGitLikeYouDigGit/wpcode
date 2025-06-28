@@ -48,6 +48,7 @@ MStatus StrataElementOpNode::initialize() {
     cFn.setArray(true);
     cFn.setUsesArrayDataBuilder(true);
     cFn.setReadable(false);
+    cFn.setAffectsAppearance(true);
 
     /*expression to generate given elements - leave blank for raw points
     */
@@ -79,6 +80,8 @@ MStatus StrataElementOpNode::initialize() {
     aStPointWorldMatrixIn = mFn.create("stPointWorldMatrixIn", "stPointWorldMatrixIn");
     mFn.setDefault(MMatrix());
     cFn.addChild(aStPointWorldMatrixIn);
+    cFn.setAffectsAppearance(true);
+    cFn.setAffectsWorldSpace(true);
 
     aStPointDriverLocalMatrixIn = mFn.create("stPointDriverLocalMatrixIn", "stPointDriverLocalMatrixIn");
     mFn.setDefault(MMatrix()); /* separate local matrix per driver*/
@@ -232,21 +235,25 @@ MStatus StrataElementOpNode::initialize() {
     addAttributes<thisT>(toAdd);
     setAttributesAffect<thisT>(drivers, driven);
 
+    attributeAffects(aStPointWorldMatrixIn, aStOutput);
+
     CHECK_MSTATUS_AND_RETURN_IT(s);
     //DEBUGS("end element initialize")
     return s;
 }
 
-//MStatus StrataElementOpNode::setDependentsDirty(const MPlug& plugBeingDirtied,
-//    MPlugArray& affectedPlugs
-//) {
-//    LOG("EL DEPENDENTS DIRTY: " + plugBeingDirtied.name());
-//    MS s(MS::kSuccess);
-//    
-//    affectedPlugs.append(MPlug(thisMObject(), aStOutput));
-//
-//    return s;
-//}
+MStatus StrataElementOpNode::setDependentsDirty(const MPlug& plugBeingDirtied,
+    MPlugArray& affectedPlugs
+) {
+    LOG("EL DEPENDENTS DIRTY: " + plugBeingDirtied.name());
+    MS s(MS::kSuccess);
+    
+    affectedPlugs.append(MPlug(thisMObject(), aStOutput));
+    //affectedPlugs.append(MPlug(thisMObject(), aStElement));
+    affectedPlugs.append(MPlug(thisMObject(), aStElementOut));
+
+    return s;
+}
 
 
 void StrataElementOpNode::postConstructor() {
@@ -287,11 +294,6 @@ MStatus StrataElementOpNode::connectionMade(
         );
     return MPxNode::connectionMade(
         plug, otherPlug, asSrc);
-    //return MPxNode::connectionMade(
-    //    plug,
-    //    otherPlug,
-    //    asSrc
-    //);
 }
 
 MStatus StrataElementOpNode::connectionBroken(
@@ -367,6 +369,7 @@ MStatus StrataElementOpNode::syncStrataParams(MObject& nodeObj, MDataBlock& data
     StrataOp* thisOpPtr, StrataOpGraph* graphPtr) {
     /* build map of element names to expressions, from maya node
     */
+    LOG("EL OP sync strata params");
     MS s;
     //thisStrataOpT* opPtr = getStrataOp<thisT>(nodeObj);
     thisStrataOpT* opPtr = static_cast<thisStrataOpT*>(thisOpPtr);
@@ -405,6 +408,8 @@ MStatus StrataElementOpNode::syncStrataParams(MObject& nodeObj, MDataBlock& data
             continue;
         }
 
+        l("paramName: " + elName);
+
         param.name = elName;
 
         opPtr->paramMap.insert_or_assign(std::string(param.name), param); // crashes
@@ -425,7 +430,12 @@ MStatus StrataElementOpNode::syncStrataParams(MObject& nodeObj, MDataBlock& data
         float matchWorldSpace = elDH.inputValue().child(aStMatchWorldSpaceIn).asFloat();
         // always match in worldspace for now
 
-        param.pData.finalMatrix = toEigen(elDH.inputValue().child(aStPointWorldMatrixIn).asMatrix());
+        MMatrix mayaMat = elDH.inputValue().child(aStPointWorldMatrixIn).asMatrix();
+        l("maya point mat: ");
+        COUT << mayaMat << std::endl;
+        l(" ");
+        COUT << toEigen(mayaMat) << std::endl;
+        param.pData.finalMatrix = toEigen(mayaMat);
 
         //opPtr->paramMap.insert({ param.name, param }); // crashes
         opPtr->paramMap.insert_or_assign( param.name, param ); // crashes
@@ -523,6 +533,9 @@ MStatus StrataElementOpNode::compute(const MPlug& plug, MDataBlock& data) {
     data.setClean(aStGlobalIndex);
     data.setClean(aStElTypeIndex);
     data.setClean(aStTypeOut);
+    data.setClean(aStOutput);
+    data.setClean(aStPointWorldMatrixIn);
+
     return MS::kSuccess;
 }
 

@@ -235,9 +235,9 @@ public:
 
 	virtual MStatus compute(const MPlug& plug, MDataBlock& data);
 
-	//virtual MStatus setDependentsDirty(const MPlug& plugBeingDirtied,
-	//	MPlugArray& affectedPlugs
-	//);
+	virtual MStatus setDependentsDirty(const MPlug& plugBeingDirtied,
+		MPlugArray& affectedPlugs
+	);
 
 
 	// override base class static strata objects, so each leaf class still has attributes

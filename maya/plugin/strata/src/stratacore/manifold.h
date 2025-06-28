@@ -1343,16 +1343,19 @@ namespace ed {
 			/* return flat float3 array for gnomon positions only on points
 			* each point has 4 coords - point itself, and then 0.1 units in x, y, z of that point
 			*/
-			LOG("Wireframe gnomon pos array");
+			//LOG("Wireframe gnomon pos array " + str(pDataMap.size()));
 			Float3Array result(pDataMap.size() * 4);
 			int i = 0;
 			std::string name;
 			for (auto& p : pointIndexGlobalIndexMap) {
 				name = getEl(p.second)->name;
-				result[i * 4] = pDataMap.at(name).finalMatrix.translation().data();
-				result[i * 4 + 1] = pDataMap.at(name).finalMatrix * Eigen::Vector3f{ 1, 0, 0 };
-				result[i * 4 + 2] = pDataMap.at(name).finalMatrix * Eigen::Vector3f{ 0, 1, 0 };
-				result[i * 4 + 3] = pDataMap.at(name).finalMatrix * Eigen::Vector3f{ 0, 0, 1 };
+				Affine3f mat = pDataMap.at(name).finalMatrix;
+				//COUT << mat.matrix() << std::endl;
+				result[i * 4] = mat.translation();
+				//result[i * 4 + 1] = pDataMap.at(name).finalMatrix * Eigen::Vector3f{ 1, 0, 0 };
+				result[i * 4 + 1] = mat * Vector3f{ 1, 0, 0 };
+				result[i * 4 + 2] = mat * Eigen::Vector3f{ 0, 1, 0 };
+				result[i * 4 + 3] = mat * Eigen::Vector3f{ 0, 0, 1 };
 				i += 1;
 			}
 			return result;
@@ -1361,17 +1364,17 @@ namespace ed {
 			/* return index array for point gnomons
 			* intended to emit as separate lines, so half is duplication
 			*/
-			LOG("Wireframe point index list array: " + str(pDataMap.size()));
+			//LOG("Wireframe point index list array: " + str(pDataMap.size()));
 			IndexList result(pDataMap.size() * 3 * 2);
 			//int i = 0;
 			std::string name;
 			for (int i = 0; i < static_cast<int>(pDataMap.size()); i++) {
-				result[i * 4] = i * 4;
-				result[i * 4 + 1] = i * 4 + 1;
-				result[i * 4 + 2] = i * 4;
-				result[i * 4 + 3] = i * 4 + 2;
-				result[i * 4 + 4] = i * 4;
-				result[i * 4 + 5] = i * 4 + 3;
+				result[i * 6] = i * 4;
+				result[i * 6 + 1] = i * 4 + 1;
+				result[i * 6 + 2] = i * 4;
+				result[i * 6 + 3] = i * 4 + 2;
+				result[i * 6 + 4] = i * 4;
+				result[i * 6 + 5] = i * 4 + 3;
 			}
 			return result;
 		}

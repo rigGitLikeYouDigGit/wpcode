@@ -140,9 +140,9 @@ namespace ed {
 			: x(static_cast<float>(v.data()[0])), y(static_cast<float>(v.data()[1])), z(static_cast<float>(v.data()[2])) {}
 		Float3(Eigen::Array<double, 3, 1, 0, 3, 1> v)
 			: x(static_cast<float>(v.data()[0])), y(static_cast<float>(v.data()[1])), z(static_cast<float>(v.data()[2])) {}
-		float x;
-		float y;
-		float z;
+		float x = 0.0f;
+		float y = 0.0f;
+		float z = 0.0f;
 		Float3& operator=(const float*& v) {
 			x = v[0];
 			y = v[1];
@@ -151,9 +151,9 @@ namespace ed {
 		}
 
 		Float3& operator=(const Eigen::Vector3<float>& v) {
-			x = *v.begin();
-			y = *(v.begin()+1);
-			z = *(v.begin()+2);
+			x = v[0];
+			y = v[1];
+			z = v[2];
 			return *this;
 		}
 	};
