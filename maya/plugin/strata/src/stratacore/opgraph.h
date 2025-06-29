@@ -45,6 +45,59 @@ namespace ed {
 		
 		int newTemplateAttr = 0;
 
-		inline void copyOtherNodesVector(const StrataOpGraph& other);
+		virtual void copyOtherNodesVector(const StrataOpGraph& other);
+
+		//virtual StrataOpGraph* clone_impl(bool copyAllResults) const;
+
+
+		template <typename T>
+		auto cloneShared(bool copyAllResults) const {
+			LOG("OpGraph cloneShared");
+			return std::shared_ptr<T>(
+				static_cast<T*>(T::clone_impl(copyAllResults)));
+		}
+
+		virtual StrataOpGraph* clone_impl(bool copyAllResults) const {
+			LOG("OpGraph clone impl");
+			auto newPtr = new StrataOpGraph(*this);
+			//newPtr->copyOther(*this, copyAllResults);
+			return newPtr;
+		}
+
+		virtual void copyOther(const StrataOpGraph& other, bool copyAllResults = true) {
+			LOG("OpGraph COPY OTHER, other nodes: " + str(other.nodes.size()))
+			this->copyOtherNodesVector(other);
+			nameIndexMap = other.nameIndexMap;
+			_outputIndex = other._outputIndex;			//nodeDatas = other.nodeDatas;
+			/* if graph is empty, it doesn't matter*/
+			if (!nodes.size()) {
+				return;
+			}
+			if (copyAllResults) {
+				results = other.results;
+			}
+			else { // only copy result of output node
+				results.clear();
+				results.resize(other.results.size());
+				results[getOutputIndex()] = other.results[getOutputIndex()];
+			}
+		}
+
+
+
+		StrataOpGraph() {
+		};
+		~StrataOpGraph() = default;
+		StrataOpGraph(StrataOpGraph const& other) {
+			copyOther(other);
+		}
+		StrataOpGraph(StrataOpGraph&& other) = default;
+		StrataOpGraph& operator=(StrataOpGraph const& other) {
+			copyOther(other);
+		}
+		StrataOpGraph& operator=(StrataOpGraph&& other) = default;
+
+
+
 	};
 }

@@ -109,13 +109,18 @@ public:
 		if (opPtr->anyDirty()) {
 			l("op ptr dirty, eval-ing op");
 			s = graphP->evalGraph(s, outIndex);
-			STAT_ERROR(s, "error eval-ing manifold to draw with strataShape node");
+			CWRSTAT(s, "error eval-ing manifold to draw with strataShape node");
+			l("dirty eval done");
 		}
+
+		l("before get other manifold");
+		l("geo o outindex after eval:" + std::to_string(graphP->_outputIndex));
 		ed::StrataManifold& otherManifold = graphP->results[graphP->getOutputIndex()];
 		l("got manifold after eval: " + ed::str(otherManifold.elements.size()) + " " + ed::str(otherManifold.pDataMap.size()));
-		manifold.clear();
+		manifold = otherManifold;
+		/*manifold.clear();
 		l("geo o outindex after eval:" + std::to_string(graphP->_outputIndex));
-		manifold = graphP->results[graphP->getOutputIndex()];
+		manifold = graphP->results[graphP->getOutputIndex()];*/
 		return s;
 	}
 
@@ -142,6 +147,11 @@ public:
 
 		l("got outInt:" + ed::str(outInt));
 		Status s = syncManifold();
+		l("synced manifold");
+		if (s) {
+			CWMSG(s, "error syncing manifold");
+			return;
+		}
 		l("shape node manifold after sync: " + ed::str(manifold.elements.size()));
 		//CWMSG(s, "Error on syncManifold in updateDG() for strataShape");
 		return;
@@ -277,8 +287,8 @@ public:
 			renderItem->depthPriority(depthPriority);
 			// Get an instance of a 3dSolidShader from the shader manager.
 			//MShaderInstance* shader = shaderManager->getStockShader(MShaderManager::k3dSolidShader);
-			//MShaderInstance* shader = shaderManager->getStockShader(MShaderManager::k3dCPVSolidShader);
-			MShaderInstance* shader = shaderManager->getStockShader(MShaderManager::k3dFloat3NumericShader);
+			MShaderInstance* shader = shaderManager->getStockShader(MShaderManager::k3dCPVSolidShader);
+			//MShaderInstance* shader = shaderManager->getStockShader(MShaderManager::k3dFloat3NumericShader);
 			if (shader != nullptr)
 			{
 				l("found shader");
@@ -378,6 +388,10 @@ public:
 					return;
 				}
 				ed::Float3Array positions = manifold.getWireframePointGnomonVertexPositionArray(s);
+				if (!positions.size()) {
+					l("returning empty manifold");
+					return;
+				}
 				if (s) {
 					l("ERROR getting position vertex buffer for manifold points");
 					return;

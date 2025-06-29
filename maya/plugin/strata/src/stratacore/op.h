@@ -12,6 +12,7 @@
 
 #include "opgraph.h"
 
+
 namespace ed {
 
 
@@ -165,7 +166,19 @@ namespace ed {
 		SAtomBackDeltaGroup backDeltasToMatch;
 
 
-		virtual StrataOp* clone_impl() const { return new StrataOp(*this); };
+		//virtual StrataOp* clone_impl() const { return new StrataOp(*this); };
+		template <typename T>
+		T* clone_impl() const { return new T(*reinterpret_cast<const T*>(this)); }
+		virtual StrataOp* clone_impl() const {
+			LOG("OP BASE clone_impl() - WRONG");
+			return clone_impl<StrataOp>(); };
+
+		virtual std::unique_ptr<DirtyNode> clone() const { 
+			LOG("OP BASE clone()");
+			return std::unique_ptr<StrataOp>(this->clone_impl()); }
+
+		virtual Status eval(StrataManifold& value,
+			EvalAuxData* auxData, Status& s);
 
 		void signalIOChanged();
 
@@ -199,51 +212,14 @@ namespace ed {
 
 		/* initial gather will only run from head output node (which will probably be a
 		merge node, from a shape node in maya*/
-		virtual Status& gatherBackDeltas(Status& s, StrataManifold& finalManifold, SAtomBackDeltaGroup& result) {
-			/* get initial deltas from end node
-			*/
-			return s;
-		}
+		virtual Status& gatherBackDeltas(Status& s, StrataManifold& finalManifold, SAtomBackDeltaGroup& result);
 
 			/* assume this will run parallel between nodes - each object should only know immediate components to affect,
 			and result will only be components taken in by this node*/
-		virtual SAtomBackDeltaGroup bestFitBackDeltas(Status* s, StrataManifold& finalManifold, SAtomBackDeltaGroup& front) {
-			/* pass in deltas to match -
-			
-			we work out what INPUTS (if any) would best match the given targets- 
-			return new AtomDeltaGroup representing that.
-
-			SAVE initial target deltas on this op to match later
-
-			those deltas may not be able to be matched exactly - 
-			subsequent method builds final offsets on this node, from previous node's best effort
-			*/
-
-			// save deltas on this node
-			backDeltasToMatch = front;
-			SAtomBackDeltaGroup result(front); // copy so we pass through any other elements
-			// erase any elements created by this node from result
-			for (int i : elements) { 
-				auto name = finalManifold.getEl(i)->name;
-				auto found = result.targetMap.find(name);
-				if (found != result.targetMap.end()) {
-					result.targetMap.erase(found->first);
-				}
-			}
-			return result;
-			}
+		virtual SAtomBackDeltaGroup bestFitBackDeltas(Status* s, StrataManifold& finalManifold, SAtomBackDeltaGroup& front);
 
 		virtual Status& setBackOffsetsAfterDeltas(
-			Status& s, StrataManifold& manifold) {
-			/* finalise offsets on top of fitted inputs to match 
-			saved deltas
-			this node will have been evaluated - make sure to 
-			edit the strata manifold element datas too?
-			or we just point back into these nodes to retrieve data
-
-			*/
-			return s;
-		}
+			Status& s, StrataManifold& manifold);
 
 		virtual Status& runBackPropagation(
 			Status& s,

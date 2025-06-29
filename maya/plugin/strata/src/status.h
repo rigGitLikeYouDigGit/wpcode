@@ -25,7 +25,7 @@ struct Status {
 
 	*/
 	int val = 0; // zero is safe
-	std::string msg;
+	std::string msg = "";
 
 	void addMsg(const std::string& newMsg) {
 		/* add a report to this status, including line and file number*/

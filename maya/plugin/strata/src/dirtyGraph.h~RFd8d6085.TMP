@@ -97,18 +97,12 @@ namespace ed {
 		DirtyNode(int index, std::string name) : index(index), name(name) {}
 		virtual ~DirtyNode(){}
 
-		virtual std::unique_ptr<DirtyNode> clone() const { return std::unique_ptr<DirtyNode>(this->clone_impl()); }
+		auto clone() const { return std::unique_ptr<DirtyNode>(clone_impl()); }
 		template<typename T>
 		std::unique_ptr<T> clone() { 
-			//return std::unique_ptr<T>(dynamic_cast<T*>(this->clone_impl()));
-			return std::unique_ptr<T>(this->clone_impl<T>());
+			return std::unique_ptr<T>(static_cast<T*>(clone_impl()));
 		}
 		virtual DirtyNode* clone_impl() const { return new DirtyNode(*this); };
-
-		template <typename T>
-		T* clone_impl() const { return new T(*reinterpret_cast<const T*>(this)); }
-
-
 
 		virtual Status postConstructor() {
 			/* called after node added to graph, all connections set up*/
@@ -165,21 +159,17 @@ namespace ed {
 		//rule of five (apparently?)
 		inline void copyOtherNodesVector(const DirtyGraph& other) {
 			// function to deep-copy all nodes in the given vector from the argument graph
-			LOG("COPY OTHER NODES dirtyGraph");
 			nodes.clear();
 			nodes.reserve(other.nodes.size());
 			for (auto& ptr : other.nodes) {
 				//nodes.push_back(std::unique_ptr<DirtyNode>(ptr.get()->clone()));
 				nodes.push_back(ptr.get()->clone<DirtyNode>());
 			}
-			for (auto& ptr : nodes) {
-				ptr->graphPtr = this;
-			}
 		}
 
 		virtual void copyOther(const DirtyGraph& other) {
 			LOG("GRAPH COPY OTHER, other out index:" + str(other.getOutputIndex()));
-			this->copyOtherNodesVector(other);
+			copyOtherNodesVector(other);
 			nameIndexMap = other.nameIndexMap;
 			_outputIndex = other._outputIndex;
 		}
@@ -948,7 +938,7 @@ namespace ed {
 			nodes.push_back(other.nodes[thatIndex]->clone());
 			nodes.back().get()->index = static_cast<int>(nodes.size()) - 1;
 			nodes.back()->graphPtr = this;
-			l("dirtyGraph imported node is in this graph: " + str(nodes.back()->graphPtr == this));
+			l("evalGraph imported node is in this graph: " + str(nodes.back()->graphPtr == this));
 			nameIndexMap.insert({std::string( nodes.back().get()->name), static_cast<int>(nodes.size()) - 1 });
 			return nodes.back().get();
 		}
@@ -1006,7 +996,6 @@ namespace ed {
 			EvalAuxData* auxData, Status& s) { return s; }*/
 		virtual Status eval(VT& value,
 			EvalAuxData* auxData, Status& s) {
-			LOG("EVALNODE EVAL on node " + name + " - THIS IS WRONG");
 			return s;
 		}
 
@@ -1067,15 +1056,11 @@ namespace ed {
 		//std::vector<NodeData> nodeDatas = {};
 
 		template <typename T>
-		auto cloneShared(bool copyAllResults) const {
-			LOG("EvalGraph cloneShared");
-			return std::shared_ptr<T>(
-				static_cast<T*>(T::clone_impl(copyAllResults))); }
+		auto cloneShared(bool copyAllResults) const { return std::shared_ptr<T>(static_cast<T*>(clone_impl(copyAllResults))); }
 		//auto cloneShared(bool copyAllResults) const { return std::shared_ptr<T>(dynamic_cast<T*>(clone_impl(copyAllResults))); }
 		virtual EvalGraph<VT>* clone_impl(bool copyAllResults) const {
-			LOG("EvalGraph clone impl");
 			auto newPtr = new EvalGraph<VT>(*this);
-			//newPtr->copyOther(*this, copyAllResults);
+			newPtr->copyOther(*this, copyAllResults);
 			return newPtr;
 		};
 
@@ -1326,9 +1311,9 @@ namespace ed {
 			return s;
 		}
 
-		virtual DirtyNode* importNode(const EvalGraph& other, int& thatIndex) {
+		virtual EvalNode<VT>* importNode(const EvalGraph& other, int& thatIndex) {
 			/* merge in a new node, and add entry in results for it?*/
-			LOG("EvalGraph import node");
+			LOG("EvalGraph import node")
 			nodes.push_back(other.nodes[thatIndex]->clone());
 			nodes.back().get()->index = static_cast<int>(nodes.size()) - 1;
 			nodes.back()->graphPtr = this;

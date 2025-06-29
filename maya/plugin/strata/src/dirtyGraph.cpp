@@ -61,6 +61,10 @@ void DirtyGraph::nodePropagateDirty(int opIndex) {
 			break;
 		}
 		DirtyNode* nextNode = *it;
+		if (nextNode->index == seedNode->index) { // skip the same node
+			it++;
+			continue;
+		}
 		
 		l("check node: " + nextNode->name);
 		bool allMatch = true;
@@ -108,6 +112,7 @@ int DirtyGraph::mergeOther(const DirtyGraph& other, Status& s) {
 		//importNode(other, other.nameIndexMap.find(nodeName))
 		int otherIndex = other.nameIndexMap.at(nodeName);
 		DirtyNode* importedNode = importNode(other, otherIndex);
+		l("dirtyGraph imported node is in this graph: " + str(importedNode->graphPtr == this));
 		if (resultIndex == -1) {
 			resultIndex = importedNode->index;
 		}

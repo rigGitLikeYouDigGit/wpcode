@@ -622,7 +622,7 @@ namespace ed {
 			}
 			case StrataElType::edge: {
 				eDataMap[el->name] = *static_cast<SEdgeData*>(data);
-				return &eDataMap.at(el->name);
+				return &eDataMap[el->name];
 			}
 			case StrataElType::face: {
 				fDataMap[el->name] = *static_cast<SFaceData*>(data);
@@ -637,27 +637,14 @@ namespace ed {
 			SElement*& outPtr,
 			bool allowOverride=false
 		) {
-			LOG("addElement from other");
 			Status s;
 			if (nameGlobalIndexMap.find(el.name) != nameGlobalIndexMap.end()) {
 				if (!allowOverride) {
-					l("laready exists, erroring");
-					outPtr = nullptr;
-
 					STAT_ERROR(s, "Name " + el.name + " already found in manifold, halting");
 					//return nullptr;
-				}
-				else {
-					outPtr = getEl(el.name);
-					if (outPtr->elType != el.elType) {
-						l("tried to add other element not matching original type - very illegal");
-						outPtr = nullptr;
 
-						STAT_ERROR(s, "El name " + el.name + "tried to override original element of different type");
-
-					}
-					return s;
 				}
+				
 			}
 			int globalIndex = static_cast<int>(elements.size());
 			elements.push_back(el);
@@ -872,7 +859,6 @@ namespace ed {
 					setElData(newEl, other.elData(otherEl));
 				}
 			}
-			l("after merge, this graph: " + printInfo());
 			return s;
 		}
 

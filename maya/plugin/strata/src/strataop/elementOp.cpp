@@ -424,6 +424,14 @@ Status& StrataElementOp::setBackOffsetsAfterDeltas(Status& s, StrataManifold& ma
 	return s;
 }
 
+
+
+StrataElementOp* StrataElementOp::clone_impl() const {
+	LOG("EL OP CLONE");
+	return StrataOp::clone_impl<StrataElementOp>();
+};
+
+
 //Status& StrataElementOp::pointSetBackOffsetsAfterDeltas(Status& s) {
 //	return s;
 //}

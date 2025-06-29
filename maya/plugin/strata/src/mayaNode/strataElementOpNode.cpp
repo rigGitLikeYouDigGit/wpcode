@@ -242,18 +242,18 @@ MStatus StrataElementOpNode::initialize() {
     return s;
 }
 
-MStatus StrataElementOpNode::setDependentsDirty(const MPlug& plugBeingDirtied,
-    MPlugArray& affectedPlugs
-) {
-    LOG("EL DEPENDENTS DIRTY: " + plugBeingDirtied.name());
-    MS s(MS::kSuccess);
-    
-    affectedPlugs.append(MPlug(thisMObject(), aStOutput));
-    //affectedPlugs.append(MPlug(thisMObject(), aStElement));
-    affectedPlugs.append(MPlug(thisMObject(), aStElementOut));
-
-    return s;
-}
+//MStatus StrataElementOpNode::setDependentsDirty(const MPlug& plugBeingDirtied,
+//    MPlugArray& affectedPlugs
+//) {
+//    LOG("EL DEPENDENTS DIRTY: " + plugBeingDirtied.name());
+//    MS s(MS::kSuccess);
+//    
+//    affectedPlugs.append(MPlug(thisMObject(), aStOutput));
+//    //affectedPlugs.append(MPlug(thisMObject(), aStElement));
+//    affectedPlugs.append(MPlug(thisMObject(), aStElementOut));
+//
+//    return s;
+//}
 
 
 void StrataElementOpNode::postConstructor() {

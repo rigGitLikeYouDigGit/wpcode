@@ -27,6 +27,9 @@ namespace ed {
 		///template <typename AuxT>
 		virtual Status eval(StrataManifold& value, EvalAuxData* auxData, Status& s);
 
+
+		virtual StrataMergeOp* clone_impl() const;
+
 	};
 
 

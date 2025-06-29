@@ -68,6 +68,8 @@ namespace ed {
 		
 		virtual Status& setBackOffsetsAfterDeltas(Status& s, StrataManifold& manifold);
 
+		virtual StrataElementOp* clone_impl() const;
+
 	};
 
 

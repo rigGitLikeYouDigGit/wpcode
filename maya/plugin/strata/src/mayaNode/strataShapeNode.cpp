@@ -462,29 +462,3 @@ MStatus StrataShapeNode::populateOutputs(MDataBlock& data) {
     return s;
 }
 
-//MStatus StrataShapeNode::legalConnection(
-//    const MPlug& plug,
-//    const MPlug& otherPlug,
-//    bool 	asSrc,
-//    bool& isLegal
-//) {
-//    /* check if the incoming plug is the strataGraph connection -
-//    * if so, check that the incoming node is a StrataGraphNode
-//
-//    asSrc	is this plug a source of the connection
-//    the docs and argument names around plug connection direction are riddles
-//    */
-//    MStatus s = StrataOpNodeBase::legalConnection(plug, otherPlug, asSrc, isLegal);
-//    if (s == MS::kSuccess) {
-//        return s; // already treated 
-//    }
-//    
-//
-//    return MS::kUnknownParameter;
-//}
-
-//MTypeId StrataShapeGeometryOverride::id = MTypeId(0x8003D);
-
-
-
-

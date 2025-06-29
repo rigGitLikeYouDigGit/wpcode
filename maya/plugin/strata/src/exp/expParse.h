@@ -216,6 +216,11 @@ namespace ed {
 				return s;
 			}
 
+			std::string printInfo() {
+				std::string result = "<expValue- varName:" + varName + " >";
+				return result;
+			}
+
 		};
 
 		struct ExpStatus {
