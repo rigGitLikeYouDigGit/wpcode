@@ -32,10 +32,14 @@ then invert those sequences for back-propagation
 
 namespace ed {
 
+	const int EL_OP_GLOBAL = 0;
+	const int EL_OP_LOCAL = 1;
+
 	struct ElOpParam {
 		StrataName name;
 		expns::Expression driverExp;
 		expns::Expression spaceExp;
+		int spaceMode = EL_OP_GLOBAL;
 		SPointData pData;
 		Affine3f pOffset; // I DON'T KNOW WHERE THIS GOES
 		SEdgeData eData;

@@ -94,6 +94,7 @@ namespace ed {
 		Vector3f uvn;
 		/*std::vector<Affine3f> matrices;
 		std::vector<Vector3f> uvns;*/
+		int spaceIndex = -1; // if not -1, this target applies locally only to the relative data in this space
 	};
 
 

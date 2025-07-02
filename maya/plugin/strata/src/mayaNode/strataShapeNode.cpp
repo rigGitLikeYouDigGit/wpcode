@@ -51,15 +51,21 @@ MStatus StrataShapeNode::initialize() {
     tFn.setDefault(MFnStringData().create(""));
     cFn.addChild(aStExpIn);
     aStSpaceModeIn = eFn.create("stSpaceModeIn", "stSpaceModeIn", 0);
-    eFn.addField("local", 0); // snap element to data specified
-    eFn.addField("world", 1); // apply param in local space on top of final element
+    eFn.addField("local", 0); // apply param in local space on top of final element, to all spaces
+    eFn.addField("world", 1); // snap to exact position in world
+    eFn.addField("localOnSpace", 2); // apply param in local space on top of final element, to single space?
     cFn.addChild(aStSpaceModeIn);
+
+    // explicitly give parent space name to modify
     aStSpaceNameIn = tFn.create("stSpaceNameIn", "stSpaceNameIn", MFnData::kString);
     tFn.setDefault(MFnStringData().create(""));
     cFn.addChild(aStSpaceNameIn);
-    aStSpaceIndexIn = nFn.create("stSpaceIndexIn", "stSpaceIndexIn", MFnNumericData::kInt, 0);
-    nFn.setMin(0);
+    // or, explicit space index to modify
+    aStSpaceIndexIn = nFn.create("stSpaceIndexIn", "stSpaceIndexIn", MFnNumericData::kInt, -1);
+    nFn.setMin(-1);
     cFn.addChild(aStSpaceIndexIn);
+    // if none given, modify element in all spaces  
+
     aStMatrixIn = mFn.create("stMatrixIn", "stMatrixIn");
     mFn.setDefault(MMatrix::identity);
     cFn.addChild(aStMatrixIn);
@@ -229,6 +235,37 @@ int getSpaceIndex(
     return spaceIndex;
 }
 
+int getSpaceIndex(
+    StrataManifold& manifold, SElement* finalEl, 
+    std::string spaceName, int spaceIndex
+) { /* return -2 to say space is missing
+    -1 to say use first or no space
+
+    TODO: move to a manifold function
+    */
+    bool foundSpace = false;
+    // get which space to affect
+    if (!spaceName.empty()) {
+        for (auto i : finalEl->spaces) {
+            spaceIndex += 1; // will start at 0
+            SElement* spaceEl = manifold.getEl(i);
+            if (spaceEl == nullptr) {
+                /* gave name but not found in driving spaces*/
+                return -1;
+            }
+
+            if (std::strcmp(spaceEl->name.c_str(), spaceName.c_str())) { // found matching name
+                return spaceIndex;
+            }
+        }
+        return -1;
+    }
+    if (spaceIndex > (finalEl->spaces.size() - 1)) {
+        return -1; // index greater than number of spaces
+    }
+    return spaceIndex;
+}
+
 MStatus StrataShapeNode::addDeltaTarget(
     MObject& nodeObj, MDataBlock& data, MDataHandle& elDH,
     ed::StrataManifold& manifold, ed::SElement* finalEl, ed::SAtomBackDeltaGroup& deltaGrp
@@ -249,7 +286,22 @@ MStatus StrataShapeNode::addDeltaTarget(
     //    DEBUGSL("specified space that doesn't exist for " + finalEl->name)
     //    return s;
     //}
+
+
+    /* MATRIX MODE - 
+    local is in space of original final matrix,
+    then decomposed into parent spaces as needed
+    */
     SAtomMatchTarget matchTarget;
+    std::string spaceName = elDH.child(aStSpaceNameIn).asString().asChar();
+    int spaceIndex = elDH.child(aStSpaceIndexIn).asInt();
+    spaceIndex = getSpaceIndex(manifold, finalEl, spaceName, spaceIndex);
+    matchTarget.spaceIndex = spaceIndex;
+
+    Status eStat;
+
+    if (spaceIndex > -1) { // if space is given, act only on offset of that space
+    }
     switch (finalEl->elType) {
         case StrataElType::point: {
             
@@ -258,10 +310,29 @@ MStatus StrataShapeNode::addDeltaTarget(
             Affine3f tf = toAff(elDH.child(aStMatrixIn).asMatrix());
             //matchTarget. = finalEl->globalIndex;
             matchTarget.matrix = tf;
-            
+
             int spaceMode = elDH.child(aStSpaceModeIn).asInt();
             matchTarget.matrixMode = spaceMode;
 
+            /* if we match the global matrix, easy */
+            if (matchTarget.matrixMode == MATRIX_MODE_GLOBAL) {
+                break;
+            }
+            
+            /* if we match a local matrix, without a space */
+            SPointData& pData = manifold.pDataMap[finalEl->name];
+            if (spaceIndex < 0) {
+                matchTarget.matrix = pData.finalMatrix * tf;
+                break;
+            }
+            
+            /* if we match a specific matrix of a parent space */
+            Affine3f uvnMat;
+            Vector3f uvn = pData.spaceDatas[spaceIndex].uvn;
+            eStat = manifold.matrixAt(eStat, uvnMat, finalEl, uvn);
+            matchTarget.matrix = uvnMat * matchTarget.matrix;
+
+            break;
         }
     }
     deltaGrp.targetMap[finalEl->name].push_back(matchTarget);
@@ -315,7 +386,7 @@ MStatus StrataShapeNode::runShapeBackPropagation(MObject& nodeObj, MDataBlock& d
         addDeltaTarget(thisMObject(), data, elDH,
             manifold, el, deltaGrp);
     }
-    l("added all delta targets");
+    l("added all delta targets: " + str(deltaGrp.targetMap.size()));
     if (!deltaGrp.targetMap.size()) {
         l("no targets gathered in shape node, skipping");
         return mStat;

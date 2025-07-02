@@ -139,6 +139,9 @@ Status& StrataOp::runBackPropagation(
 			l("value after: " + op->value().printInfo() + " " + graph->results[op->index].printInfo());
 			//StrataManifold& m = op->value();
 			l("before op back offsets");
+
+			/* offsets still need to be set on op parametres
+			*/
 			s = op->setBackOffsetsAfterDeltas(s, op->value());
 			op->setDirty(false);
 

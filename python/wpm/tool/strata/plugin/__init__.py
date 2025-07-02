@@ -159,6 +159,8 @@ def reloadPluginTest():
 	shape.stDataIn_[0].stSpaceNameIn_ = "pElbow"
 	shape.stDataIn_[0].stMatrixIn_ = driverLoc.matrix_
 
+	cmds.setAttr(driverLoc + ".rotateZ", 45)
+
 	return
 
 

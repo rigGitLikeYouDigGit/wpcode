@@ -32,6 +32,7 @@ Status& pointEvalParam(
 		(maybe then snap to drivers)
 		done
 	*/
+	LOG("eval param: " + param.name);
 	std::vector<ExpValue> resultVals;
 
 	s = value.addElement(SElement(param.name, StrataElType::point), outPtr);
@@ -46,19 +47,37 @@ Status& pointEvalParam(
 	
 	
 	if (ALREADY_DATA) {
-		//prevData->second.finalMatrix = param.pData.finalMatrix;
+		l("already data found");
 		s = value.computePointData(s, prevData->second);
 		value.pDataMap[param.name] = prevData->second;
+
+		// save built data to this node's data map
+		op.opPointDataMap[param.name] = value.pDataMap[param.name];
+		return s;
 	}
-	else { // no data found, make new
 
-		value.pDataMap[param.name] = param.pData;
-		SPointData& pData = value.pDataMap[param.name];
-		pData.creatorNode = op.name; // this op created this data
+	
+	// no data found, make new
+	value.pDataMap[param.name] = param.pData;
+	SPointData& pData = value.pDataMap[param.name];
+	pData.creatorNode = op.name; // this op created this data
 
-		// check if point has a driver - if it's a point, snap to it
-		s = param.driverExp.result(&resultVals, &expAuxData);
-		std::vector<int> drivers = expAuxData.expValuesToElements(resultVals, s);
+	// check if point has a driver - if it's a point, snap to it
+	s = param.driverExp.result(&resultVals, &expAuxData);
+	CWRSTAT(s, "error reading driver exp");
+	std::vector<int> drivers = expAuxData.expValuesToElements(resultVals, s);
+	CWRSTAT(s, "error converting driver exp to elements");
+
+	// check for spaces
+	s = param.spaceExp.result(&resultVals, &expAuxData);
+	CWRSTAT(s, "error reading space exp");
+	std::vector<int> spaces = expAuxData.expValuesToElements(resultVals, s);
+	CWRSTAT(s, "error converting space exp to elements");
+
+	/* check if matrix is specified locally, or UVNs given*/
+	if (param.spaceMode == EL_OP_GLOBAL) {
+		l("creating global data");
+
 		if (drivers.size()) {
 			auto driverEl = value.getEl(drivers[0]);
 			pData.driverData.index = drivers[0];
@@ -67,9 +86,7 @@ Status& pointEvalParam(
 			}
 		}
 
-		// check for spaces
-		s = param.spaceExp.result(&resultVals, &expAuxData);
-		std::vector<int> spaces = expAuxData.expValuesToElements(resultVals, s);
+
 		if (spaces.size()) {
 			for (auto i : spaces) {
 				auto spaceEl = value.getEl(i);
@@ -87,17 +104,56 @@ Status& pointEvalParam(
 		}
 		value.pDataMap[param.name].finalMatrix = param.pData.finalMatrix;
 
+		// save built data to this node's data map
+		op.opPointDataMap[param.name] = value.pDataMap[param.name];
+		return s;
 	}
 
+	// locally specified, more complex
+	l("creating local data");
+	s = param.spaceExp.result(&resultVals, &expAuxData);
+	std::vector<int> spaces = expAuxData.expValuesToElements(resultVals, s);
 
-	////
-	// snap to driver geo if needed
-	////
+	/* TODO: allow defining locally-defined UVNs for drivers */
 
+	if (!spaces.size()) { // if no spaces, nothing to do, take local as global
+		l("no spaces found, using local target as global");
+		value.pDataMap[param.name].finalMatrix = param.pData.finalMatrix;
 
-	// save built data to this node's data map
-	op.opPointDataMap[param.name] = value.pDataMap[param.name];
+		// save built data to this node's data map
+		op.opPointDataMap[param.name] = value.pDataMap[param.name];
+		return s;
+	}
+	
+
+	/* how do we create an element with 2 parent spaces, but we only specify its
+	local transform in one of them?
+	
+	brother do you want to get this project working or not
+
+	this also only makes sense if the parent is a point for matrices
+	*/
+	if (spaces.size() == 1) {
+		SElement* spaceEl = value.getEl(spaces[0]);
+		if (spaceEl->elType == StrataElType::point) {
+			SPointData spaceData = value.pDataMap[spaceEl->name];
+			value.pDataMap[param.name].finalMatrix = spaceData.finalMatrix * param.pData.finalMatrix;
+			return s;
+		}
+	}
+	std::vector<Affine3f> spaceBlendMats;
+	for (int i = 0; i < static_cast<int>(spaces.size()); i++) {
+		SElement* spaceEl = value.getEl(spaces[i]);
+		if (spaceEl->elType == StrataElType::point) {
+			SPointData spaceData = value.pDataMap[spaceEl->name];
+			spaceBlendMats.push_back(spaceData.finalMatrix * param.pData.finalMatrix);
+		}
+	}
+	VectorXf weights(spaceBlendMats.size());
+	weights.fill(1.0);
+	value.pDataMap[param.name].finalMatrix = blendTransforms(spaceBlendMats, weights);
 	return s;
+
 }
 
 //Status& edgeEvalDriverExpression(
@@ -214,21 +270,6 @@ Status& pointEvalParam(
 
 
 
-//Status& edgeEvalParentExpression(
-//	Status& s, SElement*& outPtr, StrataManifold& value, ExpAuxData& expAuxData,
-//	std::vector<ExpValue>* resultVals,
-//	const std::string& paramName, ed::expns::Expression& parentExp) {
-//	/* if given parent data already found in manifold,
-//	don't override it*/
-//	std::vector<int> drivers = expAuxData.expValuesToElements(*resultVals, s); // error in resultValuesToElements
-//	if (drivers.size() == 0) {
-//		// if no parents found, use an empty parent data for literal worldspace shape
-//		drivers.push_back(-1);
-//	}
-//
-//	return s;
-//}
-
 
 Status StrataElementOp::eval(StrataManifold& value, 
 	EvalAuxData* auxData, Status& s) 
@@ -304,6 +345,9 @@ Status& StrataElementOp::pointProcessTargets(Status& s, StrataManifold& finalMan
 	/* blend any target matrices given*/
 	LOG("EL OP point process targets: " + el->name);
 	int nTargets = static_cast<int>(deltaGrp.targetMap[el->name].size());
+	if (!nTargets) {
+		return s;
+	}
 	VectorXf weights(nTargets);
 	std::vector<Affine3f> mats(nTargets);
 
@@ -318,7 +362,7 @@ Status& StrataElementOp::pointProcessTargets(Status& s, StrataManifold& finalMan
 	// blend matrices together
 	Affine3f targetMat = blendTransforms(mats, weights);
 	
-	// save target matrix,
+	// save target matrix, to be matched absolutely with final offsets
 	deltaGrp.targetMap[el->name][0].matrix = targetMat;
 	
 	// if this point has no drivers or spaces, just move it
@@ -372,6 +416,7 @@ SAtomBackDeltaGroup StrataElementOp::bestFitBackDeltas(Status* s, StrataManifold
 		std::string& name = elementsAdded.rbegin()[i];
 		auto found = front.targetMap.find(name);
 		if (found == front.targetMap.end()) {
+			l("no targets found for created element: " + name + ", skipping");
 			continue;
 		}
 		
@@ -395,6 +440,23 @@ Status& StrataElementOp::setBackOffsetsAfterDeltas(Status& s, StrataManifold& ma
 	LOG("EL OP setBackOffsets");
 	for (int i = 0; i < static_cast<int>(elementsAdded.size()); i++) {
 		std::string& name = elementsAdded[i];
+
+		auto foundToMatch = backDeltasToMatch.targetMap.find(name);
+		if (foundToMatch == backDeltasToMatch.targetMap.end()) {
+			/* no effects found for this element, skip*/
+			l("no target found for el " + name + ", skipping");
+			continue;
+		}
+		/* above is rechecked each iteration, so even internal moving around of later elements should
+		propagate properly*/
+
+		/* check that a found element does have a target - this should always be the case
+		*/
+		if (!foundToMatch->second.size()) {
+			l("found no targets for found el " + name + ", skipping");
+			continue;
+		}
+
 		SElement* el = manifold.getEl(name);
 
 		ElOpParam& param = paramMap[name];
@@ -402,7 +464,7 @@ Status& StrataElementOp::setBackOffsetsAfterDeltas(Status& s, StrataManifold& ma
 		switch (el->elType) {
 			case StrataElType::point: {
 				l("point offsets:" + el->name);
-				SAtomMatchTarget& target = backDeltasToMatch.targetMap[name][0];
+				SAtomMatchTarget& target = foundToMatch->second[0];
 				SPointData& pData = manifold.pDataMap[name];
 			
 				// get final offset
@@ -414,9 +476,10 @@ Status& StrataElementOp::setBackOffsetsAfterDeltas(Status& s, StrataManifold& ma
 			
 				// project to drivers if any
 				if (el->drivers.size()) {
+					l("projecting point to drivers");
 					s = manifold.pointProjectToDrivers(s, pData.finalMatrix, el);
 				}
-
+				break;
 			}
 		}
 
@@ -431,40 +494,3 @@ StrataElementOp* StrataElementOp::clone_impl() const {
 	return StrataOp::clone_impl<StrataElementOp>();
 };
 
-
-//Status& StrataElementOp::pointSetBackOffsetsAfterDeltas(Status& s) {
-//	return s;
-//}
-
-
-
-//std::vector<StrataElementParam> params;
-//virtual StrataElementOp* clone_impl() const override {
-//	return new StrataElementOp(*this); 
-//};
-
-
-Status evalTopo(StrataManifold& manifold, Status& s) {
-	//manifold.pointDatas.reserve(names.size());
-	//manifold.points.reserve(names.size());
-
-	//std::string outGroupName = name + ":out";
-	//StrataGroup* outGroup = manifold.getGroup(outGroupName, true, static_cast<int>(names.size()));
-
-	//for (size_t i = 0; i < names.size(); i++) {
-	//	SPoint el(names[i]);
-	//	SPoint* resultpt = manifold.addPoint(el, pointDatas[i]);
-	//	outGroup->contents.push_back(resultpt->globalIndex);
-	//}
-	return s;
-}
-
-Status evalData(StrataManifold& manifold, Status& s) {
-	// update the matrix of each point
-	//std::string outGroupName = name + ":out";
-	//StrataGroup* outGroup = manifold.getGroup(outGroupName, false);
-	//for (size_t i = 0; i < pointDatas.size(); i++) {
-	//	manifold.pointDatas[outGroup->contents[static_cast<int>(i)]] = pointDatas[static_cast<int>(i)];
-	//}
-	return s;
-}

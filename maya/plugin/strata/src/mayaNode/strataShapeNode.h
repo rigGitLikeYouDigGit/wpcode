@@ -94,6 +94,10 @@ public:
 	DECLARE_STATIC_NODE_H_MEMBERS(NODE_STATIC_MEMBERS);
 
 
+	int MATRIX_MODE_LOCAL = 0;
+	int MATRIX_MODE_GLOBAL = 1;
+	//int MATRIX_MODE_LOCAL_O
+
 	static MTypeId kNODE_ID;// = const MTypeId(0x00122C1C);
 	static MString kNODE_NAME;// = MString("curveFrame");
 

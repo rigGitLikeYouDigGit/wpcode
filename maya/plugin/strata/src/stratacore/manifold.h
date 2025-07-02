@@ -1176,12 +1176,15 @@ namespace ed {
 
 		Status& computePointData(Status& s, SPointData& data) {
 			/* given all space data is built, find final matrix*/
+			LOG("compute point data: " + getEl(data.index)->name);
 			if (data.spaceDatas.size() == 0) { // no parent, just literal data
 				//data.finalMatrix = data.parentDatas[0].offset;
 				////// we assume final matrix is already known
 				return s;
 			}
-			s = pointSpaceMatrix(s, data.finalMatrix, data);
+			Affine3f spaceMat;
+			s = pointSpaceMatrix(s, spaceMat, data);
+			data.finalMatrix = spaceMat * data.finalMatrix;
 			return s;
 		}
 
