@@ -291,18 +291,27 @@ Status StrataElementOp::eval(StrataManifold& value,
 {
 	/*
 	
-	set up drivers
-	set up temp final matrix if given
-	put drivers into spaces, convert to uvn
+	listen it's really quite simple
 
-	get per-space offsets
+	check if existing data already found for each param
+	if no:
+		gather relative position data for given element at given position
+		//check for DRIVER PROJECTION
+		//if yes: 
+		//	snap to driver, modify el data to reflect ///// ?????
+		STORE el data as PARAM
 
-	build full data object
-
-	then CHECK OVERRIDE MAP for any entries to override
+	if yes:
+		compute stored offset from PARAM
+		check if TARGET found for this param (this means backprop already run, target is a final offset)
+		if yes:
+			APPLY target offset
+			MODIFY STORED PARAM
+		apply stored to el data
 
 	then check if element needs snapping / projecting to driver of higher dimension
-
+	just for fun, for now try projection as a total post-process, not captured in any data
+	could be fun, idk
 
 	*/
 	LOG("EL OP EVAL");
