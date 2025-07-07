@@ -37,6 +37,10 @@ Status& pointEvalParam(
 
 	s = value.addElement(SElement(param.name, StrataElType::point), outPtr);
 
+	if (s) {
+		l("error adding element: " + s.msg);
+		return s;
+	}
 
 	/* we don't care about outputs etc - 
 	when this op is created afresh, its saved data will be empty,
@@ -103,10 +107,12 @@ Status& pointEvalParam(
 				pData.spaceDatas.push_back(sd);
 			}
 		}
-		value.pDataMap[param.name].finalMatrix = param.pData.finalMatrix;
+		//value.pDataMap[param.name].finalMatrix = param.pData.finalMatrix;
+		pData.finalMatrix = param.pData.finalMatrix;
 
 		// save built data to this node's data map
-		op.opPointDataMap[param.name] = value.pDataMap[param.name];
+		//op.opPointDataMap[param.name] = value.pDataMap[param.name];
+		op.opPointDataMap[param.name] = pData;
 		return s;
 	}
 
@@ -119,10 +125,12 @@ Status& pointEvalParam(
 
 	if (!spaces.size()) { // if no spaces, nothing to do, take local as global
 		l("no spaces found, using local target as global");
-		value.pDataMap[param.name].finalMatrix = param.pData.finalMatrix;
+		//value.pDataMap[param.name].finalMatrix = param.pData.finalMatrix;
+		pData.finalMatrix = param.pData.finalMatrix;
 
 		// save built data to this node's data map
-		op.opPointDataMap[param.name] = value.pDataMap[param.name];
+		//op.opPointDataMap[param.name] = value.pDataMap[param.name];
+		op.opPointDataMap[param.name] = pData;
 		return s;
 	}
 	
@@ -134,11 +142,16 @@ Status& pointEvalParam(
 
 	this also only makes sense if the parent is a point for matrices
 	*/
+
+
+	// ADD TO OP POINT DATA MAP HERE
 	if (spaces.size() == 1) {
 		SElement* spaceEl = value.getEl(spaces[0]);
-		if (spaceEl->elType == StrataElType::point) {
+		if (spaceEl->elType == StrataElType::point) { // if single parent space is a point
 			SPointData spaceData = value.pDataMap[spaceEl->name];
-			value.pDataMap[param.name].finalMatrix = spaceData.finalMatrix * param.pData.finalMatrix;
+			//value.pDataMap[param.name].finalMatrix = spaceData.finalMatrix * param.pData.finalMatrix;
+			pData.finalMatrix = spaceData.finalMatrix * param.pData.finalMatrix;
+			op.opPointDataMap[param.name] = pData;
 			return s;
 		}
 	}
@@ -152,7 +165,8 @@ Status& pointEvalParam(
 	}
 	VectorXf weights(spaceBlendMats.size());
 	weights.fill(1.0);
-	value.pDataMap[param.name].finalMatrix = blendTransforms(spaceBlendMats, weights);
+	pData.finalMatrix = blendTransforms(spaceBlendMats, weights);
+	op.opPointDataMap[param.name] = pData;
 	return s;
 
 }
@@ -436,8 +450,12 @@ SAtomBackDeltaGroup StrataElementOp::bestFitBackDeltas(Status* s, StrataManifold
 }
 
 Status& StrataElementOp::setBackOffsetsAfterDeltas(Status& s, StrataManifold& manifold) {
-	/* iterate over elements created in CORRECT order this time - compare offsets,
-	add offsets to matrices, then snap to drivers where needed*/
+	/* iterate over elements created in FORWARDS order this time - compare offsets,
+	add offsets to matrices, then snap to drivers where needed
+	
+	BUT we need to set the offset first, before computing elements that rely on it
+	I will now consume my internal organs
+	*/
 	LOG("EL OP setBackOffsets");
 	for (int i = 0; i < static_cast<int>(elementsAdded.size()); i++) {
 		std::string& name = elementsAdded[i];
@@ -467,10 +485,17 @@ Status& StrataElementOp::setBackOffsetsAfterDeltas(Status& s, StrataManifold& ma
 				l("point offsets:" + el->name);
 				SAtomMatchTarget& target = foundToMatch->second[0];
 				SPointData& pData = manifold.pDataMap[name];
+
+				if (pData.finalMatrix.isApprox(target.matrix)) {
+					l("point already matched, no offset needed");
+					continue;
+				}
 			
 				// get final offset
 				Affine3f offset = pData.finalMatrix.inverse() * target.matrix;
 				param.pOffset = offset;
+
+				
 
 				// ideally we just match the target here
 				pData.finalMatrix = target.matrix;

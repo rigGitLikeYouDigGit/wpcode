@@ -194,10 +194,13 @@ def reloadPluginTest():
 
 	# connect elbow driver to test space driving, and FK
 	driverLoc = WN.Locator.create("elbowDriver_LOC")
-	shape.stDataIn_[0].stExpIn_ = "pWrist"
-	shape.stDataIn_[0].stSpaceNameIn_ = "pElbow"
-	shape.stDataIn_[0].stMatrixIn_ = driverLoc.matrix_
+	# shape.stDataIn_[0].stExpIn_ = "pWrist"
+	# shape.stDataIn_[0].stSpaceNameIn_ = "pElbow"
+	# shape.stDataIn_[0].stMatrixIn_ = driverLoc.matrix_
 
+	shape.stDataIn_[0].stExpIn_ = "pElbow"
+	shape.stDataIn_[0].stMatrixIn_ = driverLoc.matrix_
+	
 	cmds.setAttr(driverLoc + ".rotateZ", 45)
 
 	return
