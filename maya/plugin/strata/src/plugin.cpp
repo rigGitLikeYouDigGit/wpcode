@@ -23,6 +23,7 @@ register all plugins
 #include "mayaNode/strataShapeGeometryOverride.h"
 
 #include "mayaNode/matrixCurve.h"
+#include "mayaNode/frameCurve.h"
 
 //#include "mayanode/stratacurvenode.h"
 //#include "mayanode/stratasurfacenode.h"
@@ -172,6 +173,8 @@ MStatus initializePlugin( MObject obj ){
     /// bonus matrix curve node
     REGISTER_NODE(MatrixCurveNode);
 
+    REGISTER_NODE(FrameCurveNode);
+
     l("initialised Strata");
     return s;
 }
@@ -203,6 +206,8 @@ MStatus uninitializePlugin( MObject obj ){
     DEREGISTER_NODE(StrataShapeNode);
 
     DEREGISTER_NODE(MatrixCurveNode);
+
+    DEREGISTER_NODE(FrameCurveNode);
 
     l("uninitialised strata");
     return s;

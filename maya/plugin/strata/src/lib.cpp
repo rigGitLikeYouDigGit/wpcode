@@ -290,7 +290,7 @@ namespace ed {
 
 
 
-	MMatrix interpolateMMatrixArray(std::vector<MMatrix>& mmatrixArr, MMatrix& out, float t) {
+	void interpolateMMatrixArray(std::vector<MMatrix>& mmatrixArr, MMatrix& out, float t) {
 		/* assuming steadily spaced keypoints in arr, interpolate at param t
 		slerp rotation component
 		*/
@@ -309,12 +309,13 @@ namespace ed {
 		quatTo4x4Mat(quatOut, MMatrixFlatData(out));
 
 		lerpN<double, 3>(
-			MMatrixFlatData(mmatrixArr[end]) + 12,
+			MMatrixFlatData(mmatrixArr[start]) + 12,
 			MMatrixFlatData(mmatrixArr[end]) + 12,
 			MMatrixFlatData(out) + 12,
 			fraction
 		);
-		return out;
+		//return out;
+		return;
 	}
 
 }

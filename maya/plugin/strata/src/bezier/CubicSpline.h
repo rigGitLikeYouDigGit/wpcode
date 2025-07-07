@@ -151,7 +151,15 @@ namespace bez
             }
         }
         CubicBezierPath(const Eigen::MatrixX3f& control_points) {
+        //CubicBezierPath(const Eigen::Matrix3Xf& control_points) {
+        //CubicBezierPath(const Eigen::Matrix<float, 3, -1>& control_points) {
+            
             int num_points = static_cast<int>(control_points.rows());
+            //int num_points = static_cast<int>(control_points.rows());
+            
+            ////// TEMP TEMP TEMP ////// FIX THISS /////
+            //int num_points = 4;
+            /////////////////////
             int num_splines = num_points / 3;
             for (int i = 0; i < num_splines; ++i)
             {

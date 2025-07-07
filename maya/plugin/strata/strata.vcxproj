@@ -320,7 +320,9 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   <ItemGroup>
     <ClCompile Include="src\bezier\math\misc.cpp" />
     <ClCompile Include="src\bezier\math\tridiagonal.cpp" />
+    <ClCompile Include="src\eigtest.cpp" />
     <ClCompile Include="src\logger.cpp" />
+    <ClCompile Include="src\mayaNode\frameCurve.cpp" />
     <ClCompile Include="src\mayaNode\strataShapeGeometryOverride.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\MInclude.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\api.h" />
@@ -396,6 +398,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="src\bezier\math\misc.h" />
     <ClInclude Include="src\bezier\math\tridiagonal.h" />
     <ClInclude Include="src\logger.h" />
+    <ClInclude Include="src\mayaNode\frameCurve.h" />
     <ClInclude Include="src\mayaNode\strataShapeGeometryOverride.h" />
   </ItemGroup>
   <ItemGroup>

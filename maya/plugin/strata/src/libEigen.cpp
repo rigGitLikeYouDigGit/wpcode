@@ -690,7 +690,42 @@ MPointArray ed::curvePointsFromEditPointsAndTangents(
 
 
 
+Eigen::MatrixX3f ed::makeRMFNormals(
+	Eigen::MatrixX3f& positions,
+	Eigen::MatrixX3f& tangents,
+	const Eigen::MatrixX3f& targetNormals,
+	const int nSamples
+) {/*
+	as above, but working on only positions and tangents
+	*/
 
+	Eigen::MatrixX3f resultNs(nSamples, 3);
+
+	//Eigen::Vector3f ri = targetNormals.row(0);
+	resultNs.row(0) = targetNormals.row(0);
+
+	for (int i = 0; i < nSamples - 1; i++) {
+		Vector3f xi = positions.row(i);
+		Vector3f ti = tangents.row(i).normalized();
+
+		Vector3f xiPlus1 = positions.row(i + 1);
+		Vector3f v1 = xiPlus1 - xi;
+		float c1 = v1.dot(v1);
+		float ttf = (v1.dot(resultNs.row(i)));
+		Vector3f ttv = v1 * (2.0 / c1) * ttf;
+		Vector3f ttr = Vector3f(resultNs.row(i)) - ttv;
+		//Vector3f rLi = resultNs.row(i) - v1 * (2.0 / c1) * (v1.dot(resultNs.row(i)));
+		Vector3f rLi = ttr;
+		Vector3f tLi = ti - (2.0 / c1) * (v1.dot(ti)) * v1;
+
+		Vector3f tiPlus1 = tangents.row(i + 1).normalized(); // next point's tangent
+		Vector3f v2 = tiPlus1 - tLi;
+		float c2 = v2.dot(v2);
+		Vector3f riPlus1 = rLi - (2.0 / c2) * (v2.dot(rLi)) * v2; // final reflected normal
+		resultNs.row(i + 1) = riPlus1.normalized();
+	}
+	return resultNs;
+}
 
 
 

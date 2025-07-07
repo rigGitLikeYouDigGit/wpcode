@@ -8,7 +8,7 @@
 #include <map>
 #include "api.h"
 #include "macro.h"
-#include "bezier/bezier.h"
+//#include "bezier/bezier.h"
 
 
 /* if C warns me about losing precision adding 2.0 to a float,
@@ -476,7 +476,7 @@ namespace ed {
 	template<typename T, int N>
 	static inline T* lerpN(T* a, T* b, T* out, T t);
 
-	MMatrix interpolateMMatrixArray(std::vector<MMatrix>& mmatrixArr, MMatrix& out, float t);
+	void interpolateMMatrixArray(std::vector<MMatrix>& mmatrixArr, MMatrix& out, float t);
 
 	template <typename T=float>
 	inline T lerpArray(const T* arr, const int nVals, float t) {

@@ -581,6 +581,230 @@
         }
       ]
     },
+    "frameCurve": {
+      "typeName": "frameCurve",
+      "apiTypeConstant": "",
+      "apiTypeStr": "",
+      "typeIdInt": 1191586,
+      "mfnStr": "",
+      "bases": [
+        "_BASE_",
+        "THdependNode"
+      ],
+      "isAbstract": false,
+      "attrDatas": [
+        {
+          "name": "activeSampleMatrixIn",
+          "type": 578,
+          "typeName": "kMatrixAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "activeSampleMatrixIn",
+          "parentName": "sampleIn"
+        },
+        {
+          "name": "activeUp",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": false,
+          "shortName": "activeUp",
+          "parentName": ""
+        },
+        {
+          "name": "activeUpMatrix",
+          "type": 578,
+          "typeName": "kMatrixAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "activeUpMatrix",
+          "parentName": "activeUp"
+        },
+        {
+          "name": "binMembership",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "bnm",
+          "parentName": ""
+        },
+        {
+          "name": "caching",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "cch",
+          "parentName": ""
+        },
+        {
+          "name": "curveIn",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "curveIn",
+          "parentName": ""
+        },
+        {
+          "name": "frozen",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "fzn",
+          "parentName": ""
+        },
+        {
+          "name": "isHistoricallyInteresting",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "ihi",
+          "parentName": ""
+        },
+        {
+          "name": "message",
+          "type": 580,
+          "typeName": "kMessageAttribute",
+          "isArray": false,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "msg",
+          "parentName": ""
+        },
+        {
+          "name": "nodeState",
+          "type": 572,
+          "typeName": "kEnumAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "nds",
+          "parentName": ""
+        },
+        {
+          "name": "refCurveIn",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "refCurveIn",
+          "parentName": ""
+        },
+        {
+          "name": "refSampleMatrixIn",
+          "type": 578,
+          "typeName": "kMatrixAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "refSampleMatrixIn",
+          "parentName": "sampleIn"
+        },
+        {
+          "name": "refUp",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": false,
+          "shortName": "refUp",
+          "parentName": ""
+        },
+        {
+          "name": "refUpMatrix",
+          "type": 578,
+          "typeName": "kMatrixAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "refUpMatrix",
+          "parentName": "refUp"
+        },
+        {
+          "name": "sampleIn",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": true,
+          "isOutput": false,
+          "shortName": "sampleIn",
+          "parentName": ""
+        },
+        {
+          "name": "sampleMatrixOnCurveOut",
+          "type": 578,
+          "typeName": "kMatrixAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "sampleMatrixOnCurveOut",
+          "parentName": "sampleOut"
+        },
+        {
+          "name": "sampleMatrixOut",
+          "type": 578,
+          "typeName": "kMatrixAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "sampleMatrixOut",
+          "parentName": "sampleOut"
+        },
+        {
+          "name": "sampleOut",
+          "type": 576,
+          "typeName": "kCompoundAttribute",
+          "isArray": true,
+          "isInput": false,
+          "isOutput": true,
+          "shortName": "sampleOut",
+          "parentName": ""
+        },
+        {
+          "name": "sampleUIn",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "sampleUIn",
+          "parentName": "sampleIn"
+        },
+        {
+          "name": "sampleUOut",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "sampleUOut",
+          "parentName": "sampleOut"
+        },
+        {
+          "name": "steps",
+          "type": 566,
+          "typeName": "kNumericAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "steps",
+          "parentName": ""
+        }
+      ]
+    },
     "matrixCurve": {
       "typeName": "matrixCurve",
       "apiTypeConstant": "",

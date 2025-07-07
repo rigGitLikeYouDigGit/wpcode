@@ -15,6 +15,8 @@ namespace ed {
 
         volatile static int _logDepth;
 
+        static int hush ; // set to 1 to silence this log object
+
         //template<typename...T>
         //Log(T...args) {
         //    
@@ -69,6 +71,9 @@ namespace ed {
         template<typename strT>
         void logPrint(strT arg) {
             //DEBUGS("log depth on print: " + std::to_string(_logDepth));
+            if (hush) {
+                return;
+            }
             //logPrint('\n');
             //COUT << "\n";
             //COUT << std::endl;

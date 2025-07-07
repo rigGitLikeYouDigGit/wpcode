@@ -61,7 +61,6 @@ Status& pointEvalParam(
 	value.pDataMap[param.name] = param.pData;
 	SPointData& pData = value.pDataMap[param.name];
 	pData.creatorNode = op.name; // this op created this data
-	pData.index = outPtr->globalIndex;
 
 	// check if point has a driver - if it's a point, snap to it
 	s = param.driverExp.result(&resultVals, &expAuxData);

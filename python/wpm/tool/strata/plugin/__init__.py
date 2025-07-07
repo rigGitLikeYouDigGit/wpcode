@@ -79,8 +79,71 @@ def makeStrataCurve(name, tf1, tf2):
 	cmds.connectAttr(tf2 + ".worldMatrix[0]", dgNode + ".stEndMatrix")
 	return dgNode, tf
 
+
+def reloadFrameCurveTest():
+	from wpm import cmds
+	cmds.file(newFile=1, f=1)
+	pluginAid.loadPlugin(forceReload=True)
+	# pt = cmds.createNode("strataPoint")
+
+	# update node class wrappers
+	pluginAid.updateGeneratedNodeClasses()
+
+	refCurve = cmds.curve(point=[(0, 0, 0), (10, 0, 0)], degree=1)
+	refCurve = WN(refCurve)
+	refCurve.setName("ref_CRV")
+
+	curve = cmds.curve(point=[(0, 1, 0), (1, 0, 0), (2, 3, 1), (4, -2, 1), (6, 1, -1), (10, 3, 3)])
+	curve = WN(curve)
+	curve.setName("active_CRV")
+	curve.tf().translateY_ = 5
+	print(curve.local_)
+
+	frameCurve = WN.FrameCurve.create("frameCurve")
+
+	frameCurve.refCurveIn_ = refCurve.worldSpace_[0]
+	frameCurve.curveIn_ = curve.worldSpace_[0]
+
+	tfs = []
+	for i in range(0, 7):
+		tf = WN.Locator.create("refTf{}_LOC".format(i)).tf()
+		tf.translateX_ = i + 1
+		tf.translateZ_ = 1
+		tfs.append(tf)
+
+		frameCurve.sampleIn_[i].refSampleMatrixIn_ = tf.worldMatrix_[0]
+
+		outTf = WN.Locator.create("outTf{}_LOC".format(i)).tf()
+		outTf.offsetParentMatrix_ = frameCurve.sampleOut_[i].sampleMatrixOut_
+
+	# up locators
+	refUpTfA = WN.Locator.create("refUpTfStart_LOC").tf()
+	refUpTfA.translateX_ = -3
+
+	refUpTfB = WN.Locator.create("refUpTfEnd_LOC").tf()
+	refUpTfB.translateX_ = 13
+
+	activeUpTfA = WN.Locator.create("activeUpTfStart_LOC").tf()
+	activeUpTfA.translateY_ = 5
+
+	activeUpTfB = WN.Locator.create("activeUpTfEnd_LOC").tf()
+	activeUpTfB.translateX_ = 13
+	activeUpTfB.translateY_ = 5
+
+	frameCurve.refUp_[0].refUpMatrix_ = refUpTfA.worldOut
+	frameCurve.refUp_[1].refUpMatrix_ = refUpTfB.worldOut
+
+	frameCurve.activeUp_[0].activeUpMatrix_ = activeUpTfA.worldOut
+	frameCurve.activeUp_[1].activeUpMatrix_ = activeUpTfB.worldOut
+	return
+
+
 def reloadPluginTest():
-	"""single test to check strata nodes are working"""
+	"""single test to check strata nodes are working
+
+	from wpm.tool.strata import plugin
+	plugin.reloadPluginTest()
+	"""
 	from wpm import cmds
 	cmds.file(newFile=1, f=1)
 	pluginAid.loadPlugin(forceReload=True)
@@ -89,32 +152,8 @@ def reloadPluginTest():
 	# update node class wrappers
 	pluginAid.updateGeneratedNodeClasses()
 
-	# # test out the matrixCurve node
-	# crv = WN.NurbsCurve.create("matrixRoot_CRV")
-	# #return # works when run multiple times
-	#
-	# matCrv = WN.MatrixCurve.create("matrixCurve")
-	# matCrv.curveOut_.con(crv.shape().worldIn)
-	# return
 
-	# # check graph update functions
-	# elOp1 = WN.StrataElementOp.create("elOp1")
-	# #return
-	# #elOp2 = WN.StrataElementOp("elOp2", new=1) # only gives transform, fix
-	# elOp2 = WN.StrataElementOp.create("elOp2")
-	# elOp2.stInput_[0] = elOp1.stOutput_
-	#
-	# elOp3 = WN.StrataElementOp.create("elOp3")
-	# elOp2.stInput_[1] = elOp3.stOutput_
-	#
-	# shape : WN.StrataShape = WN.StrataShape.create("newShape")
-	# shape.stInput_[0] = elOp2.stOutput_
-	#
-	# shape.stInput_[1] = elOp1.stOutput_ # unhinged, just a stress test of the connection / merging logic
-	#
-	# # delete first shape input, then check shape node
-	#
-	# return
+
 
 	# create single strata shape
 	elOp: WN.StrataElementOp = WN.createNode("strataElementOp", "newElOp")
