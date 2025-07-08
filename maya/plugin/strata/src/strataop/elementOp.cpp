@@ -12,55 +12,14 @@ Status StrataElementOp::makeParams() {
 	return s;
 }
 
-Status& pointEvalParam( 
+Status& pointCreateNew(
 	Status& s, StrataElementOp& op, SElement*& outPtr, StrataManifold& value, ExpAuxData& expAuxData,
 	ElOpParam& param) {
-	/* a separate function here may be slightly overkill
-	
-	DO WE allow input data for pure drivers, and PROJECT that data on to driver geo?
-	
-	for points, it's the nearest point on driver geo to the target point?
-	for edges, flatten target curve into driver surface?
-
-	allow point drivers for snapping positions,
-	then save relative position in space as override,
-	reapply that in later iterations
-
-	IF DATA IS ALREADY FOUND from previous graph iteration:
-		add element
-		compute data from spaces
-		(maybe then snap to drivers)
-		done
+	/* create a new point with no existing prior data
 	*/
-	LOG("eval param: " + param.name);
+	LOG("point create new");
 	std::vector<ExpValue> resultVals;
 
-	s = value.addElement(SElement(param.name, StrataElType::point), outPtr);
-
-	if (s) {
-		l("error adding element: " + s.msg);
-		return s;
-	}
-
-	/* we don't care about outputs etc - 
-	when this op is created afresh, its saved data will be empty,
-	so we just need to look if node has data saved on it*/
-	bool ALREADY_DATA = false;
-	auto prevData = op.opPointDataMap.find(param.name);
-	ALREADY_DATA = (prevData != op.opPointDataMap.end());
-	
-	
-	if (ALREADY_DATA) {
-		l("already data found");
-		s = value.computePointData(s, prevData->second);
-		value.pDataMap[param.name] = prevData->second;
-
-		// save built data to this node's data map
-		op.opPointDataMap[param.name] = value.pDataMap[param.name];
-		return s;
-	}
-
-	
 	// no data found, make new
 	value.pDataMap[param.name] = param.pData;
 	SPointData& pData = value.pDataMap[param.name];
@@ -133,11 +92,11 @@ Status& pointEvalParam(
 		op.opPointDataMap[param.name] = pData;
 		return s;
 	}
-	
+
 
 	/* how do we create an element with 2 parent spaces, but we only specify its
 	local transform in one of them?
-	
+
 	brother do you want to get this project working or not
 
 	this also only makes sense if the parent is a point for matrices
@@ -167,6 +126,120 @@ Status& pointEvalParam(
 	weights.fill(1.0);
 	pData.finalMatrix = blendTransforms(spaceBlendMats, weights);
 	op.opPointDataMap[param.name] = pData;
+	return s;
+}
+
+//Status& StrataElementOp::setBackOffsetsAfterDeltas(Status& s, StrataManifold& manifold) {
+Status& pointSetBackOffsets(Status& s, StrataElementOp& op, SElement*& el, StrataManifold& manifold, 
+	ExpAuxData& expAuxData, ElOpParam& param, SPointData& pData
+	){
+	/* iterate over elements created in FORWARDS order this time - compare offsets,
+	add offsets to matrices, then snap to drivers where needed
+
+	BUT we need to set the offset first, before computing elements that rely on it
+	I will now consume my internal organs
+	*/
+	LOG("EL OP setBackOffsets");
+	auto name = op.name;
+
+	auto foundToMatch = op.backDeltasToMatch.targetMap.find(name);
+	if (foundToMatch == op.backDeltasToMatch.targetMap.end()) {
+		/* no effects found for this element, skip*/
+		l("no target found for el " + name + ", skipping");
+		return s;
+	}
+	/* above is rechecked each iteration, so even internal moving around of later elements should
+	propagate properly*/
+
+	/* check that a found element does have a target - this should always be the case
+	*/
+	if (!foundToMatch->second.size()) {
+		l("found no targets for found el " + name + ", skipping");
+		return s;
+	}
+
+	l("point offsets:" + el->name);
+	SAtomMatchTarget& target = foundToMatch->second[0];
+
+	if (pData.finalMatrix.isApprox(target.matrix)) {
+		l("point already matched, no offset needed");
+		return s;
+	}
+
+	// get final offset
+	Affine3f offset = pData.finalMatrix.inverse() * target.matrix;
+	param.pOffset = offset;
+
+	// ideally we just match the target here
+	pData.finalMatrix = target.matrix;
+
+	return s;
+}
+
+Status& pointEvalParam( 
+	Status& s, StrataElementOp& op, SElement*& outPtr, StrataManifold& value, ExpAuxData& expAuxData,
+	ElOpParam& param) {
+	/* a separate function here may be slightly overkill
+	
+	DO WE allow input data for pure drivers, and PROJECT that data on to driver geo?
+	
+	for points, it's the nearest point on driver geo to the target point?
+	for edges, flatten target curve into driver surface?
+
+	allow point drivers for snapping positions,
+	then save relative position in space as override,
+	reapply that in later iterations
+
+	IF DATA IS ALREADY FOUND from previous graph iteration:
+		add element
+		compute data from spaces
+		(maybe then snap to drivers)
+		done
+	*/
+	LOG("eval param: " + param.name);
+
+
+	s = value.addElement(SElement(param.name, StrataElType::point), outPtr);
+
+	if (s) {
+		l("error adding element: " + s.msg);
+		return s;
+	}
+
+	/* we don't care about outputs etc - 
+	when this op is created afresh, its saved data will be empty,
+	so we just need to look if node has data saved on it*/
+	bool ALREADY_DATA = false;
+	auto prevData = op.opPointDataMap.find(param.name);
+	ALREADY_DATA = (prevData != op.opPointDataMap.end());
+	
+	
+	if (ALREADY_DATA) {
+		l("already data found");
+		s = value.computePointData(s, prevData->second);
+		value.pDataMap[param.name] = prevData->second;
+
+		// save built data to this node's data map
+		op.opPointDataMap[param.name] = value.pDataMap[param.name];
+	}
+	else {
+		s = pointCreateNew(s, op, outPtr, value, expAuxData, param);
+	}
+	SPointData& pData = op.opPointDataMap[param.name]; 
+	/* TODO:   CONSOLIDATE THIS TRASH
+	reuse param for pData throughout backprop and offsets
+	
+	*/
+	s = pointSetBackOffsets(s, op, outPtr, value,
+		expAuxData, param, pData);
+
+
+	// project to drivers if any
+	if (el->drivers.size()) {
+		l("projecting point to drivers");
+		s = manifold.pointProjectToDrivers(s, pData.finalMatrix, el);
+	}
+
 	return s;
 
 }
@@ -284,8 +357,6 @@ Status& pointEvalParam(
 //}
 
 
-
-
 Status StrataElementOp::eval(StrataManifold& value, 
 	EvalAuxData* auxData, Status& s) 
 {
@@ -311,7 +382,7 @@ Status StrataElementOp::eval(StrataManifold& value,
 
 	then check if element needs snapping / projecting to driver of higher dimension
 	just for fun, for now try projection as a total post-process, not captured in any data
-	could be fun, idk
+	could be interesting, idk
 
 	*/
 	LOG("EL OP EVAL");
@@ -358,12 +429,7 @@ Status StrataElementOp::eval(StrataManifold& value,
 	return s;
 }
 
-/* should we RE-RUN driver stuff after parents built?
-if points need to be snapped back to driver curves, 
-curves to surfaces etc.
 
-we don't use delta matrices here yet, might be worth changing that
-*/
 
 Status& StrataElementOp::pointProcessTargets(Status& s, StrataManifold& finalManifold, SAtomBackDeltaGroup& deltaGrp, SElement* el) {
 	/* blend any target matrices given*/
@@ -458,69 +524,7 @@ SAtomBackDeltaGroup StrataElementOp::bestFitBackDeltas(Status* s, StrataManifold
 	return front;
 }
 
-Status& StrataElementOp::setBackOffsetsAfterDeltas(Status& s, StrataManifold& manifold) {
-	/* iterate over elements created in FORWARDS order this time - compare offsets,
-	add offsets to matrices, then snap to drivers where needed
-	
-	BUT we need to set the offset first, before computing elements that rely on it
-	I will now consume my internal organs
-	*/
-	LOG("EL OP setBackOffsets");
-	for (int i = 0; i < static_cast<int>(elementsAdded.size()); i++) {
-		std::string& name = elementsAdded[i];
 
-		auto foundToMatch = backDeltasToMatch.targetMap.find(name);
-		if (foundToMatch == backDeltasToMatch.targetMap.end()) {
-			/* no effects found for this element, skip*/
-			l("no target found for el " + name + ", skipping");
-			continue;
-		}
-		/* above is rechecked each iteration, so even internal moving around of later elements should
-		propagate properly*/
-
-		/* check that a found element does have a target - this should always be the case
-		*/
-		if (!foundToMatch->second.size()) {
-			l("found no targets for found el " + name + ", skipping");
-			continue;
-		}
-
-		SElement* el = manifold.getEl(name);
-
-		ElOpParam& param = paramMap[name];
-
-		switch (el->elType) {
-			case StrataElType::point: {
-				l("point offsets:" + el->name);
-				SAtomMatchTarget& target = foundToMatch->second[0];
-				SPointData& pData = manifold.pDataMap[name];
-
-				if (pData.finalMatrix.isApprox(target.matrix)) {
-					l("point already matched, no offset needed");
-					continue;
-				}
-			
-				// get final offset
-				Affine3f offset = pData.finalMatrix.inverse() * target.matrix;
-				param.pOffset = offset;
-
-				
-
-				// ideally we just match the target here
-				pData.finalMatrix = target.matrix;
-			
-				// project to drivers if any
-				if (el->drivers.size()) {
-					l("projecting point to drivers");
-					s = manifold.pointProjectToDrivers(s, pData.finalMatrix, el);
-				}
-				break;
-			}
-		}
-
-	}
-	return s;
-}
 
 
 
