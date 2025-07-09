@@ -50,9 +50,10 @@ Status& pointCreateNew(
 			}
 		}
 
-
+		
 		if (spaces.size()) {
 			for (auto i : spaces) {
+				l("add space:" + str(i));
 				auto spaceEl = value.getEl(i);
 				// get final matrix in this space
 
@@ -61,6 +62,7 @@ Status& pointCreateNew(
 				sd.name = spaceEl->name;
 				Affine3f sampleMat;
 				s = value.matrixAt(s, sampleMat, spaceEl, sd.uvn);
+				l("parent matrix is:" + str(sampleMat));
 				sd.offset = sampleMat.inverse() * pData.finalMatrix;
 
 				pData.spaceDatas.push_back(sd);
@@ -128,7 +130,7 @@ Status& pointSetBackOffsets(Status& s, StrataElementOp& op, SElement*& el, Strat
 	I will now consume my internal organs
 	*/
 	LOG("EL OP setBackOffsets");
-	auto name = op.name;
+	auto name = el->name;
 
 	auto foundToMatch = op.backDeltasToMatch.targetMap.find(name);
 	if (foundToMatch == op.backDeltasToMatch.targetMap.end()) {
@@ -213,11 +215,6 @@ Status& pointEvalParam(
 	// save built data to this node's data map
 	SPointData& pData = value.pDataMap[param.name];
 
-	//op.opPointDataMap[param.name] = pData; 
-	/* TODO:   CONSOLIDATE THIS TRASH
-	reuse param for pData throughout backprop and offsets
-	
-	*/
 	s = pointSetBackOffsets(s, op, outPtr, value,
 		expAuxData, param, pData);
 
@@ -377,7 +374,6 @@ Status StrataElementOp::eval(StrataManifold& value,
 
 	*/
 	LOG("EL OP EVAL");
-	//StrataElementOp* opPtr = static_cast<StrataElementOp*>(node);
 	elementsAdded.clear();
 	elementsAdded.reserve(paramMap.size());
 	StrataElementOp* opPtr = this;
@@ -496,22 +492,31 @@ SAtomBackDeltaGroup StrataElementOp::bestFitBackDeltas(Status* s, StrataManifold
 	for (int i = 0; i < static_cast<int>(elementsAdded.size()); i++) {
 		std::string& name = elementsAdded.rbegin()[i];
 		auto found = front.targetMap.find(name);
-		if (found == front.targetMap.end()) {
-			l("no targets found for created element: " + name + ", skipping");
-			continue;
-		}
-		
-		SElement* el = finalManifold.getEl(name);
-		ElOpParam& param = paramMap[name];
-		switch (el->elType) {
+		if (found != front.targetMap.end()) {
+
+
+			SElement* el = finalManifold.getEl(name);
+			ElOpParam& param = paramMap[name];
+			switch (el->elType) {
 			case StrataElType::point: {
 				stat = pointProcessTargets(stat, finalManifold, front, el);
 			}
+			}
+		}
+		else{
+			l("no targets found for created element: " + name + ", skipping");
 		}
 
 	}
 	backDeltasToMatch = front; // save deltas to match for later
 
+	for (int i = 0; i < static_cast<int>(elementsAdded.size()); i++) {
+		std::string& name = elementsAdded.rbegin()[i];
+		auto found = front.targetMap.find(name);
+		if (found != front.targetMap.end()) {
+			front.targetMap.erase(name);
+		}
+	}
 	return front;
 }
 

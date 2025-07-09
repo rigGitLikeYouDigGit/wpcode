@@ -47,17 +47,6 @@ SAtomBackDeltaGroup StrataOp::bestFitBackDeltas(Status* s, StrataManifold& final
 	return result;
 }
 
-Status& StrataOp::setBackOffsetsAfterDeltas(
-	Status& s, StrataManifold& manifold) {
-	/* finalise offsets on top of fitted inputs to match
-	saved deltas
-	this node will have been evaluated - make sure to
-	edit the strata manifold element datas too?
-	or we just point back into these nodes to retrieve data
-
-	*/
-	return s;
-}
 
 Status& StrataOp::runBackPropagation(
 	Status& s,
@@ -107,46 +96,10 @@ Status& StrataOp::runBackPropagation(
 			resultDeltas[0].mergeOther(resultDeltas[n]);
 		}
 		deltaGrp = resultDeltas[0]; // need to do a copy here because we create the intermediate vals in the loop scope
+		l("deltas after generation: " + deltaGrp.strInfo());
 	}
-
-	/* now forwards pass, eval'ing nodes and setting final offsets
-	*/
-	l("back prop FORWARDS pass");
-	for (int i = 0; i < static_cast<int>(generations.size()); i++) {
-
-		std::vector<int>& toVisit = *(generations.rbegin() + i);
-		for (int n = 0; n < static_cast<int>(toVisit.size()); n++) { // parallel this
-			StrataOp* op = graph->getNode<StrataOp>(toVisit[n]);
-			/* TODO: for eval-ing single nodes like this,
-			should only need to call direct method*/
-			//s = graph->evalGraph(s, toVisit[n], &auxData); // eval node with new best-fit params
-
-			l("eval op for forwards prop: " + op->name + ", value before: " + op->value().printInfo());
-			if (op->index) {
-				l("prev op value: " + graph->results[op->index].printInfo());
-				l("prev val to copy: " + graph->results[op->inputs[0]].printInfo());
-				graph->results[op->index] = graph->results[op->inputs[0]];
-				l("value after copy: " + graph->results[op->index].printInfo());
-			}
-			l("op is in this graph? " + ed::str(op->getGraphPtr() == graph));
-
-			s = graph->evalNode(op, &auxData, s); // eval node with new best-fit params
-			if (s) {
-				l(s.msg);
-			}
-			CWRSTAT(s, "error in evaling node in backprop");
-			/// BELOW GIVES DIFFERENT RESULTS
-			l("value after: " + op->value().printInfo() + " " + graph->results[op->index].printInfo());
-			//StrataManifold& m = op->value();
-			l("before op back offsets");
-
-			/* offsets still need to be set on op parametres
-			*/
-			s = op->setBackOffsetsAfterDeltas(s, op->value());
-			op->setDirty(false);
-
-		}
-	}
-
+	
+	///* eval */
+	//s = graph->evalGraph(s, fromNode->index, &auxData);
 	return s;
 }

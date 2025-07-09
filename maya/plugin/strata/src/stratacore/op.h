@@ -90,11 +90,21 @@ namespace ed {
 		int matrixMode = SDELTAMODE_LOCAL;
 		int uvnMode = SDELTAMODE_LOCAL;
 
-		Affine3f matrix;
-		Vector3f uvn;
+		Affine3f matrix = Affine3f::Identity();
+		Vector3f uvn = { 0, 0, 0 };
 		/*std::vector<Affine3f> matrices;
 		std::vector<Vector3f> uvns;*/
 		int spaceIndex = -1; // if not -1, this target applies locally only to the relative data in this space
+
+		inline std::string strInfo() {
+			std::stringstream matStr;
+			matStr << matrix.matrix() ;
+
+			std::stringstream uvnStr;
+			uvnStr << uvn;
+
+			return "<tgt: " + matStr.str() + ", " + uvnStr.str() + ">";
+		}
 	};
 
 
@@ -108,7 +118,6 @@ namespace ed {
 		*/
 		std::map<StrataName, std::vector<SAtomMatchTarget>> targetMap;
 
-
 		void mergeOther(SAtomBackDeltaGroup& other) {
 			for (auto& p : other.targetMap) {
 				targetMap.at(p.first).insert(
@@ -118,6 +127,19 @@ namespace ed {
 				);
 			}
 		}
+		inline std::string strInfo() {
+			std::string result = "<dgrp: ";
+			for (auto& p : targetMap) {
+				result += "{" + p.first + ":";
+				for (auto& v : p.second) {
+					result += v.strInfo() + ",";
+				}
+				result += "}";
+			}	
+			result += ">";
+			return result;
+		}
+		
 	};
 
 
@@ -219,8 +241,12 @@ namespace ed {
 			and result will only be components taken in by this node*/
 		virtual SAtomBackDeltaGroup bestFitBackDeltas(Status* s, StrataManifold& finalManifold, SAtomBackDeltaGroup& front);
 
-		virtual Status& setBackOffsetsAfterDeltas(
-			Status& s, StrataManifold& manifold);
+		/* we now treat offset targets within normal evaluation
+		*/
+		//virtual Status& setBackOffsetsAfterDeltas(
+		//	Status& s, StrataManifold& manifold);
+
+		
 
 		virtual Status& runBackPropagation(
 			Status& s,

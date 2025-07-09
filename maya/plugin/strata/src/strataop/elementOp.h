@@ -70,7 +70,7 @@ namespace ed {
 		virtual SAtomBackDeltaGroup bestFitBackDeltas(Status* s, StrataManifold& finalManifold, SAtomBackDeltaGroup& front);
 		Status& pointProcessTargets(Status& s, StrataManifold& finalManifold, SAtomBackDeltaGroup& deltaGrp, SElement* el);
 		
-		virtual Status& setBackOffsetsAfterDeltas(Status& s, StrataManifold& manifold);
+		//virtual Status& setBackOffsetsAfterDeltas(Status& s, StrataManifold& manifold);
 
 		virtual StrataElementOp* clone_impl() const;
 

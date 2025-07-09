@@ -963,8 +963,10 @@ namespace ed {
 		}
 		
 		static Status& pointMatrixAt(Status& s, Eigen::Affine3f& out, const SPointData& d, const Eigen::Vector3f& uvn){
+			LOG("pointMatrixAt: ");
 			out = d.finalMatrix;
-			out.translate(uvn);
+			//out.translate(uvn);
+			out.translation() = out * uvn;
 			return s;
 		}
 		static inline Status& edgeDataMatrixAt(Status& s, Eigen::Affine3f& out, const SEdgeData& d, const Eigen::Vector3f& uvn
@@ -1006,8 +1008,12 @@ namespace ed {
 			return s;
 		}
 		Status& matrixAt(Status& s, Eigen::Affine3f& outMat, SElement* el, Eigen::Vector3f uvn) {
-			/* interpolate a spatial element to get a matrix in world space*/
+			/* interpolate a spatial element to get a matrix in world space - 
+			look up UVN on given element, return that matrix
+			*/
+			LOG("matrixAt: " + el->name +" " + str(uvn));
 			if (el == nullptr) {
+				l("el is null");
 				outMat = Affine3f::Identity();
 				return s;
 			}
@@ -1085,6 +1091,7 @@ namespace ed {
 			*/
 			//SPointData& d = pointDatas[elIndex];
 			//outUVN = (d.finalMatrix.inverse() * worldMat).translation();
+			LOG("pointGetUVN");
 			outUVN = (d.finalMatrix.inverse() * worldPos);
 			return s;
 		}
@@ -1152,14 +1159,18 @@ namespace ed {
 			seems like we can just use integers, won't be dynamic unless we add a way
 			to edit structure of graph in history
 			*/
+			LOG("pointSpaceMatrix");
+
 			if (data.spaceDatas.size() == 0) {
+				l("no space datas, space matrix is identity");
 				outMat = Affine3f::Identity();
 				return s;
 			}
 			if (data.spaceDatas.size() == 1) { 
+				l("single space data, look up UVN");
 				auto spaceEl = getEl(data.spaceDatas[0].name);
 				s = matrixAt(s, outMat, spaceEl, data.spaceDatas[0].uvn);
-				outMat = outMat * data.spaceDatas[0].offset;
+				outMat = outMat * data.spaceDatas[0].offset; // add space-specific, child-specific offset
 				return s;
 			}
 			VectorXf weights(data.spaceDatas.size());
@@ -1180,11 +1191,14 @@ namespace ed {
 			if (data.spaceDatas.size() == 0) { // no parent, just literal data
 				//data.finalMatrix = data.parentDatas[0].offset;
 				////// we assume final matrix is already known
+				l("no spaceDatas found");
 				return s;
 			}
-			Affine3f spaceMat;
+			Affine3f spaceMat = Affine3f::Identity();
 			s = pointSpaceMatrix(s, spaceMat, data);
+			l("found space mat:" + str(spaceMat));
 			data.finalMatrix = spaceMat * data.finalMatrix;
+			l("final matrix: " + str(data.finalMatrix));
 			return s;
 		}
 

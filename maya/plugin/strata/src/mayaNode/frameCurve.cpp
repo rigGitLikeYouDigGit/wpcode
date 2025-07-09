@@ -185,7 +185,7 @@ void interpolateMMatrixArray2(std::vector<MMatrix>& mmatrixArr, MMatrix& out, fl
     */
     t = fmin(fmax(t, 0.001f), 0.999f);
 
-    int start = floor(float(mmatrixArr.size()) * t);
+    int start = static_cast<int>(floor(float(mmatrixArr.size()) * t));
     int end = std::min(start + 1, int(mmatrixArr.size() - 1));
     float fraction = mmatrixArr.size() * t - start;
 
@@ -237,8 +237,8 @@ MVectorArray makeRMFNormals(
 
         MVector xiPlus1 = positions[i + 1];
         MVector v1 = xiPlus1 - xi;
-        float c1 = v1*  v1;
-        float ttf = v1 * (resultNs[i]);
+        double c1 = v1*  v1;
+        double ttf = v1 * (resultNs[i]);
         MVector ttv = v1 * (2.0 / c1) * ttf;
         //MVector ttr = MVector(resultNs.row(i)) - ttv;
         MVector ttr = resultNs[i] - ttv;
@@ -248,7 +248,7 @@ MVectorArray makeRMFNormals(
 
         MVector tiPlus1 = tangents[i + 1].normal(); // next point's tangent
         MVector v2 = tiPlus1 - tLi;
-        float c2 = v2 * v2 ;
+        double c2 = v2 * v2 ;
         MVector riPlus1 = rLi - (2.0 / c2) * (v2 * (rLi)) * v2; // final reflected normal
         resultNs[i + 1] = riPlus1.normal();
     }
@@ -289,7 +289,7 @@ MStatus FrameCurveNode::compute(const MPlug& plug, MDataBlock& data) {
 
     /// REF rmf
     for (int i = 0; i < nSteps; i++) { // TODO: parallel ref, active
-        float u = (1.0 / float(nSteps -1)) * float(i);
+        double u = (1.0 / float(nSteps -1)) * float(i);
         double domainMin;
         double domainMax;
         refFn.getKnotDomain(domainMin, domainMax);
@@ -372,7 +372,7 @@ MStatus FrameCurveNode::compute(const MPlug& plug, MDataBlock& data) {
     
 
     for (int i = 0; i < nSteps; i++) { // TODO: parallel ref, active
-        float u = (1.0 / float(nSteps - 1)) * float(i);
+        double u = (1.0 / float(nSteps - 1)) * float(i);
         double domainMin;
         double domainMax;
         activeFn.getKnotDomain(domainMin, domainMax);
@@ -465,7 +465,7 @@ MStatus FrameCurveNode::compute(const MPlug& plug, MDataBlock& data) {
         interpolateMMatrixArray2(
             refMats,
             refCurveMat,
-            u
+            static_cast<float>(u)
         );
 
         l("ref mat pos:");
@@ -483,9 +483,9 @@ MStatus FrameCurveNode::compute(const MPlug& plug, MDataBlock& data) {
         interpolateMMatrixArray2(
             activeMats,
             activeCurveMat,
-            u
+            static_cast<float>(u)
         );
-
+         
         l("active mat pos:");
         DEBUGMV(MPoint(activeCurveMat[3]));
 

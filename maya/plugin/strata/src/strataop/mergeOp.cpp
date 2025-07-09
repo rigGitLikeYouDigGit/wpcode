@@ -43,3 +43,21 @@ Status StrataMergeOp::eval(StrataManifold& value,
 StrataMergeOp* StrataMergeOp::clone_impl() const { 
 	LOG("MERGE OP CLONE");
 	return StrataOp::clone_impl<StrataMergeOp>(); };
+
+SAtomBackDeltaGroup StrataMergeOp::bestFitBackDeltas(Status* s, StrataManifold& finalManifold, SAtomBackDeltaGroup& front) {
+	/* check if this merge op created any elements - 
+	if so, reroute deltas to their source*/
+	LOG("MERGE OP fitBackDeltas:" + name);
+	backDeltasToMatch = front;
+	SAtomBackDeltaGroup result(front); // copy so we pass through any other elements
+	// erase any elements created by this node from result
+	for (int i : elements) {
+		auto name = finalManifold.getEl(i)->name;
+		auto found = result.targetMap.find(name);
+		if (found != result.targetMap.end()) {
+			result.targetMap.erase(found->first);
+		}
+	}
+	return front;
+}
+

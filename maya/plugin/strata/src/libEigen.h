@@ -23,6 +23,18 @@ namespace ed {
 
 	using namespace Eigen;
 
+	/* eigen to string functions - a little spaghett*/
+	inline std::string str(Vector3f& any) {
+		std::stringstream ss;
+		ss << any;
+		return ss.str();
+	}
+	inline std::string str(Affine3f& any) {
+		std::stringstream ss;
+		ss << any.matrix();
+		return ss.str();
+	}
+
 	template<class T>
 	//inline void Quaternion<T>::computeAngleAxis(T& radians, Vector<3, T>& axis) const
 	inline void computeAngleAxis(Eigen::Quaternion<T>& q, T& radians, Eigen::Vector3<T>& axis)

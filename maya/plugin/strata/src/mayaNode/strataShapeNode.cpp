@@ -409,7 +409,13 @@ MStatus StrataShapeNode::runShapeBackPropagation(MObject& nodeObj, MDataBlock& d
         l(st.msg);
         return MStatus::kFailure;
     }
-
+    l("eval after backprop:");
+    st = static_cast<StrataOpGraph*>(opPtr->graphPtr)->evalGraph(st, opPtr->index, &auxData);
+    if (st.val) {
+        l("ERROR IN post-backprop EVAL:");
+        l(st.msg);
+        return MStatus::kFailure;
+    }
     return mStat;
 }
 

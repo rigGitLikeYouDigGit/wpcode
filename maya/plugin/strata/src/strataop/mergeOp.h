@@ -30,6 +30,9 @@ namespace ed {
 
 		virtual StrataMergeOp* clone_impl() const;
 
+		virtual SAtomBackDeltaGroup bestFitBackDeltas(Status* s, StrataManifold& finalManifold, SAtomBackDeltaGroup& front);
+
+
 	};
 
 

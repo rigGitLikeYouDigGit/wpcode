@@ -1,5 +1,7 @@
 
 #include "expParse.h"
+
+#include "../logger.h"
 using namespace ed;
 using namespace ed::expns;
 
@@ -297,6 +299,38 @@ ExpOpNode* ExpGraph::getResultNode() {
 	return static_cast<ExpOpNode*>(getNode(0));
 }
 
+std::vector<int> ExpAuxData::expValuesToElements(std::vector<ExpValue>& values, Status& s) {
+	/* resolve all possible values to elements */
+	LOG("expValuesToElements: " + str(values.size()));
+	std::vector<int> result;
+	for (size_t vi = 0; vi < values.size(); vi++) {
+		//for (auto& v : values) {
+		ExpValue& v = values[vi];
+		l("check value:" + v.printInfo());
+		for (auto& f : v.numberVals) { // check for integer indices
+			int id = fToInt(f);
+			SElement* ptr = manifold->getEl(id);
+			if (ptr == nullptr) { // index not found in manifold
+				continue;
+			}
+			if (!seqContains(result, id)) { // add unique value found
+				result.push_back(id);
+			}
+		}
+		for (auto& s : v.stringVals) { // check for string names
+			// patterns will already have been expanded by top level
+			SElement* ptr = manifold->getEl(s);
+			if (ptr == nullptr) {
+				continue;
+			}
+			if (!seqContains(result, ptr->globalIndex)) { // add unique value found
+				result.push_back(ptr->globalIndex);
+			}
+		}
+	}
+	return result;
+}
+
 Status Expression::parse() {
 	/* update internal structures, return a status on completion or error
 	* I am glad Djikstra is long dead.
@@ -335,6 +369,7 @@ Status Expression::result(
 ) {
 	// get result of expression at top level
 	Status s;
+	LOG("exp RESULT: " + srcStr);
 	if (srcStr == "") { // no expression string, empty result
 		//STAT_ERROR(s, "cannot parse empty source string for expression, halting");
 		return s;

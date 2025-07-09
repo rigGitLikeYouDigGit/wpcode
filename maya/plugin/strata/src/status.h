@@ -9,6 +9,7 @@
 #include <algorithm>
 //#include <cstdint>
 
+#include "macro.h"
 
 
 struct Status {
@@ -74,10 +75,10 @@ struct Status {
 
 // for check-return status
 #define	CRSTAT(s)\
-	if(s){ return s; }\
+	if(s){COUT << ("\n" + s.msg) ;return s; }\
 
 #define	CRMSG(s, strMsg)\
-	if(s){ s.addMsg(strMsg); return s; }\
+	if(s){ s.addMsg(strMsg); COUT << s.msg; return s; }\
 
 	// for check-write
 #define CWSTAT(s)\
@@ -85,9 +86,9 @@ struct Status {
 
 // check-write-message
 #define CWMSG(s, strMsg)\
-	if(s){ s.addMsg(strMsg); DEBUGS(s.msg);}
+	if(s){ s.addMsg(strMsg); DEBUGS("\n" + s.msg);}
 
 
 // check-write-return
 #define CWRSTAT(s, strMsg)\
-	if(s){ s.addMsg(strMsg); DEBUGS(s.msg); return s;}
+	if(s){ s.addMsg(strMsg); DEBUGS("\n" + s.msg); return s;}
