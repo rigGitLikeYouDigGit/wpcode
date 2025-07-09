@@ -160,7 +160,7 @@ namespace ed {
 
 		/* test saving created element data on the ops that create them????
 		*/
-		std::map<StrataName, SPointData> opPointDataMap;
+		std::map<StrataName, SPointData> opPointDataMap; /* use as check if element created on previous cycle*/
 		std::map<StrataName, SEdgeData> opEdgeDataMap;
 
 		/* BACK-PROPAGATION */

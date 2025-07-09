@@ -66,12 +66,7 @@ Status& pointCreateNew(
 				pData.spaceDatas.push_back(sd);
 			}
 		}
-		//value.pDataMap[param.name].finalMatrix = param.pData.finalMatrix;
 		pData.finalMatrix = param.pData.finalMatrix;
-
-		// save built data to this node's data map
-		//op.opPointDataMap[param.name] = value.pDataMap[param.name];
-		op.opPointDataMap[param.name] = pData;
 		return s;
 	}
 
@@ -84,12 +79,7 @@ Status& pointCreateNew(
 
 	if (!spaces.size()) { // if no spaces, nothing to do, take local as global
 		l("no spaces found, using local target as global");
-		//value.pDataMap[param.name].finalMatrix = param.pData.finalMatrix;
 		pData.finalMatrix = param.pData.finalMatrix;
-
-		// save built data to this node's data map
-		//op.opPointDataMap[param.name] = value.pDataMap[param.name];
-		op.opPointDataMap[param.name] = pData;
 		return s;
 	}
 
@@ -108,9 +98,8 @@ Status& pointCreateNew(
 		SElement* spaceEl = value.getEl(spaces[0]);
 		if (spaceEl->elType == StrataElType::point) { // if single parent space is a point
 			SPointData spaceData = value.pDataMap[spaceEl->name];
-			//value.pDataMap[param.name].finalMatrix = spaceData.finalMatrix * param.pData.finalMatrix;
+
 			pData.finalMatrix = spaceData.finalMatrix * param.pData.finalMatrix;
-			op.opPointDataMap[param.name] = pData;
 			return s;
 		}
 	}
@@ -125,7 +114,6 @@ Status& pointCreateNew(
 	VectorXf weights(spaceBlendMats.size());
 	weights.fill(1.0);
 	pData.finalMatrix = blendTransforms(spaceBlendMats, weights);
-	op.opPointDataMap[param.name] = pData;
 	return s;
 }
 
@@ -154,7 +142,7 @@ Status& pointSetBackOffsets(Status& s, StrataElementOp& op, SElement*& el, Strat
 	/* check that a found element does have a target - this should always be the case
 	*/
 	if (!foundToMatch->second.size()) {
-		l("found no targets for found el " + name + ", skipping");
+		l("found no targets for found el " + name + ", VERY WEIRD, skipping");
 		return s;
 	}
 
@@ -218,14 +206,14 @@ Status& pointEvalParam(
 		l("already data found");
 		s = value.computePointData(s, prevData->second);
 		value.pDataMap[param.name] = prevData->second;
-
-		// save built data to this node's data map
-		op.opPointDataMap[param.name] = value.pDataMap[param.name];
 	}
 	else {
 		s = pointCreateNew(s, op, outPtr, value, expAuxData, param);
 	}
-	SPointData& pData = op.opPointDataMap[param.name]; 
+	// save built data to this node's data map
+	SPointData& pData = value.pDataMap[param.name];
+
+	//op.opPointDataMap[param.name] = pData; 
 	/* TODO:   CONSOLIDATE THIS TRASH
 	reuse param for pData throughout backprop and offsets
 	
@@ -233,11 +221,14 @@ Status& pointEvalParam(
 	s = pointSetBackOffsets(s, op, outPtr, value,
 		expAuxData, param, pData);
 
+	// try saving pData before any projection, for fun
+	op.opPointDataMap[param.name] = pData; 
+
 
 	// project to drivers if any
-	if (el->drivers.size()) {
+	if (outPtr->drivers.size()) {
 		l("projecting point to drivers");
-		s = manifold.pointProjectToDrivers(s, pData.finalMatrix, el);
+		s = value.pointProjectToDrivers(s, pData.finalMatrix, outPtr);
 	}
 
 	return s;
