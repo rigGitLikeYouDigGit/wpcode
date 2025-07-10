@@ -331,6 +331,16 @@ std::vector<int> ExpAuxData::expValuesToElements(std::vector<ExpValue>& values, 
 	return result;
 }
 
+void Expression::setSource(const char* inSrcStr) {
+	// only recompile if string has changed
+	LOG("setSource: " + std::string(inSrcStr) + ", was " + std::string(srcStr));
+	if (strcmp(inSrcStr, srcStr.c_str()) == 0) { return; }
+	l("string is new, setting");
+	srcStr = inSrcStr;
+	lexer = Lexer(inSrcStr);
+	needsRecompile = true;
+}
+
 Status Expression::parse() {
 	/* update internal structures, return a status on completion or error
 	* I am glad Djikstra is long dead.

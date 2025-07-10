@@ -998,15 +998,7 @@ namespace ed {
 			Expression& operator=(Expression&& other) = default;;
 
 
-			void setSource(const char* inSrcStr) {
-				// only recompile if string has changed
-				LOG("setSource: " + std::string(inSrcStr) + ", was " + std::string(srcStr));
-				if (strcmp(inSrcStr, srcStr.c_str()) != 0) { return; }
-				l("string is new, setting");
-				srcStr = inSrcStr;
-				lexer = Lexer(inSrcStr);
-				needsRecompile = true;
-			}
+			void setSource(const char* inSrcStr);
 
 			Status parse();
 
