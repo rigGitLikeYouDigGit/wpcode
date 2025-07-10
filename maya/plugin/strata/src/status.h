@@ -69,7 +69,7 @@ struct Status {
 
 // raise an early error from a function with value and message
 #define STAT_ERROR_VAL(s, errVal, strMsg)\
-	s.val = errVal; s.addMsg(strMsg); return s;
+	s.val = errVal; s.addMsg(strMsg); COUT<<("\n" + s.msg); return s;
 
 #define STAT_ERROR(s, strMsg) STAT_ERROR_VAL(s, 1, strMsg)
 

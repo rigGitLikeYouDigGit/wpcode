@@ -1106,6 +1106,7 @@ namespace ed {
 		EvalGraph(EvalGraph&& other) = default;
 		EvalGraph& operator=(EvalGraph const& other) {
 			copyOther(other);
+			return *this;
 		}
 		EvalGraph& operator=(EvalGraph&& other) = default;
 
@@ -1153,7 +1154,9 @@ namespace ed {
 			typename NodeT::EvalFnT evalFnPtr = nullptr) 
 		{
 			NodeT* baseResult = DirtyGraph::addNode<NodeT>(name, false);
-			if (baseResult == nullptr) { return nullptr; };
+			if (baseResult == nullptr) {
+				LOG("baseResult null, dupe node found")
+				return nullptr; };
 			//if (defaultValue == nullptr) { // if default is given, add it to graph
 			//	defaultValue = VT();
 			//}

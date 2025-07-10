@@ -36,6 +36,9 @@
 #include <iomanip>
 #include <iostream>
 
+#include "../logger.h"
+#include "../api.h"
+
 //#include "span.h"
 
 namespace ed {
@@ -87,7 +90,59 @@ namespace ed {
                 Space
             };
 
+            static inline std::string kindStrStatic(Kind val) { //// wow this language kind of sucks huh?
+                switch (val) {
+                case Kind::Number: return "Number";
+                case Kind::Identifier: return "Identifier";
+                case Kind::LeftParen: return "leftParen";
+                case Kind::RightParen: return "rightParen";
+                case Kind::LeftSquare: return "leftSquare";
+                case Kind::RightSquare: return "rightSquare";
+                case Kind::LeftCurly: return "leftCurly";
+                case Kind::RightCurly: return "rightCurly";
+                case Kind::LessThan: return "lessThan";
+                case Kind::GreaterThan:return "greaterThan";
+                case Kind::Equal: return "equal";
+                case Kind::Plus: return "Plus";
+                case Kind::Minus: return "minus";
+                case Kind::Asterisk: return "asterisk";
+                case Kind::Slash: return "slash";
+                case Kind::Hash:return "hash";
+                case Kind::Dot: return "dot";
+                case Kind::Comma: return "comma";
+                case Kind::Colon: return "colon";
+                case Kind::Semicolon: return "semicolon";
+                case Kind::SingleQuote: return "singleQuote";
+                case Kind::DoubleQuote: return "doubleQuote";
+                case Kind::Comment: return "comment";
+                case Kind::Pipe: return "pipe";
+                case Kind::End: return "end";
+                case Kind::Unexpected: return "unexpected";
+                case Kind::Ampersand: return "ampersand";
+                case Kind::At: return "at";
+                case Kind::Exclamation: return "exclamation";
+                case Kind::Question: return "question";
+                case Kind::Tilde: return "tilde";
+
+                case Kind::Percent: return "percent";
+                case Kind::Pound: return "pound";
+                case Kind::Dollar: return "dollar";
+                case Kind::Power: return "power";
+                case Kind::Backslash: return "backslash";
+                case Kind::String: return "string";
+                case Kind::Pattern: return "pattern";
+                case Kind::Space: return "space";
+                }
+                return "UNKNOWN_TOKEN";
+            }
+
+            inline std::string kindStr() {
+                return kindStrStatic(getKind());
+            }
+
+
             int side = 0; // -1 for left, 1 for right
+
 
             Token(Kind kind) noexcept : m_kind{ kind } {}
 
@@ -156,8 +211,11 @@ namespace ed {
 
         typedef Token::Kind TKind;
 
+
+
         class Lexer {
         public:
+
             Lexer(const char* beg) noexcept : m_beg{ beg }, origChar{ beg } {}
 
             Lexer() {
@@ -173,6 +231,7 @@ namespace ed {
             void reset(const char* beg) { m_beg = beg; origChar = beg; }
 
             void copyOther(const Lexer& other) {
+                LOG("lexer copyOther");
                 m_beg = other.m_beg;
                 origChar = other.origChar;
             }
@@ -183,6 +242,7 @@ namespace ed {
             Lexer(Lexer&& other) = default;
             Lexer& operator=(Lexer const& other) {
                 copyOther(other);
+                return *this;
             }
             Lexer& operator=(Lexer&& other) = default;
 
@@ -205,5 +265,9 @@ namespace ed {
             return {} [static_cast<int>(kind)] ;
         }*/
 
+    }
+    inline std::string str(expns::Token& any) {
+        return "<tk " + str(any.side) + " " + any.kindStr()
+            + any.lexeme() + ">";
     }
 }

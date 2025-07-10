@@ -565,7 +565,7 @@ namespace ed {
 				int& outNodeIndex,
 				Status& s
 			) {
-
+				LOG("NAME parse: " + str(token) + " " + str(outNodeIndex));
 				ExpOpNode* newNode = graph.addNode<NameAtom>();
 				outNodeIndex = newNode->index;
 				NameAtom* op = static_cast<NameAtom*>(newNode->expAtomPtr.get());
@@ -819,11 +819,11 @@ namespace ed {
 			separate lexing passes beforehand
 			*/
 			int index = 0;
-			std::vector<Token> parsedTokens;
-			std::vector<Token> readTokens;
-			std::vector<Token> mRead;
-			std::unordered_map<Token::Kind, std::unique_ptr<InfixParselet>> mInfixParselets;
-			std::unordered_map<Token::Kind, std::unique_ptr<PrefixParselet>> mPrefixParselets;
+			std::vector<Token> parsedTokens = {};
+			std::vector<Token> readTokens = {};
+			std::vector<Token> mRead = {};
+			std::unordered_map<Token::Kind, std::unique_ptr<InfixParselet>> mInfixParselets = {};
+			std::unordered_map<Token::Kind, std::unique_ptr<PrefixParselet>> mPrefixParselets = {};
 
 
 			//virtual ~ExpParser() = default;
@@ -875,6 +875,7 @@ namespace ed {
 
 			void resetTokens(std::vector<Token>& aParsedTokens) {
 				/* restart parser to work on a new set of tokens*/
+				LOG("resetTokens");
 				parsedTokens = aParsedTokens;
 				readTokens.clear();
 				mRead.clear();
@@ -890,6 +891,7 @@ namespace ed {
 			}
 
 			Token consume(Token::Kind expected, Status& s) {
+				LOG("consume, expected: " + Token::kindStrStatic(expected));
 				Token token = lookAhead(0);
 				if (token.getKind() != expected) {
 					/*throw ParseException("Expected token " + tokentype::toString(expected) +
@@ -902,6 +904,7 @@ namespace ed {
 
 			Token consume() {
 				// Make sure we've read the token.
+				LOG("consume empty");
 				lookAhead(0);
 
 				Token front = mRead.front();
@@ -984,9 +987,7 @@ namespace ed {
 				srcStr = inSrcStr;
 			}
 
-			void copyOther(const Expression& other) {
-
-			}
+			void copyOther(const Expression& other);
 
 			~Expression() = default; Expression(Expression const& other) {
 				copyOther(other);

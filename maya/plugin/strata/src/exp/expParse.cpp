@@ -54,26 +54,25 @@ Status ExpOpNode::eval(ExpOpNode* node, std::vector<ExpValue>& value, EvalAuxDat
 //}
 
 Status validateAndParseStrings(std::string srcStr, std::vector<Token>& parsedTokens) {
+	/* check for syntax errors I guess? I won't lie, I have no memory of this entire file
+	*/
 	Status s;
+	LOG("validate and parse: " + srcStr + ", " + str(parsedTokens));
 	//lexer = Lexer(srcStr.c_str());
 	Lexer lexer(srcStr.c_str());
 
 	//std::stack<Token> quoteTokenStack;
 	std::vector<Token> quoteTokenStack;
 	//std::stack<Token> parsedTokenStack;
-
+	int limit = 100;
+	int i = 0;
 	for (Token& token = lexer.next();
 		//!(token.is_one_of(Token::Kind::End, Token::Kind::Unexpected));
 		true;
 		token = lexer.next())
 	{
-		if (token.getKind() == Token::Kind::Unexpected) {
-			STAT_ERROR(s, "ERROR in parsing expression:\n source string: " + srcStr +
-				"\nError at char " + std::to_string(lexer.index()) + ", unexpected token: " + token.lexeme());
-			return s;
-		}
-
 		if (token.getKind() == Token::Kind::End) {
+			l("hit end token");
 
 			// if a quote is on the stack, there is an unterminated string
 			if (quoteTokenStack.size()) {
@@ -85,6 +84,19 @@ Status validateAndParseStrings(std::string srcStr, std::vector<Token>& parsedTok
 
 			return s;
 		}
+
+		i += 1;
+		if (i > limit) {
+			l("PARSE LIMIT REACHED, BREAKING");
+			break;
+		}
+		l("parse token:" + str(token));
+		if (token.getKind() == Token::Kind::Unexpected) {
+			STAT_ERROR(s, "ERROR in parsing expression:\n source string: " + srcStr +
+				"\nError at char " + std::to_string(lexer.index()) + ", unexpected token: " + token.lexeme());
+			return s;
+		}
+
 
 		// check if this token is a quote - if so:
 		// - if it matches the last on the quote stack, pop off the last, as it forms a full string
@@ -140,6 +152,7 @@ Status ExpAtom::parse(
 	int& outNodeIndex,
 	Status& s
 ) {
+	LOG("ExpAtom parse");
 	return s;
 }
 
@@ -151,6 +164,7 @@ Status PrefixParselet::parse(
 	int& outNodeIndex,
 	Status& s
 ) {
+	LOG("PrefixParselet parse");
 	return s;
 }
 
@@ -162,6 +176,7 @@ Status InfixParselet::parse(
 	int& outNodeIndex,
 	Status& s
 ) {
+	LOG("InfixParselet parse: "+ str(token) + " " + str(srcString) + " " + str(leftIndex) + str(outNodeIndex));
 	return s;
 }
 
@@ -175,6 +190,7 @@ Status CallAtom::parse(
 ) {
 	// check if name of function is the graph's result node - 
 	// add each separate argument as expression results
+	LOG("callAtom parse");
 	DirtyNode* newNode = nullptr;
 	DirtyNode* leftNode = graph.getNode(leftIndex);
 	if (leftNode->name == resultCallName) {
@@ -255,21 +271,37 @@ Status ExpParser::parseExpression(
 	int precedence
 ) {
 	Status s;
+	LOG("parser parseExpression");
+	int n = 10;
 	Token token = consume();
+	l("consumeToken:" + str(token));
 	auto it = mPrefixParselets.find(token.getKind());
 
-	if (it == mPrefixParselets.end())
+	if (it == mPrefixParselets.end()) { // if statements require brackets
+		// you utter embarrassment
 		//throw ParseException("Could not parse \"" + token.getText() + "\".");
-		STAT_ERROR(s, "Could not find prefixParselet for token: " + token.lexeme() + " , halting");
+		l("END, returning");
+		STAT_ERROR(s, "Could not find prefixParselet for token: " + token.lexeme() + " , halting"); // why does VS still indent lines
+		// if they're not actually part of an if-statement
+	}
 
-	PrefixParselet* prefix = it->second.get();
+	PrefixParselet* prefix = it->second.get(); // strName is empty
 	Status parseS;
-	prefix->parse(graph,  *this, token, outNodeIndex, parseS);
+	prefix->parse(graph,  *this, token, outNodeIndex, parseS); // remove copy here if possible
 	CWRSTAT(parseS, "error parsing prefix ");
+	 
+	graph.getNode(graph.getOutputIndex())->inputs.push_back(outNodeIndex);
 
+	int limit = 100;
+	int i = 0;
 	while (precedence < getPrecedence()) {
+		i += 1;
+		if (i > limit) {
+			l("HIT LIMIT, BREAKING");
+			STAT_ERROR(s, "HIT PRECEDENCE LIMIT");
+		}
 		token = consume();
-
+		l("parse token:" + str(token));
 		int outInfixNodeIndex = -1;
 		InfixParselet* infix = mInfixParselets[token.getKind()].get();
 		Status infixS;
@@ -301,8 +333,10 @@ ExpOpNode* ExpGraph::getResultNode() {
 
 std::vector<int> ExpAuxData::expValuesToElements(std::vector<ExpValue>& values, Status& s) {
 	/* resolve all possible values to elements */
-	LOG("expValuesToElements: " + str(values.size()));
+	
 	std::vector<int> result;
+	if (!values.size()) { return result; }
+	LOG("expValuesToElements: " + str(values.size()));
 	for (size_t vi = 0; vi < values.size(); vi++) {
 		//for (auto& v : values) {
 		ExpValue& v = values[vi];
@@ -350,6 +384,7 @@ Status Expression::parse() {
 	* this way we don't have to deal with multiple values at the top level?
 	*
 	*/
+	LOG("PARSE:" + srcStr)
 	Status s;
 	if (srcStr == "") {
 		STAT_ERROR(s, "cannot parse empty source string for expression, halting");
@@ -357,11 +392,11 @@ Status Expression::parse() {
 
 	std::vector<Token> parsedTokens;
 	 s = validateAndParseStrings(srcStr, parsedTokens);
-	if (s) { return s; }
+	 CWRSTAT(s, "ERROR in validateParseStrings");
 
 	parseStatus = ExpParseStatus();
-
-	graph.clear();
+	graph = ExpGraph();
+	//graph.clear();
 	graph.addResultNode();
 
 	parser.resetTokens(parsedTokens);
@@ -385,14 +420,24 @@ Status Expression::result(
 		return s;
 	}
 	if(needsRecompile){
+		l("needs recompile");
 		s = parse();
 		CWRSTAT(s, "could not recompile expression " + srcStr + " to get value, halting");
-		return s;
+		//return s;
 	}
-
+	l("eval-ing graph");
 	graph.evalGraph(s, graph.getResultNode()->index, auxData);
 	CWRSTAT(s, "error evaluating expression: " + srcStr + " , halting");
 	outResult = &graph.results[graph.getResultNode()->index];
 	return s;
 }
 
+
+void Expression::copyOther(const Expression& other) {
+	LOG("EXP copyOther: " + srcStr + " from " + other.srcStr);
+	srcStr = other.srcStr;
+	parseStatus = other.parseStatus;
+	lexer = other.lexer;
+	graph = other.graph;
+	needsRecompile = other.needsRecompile;
+}

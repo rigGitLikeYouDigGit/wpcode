@@ -24,11 +24,25 @@ namespace ed {
 		return std::to_string(any);
 	}
 
+	//inline std::string str(enum any) {
+	//	return static_cast<int>(any);
+	//}
+
 	inline std::string str(std::string any) {
 		return any;
 	}
 	inline std::string str(const char* any) {
 		return std::string(any);
+	}
+
+	template<typename T>
+	inline std::string str(std::vector<T> any) {
+		std::string result = "{";
+		for (T& s : any) {
+			result += str(s);
+		}
+		result += "len:" + str(any.size()) + "}";
+		return result;
 	}
 	//inline std::string str(const char** any) {
 	//	return std::string(any);

@@ -114,6 +114,7 @@ Token Lexer::atom(Token::Kind kind, int side) noexcept {
 }
 
 Token Lexer::space() noexcept {
+    LOG("space()");
     const char* start = m_beg;
     get();
 
@@ -264,6 +265,7 @@ Token Lexer::next() noexcept {
 }
 
 Token Lexer::identifier() noexcept {
+    LOG("IDENTIFIER");
     const char* start = m_beg;
     get();
 
@@ -275,6 +277,7 @@ Token Lexer::identifier() noexcept {
 }
 
 Token Lexer::number() noexcept {
+    LOG("number");
     const char* start = m_beg;
     get();
     while (is_digit(peek()) || (peek() == '.') || (peek() == 'e')) get();
@@ -282,6 +285,7 @@ Token Lexer::number() noexcept {
 }
 
 Token Lexer::slash_or_comment() noexcept {
+    LOG("slash or comment");
     const char* start = m_beg;
     get();
     if (peek() == '/') {
