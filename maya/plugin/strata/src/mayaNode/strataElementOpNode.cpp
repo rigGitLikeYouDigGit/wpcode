@@ -421,6 +421,7 @@ MStatus StrataElementOpNode::syncStrataParams(MObject& nodeObj, MDataBlock& data
         //continue;
         // parent exp
         std::string spaceExpStr = elDH.inputValue().child(aStSpaceExp).asString().asChar();
+        l("space exp str: " + spaceExpStr);
         param.spaceExp.setSource(spaceExpStr.c_str());
         std::string elParentName = elName + "!";
         foundNames.insert(elParentName);
@@ -431,23 +432,21 @@ MStatus StrataElementOpNode::syncStrataParams(MObject& nodeObj, MDataBlock& data
         // always match in worldspace for now
 
         MMatrix mayaMat = elDH.inputValue().child(aStPointWorldMatrixIn).asMatrix();
-        l("maya point mat: ");
-        COUT << mayaMat << std::endl;
-        l(" ");
-        COUT << toEigen(mayaMat) << std::endl;
+        //l("maya point mat: ");
+        //COUT << mayaMat << std::endl;
+        //l(" ");
+        //COUT << toEigen(mayaMat) << std::endl;
         param.pData.finalMatrix = toEigen(mayaMat);
 
-        //opPtr->paramMap.insert({ param.name, param }); // crashes
         opPtr->paramMap.insert_or_assign( param.name, param ); // crashes
-        //opPtr->paramMap.insert({ "test", param }); // no crash
 
     }
 
-    for (auto& i : opPtr->paramMap) { // crashes on iteration
-        if (foundNames.find(i.first) == foundNames.end()) {
-            opPtr->paramMap.erase(i.first);
-        }
-    }
+    //for (auto& i : opPtr->paramMap) { // crashes on iteration
+    //    if (foundNames.find(i.first) == foundNames.end()) {
+    //        opPtr->paramMap.erase(i.first); // mutating map during
+    //    }
+    //}
     return s;
 }
 

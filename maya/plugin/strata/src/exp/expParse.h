@@ -1000,7 +1000,9 @@ namespace ed {
 
 			void setSource(const char* inSrcStr) {
 				// only recompile if string has changed
-				if (strcmp(inSrcStr, srcStr.c_str())) { return; }
+				LOG("setSource: " + std::string(inSrcStr) + ", was " + std::string(srcStr));
+				if (strcmp(inSrcStr, srcStr.c_str()) != 0) { return; }
+				l("string is new, setting");
 				srcStr = inSrcStr;
 				lexer = Lexer(inSrcStr);
 				needsRecompile = true;
