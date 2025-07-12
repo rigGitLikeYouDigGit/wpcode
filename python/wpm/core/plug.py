@@ -218,7 +218,8 @@ def plugMFnDataType(plug:om.MPlug):
 	mfnAttr = plugMFnAttr(plug)
 	if not isinstance(mfnAttr, om.MFnTypedAttribute):
 		return None
-	return mfnDataConstantTypeMap()[mfnAttr.attrType()]
+	return getCache().apiTypeMFnDataMap[mfnAttr.attrType()]
+	# return mfnDataConstantTypeMap()[mfnAttr.attrType()]
 
 def ensurePlugHasMObject(plug:om.MPlug):
 	mfnDataCls = plugMFnDataType(plug)

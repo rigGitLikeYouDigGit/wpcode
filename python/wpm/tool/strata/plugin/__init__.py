@@ -172,7 +172,7 @@ def reloadPluginTest():
 	# shape.stInput_[1] = el2.stOutput_
 	# shape.stInput_[2] = elOp.stOutput_
 
-	#return
+	return
 
 
 	ptB = makeStrataPoint("ptB").tf()
@@ -194,22 +194,26 @@ def reloadPluginTest():
 
 	# connect elbow driver to test space driving, and FK
 	driverLoc = WN.Locator.create("elbowDriver_LOC")
-	# shape.stDataIn_[0].stExpIn_ = "pWrist"
-	# shape.stDataIn_[0].stSpaceNameIn_ = "pElbow"
-	# shape.stDataIn_[0].stMatrixIn_ = driverLoc.matrix_
 
+	# try second fk joint
+	ptD = makeStrataPoint("ptD").tf()
+	ptD.translateX_ = 9
+
+	elOp.stElement_[3].stName_ = "pFinger"
+	elOp.stElement_[3].stPointWorldMatrixIn_ = ptD.worldOut
+	elOp.stElement_[3].stSpaceExp_ = "pWrist"
+
+	driverLoc2 = WN.Locator.create("fingerDriver_LOC").tf()
+	driverLoc2Grp = WN.create("fingerDriver_GRP")
+	driverLoc2.setParentKeepWorld(driverLoc2Grp)
+	driverLoc2Grp.translateZ_ = 2.0
+
+	# SET SHAPE OVERRIDE TARGETS FOR BACK PROPAGATION
 	shape.stDataIn_[0].stExpIn_ = "pElbow"
 	shape.stDataIn_[0].stMatrixIn_ = driverLoc.matrix_
 
-	#cmds.setAttr(driverLoc + ".rotateZ", 45)
-
-	return
-
-
-	#elOp = cmds.createNode("strataElementOp")
-
-
-
+	shape.stDataIn_[1].stExpIn_ = "pWrist"
+	shape.stDataIn_[1].stMatrixIn_ = driverLoc2.matrix_
 
 
 

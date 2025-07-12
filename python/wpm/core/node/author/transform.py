@@ -12,9 +12,9 @@ class Transform(GenTransform):
 	clsApiType = om.MFn.kTransform
 
 	def localMatrix(self)->om.MMatrix:
-		return self.dagLocalMatrix_.value()
+		return self.dagLocalMatrix_()
 	def worldMatrix(self)->om.MMatrix:
-		return self.worldMatrix_.value()
+		return self.worldMatrix_[0]()
 
 	def setLocalMatrix(self, mat):
 		mat = to(mat, om.MTransformationMatrix)
@@ -26,9 +26,9 @@ class Transform(GenTransform):
 			self.MFn.setTransformation(mat)
 			return
 
-		parentMat = om.MFnTransform(self.MFn.parent()).transformationMatrix()
+		parentMat = om.MFnTransform(self.MFn.parent(0)).transformationMatrix()
 		mat = to(mat, om.MMatrix)
-		self.setLocalMatrix(parentMat.asMatrixInverse() * mat)
+		self.setLocalMatrix(parentMat.inverse() * mat)
 
 	def localPos(self)->om.MVector:
 		return self.MFn.translation(om.MSpace.kObject)
@@ -55,3 +55,15 @@ class Transform(GenTransform):
 	@property
 	def worldOut(self) -> Plug:
 		return self.worldMatrix_[0]
+
+	def setParentKeepWorld(self, other:WN, updateOffsetParentMat=False):
+		"""reparent keeping worldspace position, setting new local
+		transform attributes on this node
+		if updateOffsetParentMat, the offsetParentMatrix of this node will
+		receive the full transform, and both world position and local attributes
+		of this node will be preserved (as long as offsetParent is not
+		connected in the graph)
+		"""
+		worldMat = self.worldMatrix()
+		self.setParentKeepLocal(other)
+		self.setWorldMatrix(worldMat)

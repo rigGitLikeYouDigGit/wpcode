@@ -71,6 +71,8 @@ public:
 		return s;
 	}
 
+	//MString initialize(const MInitContext& initContext, MSharedPtr<MUserData>&)
+
 
 	inline Status syncManifold() {
 		/* eval manifold if its final out node is dirty*/
@@ -185,7 +187,7 @@ public:
 	bool requiresGeometryUpdate() const {
 		LOG("GEO O REQ GEOMETRY UPDATE()");
 		return true;
-	}
+	}  
 
 	/* UI drawing - for now just dots on points, as well as the gnomon lines -
 	just an experiment*/
@@ -230,6 +232,57 @@ public:
 		);
 	}
 
+	inline std::string paramTypeName(MShaderInstance::ParameterType t) {
+		switch (t)
+		{
+		case MHWRender::MShaderInstance::kInvalid:
+			return ("'Invalid', ");
+			break;
+		case MHWRender::MShaderInstance::kBoolean:
+			return ("'Boolean', ");
+			break;
+		case MHWRender::MShaderInstance::kInteger:
+			return ("'Integer', ");
+			break;
+		case MHWRender::MShaderInstance::kFloat:
+			return ("'Float', ");
+			break;
+		case MHWRender::MShaderInstance::kFloat2:
+			return ("'Float2', ");
+			break;
+		case MHWRender::MShaderInstance::kFloat3:
+			return ("'Float3', ");
+			break;
+		case MHWRender::MShaderInstance::kFloat4:
+			return ("'Float4', ");
+			break;
+		case MHWRender::MShaderInstance::kFloat4x4Row:
+			return ("'Float4x4Row', ");
+			break;
+		case MHWRender::MShaderInstance::kFloat4x4Col:
+			return ("'Float4x4Col', ");
+			break;
+		case MHWRender::MShaderInstance::kTexture1:
+			return ("'1D Texture', ");
+			break;
+		case MHWRender::MShaderInstance::kTexture2:
+			return ("'2D Texture', ");
+			break;
+		case MHWRender::MShaderInstance::kTexture3:
+			return ("'3D Texture', ");
+			break;
+		case MHWRender::MShaderInstance::kTextureCube:
+			return ("'Cube Texture', ");
+			break;
+		case MHWRender::MShaderInstance::kSampler:
+			return ("'Sampler', ");
+			break;
+		default:
+			return ("'Unknown', ");
+			break;
+		}
+	}
+
 	void updateRenderItems(const MDagPath& path, MHWRender::MRenderItemList& renderItems) override {
 		/* largely copied from the geometryOverrideExample2 in the maya devkit
 		*
@@ -253,6 +306,8 @@ public:
 			l("returning no shader manager");
 			return;
 		}
+		MStatus ms(MS::kSuccess);
+
 		// Get the inherited DAG display properties.
 		auto wireframeColor = MHWRender::MGeometryUtilities::wireframeColor(path);
 		auto displayStatus = MHWRender::MGeometryUtilities::displayStatus(path);
@@ -282,7 +337,8 @@ public:
 				MHWRender::MGeometry::kLines
 			);
 			// We want this render item to show up when in all mode ( Wireframe, Shaded, Textured and BoundingBox)
-			renderItem->setDrawMode(drawMode);
+			//renderItem->setDrawMode(MGeometry::kWireframe);
+			renderItem->setDrawMode(MGeometry::kAll);
 			// Set selection priority: on top of everything
 			renderItem->depthPriority(depthPriority);
 			// Get an instance of a 3dSolidShader from the shader manager.
@@ -293,6 +349,34 @@ public:
 			{
 				l("found shader");
 				renderItem->setShader(shader);
+
+				/* get some info from the CPV shader:
+				*    |found shader
+   |param: C_4F, COLOR0 t:'Float4', 
+   |param: dimmer,  t:'Float', 
+   |param: selectionHiddenColor,  t:'Float4', 
+   |param: isSelectionHighlightingON,  t:'Boolean', 
+   |param: Pm, POSITION t:'Float3', 
+   |param: WorldViewProj, worldviewprojection t:'Float4x4Row', 
+   |param: DepthPriority, DepthPriority t:'Float', 
+   |param: orthographic, isorthographic t:'Boolean', 
+   |param: depthPriorityThreshold, mayadepthprioritythreshold t:'Float', 
+   |param: depthPriorityScale, mayadepthprioirtyscale t:'Float', 
+   |param: Instanced,  t:'Boolean', 
+   |param: MultiDraw,  t:'Integer',
+
+   color is float4
+				*/
+				//MStringArray paramList;
+				//shader->parameterList(paramList);
+				//for (int pi = 0; pi < paramList.length(); pi++) {
+				//	MString paramName = paramList[pi];
+				//	MString paramSemantic = shader->parameterSemantic(paramName, ms);
+				//	MShaderInstance::ParameterType paramType = shader->parameterType(paramName);
+				//	l("param: " + paramName + ", " + paramSemantic + " t:" + paramTypeName(paramType).c_str());
+				//}
+
+				renderItem->enable(true);
 				// Once assigned, no need to hold on to shader instance
 				shaderManager->releaseShader(shader);
 			}
@@ -315,7 +399,7 @@ public:
 			if (shader)
 			{
 				// Set the shader color parameter
-				shader->setParameter("solidColor", &color.r);
+				//shader->setParameter("solidColor", &color.r);
 			}
 			//renderItem->enable(isEnable); 
 			renderItem->enable(true);
@@ -401,18 +485,19 @@ public:
 				void* buffer = positionBuffer->acquire(static_cast<unsigned int>(positions.size()), true /*writeOnly */);
 				if (buffer)
 				{
-					const std::size_t bufferSizeInByte =
-						sizeof(ed::Float3Array::value_type) * positions.size();
+					const std::size_t bufferSizeInByte = sizeof(ed::Float3Array::value_type) * positions.size();
 					memcpy(buffer, positions.data(), bufferSizeInByte);
 					// Transfer from CPU to GPU memory.
 					positionBuffer->commit(buffer);
+					l("committed position buffer");
 				}
 				else {
 					l("could not acquire point position buffer");
 				}
+				break;
+
 
 			}
-			break;
 			case MGeometry::kNormal:
 			{
 				l("vertex buffer normal");
@@ -507,30 +592,33 @@ public:
 					l("descriptor not found, continuing");
 					continue;
 				}
+				l("descriptor: " + ed::str(desc.semanticName().asChar()));
 				MHWRender::MVertexBuffer* colourBuffer = data.createVertexBuffer(desc);
 				if (!colourBuffer) {
 					l("could not create colourBuffer for vertex data");
 					return;
 				}
-				ed::Float3Array colours(manifold.pDataMap.size() * 4);
+				ed::Float4Array colours(manifold.pDataMap.size() * 4);
+				float selectedFloat = 0.5f;
 				for (int n = 0; n < static_cast<int>(manifold.pDataMap.size()); n++) {
-					colours[n * 4] = ed::Float3(1.0f, 1.0f, 1.0f);
-					colours[n * 4 + 1] = ed::Float3(1.0f, 0.0f, 0.0f);
-					colours[n * 4 + 2] = ed::Float3(0.0f, 1.0f, 0.0f);
-					colours[n * 4 + 3] = ed::Float3(0.0f, 0.0f, 1.0f);
+					colours[n * 4] = ed::Float4(0.0f, 0.0f, 0.0f, 1.0f); // centre point black when not selected
+					colours[n * 4 + 1] = ed::Float4(1.0f, 0.0f, 0.0f, selectedFloat);
+					colours[n * 4 + 2] = ed::Float4(0.0f, 1.0f, 0.0f, selectedFloat);
+					colours[n * 4 + 3] = ed::Float4(0.0f, 0.0f, 1.0f, selectedFloat);
 				}
 				void* buffer = colourBuffer->acquire(static_cast<unsigned int>(colours.size()), true /*writeOnly */);
 				if (buffer)
 				{
-					const std::size_t bufferSizeInByte =
-						sizeof(ed::Float3Array::value_type) * colours.size();
+					const std::size_t bufferSizeInByte = sizeof(ed::Float4Array::value_type) * colours.size();
 					memcpy(buffer, colours.data(), bufferSizeInByte);
 					// Transfer from CPU to GPU memory.
 					colourBuffer->commit(buffer);
+					l("committed colour buffer");
 				}
 				else {
 					l("could not acquire point colour buffer");
 				}
+				break;
 			}
 			case MGeometry::kTangentWithSign: {
 				l("vertex buffer tangentWithSign");

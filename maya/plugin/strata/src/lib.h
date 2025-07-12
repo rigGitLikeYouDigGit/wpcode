@@ -171,6 +171,66 @@ namespace ed {
 			return *this;
 		}
 	};
+
+	struct Float4
+	{
+		Float4() : x(0), y(0), z(0), w(0) {}
+		Float4(float x, float y, float z)
+			: x(static_cast<float>(x)), y(static_cast<float>(y)), z(static_cast<float>(z)), w(0.0f) {
+		}
+		Float4(float x, float y, float z, float w)
+			: x(static_cast<float>(x)), y(static_cast<float>(y)), z(static_cast<float>(z)), w(static_cast<float>(w)) {
+		}
+		Float4(MVector v)
+			: x(static_cast<float>(v[0])), y(static_cast<float>(v[1])), z(static_cast<float>(v[2])) {
+		}
+		Float4(MPoint v)
+			: x(static_cast<float>(v[0])), y(static_cast<float>(v[1])), z(static_cast<float>(v[2])) {
+		}
+		Float4(float* v)
+			: x(static_cast<float>(v[0])), y(static_cast<float>(v[1])), z(static_cast<float>(v[2])) {
+		}
+		Float4(const float* v)
+			: x(static_cast<float>(v[0])), y(static_cast<float>(v[1])), z(static_cast<float>(v[2])) {
+		}
+		Float4(double* v)
+			: x(static_cast<float>(v[0])), y(static_cast<float>(v[1])), z(static_cast<float>(v[2])) {
+		}
+		Float4(Eigen::Vector3f& v)
+			: x(static_cast<float>(v.data()[0])), y(static_cast<float>(v.data()[1])), z(static_cast<float>(v.data()[2])) {
+		}
+		Float4(Eigen::Vector3f&& v)
+			: x(static_cast<float>(v[0])), y(static_cast<float>(v.data()[1])), z(static_cast<float>(v.data()[2])) {
+		}
+		//Float4(Eigen::Matrix<float, 3, 1, 0, 3, 1>&& v)
+		//	: x(static_cast<float>(v[0])), y(static_cast<float>(v.data()[1])), z(static_cast<float>(v.data()[2])) {
+		//}
+		Float4(Eigen::Matrix<double, 3, 1, 0, 3, 1> v)
+			: x(static_cast<float>(v.data()[0])), y(static_cast<float>(v.data()[1])), z(static_cast<float>(v.data()[2])) {
+		}
+		Float4(Eigen::Array<double, 3, 1, 0, 3, 1> v)
+			: x(static_cast<float>(v.data()[0])), y(static_cast<float>(v.data()[1])), z(static_cast<float>(v.data()[2])) {
+		}
+		float x = 0.0f;
+		float y = 0.0f;
+		float z = 0.0f;
+		float w = 0.0f;
+		Float4& operator=(const float*& v) {
+			x = v[0];
+			y = v[1];
+			z = v[2];
+			return *this;
+		}
+
+		Float4& operator=(const Eigen::Vector3<float>& v) {
+			x = v[0];
+			y = v[1];
+			z = v[2];
+			return *this;
+		}
+	};
+
+	typedef std::vector<Float4>       Float4Array;
 	typedef std::vector<Float3>       Float3Array;
 	typedef std::vector<Float2>       Float2Array;
 	typedef std::vector<unsigned int> IndexList;
