@@ -73,6 +73,9 @@ Status& pointCreateNew(
 			}
 		}
 		pData.finalMatrix = param.pData.finalMatrix;
+
+		l("built pdata:");
+		l(pData.strInfo());
 		return s;
 	}
 

@@ -5,6 +5,20 @@
 #include "../libEigen.h"
 
 using namespace ed;
+
+std::string ed::SPointSpaceData::strInfo() {
+	return "<PSData " + name + " w:" + str(weight) + " uvn:" + str(uvn) + " offset:" + str(offset) + ">";
+}
+
+std::string ed::SPointData::strInfo() {
+	std::string result = "<PData driver:" + str(driverData.index) + " ";
+	for (auto& i : spaceDatas) {
+		result += i.strInfo() + " ";
+	}
+	result += " mat: " + str(finalMatrix) + ">";
+	return result;
+}
+
 //
 //inline Float3Array StrataManifold::getWireframeVertexPositionArray(Status& s) {
 //	/* return flat float3 array for vector positions on points and curves

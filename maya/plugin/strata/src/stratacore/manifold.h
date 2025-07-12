@@ -204,6 +204,7 @@ namespace ed {
 		// eg if point goes off edge of space surface
 		Affine3f offset = Eigen::Affine3f::Identity(); // translation is UVN, rotation is relative rotation from that position
 
+		std::string strInfo();
 	};
 
 	struct SPointData : SElData {
@@ -212,6 +213,8 @@ namespace ed {
 		//MMatrix finalMatrix = MMatrix::identity; // final evaluated matrix in world space
 		Eigen::Affine3f finalMatrix = Eigen::Affine3f::Identity(); // final evaluated matrix in world space
 		//std::vector<std::string> nodeHistory; // each node that has affected this point, starting with creator
+
+		std::string strInfo();
 	};
 
 
@@ -1185,19 +1188,28 @@ namespace ed {
 			return s;
 		}
 
-		Status& computePointData(Status& s, SPointData& data) {
-			/* given all space data is built, find final matrix*/
+		Status& computePointData(Status& s, SPointData& data//, bool doProjectToDrivers=false
+		) {
+			/* given all space data is built, find final matrix
+			* 
+			* DO WE PROJECT TO DRIVERS HERE???
+			* no, it's only one call outside - be explicit in calling code
+			*/
 			LOG("compute point data: " + getEl(data.index)->name);
-			if (data.spaceDatas.size() == 0) { // no parent, just literal data
-				//data.finalMatrix = data.parentDatas[0].offset;
-				////// we assume final matrix is already known
-				l("no spaceDatas found");
-				return s;
+			l(data.strInfo());
+			if (data.spaceDatas.size()) { // no parent, just literal data
+				Affine3f spaceMat = Affine3f::Identity();
+				s = pointSpaceMatrix(s, spaceMat, data);
+				l("found space mat:" + str(spaceMat));
+				//data.finalMatrix = spaceMat * data.finalMatrix;
+				data.finalMatrix = spaceMat; // oh god oh god is this correct
+				/* each space holds its own offset, so there should be no reason to
+				pull from any existing data on main pData object */
 			}
-			Affine3f spaceMat = Affine3f::Identity();
-			s = pointSpaceMatrix(s, spaceMat, data);
-			l("found space mat:" + str(spaceMat));
-			data.finalMatrix = spaceMat * data.finalMatrix;
+			//if (doProjectToDrivers) {
+			//	l("projectingToDrivers");
+			//	s = pointProjectToDrivers(s, data.finalMatrix, getEl(data.index));
+			//}
 			l("final matrix: " + str(data.finalMatrix));
 			return s;
 		}

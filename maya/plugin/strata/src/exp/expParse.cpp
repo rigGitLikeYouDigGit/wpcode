@@ -337,11 +337,11 @@ std::vector<int> ExpAuxData::expValuesToElements(std::vector<ExpValue>& values, 
 	
 	std::vector<int> result;
 	if (!values.size()) { return result; }
-	LOG("expValuesToElements: " + str(values.size()));
+	//LOG("expValuesToElements: " + str(values.size()));
 	for (size_t vi = 0; vi < values.size(); vi++) {
 		//for (auto& v : values) {
 		ExpValue& v = values[vi];
-		l("check value:" + v.printInfo());
+		//l("check value:" + v.printInfo());
 		for (auto& f : v.numberVals) { // check for integer indices
 			int id = fToInt(f);
 			SElement* ptr = manifold->getEl(id);
@@ -368,9 +368,9 @@ std::vector<int> ExpAuxData::expValuesToElements(std::vector<ExpValue>& values, 
 
 void Expression::setSource(const char* inSrcStr) {
 	// only recompile if string has changed
-	LOG("setSource: " + std::string(inSrcStr) + ", was " + std::string(srcStr));
+	//LOG("setSource: " + std::string(inSrcStr) + ", was " + std::string(srcStr));
 	if (strcmp(inSrcStr, srcStr.c_str()) == 0) { return; }
-	l("string is new, setting");
+	//l("string is new, setting");
 	srcStr = inSrcStr;
 	lexer = Lexer(inSrcStr);
 	needsRecompile = true;
@@ -385,7 +385,7 @@ Status Expression::parse() {
 	* this way we don't have to deal with multiple values at the top level?
 	*
 	*/
-	LOG("PARSE:" + srcStr)
+	//LOG("PARSE:" + srcStr)
 	Status s;
 	if (srcStr == "") {
 		STAT_ERROR(s, "cannot parse empty source string for expression, halting");
@@ -415,18 +415,18 @@ Status Expression::result(
 ) {
 	// get result of expression at top level
 	Status s;
-	LOG("exp RESULT: " + srcStr);
+	//LOG("exp RESULT: " + srcStr);
 	if (srcStr == "") { // no expression string, empty result
 		//STAT_ERROR(s, "cannot parse empty source string for expression, halting");
 		return s;
 	}
 	if(needsRecompile){
-		l("needs recompile");
+		//l("needs recompile");
 		s = parse();
 		CWRSTAT(s, "could not recompile expression " + srcStr + " to get value, halting");
 		//return s;
 	}
-	l("eval-ing graph");
+	//l("eval-ing graph");
 	//graph.evalGraph(s, graph.getResultNode()->index, auxData);
 	graph.evalGraphSerial(s, graph.getResultNode()->index, auxData);
 	CWRSTAT(s, "error evaluating expression: " + srcStr + " , halting");
@@ -436,7 +436,7 @@ Status Expression::result(
 
 
 void Expression::copyOther(const Expression& other) {
-	LOG("EXP copyOther: " + srcStr + " from " + other.srcStr);
+	//LOG("EXP copyOther: " + srcStr + " from " + other.srcStr);
 	srcStr = other.srcStr;
 	parseStatus = other.parseStatus;
 	lexer = other.lexer;

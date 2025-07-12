@@ -569,7 +569,7 @@ namespace ed {
 				int& outNodeIndex,
 				Status& s
 			) {
-				LOG("NAME parse: " + str(token) + " " + str(outNodeIndex));
+				//LOG("NAME parse: " + str(token) + " " + str(outNodeIndex));
 				ExpOpNode* newNode = graph.addNode<NameAtom>();
 				outNodeIndex = newNode->index;
 				NameAtom* op = static_cast<NameAtom*>(newNode->expAtomPtr.get());
@@ -879,7 +879,7 @@ namespace ed {
 
 			void resetTokens(std::vector<Token>& aParsedTokens) {
 				/* restart parser to work on a new set of tokens*/
-				LOG("resetTokens");
+				//LOG("resetTokens");
 				parsedTokens = aParsedTokens;
 				readTokens.clear();
 				mRead.clear();
@@ -895,7 +895,7 @@ namespace ed {
 			}
 
 			Token consume(Token::Kind expected, Status& s) {
-				LOG("consume, expected: " + Token::kindStrStatic(expected));
+				//LOG("consume, expected: " + Token::kindStrStatic(expected));
 				Token token = lookAhead(0);
 				if (token.getKind() != expected) {
 					/*throw ParseException("Expected token " + tokentype::toString(expected) +
@@ -908,7 +908,7 @@ namespace ed {
 
 			Token consume() {
 				// Make sure we've read the token.
-				LOG("consume empty");
+				//LOG("consume empty");
 				lookAhead(0);
 
 				Token front = mRead.front();
