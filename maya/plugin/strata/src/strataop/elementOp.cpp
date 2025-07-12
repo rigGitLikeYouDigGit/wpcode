@@ -18,7 +18,8 @@ Status& pointCreateNew(
 	/* create a new point with no existing prior data
 	*/
 	LOG("point create new");
-	std::vector<ExpValue> resultVals;
+	std::vector<ExpValue> emptyResult;
+	std::vector<ExpValue>* resultVals = &emptyResult;
 
 	// no data found, make new
 	value.pDataMap[param.name] = param.pData;
@@ -27,15 +28,18 @@ Status& pointCreateNew(
 	pData.index = outPtr->globalIndex;
 
 	// check if point has a driver - if it's a point, snap to it
-	s = param.driverExp.result(&resultVals, &expAuxData);
+	//expAuxData.exp
+	s = param.driverExp.result(resultVals, &expAuxData);
 	CWRSTAT(s, "error reading driver exp");
-	std::vector<int> drivers = expAuxData.expValuesToElements(resultVals, s);
+	std::vector<int> drivers = expAuxData.expValuesToElements(*resultVals, s);
 	CWRSTAT(s, "error converting driver exp to elements");
 
 	// check for spaces
-	s = param.spaceExp.result(&resultVals, &expAuxData);
+	resultVals = &emptyResult;
+	s = param.spaceExp.result(resultVals, &expAuxData);
 	CWRSTAT(s, "error reading space exp");
-	std::vector<int> spaces = expAuxData.expValuesToElements(resultVals, s);
+	std::vector<int> spaces = expAuxData.expValuesToElements(
+		*resultVals, s);
 	CWRSTAT(s, "error converting space exp to elements");
 
 	/* check if matrix is specified locally, or UVNs given*/
@@ -74,8 +78,8 @@ Status& pointCreateNew(
 
 	// locally specified, more complex
 	l("creating local data");
-	s = param.spaceExp.result(&resultVals, &expAuxData);
-	spaces = expAuxData.expValuesToElements(resultVals, s);
+	//s = param.spaceExp.result(resultVals, &expAuxData);
+	//spaces = expAuxData.expValuesToElements(*resultVals, s);
 
 	/* TODO: allow defining locally-defined UVNs for drivers */
 
@@ -381,6 +385,8 @@ Status StrataElementOp::eval(StrataManifold& value,
 
 	// use one data struct throughout to allow reusing variables between params
 	ExpAuxData expAuxData;
+	ExpStatus expStatus; // status object shouldn't have to live beyond this eval function
+	expAuxData.expStatus = &expStatus;
 
 	//for (auto& p : paramMap) {
 	for( auto paramName : paramNames){

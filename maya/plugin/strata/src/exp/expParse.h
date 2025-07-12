@@ -223,16 +223,22 @@ namespace ed {
 
 		};
 
+		/* SHOULD THIS OBJECT LINK TO MANIFOLD?
+		OR
+		SHOULD HIGHER EXPAUXDATA
+
+		flat better than nested until we find a required case
+		*/
 		struct ExpStatus {
 			/*constant state of overall expression -
 			mainly tracking variables*/
-			std::map<std::string, ExpValue> varMap;
+			std::map<std::string, ExpValue> varMap = {};
 			// map of which node to pull from for any variable name - 
 			// updated by eval whenever var is modified
-			std::map<std::string, int> varIndexMap;
+			std::map<std::string, int> varIndexMap = {};
 
 			// we specialise this for strata - this will never be its own separate library anyway
-			StrataManifold* manifold = nullptr;
+			//StrataManifold* manifold = nullptr;
 
 			/* status has to be copied out by every node too : (otherwise races ?
 			// not necessarily, only during parsing, otherwise graph shape 
@@ -252,6 +258,19 @@ namespace ed {
 			std::map<std::string, int> varIndexMap;
 
 		};
+
+		struct Expression;
+
+		struct ExpAuxData : EvalAuxData {
+			StrataManifold* manifold = nullptr;
+			ExpStatus* expStatus = nullptr;
+			//Expression* exp = nullptr;
+			/* TODO: we'll have to parallelise status at some point
+			* to parallelise exp execution */
+
+			std::vector<int> expValuesToElements(std::vector<ExpValue>& values, Status& s);
+		};
+
 
 		/* below is an adaption of Bob Nystrom's Bantam parser, as best as I understand
 		it
@@ -304,12 +323,11 @@ namespace ed {
 			ExpAtom& operator=(ExpAtom&& other) = default;
 
 			// function to run live in op graph
-			virtual Status eval(
-				std::vector<ExpValue>& argList,
-				Expression* exp,
+			virtual Status eval(std::vector<ExpValue>& argList, ExpAuxData* auxData,
 				std::vector<ExpValue>& result,
 				Status& s)
 			{
+				LOG("EXPATOM base eval - probably wrong");
 				result = argList;
 				return s;
 			}
@@ -375,29 +393,7 @@ namespace ed {
 
 			ExpOpNode* addResultNode();
 
-			//Status getResult(std::vector<ExpValue>*& outResult,
-			//	ExpAuxData* ) {
-			//	// final evaluated result of the expression
-			//	Status s;
-			//	if (getResultNode()->anyDirty()) {
-			//		evalGraph(s, getResultNode()->index);
-			//		CWRSTAT(s, "Error evaling Exp graph result");
-			//	}
-			//	outResult = &(results)[0];
-			//	return s;
-			//}
 			ExpOpNode* getResultNode();
-
-			//~ExpGraph() = default;
-			//ExpGraph(ExpGraph const& other) {
-			//	copyOther(other);
-			//}
-			//ExpGraph(DirtyGraph&& other) = default;
-			//ExpGraph& operator=(ExpGraph const& other) {
-			//	copyOther(other);
-			//}
-			//ExpGraph& operator=(ExpGraph&& other) = default;
-
 
 
 		};
@@ -412,7 +408,12 @@ namespace ed {
 			//static Status evalMain(ExpOpNode* node, std::vector<ExpValue>& value, Status& s);
 			//EvalFnT evalFnPtr = evalMain; // pointer to op function - if passed, easier than defining custom classes for everything?
 
-			static Status eval(ExpOpNode* node, std::vector<ExpValue>& value, EvalAuxData* auxData, Status& s);
+			//static Status eval(ExpOpNode* node, std::vector<ExpValue>& value, EvalAuxData* auxData, Status& s);
+			virtual Status eval(
+				std::vector<ExpValue>& value,
+				EvalAuxData* auxData,
+				Status& s
+			);
 
 			virtual ExpGraph* getGraphPtr() {
 				if (graphPtr == nullptr) { 
@@ -521,7 +522,7 @@ namespace ed {
 				return s;
 			}
 
-			virtual Status eval(std::vector<ExpValue>& argList, ExpStatus* expStat, std::vector<ExpValue>& result, Status& s)
+			virtual Status eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, std::vector<ExpValue>& result, Status& s)
 			{
 				ExpValue v;
 				if (!literalStr.empty()) {
@@ -549,7 +550,9 @@ namespace ed {
 			MAKE_COPY_FNS(NameAtom)
 
 			// depending on use, this name will either be set or retrieved by the next operation in graph
-			virtual Status eval(std::vector<ExpValue>& argList, ExpStatus* expStat, std::vector<ExpValue>& result, Status& s)
+			virtual Status eval(std::vector<ExpValue>& argList, ExpAuxData* auxData,
+				std::vector<ExpValue>& result, 
+				Status& s)
 			{
 				ExpValue v;
 				v.stringVals = { strName };
@@ -557,6 +560,7 @@ namespace ed {
 				result.push_back(v);
 				return s;
 			}
+
 
 			virtual Status parse(
 				ExpGraph& graph,
@@ -597,7 +601,7 @@ namespace ed {
 				Status& s
 			);
 
-			virtual Status eval(std::vector<ExpValue>& argList, ExpStatus* expStat, std::vector<ExpValue>& result, Status& s)
+			virtual Status eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, std::vector<ExpValue>& result, Status& s)
 			{
 				/*TODO: could allow multiple values here for concatenation - 
 				in that case we would only need to check that types match between them
@@ -611,7 +615,7 @@ namespace ed {
 				v.copyOther(argList[1]);
 
 				// create variable in expression status / scope
-				expStat->varMap[v.varName] = v;
+				auxData->expStatus->varMap[v.varName] = v;
 
 				// copy left-hand into this node's result, as the value of this variable at this moment
 				result.insert(result.begin(), argList.begin() + 1, argList.end());
@@ -643,7 +647,7 @@ namespace ed {
 				Status& s
 			);
 
-			virtual Status eval(std::vector<ExpValue>& argList, ExpStatus* expStat, std::vector<ExpValue>& result, Status& s)
+			virtual Status eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, std::vector<ExpValue>& result, Status& s)
 			{
 				return s;
 			}
@@ -679,7 +683,7 @@ namespace ed {
 				Status& s
 			);
 
-			virtual Status eval(std::vector<ExpValue>& argList, ExpStatus* expStat, std::vector<ExpValue>& result, Status& s)
+			virtual Status eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, std::vector<ExpValue>& result, Status& s)
 			{
 				if (!(argList.size() == 2)) { // check only name of variable and variable value passed
 					STAT_ERROR(s, "Can only assign single ExpValue to variable, not 0 or multiple");
@@ -690,7 +694,7 @@ namespace ed {
 				v.copyOther(argList[1]);
 
 				// create variable in expression status / scope
-				expStat->varMap[v.varName] = v;
+				auxData->expStatus->varMap[v.varName] = v;
 
 				return s;
 			}
@@ -714,7 +718,7 @@ namespace ed {
 			}
 
 			MAKE_COPY_FNS(AccessAtom)
-			virtual Status eval(std::vector<ExpValue>& argList, ExpStatus* expStat, std::vector<ExpValue>& result, Status& s)
+			virtual Status eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, std::vector<ExpValue>& result, Status& s)
 			{
 
 				return s;
@@ -734,7 +738,7 @@ namespace ed {
 				InfixParselet::copyOther(other);
 			}
 			MAKE_COPY_FNS(GetItemAtom)
-			virtual Status eval(std::vector<ExpValue>& argList, ExpStatus* expStat, std::vector<ExpValue>& result, Status& s)
+			virtual Status eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, std::vector<ExpValue>& result, Status& s)
 			{
 
 				return s;
@@ -761,7 +765,7 @@ namespace ed {
 			}
 
 			MAKE_COPY_FNS(ResultAtom)
-			virtual Status eval(std::vector<ExpValue>& argList, ExpStatus* expStat, std::vector<ExpValue>& result, Status& s)
+			virtual Status eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, std::vector<ExpValue>& result, Status& s)
 			{
 				if (argList.size() == 0) { // nothing to do
 					return s;
@@ -777,7 +781,7 @@ namespace ed {
 					argList[0].extend({ arg });
 				}
 
-				result.push_back(argList[0]);
+				//result.push_back(argList[0]);
 				return s;
 			}
 		};
@@ -794,7 +798,7 @@ namespace ed {
 				InfixParselet::copyOther(other);
 			}
 			MAKE_COPY_FNS(PlusAtom)
-			virtual Status eval(std::vector<ExpValue>& argList, ExpStatus* expStat, std::vector<ExpValue>& result, Status& s)
+			virtual Status eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, std::vector<ExpValue>& result, Status& s)
 			{
 				if (!(argList.size() == 2)) { // check only name of variable and variable value passed
 					STAT_ERROR(s, "Can only add 2 values together ");
@@ -805,7 +809,7 @@ namespace ed {
 				v.copyOther(argList[1]);
 
 				// create variable in expression status / scope
-				expStat->varMap[v.varName] = v;
+				auxData->expStatus->varMap[v.varName] = v;
 
 				return s;
 			}
@@ -956,12 +960,7 @@ namespace ed {
 			}
 		};
 
-		struct ExpAuxData : EvalAuxData {
-			StrataManifold* manifold;
-			ExpStatus* expStatus;
 
-			std::vector<int> expValuesToElements(std::vector<ExpValue>& values, Status& s);
-		};
 
 		struct Expression {
 			/* master container for individual expression*/
@@ -1003,7 +1002,7 @@ namespace ed {
 
 			Status parse();
 
-			Status result(std::vector<ExpValue>* outResult,
+			Status result(std::vector<ExpValue>*& outResult,
 				//ExpStatus* expStatus,
 				ExpAuxData* auxData
 			);

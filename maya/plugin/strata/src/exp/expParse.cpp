@@ -10,18 +10,16 @@ const std::string test::tag("hello");
 //ExpGrammar baseGrammar;
 
 
-
-//Status ExpOpNode::evalMain(ExpOpNode* node, std::vector<ExpValue>& value, Status& s) {
-Status ExpOpNode::eval(ExpOpNode* node, std::vector<ExpValue>& value, EvalAuxData* auxData, Status& s) {
+Status ExpOpNode::eval(std::vector<ExpValue>& value, EvalAuxData* auxData, Status& s) {
 	/* pull in ExpValues from input nodes, join all arguments together - 
 	MAYBE there's a case for naming blocks of arguments but that gets insane - 
 	python kwargs seem a bit excessive for now
 
 	pass into atom as arguments*/
 	std::vector<ExpValue> arguments;
-
+	ExpAuxData* expAuxData = static_cast<ExpAuxData*>(auxData);
 	
-	if (node->graphPtr == nullptr) {
+	if (graphPtr == nullptr) {
 		STAT_ERROR(s, "UNABLE TO CAST NODE GRAPHPTR TYPE TO EXPGRAPH*");
 	}
 	//ExpGraph* testGraphPtr = static_cast<ExpGraph*>((node->graphPtr));
@@ -30,16 +28,17 @@ Status ExpOpNode::eval(ExpOpNode* node, std::vector<ExpValue>& value, EvalAuxDat
 		STAT_ERROR(s, "UNABLE TO CAST NODE GRAPHPTR TYPE TO EXPGRAPH*");
 	}*/
 
-	ExpGraph* graphPtr = node->getGraphPtr();
-	for (int index : node->inputs) {
+	ExpGraph* graphPtr = getGraphPtr();
+	for (int index : inputs) {
 		arguments.insert(arguments.end(), 
 			graphPtr->results[index].begin(),
 			graphPtr->results[index].end());
 	}
 
-	Status result = node->expAtomPtr->eval(
+	Status result = expAtomPtr->eval(
 		arguments,
-		graphPtr->exp,
+		//auxData,
+		expAuxData,
 		value,
 		s);
 	return s;
@@ -289,7 +288,8 @@ Status ExpParser::parseExpression(
 	Status parseS;
 	prefix->parse(graph,  *this, token, outNodeIndex, parseS); // remove copy here if possible
 	CWRSTAT(parseS, "error parsing prefix ");
-	 
+	
+	graph.setOutputNode(0);
 	graph.getNode(graph.getOutputIndex())->inputs.push_back(outNodeIndex);
 
 	int limit = 100;
@@ -330,6 +330,7 @@ ExpOpNode* ExpGraph::addResultNode() {
 ExpOpNode* ExpGraph::getResultNode() {
 	return static_cast<ExpOpNode*>(getNode(0));
 }
+
 
 std::vector<int> ExpAuxData::expValuesToElements(std::vector<ExpValue>& values, Status& s) {
 	/* resolve all possible values to elements */
@@ -407,7 +408,7 @@ Status Expression::parse() {
 }
 
 Status Expression::result( 
-	std::vector<ExpValue>*outResult,
+	std::vector<ExpValue>*& outResult,
 	//ExpStatus * expStatus,
 	ExpAuxData* auxData
 
@@ -426,7 +427,8 @@ Status Expression::result(
 		//return s;
 	}
 	l("eval-ing graph");
-	graph.evalGraph(s, graph.getResultNode()->index, auxData);
+	//graph.evalGraph(s, graph.getResultNode()->index, auxData);
+	graph.evalGraphSerial(s, graph.getResultNode()->index, auxData);
 	CWRSTAT(s, "error evaluating expression: " + srcStr + " , halting");
 	outResult = &graph.results[graph.getResultNode()->index];
 	return s;

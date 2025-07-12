@@ -470,8 +470,6 @@ namespace ed {
 			/* flat set of all nodes found in history
 			we also include final op index - if not desired, iterate only
 			up to last value
-
-			seed node is first, values increasing in reverse
 			*/
 			LOG("nodesInHistory flat " + std::to_string(opIndex));
 			std::vector<int> result;
@@ -973,14 +971,6 @@ namespace ed {
 
 		consider this representing 
 		*/
-
-		virtual Status& mergeOther(Status& s, EvalAuxData* other) {
-			/* this is used after eval'ing nodes in parallel, to combine mutated
-			auxDatas from those nodes, and pass new result to next generation
-			maybe it should be
-			changed to take a vector*/
-			return s;
-		}
 	};
 
 	template <typename VT>
@@ -1229,7 +1219,7 @@ namespace ed {
 			op->preEval("main", s);
 			CWRSTAT(s, "error in preEval for node: " + op->name);
 			l("pre eval nResults, " + std::to_string(results.size()));
-			op->eval(results[op->index], auxData, s);
+			op->eval( results[op->index], auxData, s);
 			CWRSTAT(s, "error in EVAL for node: " + op->name);
 
 			// donezo
@@ -1343,6 +1333,8 @@ namespace ed {
 
 		Status evalGraphSerial(Status& s, int upToNodeId = -1, EvalAuxData* auxData = nullptr) {
 			/*eval without fancy parallel generations*/
+
+			// sort topo generations in nodes if graph has changed
 			LOG("EvalGraphSerial begin eval to node: " + std::to_string(upToNodeId));
 
 			// if specific node given, 
@@ -1351,31 +1343,75 @@ namespace ed {
 				toEval = nodesInHistory(upToNodeId);
 			}
 			else { // run everything
-				//toEval.reserve(nodes.size());
-				//for (int n = 0; n < nodes.size(); n++) { // does c++ have a linear space
-				//	toEval.push_back(n);
-				//}
-				toEval = nodesInHistory(getOutputIndex());
+				toEval.reserve(nodes.size());
+				for (int n = 0; n < nodes.size(); n++) { // does c++ have a linear space
+					toEval.push_back(n);
+				}
 			}
-			
-			for (size_t i = 0; i < toEval.size(); i++) {
-				int nodeId = toEval.rbegin()[i];
-				EvalNode<VT>* node = static_cast<EvalNode<VT>*>(getNode(nodeId));
-				if (!node->anyDirty()) {
-					l("node is not dirty, skip");
+			l("toEval: ");
+			DEBUGVI(toEval);
+			l("nGenerations " + std::to_string(generations.size()));
+
+			bool foundEndNode = false;
+			// for now just work in generations
+			// go through generations in sequence
+			for (auto generation : generations) {
+				l("generation");
+				DEBUGVI(generation);
+				// go through each node in generation
+				// this is the bit that can be parallelised
+				if (upToNodeId > -1) {
+					l("doing intersection");
+					std::vector<int> baseGeneration(generation);
+					generation.clear();
+					std::sort(baseGeneration.begin(), baseGeneration.end());
+					std::sort(toEval.begin(), toEval.end());
+					std::set_intersection(
+						baseGeneration.begin(), baseGeneration.end(),
+						toEval.begin(), toEval.end(),
+						std::inserter(generation, generation.begin())
+					); // god c++ is so complicated
+					l("generation after intersection");
+					DEBUGVI(generation);
+				}
+
+				if (!generation.size()) {
+					l("generation empty, skipping");
 					continue;
 				}
-				// eval whole node
-				evalNode(node, auxData, s);
-				CRMSG(s, "ERROR eval-ing op " + node->name + ", halting Strata graph ");
 
-				// set node clean
-				node->setDirty(false);
 
+				for (auto& nodeId : generation) {
+					EvalNode<VT>* node = static_cast<EvalNode<VT>*>(getNode(nodeId));
+					l("consider node: " + str(node->name) + ", " + str(node->index));
+					// check if anything on node is dirty - if so, continue
+					if (!node->anyDirty()) {
+						l("node is not dirty, skip");
+						continue;
+					}
+					// eval whole node
+					evalNode(node, auxData, s);
+					CRMSG(s, "ERROR eval-ing op " + node->name + ", halting Strata graph ");
+
+					// set node clean
+					node->setDirty(false);
+
+					// if node's index is given as breakpoint to eval to, end
+					if (node->index == upToNodeId) {
+						foundEndNode = true;
+						break;
+					}
+				}
+				// stop all eval if end node reached
+				if (foundEndNode) {
+					l("found end node, ending eval");
+					break;
+				}
 			}
-			l("end serial graph eval");
+			l("end graph eval");
 			return s;
 		}
+
 
 		virtual DirtyNode* importNode(const EvalGraph& other, int& thatIndex) {
 			/* merge in a new node, and add entry in results for it?*/
