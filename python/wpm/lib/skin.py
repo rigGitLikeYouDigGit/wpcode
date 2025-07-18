@@ -161,9 +161,28 @@ def resetSkinCluster(skc:EdNode, influenceList:list[PlugTree]):
 		plug.con(plug, skc("matrix", i))
 
 
+def setWeightArray(skc, weightArr: np.ndarray = None):
+	"""assumed to be fully dense"""
+	nVertices, nWeights = weightArr.shape
 
+	weightListPlug = findPlug("weightList", False)
+	weightListMObj = weightListPlug.attribute()
 
+	# nVertices = max(weightListPlug.getExistingArrayAttributeIndices()) + 1
 
+	weightsPlug = skFn.findPlug("weights", False)
+	leafPlug = om.MPlug(weightsPlug)
+
+	# for vtx in range(nVertices):
+	for vtx in range(nVertices):
+		weightsPlug.selectAncestorLogicalIndex(vtx, weightListMObj)
+		leafPlug.selectAncestorLogicalIndex(vtx, weightListMObj)
+
+		# for index in weightsPlug.getExistingArrayAttributeIndices():
+		for index in range(nWeights):
+			leafPlug.selectAncestorLogicalIndex(index)
+			leafPlug.setFloat(weightArr[vtx, index])
+	return weightArr
 
 def poolSkinClusters(skcList:list[EdNode]):
 	"""top-level fire-and-forget function to unify all influences across all given

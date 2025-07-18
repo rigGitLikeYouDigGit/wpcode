@@ -32,6 +32,17 @@ a totally uniform data structure.
 
 more files than needed in this module to give more descriptive tracebacks
 
+
+to catch instances where types might have moved around, consider either tracking
+or a full first pass over structure to find and load all types needed -
+then check which ones aren't found and flag them
+
+can then pass this to a UI, or pass a function hook directly to resolve them
+THEN run full deserialisation
+
+if an object can't be deserialised, consider an overall "UNKNOWN" type to preserve
+data in a read-only state in a tool, even if it can't be directly loaded
+
 """
 
 from .adaptor import SerialAdaptor

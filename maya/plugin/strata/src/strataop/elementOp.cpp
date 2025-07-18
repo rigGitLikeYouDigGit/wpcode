@@ -12,6 +12,7 @@ Status StrataElementOp::makeParams() {
 	return s;
 }
 
+
 Status& pointCreateNew(
 	Status& s, StrataElementOp& op, SElement*& outPtr, StrataManifold& value, ExpAuxData& expAuxData,
 	ElOpParam& param) {
@@ -49,7 +50,7 @@ Status& pointCreateNew(
 		if (drivers.size()) {
 			auto driverEl = value.getEl(drivers[0]);
 			pData.driverData.index = drivers[0];
-			if (driverEl->elType == StrataElType::point) {
+			if (driverEl->elType == SElType::point) {
 				pData.finalMatrix = value.pDataMap[driverEl->name].finalMatrix;
 			}
 		}
@@ -105,7 +106,7 @@ Status& pointCreateNew(
 	// ADD TO OP POINT DATA MAP HERE
 	if (spaces.size() == 1) {
 		SElement* spaceEl = value.getEl(spaces[0]);
-		if (spaceEl->elType == StrataElType::point) { // if single parent space is a point
+		if (spaceEl->elType == SElType::point) { // if single parent space is a point
 			SPointData spaceData = value.pDataMap[spaceEl->name];
 
 			pData.finalMatrix = spaceData.finalMatrix * param.pData.finalMatrix;
@@ -115,7 +116,7 @@ Status& pointCreateNew(
 	std::vector<Affine3f> spaceBlendMats;
 	for (int i = 0; i < static_cast<int>(spaces.size()); i++) {
 		SElement* spaceEl = value.getEl(spaces[i]);
-		if (spaceEl->elType == StrataElType::point) {
+		if (spaceEl->elType == SElType::point) {
 			SPointData spaceData = value.pDataMap[spaceEl->name];
 			spaceBlendMats.push_back(spaceData.finalMatrix * param.pData.finalMatrix);
 		}
@@ -130,11 +131,10 @@ Status& pointCreateNew(
 Status& pointSetBackOffsets(Status& s, StrataElementOp& op, SElement*& el, StrataManifold& manifold, 
 	ExpAuxData& expAuxData, ElOpParam& param, SPointData& pData
 	){
-	/* iterate over elements created in FORWARDS order this time - compare offsets,
-	add offsets to matrices, then snap to drivers where needed
-
-	BUT we need to set the offset first, before computing elements that rely on it
-	I will now consume my internal organs
+	/* 
+	TODO: support multiple targets
+	
+	TODO: process global targets first, match them, then apply local matrix targets
 	*/
 	LOG("EL OP setBackOffsets");
 	auto name = el->name;
@@ -145,6 +145,7 @@ Status& pointSetBackOffsets(Status& s, StrataElementOp& op, SElement*& el, Strat
 		l("no target found for el " + name + ", skipping");
 		return s;
 	}
+
 	/* above is rechecked each iteration, so even internal moving around of later elements should
 	propagate properly*/
 
@@ -163,12 +164,24 @@ Status& pointSetBackOffsets(Status& s, StrataElementOp& op, SElement*& el, Strat
 		return s;
 	}
 
-	// get final offset
-	Affine3f offset = pData.finalMatrix.inverse() * target.matrix;
-	param.pOffset = offset;
+	if (target.matrixMode == ST_TARGET_MODE_GLOBAL) { //// GLOBAL TARGET 
+		/* target has to be matched*/
 
-	// ideally we just match the target here
-	pData.finalMatrix = target.matrix;
+		// get final offset
+		Affine3f offset = pData.finalMatrix.inverse() * target.matrix;
+		param.pOffset = offset;
+
+		// ideally we just match the target here
+		pData.finalMatrix = target.matrix;
+	}
+	else { ////// LOCAL TARGET
+		/* just modify element's local matrix / parametres after the fact */
+		pData.finalMatrix = pData.finalMatrix * target.matrix;
+	}
+
+
+
+	
 
 	return s;
 }
@@ -196,7 +209,7 @@ Status& pointEvalParam(
 	LOG("eval param: " + param.name);
 
 
-	s = value.addElement(SElement(param.name, StrataElType::point), outPtr);
+	s = value.addElement(SElement(param.name, SElType::point), outPtr);
 
 	if (s) {
 		l("error adding element: " + s.msg);
@@ -218,6 +231,7 @@ Status& pointEvalParam(
 	}
 	else {
 		s = pointCreateNew(s, op, outPtr, value, expAuxData, param);
+		CWRSTAT(s, "ERROR in pointCreateNew");
 	}
 	// save built data to this node's data map
 	SPointData& pData = value.pDataMap[param.name];
@@ -239,6 +253,94 @@ Status& pointEvalParam(
 
 }
 
+
+
+
+Status& edgeCreateNew(
+	Status& s, StrataElementOp& op, SElement*& outPtr, StrataManifold& value, ExpAuxData& expAuxData,
+	ElOpParam& param) {
+	/* create a new edge with no existing prior data
+	*/
+	std::vector<ExpValue> emptyResult;
+	std::vector<ExpValue>* resultVals = &emptyResult;
+
+	LOG("edge create new");
+
+	// no data found, make new
+	value.eDataMap[param.name] = param.eData;
+	SEdgeData& eData = value.eDataMap[param.name];
+	eData.creatorNode = op.name; // this op created this data
+	eData.index = outPtr->globalIndex;
+
+	// check if point has a driver - if it's a point, snap to it
+	//expAuxData.exp
+	s = param.driverExp.result(resultVals, &expAuxData);
+	CWRSTAT(s, "error reading driver exp");
+	std::vector<int> drivers = expAuxData.expValuesToElements(*resultVals, s);
+	CWRSTAT(s, "error converting driver exp to elements");
+
+	l("drivers: " + str(drivers));
+	if (!drivers.size()) {
+		/* no drivers given, we NEED a literal curve specified (later)*/
+		STAT_ERROR(s, "no drivers specified for edge " + op.name + ", returning");
+	}
+
+	eData.driverDatas.resize(drivers.size());
+	for (int i = 0; i < static_cast<int>(drivers.size()); i++) {
+		SElement* driverEl = value.getEl(drivers[i]);
+		SEdgeDriverData& eDriver = eData.driverDatas[i];
+		eDriver.index = driverEl->globalIndex;
+		switch (driverEl->elType) {
+		case SElType::point: {
+			eDriver.finalMatrix = value.pDataMap[driverEl->name].finalMatrix;
+			eDriver.uvn = { 0, 0, 0 };
+			break;
+		}
+		case SElType::edge: {
+			eDriver.uvn = { 0.5, 0, 0 }; /* TODO: WHAT DO WE DO */
+			break;
+		}
+		}
+		eData.driverDatas.push_back(eDriver);
+	}
+	return s;
+
+}
+
+Status& edgeEvalParam(
+	Status& s, StrataElementOp& op, SElement*& outPtr, StrataManifold& value, ExpAuxData& expAuxData,
+	ElOpParam& param) {
+
+	s = value.addElement(SElement(param.name, SElType::edge), outPtr);
+	CWRSTAT(s, "error adding new edge element");
+
+	bool ALREADY_DATA = false;
+	auto prevData = op.opEdgeDataMap.find(param.name);
+	ALREADY_DATA = (prevData != op.opEdgeDataMap.end());
+
+	/*
+	for now, no offsets preserved on edge curves - rebuilt fresh every time
+	*/
+	//if (ALREADY_DATA) {
+	//	//l("already data found");
+	//	s = value.computePointData(s, prevData->second);
+	//	value.pDataMap[param.name] = prevData->second;
+	//}
+	//else {
+	//	s = pointCreateNew(s, op, outPtr, value, expAuxData, param);
+	//}
+	// save built data to this node's data map
+	s = edgeCreateNew(s, op, outPtr, value, expAuxData, param);
+	CWRSTAT(s, "error creating new edge");
+	return s;
+	SEdgeData& eData = value.eDataMap[param.name];
+	s = value.buildEdgeData(s, eData);
+	CWRSTAT(s, "error building edge data")
+
+	return s;
+}
+
+
 //Status& edgeEvalDriverExpression(
 //	Status& s, StrataElementOp& op, SElement*& outPtr, StrataManifold& value, ExpAuxData& expAuxData,
 //	std::vector<ExpValue>* resultVals,
@@ -252,7 +354,7 @@ Status& pointEvalParam(
 //		}
 //	}
 //	// add new edge element 
-//	s = value.addElement(SElement(paramName, StrataElType::edge), outPtr);
+//	s = value.addElement(SElement(paramName, SElType::edge), outPtr);
 //	CWRSTAT(s, "Error adding new edge element: " + paramName + " halting");
 //	SEdgeData& edgeData = value.edgeDatas.at(outPtr->elIndex);
 //
@@ -291,18 +393,18 @@ Status& pointEvalParam(
 //		SElement* driverPtr = value.getEl(i);
 //		//outPtr->drivers.push_back(i); 
 //		outPtr->drivers.push_back(driverPtr->name);
-//		edgeData.driverDatas.push_back(EdgeDriverData());
-//		EdgeDriverData& driverData = edgeData.driverDatas.at(edgeData.driverDatas.size() - 1);
+//		edgeData.driverDatas.push_back(SEdgeDriverData());
+//		SEdgeDriverData& driverData = edgeData.driverDatas.at(edgeData.driverDatas.size() - 1);
 //		driverData.index = i;
 //
 //		Eigen::Vector3f defaultCoords{ 0.0, 0.0, 0.0 };
 //		// TODO: HOW DO WE DEFINE DRIVER PARAMETRES
 //
-//		/*if (driverPtr->elType == StrataElType::point) {
+//		/*if (driverPtr->elType == SElType::point) {
 //			driverData.finalMatrix = value.pointDatas[driverPtr->el]
 //		}*/
 //
-//		if (driverPtr->elType == StrataElType::edge) {
+//		if (driverPtr->elType == SElType::edge) {
 //			defaultCoords(0) = 0.5f;
 //		}
 //
@@ -338,7 +440,7 @@ Status& pointEvalParam(
 //	CWRSTAT(s, "error converting final exp result to strata drivers, halting");
 //
 //	// add new edge element 
-//	s = value.addElement(SElement(paramName, StrataElType::face), outPtr);
+//	s = value.addElement(SElement(paramName, SElType::face), outPtr);
 //	CWRSTAT(s, "Error adding new face element: " + paramName + " halting");
 //
 //	// add drivers to new edge
@@ -397,7 +499,6 @@ Status StrataElementOp::eval(StrataManifold& value,
 		ElOpParam& param = paramMap[paramName];
 		SElement* outPtr = nullptr;
 		expAuxData.manifold = &value;
-		std::vector<ExpValue>* resultVals = nullptr;
 		auto& op = *this;
 
 		switch (paramName[0]) { // get the type of element to add by the first letter of the name
@@ -406,6 +507,15 @@ Status StrataElementOp::eval(StrataManifold& value,
 				s = pointEvalParam(s, op, outPtr, value, expAuxData,
 					param
 				);
+				CWRSTAT(s, "ERROR eval-ing point param: " + param.driverExp.srcStr);
+
+				break;
+			}
+			case 'e': {
+				s = edgeEvalParam(s, op, outPtr, value, expAuxData,
+					param
+				);
+				CWRSTAT(s, "ERROR eval-ing edge param: " + param.driverExp.srcStr);
 				break;
 			}
 
@@ -434,6 +544,11 @@ Status& StrataElementOp::pointProcessTargets(Status& s, StrataManifold& finalMan
 	if (!nTargets) {
 		return s;
 	}
+
+	if (nTargets == 1) {
+
+	}
+
 	VectorXf weights(nTargets);
 	std::vector<Affine3f> mats(nTargets);
 
@@ -501,24 +616,24 @@ SAtomBackDeltaGroup StrataElementOp::bestFitBackDeltas(Status* s, StrataManifold
 	for (int i = 0; i < static_cast<int>(elementsAdded.size()); i++) {
 		std::string& name = elementsAdded.rbegin()[i];
 		auto found = front.targetMap.find(name);
-		if (found != front.targetMap.end()) {
+		if (found == front.targetMap.end()) {
+			continue;
+		}
+	
 
-
-			SElement* el = finalManifold.getEl(name);
-			ElOpParam& param = paramMap[name];
-			switch (el->elType) {
-			case StrataElType::point: {
+		SElement* el = finalManifold.getEl(name);
+		ElOpParam& param = paramMap[name];
+		switch (el->elType) {
+			case SElType::point: {
 				stat = pointProcessTargets(stat, finalManifold, front, el);
 			}
-			}
 		}
-		else{
-			l("no targets found for created element: " + name + ", skipping");
-		}
-
+		
+	
 	}
 	backDeltasToMatch = front; // save deltas to match for later
 
+	// remove all elements created by this op
 	for (int i = 0; i < static_cast<int>(elementsAdded.size()); i++) {
 		std::string& name = elementsAdded.rbegin()[i];
 		auto found = front.targetMap.find(name);

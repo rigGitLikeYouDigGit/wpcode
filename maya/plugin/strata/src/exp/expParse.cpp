@@ -271,7 +271,7 @@ Status ExpParser::parseExpression(
 ) {
 	Status s;
 	LOG("parser parseExpression");
-	int n = 10;
+	int n = 10; 
 	Token token = consume();
 	l("consumeToken:" + str(token));
 	auto it = mPrefixParselets.find(token.getKind());
@@ -337,7 +337,7 @@ std::vector<int> ExpAuxData::expValuesToElements(std::vector<ExpValue>& values, 
 	
 	std::vector<int> result;
 	if (!values.size()) { return result; }
-	//LOG("expValuesToElements: " + str(values.size()));
+	LOG("expValuesToElements: " + str(values.size()));
 	for (size_t vi = 0; vi < values.size(); vi++) {
 		//for (auto& v : values) {
 		ExpValue& v = values[vi];
@@ -392,7 +392,9 @@ Status Expression::parse() {
 	}
 
 	std::vector<Token> parsedTokens;
-	 s = validateAndParseStrings(srcStr, parsedTokens);
+	 //s = validateAndParseStrings(srcStr, parsedTokens);
+	// try something new to capture multiple top-level values
+	 s = validateAndParseStrings( "(" + srcStr + ")", parsedTokens);
 	 CWRSTAT(s, "ERROR in validateParseStrings");
 
 	parseStatus = ExpParseStatus();

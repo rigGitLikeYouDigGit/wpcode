@@ -172,7 +172,7 @@ def reloadPluginTest():
 	# shape.stInput_[1] = el2.stOutput_
 	# shape.stInput_[2] = elOp.stOutput_
 
-	return
+	#return
 
 
 	ptB = makeStrataPoint("ptB").tf()
@@ -214,6 +214,15 @@ def reloadPluginTest():
 
 	shape.stDataIn_[1].stExpIn_ = "pWrist"
 	shape.stDataIn_[1].stMatrixIn_ = driverLoc2.matrix_
+
+	driverLoc.rotateZ_ = 45
+
+	##### ADD A CURVE ######
+
+	elOp.stElement_[4].stName_ = "eArmCrv"
+	elOp.stElement_[4].stDriverExp_ = "pShoulder, pElbow, pWrist"
+
+
 
 
 

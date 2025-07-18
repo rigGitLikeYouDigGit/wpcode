@@ -303,19 +303,25 @@ MStatus StrataShapeNode::addDeltaTarget(
     if (spaceIndex > -1) { // if space is given, act only on offset of that space
     }
     switch (finalEl->elType) {
-        case StrataElType::point: {
+        case SElType::point: {
             
             // check data is found
-            //Affine3f tf = toAff(MFnMatrixData(elDH.child(aStMatrixIn).data()).matrix());
+            
             Affine3f tf = toAff(elDH.child(aStMatrixIn).asMatrix());
-            //matchTarget. = finalEl->globalIndex;
             matchTarget.matrix = tf;
 
             int spaceMode = elDH.child(aStSpaceModeIn).asInt();
             matchTarget.matrixMode = spaceMode;
 
+            /* TEST: if we match a local matrix, don't do ANYTHING else - 
+            it's added as a post-process, no propagation*/
+
+            if (matchTarget.matrixMode == ST_TARGET_MODE_LOCAL) {
+                break;
+            }
+
             /* if we match the global matrix, easy */
-            if (matchTarget.matrixMode == MATRIX_MODE_GLOBAL) {
+            if (matchTarget.matrixMode == ST_TARGET_MODE_GLOBAL) {
                 break;
             }
             
@@ -465,6 +471,7 @@ MStatus StrataShapeNode::compute(const MPlug& plug, MDataBlock& data) {
     // run strata op merge
     s = superT::compute<StrataShapeNode>(thisMObject(), plug, data);
 
+
     if (s == MS::kEndOfFile) {
         return MS::kSuccess;
     }
@@ -519,17 +526,17 @@ MStatus StrataShapeNode::populateOutputs(MDataBlock& data) {
         }
 
         switch (el->elType) {
-        case StrataElType::point :{ // set matrices
+        case SElType::point :{ // set matrices
             SPointData& d = opPtr->value().pDataMap[el->name];
             outArrDH.outputValue().child(aStMatrixOut).setMMatrix(
                 toMMatrix(d.finalMatrix)
             );
             break;
             }
-        case StrataElType::edge: {
+        case SElType::edge: {
             break;
         }
-        case StrataElType::face: {
+        case SElType::face: {
             break;
         }
         }

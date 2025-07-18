@@ -1229,7 +1229,7 @@ namespace ed {
 			op->preEval("main", s);
 			CWRSTAT(s, "error in preEval for node: " + op->name);
 			l("pre eval nResults, " + std::to_string(results.size()));
-			op->eval(results[op->index], auxData, s);
+			s = op->eval(results[op->index], auxData, s);
 			CWRSTAT(s, "error in EVAL for node: " + op->name);
 
 			// donezo

@@ -267,7 +267,7 @@ namespace ed {
 
     }
     inline std::string str(expns::Token& any) {
-        return "<tk " + str(any.side) + " " + any.kindStr()
+        return "<tk " + str(any.side) + " " + any.kindStr() + " "
             + any.lexeme() + ">";
     }
 }

@@ -367,7 +367,7 @@ namespace ed {
 				//	EvalGraph<std::vector<ExpValue>>();
 			}
 
-			Expression* exp = nullptr; // owner expression
+			//Expression* exp = nullptr; // owner expression
 			template <typename ExpOpT, typename NodeT = ExpOpNode>
 			NodeT* addNode(const std::string& name = ""
 			)

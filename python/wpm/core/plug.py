@@ -515,15 +515,18 @@ def _setDataOnPlugMObject(obj, data):
 
 
 def _setLeafPlugValue(plug:om.MPlug, data,
-                     toRadians=False):
+                     toRadians=True):
 
 	# we now need to check the attribute type of the plug
 	attribute = plug.attribute()
 	attrFn = getMFn(attribute)
 	attrFnType = type(attrFn)
-	if attrFnType is om.MFnUnitAttribute:
+	if attrFnType is om.MFnUnitAttribute: # spaghett
 		if attrFn.unitType() == om.MFnUnitAttribute.kAngle and toRadians:
-			data = om.MAngle(data).toRadians()
+			data = om.MAngle(data).asRadians()
+		if attrFn.unitType() == om.MFnUnitAttribute.kAngle and not isinstance(data, om.MAngle):
+			plug.setMAngle(om.MAngle(data, om.MAngle.kDegrees))
+			return
 		setFn = getCache().unitAttrPlugMethodMap[attrFn.unitType()][1]
 		setFn(plug, data)
 

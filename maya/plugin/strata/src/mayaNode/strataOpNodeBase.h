@@ -965,6 +965,9 @@ struct StrataOpNodeTemplate : public StrataOpNodeBase {
 		//DEBUGSL("template got index from node")
 		graphS = opGraphPtr.get()->evalGraph(graphS, opGraphPtr->_outputIndex);
 		CWSTAT(graphS);
+		if (graphS) {
+			return MS::kFailure;
+		}
 		l("template graph eval'd");
 
 		data.setClean(NodeT::aStOutput);

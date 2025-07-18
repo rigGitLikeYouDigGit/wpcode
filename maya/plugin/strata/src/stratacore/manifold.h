@@ -79,13 +79,17 @@ namespace ed {
 //int a = seqIndex(-5, 3);
 
 // don't need full int here but MAYBE in the long run, we'll need to make an enum attribute in maya for it
-	//BETTER_ENUM(StrataElType, int, point, edge, face);
+	//BETTER_ENUM(SElType, int, point, edge, face);
 
-	enum StrataElType : short{ point, edge, face};
+	enum SElType : short{ point, edge, face};
 
 	struct StrataManifold;
 
 	int constexpr stMaxParents = 3;
+
+	int constexpr ST_TARGET_MODE_LOCAL = 0;
+	int constexpr ST_TARGET_MODE_GLOBAL = 1;
+	//int MATRIX_MODE_LOCAL_O
 
 	struct SElement {
 		// whenever an element is added to manifold, during graph eval, 
@@ -94,7 +98,7 @@ namespace ed {
 
 
 		StrataName name;
-		StrataElType elType = StrataElType::point;
+		SElType elType = SElType::point;
 		// ANOTHER DAY, ANOTHER INABILITY TO USE CONST
 
 		int elIndex = -1; // index within this element's type - the 3rd point, the 3rd face etc
@@ -127,7 +131,7 @@ namespace ed {
 		// true for forwards, false for backwards
 		bool flipFace = 0; // if face as a whole should be flipped, after edge winding
 
-		SElement(StrataName elName, const StrataElType t=StrataElType::point) : name(elName), elType(t) {
+		SElement(StrataName elName, const SElType t=SElType::point) : name(elName), elType(t) {
 			//name = elName;
 			//elType = t;
 		};
@@ -175,7 +179,7 @@ namespace ed {
 	for full separation, we might break things up further?
 
 
-	an edge is driven by EdgeDriverData -
+	an edge is driven by SEdgeDriverData -
 	outputs of an edge are EdgeSampleData? - 
 	*/
 
@@ -219,7 +223,7 @@ namespace ed {
 
 
 	// data for discrete hard connections between elements
-	struct EdgeDriverData {
+	struct SEdgeDriverData {
 		/* struct for a single driver OF an edge - get tangent, normal and twist
 		vectors for curve frame
 
@@ -249,6 +253,11 @@ namespace ed {
 		Eigen::Affine3f finalMatrix = Eigen::Affine3f::Identity();
 
 		inline Eigen::Vector3f pos() { return finalMatrix.translation(); }
+
+		inline Status& syncMatrix() {
+			/* update final matrix from local driver tangents, offsets etc
+			*/
+		}
 	};
 
 	// DRIVER datas are in space of the DRIVER
@@ -301,18 +310,19 @@ namespace ed {
 		*/
 		using thisT = SEdgeData;
 		using T = SEdgeData;
-		std::vector<EdgeDriverData> driverDatas; // drivers of this edge
+		std::vector<SEdgeDriverData> driverDatas; // drivers of this edge
 		//std::array<SEdgeParentData, stMaxParents> parentDatas; // curves in space of each driver
 		std::vector<SEdgeParentData> parentDatas; // curves in space of each driver
 		
 		int denseCount = 5; // number of dense sub-spans in each segment
 
+		bool closed = false;
 		/* don't keep live splines, output from parent system etc - 
 		all temporary during construction
 		posSpline is FINAL spline of all points on this edge
 		*/
 
-		Eigen::ArrayX3d uvnOffsets; // final dense offsets should only be in space of final built curve?
+		Eigen::ArrayX3d uvnOffsets = {}; // final dense offsets should only be in space of final built curve?
 		// maybe???? 
 
 		//// IGNORE FOR NOW
@@ -322,9 +332,9 @@ namespace ed {
 
 		//Eigen::MatrixX3d finalPositions; // dense worldspace positions
 		bez::CubicBezierPath finalCurve; // dense? final curve // DENSE
-		Eigen::MatrixX3f finalNormals; // worldspace normals 
+		Eigen::MatrixX3f finalNormals = {}; // worldspace normals 
 
-		Eigen::MatrixX3f finalPoints; // densely sampled final points in worldspace - use for querying
+		Eigen::MatrixX3f finalPoints = {}; // densely sampled final points in worldspace - use for querying
 
 
 		DECLARE_DEFINE_CLONABLE_METHODS(thisT)
@@ -380,7 +390,7 @@ namespace ed {
 			}
 		}
 
-		inline void driversForSpan(const int spanIndex, EdgeDriverData& lower, EdgeDriverData& upper) {
+		inline void driversForSpan(const int spanIndex, SEdgeDriverData& lower, SEdgeDriverData& upper) {
 			lower = driverDatas[spanIndex];
 			upper = driverDatas[spanIndex + 1];
 		}
@@ -485,24 +495,24 @@ namespace ed {
 			//	\
 			//		takeOther(other); \
 			//		return *this; 
-		inline SElData* elData(int globalElId, StrataElType elT) {
+		inline SElData* elData(int globalElId, SElType elT) {
 			switch (elT) {
-			//case StrataElType::point: return &pointDatas[pointIndexGlobalIndexMap[globalElId]];
-			case StrataElType::point: {
+			//case SElType::point: return &pointDatas[pointIndexGlobalIndexMap[globalElId]];
+			case SElType::point: {
 				//return &pointDatas[el.elIndex];
 				auto ptr = pDataMap.find(getEl(globalElId)->name);
 				if (ptr == pDataMap.end()) { return nullptr; }
 				return &(ptr->second);
 				break;
 			}
-			//case StrataElType::edge: return &edgeDatas[edgeIndexGlobalIndexMap[globalElId]];
-			case StrataElType::edge: {
+			//case SElType::edge: return &edgeDatas[edgeIndexGlobalIndexMap[globalElId]];
+			case SElType::edge: {
 				auto ptr = eDataMap.find(getEl(globalElId)->name);
 				if (ptr == eDataMap.end()) { return nullptr; }
 				return &(ptr->second);
 				break;
 			}
-			case StrataElType::face: {
+			case SElType::face: {
 				auto ptr = fDataMap.find(getEl(globalElId)->name);
 				if (ptr == fDataMap.end()) { return nullptr; }
 				return &(ptr->second);
@@ -519,21 +529,21 @@ namespace ed {
 		//}
 		inline SElData* elData(SElement& el) {
 			switch (el.elType) {
-			case StrataElType::point: {
+			case SElType::point: {
 				//return &pointDatas[el.elIndex];
 				auto ptr = pDataMap.find(el.name);
 				if (ptr == pDataMap.end()) {return nullptr;	}
 				return &(ptr->second);
 				break;
 			}
-			//case StrataElType::edge: return &edgeDatas[el.elIndex];
-			case StrataElType::edge: {
+			//case SElType::edge: return &edgeDatas[el.elIndex];
+			case SElType::edge: {
 				auto ptr = eDataMap.find(el.name);
 				if (ptr == eDataMap.end()) { return nullptr; }
 				return &(ptr->second);
 				break;
 			}
-			case StrataElType::face: {
+			case SElType::face: {
 				auto ptr = fDataMap.find(el.name);
 				if (ptr == fDataMap.end()) { return nullptr; }
 				return &(ptr->second);
@@ -617,17 +627,17 @@ namespace ed {
 			/* absolutely no idea on how best to do these uniform interfaces for #
 			setting data of different types*/
 			switch (el->elType) {
-			case StrataElType::point: {
+			case SElType::point: {
 				//pointDatas[el->elIndex] = *static_cast<SPointData*>(data);
 				pDataMap[el->name] = *static_cast<SPointData*>(data);
 				//return &pointDatas[el->elIndex];
 				return &pDataMap.at(el->name);
 			}
-			case StrataElType::edge: {
+			case SElType::edge: {
 				eDataMap[el->name] = *static_cast<SEdgeData*>(data);
 				return &eDataMap.at(el->name);
 			}
-			case StrataElType::face: {
+			case SElType::face: {
 				fDataMap[el->name] = *static_cast<SFaceData*>(data);
 				return &fDataMap[el->name];
 			}
@@ -670,7 +680,7 @@ namespace ed {
 
 			// get element-specific index map, add element data
 			switch (el.elType) {
-				case StrataElType::point: {
+				case SElType::point: {
 					//pointDatas.push_back(SPointData());
 					pDataMap.insert({ el.name, SPointData() });
 					int elementIndex = static_cast<int>(pointIndexGlobalIndexMap.size()); // get current max key of element set
@@ -678,7 +688,7 @@ namespace ed {
 					pointIndexGlobalIndexMap[elementIndex] = globalIndex;
 					break;
 				}
-				case StrataElType::edge: {
+				case SElType::edge: {
 					//edgeDatas.push_back(SEdgeData());
 					eDataMap.insert({ el.name, SEdgeData() });
 					int elementIndex = static_cast<int>(edgeIndexGlobalIndexMap.size());
@@ -686,7 +696,7 @@ namespace ed {
 					edgeIndexGlobalIndexMap[elementIndex] = globalIndex;
 					break;
 				}
-				case StrataElType::face: { 
+				case SElType::face: { 
 					fDataMap.insert({ el.name, SFaceData() });
 					int elementIndex = static_cast<int>(faceIndexGlobalIndexMap.size());
 					elP->elIndex = elementIndex;
@@ -700,7 +710,7 @@ namespace ed {
 
 		Status addElement(
 			const std::string name,
-			const StrataElType elT,
+			const SElType elT,
 			SElement*& outPtr
 		) {
 			return addElement(SElement(name, elT), outPtr);
@@ -724,7 +734,7 @@ namespace ed {
 		//	for (int driverGId : face->drivers) {
 		//		SElement* driver = getEl(driverGId);
 		//		// skip anything not an edge
-		//		if (driver->elType != StrataElType::edge) {
+		//		if (driver->elType != SElType::edge) {
 		//			continue;
 		//		}
 		//		// check if this is the first edge visited
@@ -903,12 +913,12 @@ namespace ed {
 				//	continue;
 				//}
 				switch (el.elType) {
-				case StrataElType::point: {
+				case SElType::point: {
 					SPointData& data = pDataMap[el.name];
 					data.finalMatrix = mat * data.finalMatrix;
 					break;
 				}
-				case StrataElType::edge: {
+				case SElType::edge: {
 					SEdgeData& data = eDataMap[el.name];
 					data.finalCurve.transform(mat);
 					for (int i = 0; i < static_cast<int>(data.finalNormals.rows()); i++) {
@@ -950,13 +960,13 @@ namespace ed {
 			may allow faster sampling in future*/
 			SElement* el = getEl(globalIndex);
 			switch (el->elType) {
-			case StrataElType::point: {
+			case SElType::point: {
 				//SPointData& d = pointDatas.at(el->elIndex);
 				SPointData& d = pDataMap.at(el->name);
 				return pointPosAt(s, out, d, uvn);
 				break;
 			}
-			case StrataElType::edge: {
+			case SElType::edge: {
 				SEdgeData& d = eDataMap.at(el->name);
 				return edgePosAt( s, out, d, uvn);
 				break;
@@ -1022,12 +1032,12 @@ namespace ed {
 			}
 			//SElement* el = getEl(globalIndex);
 			switch (el->elType) {
-				case (StrataElType::point): {
+				case (SElType::point): {
 					//SPointData& d = pointDatas[el->elIndex];
 					SPointData& d = pDataMap.at(el->name);
 					return pointMatrixAt(s, outMat, d, uvn);
 				}
-				case (StrataElType::edge): {
+				case (SElType::edge): {
 					SEdgeData& d = eDataMap[el->name];
 					//return edgeMatrixAt(s, out, el->elIndex, uvn);
 					return edgeDataMatrixAt(s, outMat, d, uvn);
@@ -1078,10 +1088,10 @@ namespace ed {
 			}
 			//SElement* el = getEl(globalIndex);
 			switch (el->elType) {
-			case (StrataElType::point): {
+			case (SElType::point): {
 				return pointClosestMatrix(s, outMat, pDataMap.at(el->name), closePos);
 			}
-			case (StrataElType::edge): {
+			case (SElType::edge): {
 				return edgeClosestMatrix(s, outMat, el, closePos);
 			}
 			default: STAT_ERROR(s, "Cannot eval matrix at UVN for type " + std::to_string(el->elType));
@@ -1143,10 +1153,10 @@ namespace ed {
 			// make another function to return a full transform, for point parents
 			
 			switch (el->elType) {
-			case (StrataElType::point): {
+			case (SElType::point): {
 				return pointGetUVN(s, uvn, pDataMap.at(el->name), closePos);
 			}
-			case (StrataElType::edge): {
+			case (SElType::edge): {
 				return edgeGetUVN(s, uvn, el, closePos);
 			}
 			default: STAT_ERROR(s, "Cannot get UVN for type " + std::to_string(el->elType));
@@ -1225,7 +1235,7 @@ namespace ed {
 				return s;
 			}
 			switch (driverEl->elType) {
-				case StrataElType::point: {
+				case SElType::point: {
 					SPointData& driverData = pDataMap[driverEl->name];
 					mat.translation() = driverData.finalMatrix.translation();
 					break;
@@ -1254,31 +1264,6 @@ namespace ed {
 			
 		}
 
-		// if IMMUTABLE
-		//  HOW DO WE DO DRIVERS
-		// check for existing data when element op is run?
-
-		/*
-		within single element op
-		add face F
-		add edge E, parent F
-		
-		on next iteration, need to 
-
-
-		data "injection" chances at different stages? ie whenever element added, also put in hook for any incoming data?
-		check for overrides
-		add element / generate element in whichever way 
-		THEN check for overrides?
-		index by element -> parent -> string attribute ?
-		
-
-		data is data, only one
-		reduce complexity by propagating back to node parametres?
-		otherwise could be lost if element vanishes?
-
-		*/
-
 		Status& buildEdgeDrivers(Status& s, SEdgeData& eData) {
 
 			Eigen::MatrixX3f driverPoints(static_cast<int>(eData.driverDatas.size()), 3);
@@ -1298,18 +1283,22 @@ namespace ed {
 			
 			Eigen::MatrixX3f pointsAndTangents = cubicTangentPointsForBezPoints(
 				driverPoints,
-				eData.isClosed(),
+				eData.closed,
 				inContinuities.data()
 			);
 
+			eData.finalCurve = bez::CubicBezierPath(pointsAndTangents);
+
 			/// TODO //// 
 			//// resample these back into driver's space? or no point since they'll be sampled into PARENT's space anyway
-			for (int i = 0; i < eData.nCVs(); i++) {
-				int thisI = (i * 3) % eData.nCVs();
-				int prevI = (i * 3 - 1) % eData.nCVs();
-				int nextI = (i * 3 + 1) % eData.nCVs();
-				eData.driverDatas[i].prevTan = pointsAndTangents.row(prevI);
-				eData.driverDatas[i].postTan = pointsAndTangents.row(nextI);
+			// what is man talkin about
+			int nCVs = static_cast<int>(eData.driverDatas.size());
+			for (int i = 0; i < nCVs; i++) {
+				int thisI = (i * 3) % nCVs;
+				int prevI = (i * 3 - 1) % nCVs;
+				int nextI = (i * 3 + 1) % nCVs;
+				eData.driverDatas[thisI].prevTan = pointsAndTangents.row(prevI);
+				eData.driverDatas[thisI].postTan = pointsAndTangents.row(nextI);
 			}
 
 

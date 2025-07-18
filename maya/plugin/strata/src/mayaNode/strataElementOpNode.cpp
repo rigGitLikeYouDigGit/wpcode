@@ -432,21 +432,12 @@ MStatus StrataElementOpNode::syncStrataParams(MObject& nodeObj, MDataBlock& data
         // always match in worldspace for now
 
         MMatrix mayaMat = elDH.inputValue().child(aStPointWorldMatrixIn).asMatrix();
-        //l("maya point mat: ");
-        //COUT << mayaMat << std::endl;
-        //l(" ");
-        //COUT << toEigen(mayaMat) << std::endl;
         param.pData.finalMatrix = toEigen(mayaMat);
 
         opPtr->paramMap.insert_or_assign( param.name, param ); // crashes
 
     }
 
-    //for (auto& i : opPtr->paramMap) { // crashes on iteration
-    //    if (foundNames.find(i.first) == foundNames.end()) {
-    //        opPtr->paramMap.erase(i.first); // mutating map during
-    //    }
-    //}
     return s;
 }
 
@@ -475,7 +466,7 @@ MStatus StrataElementOpNode::compute(const MPlug& plug, MDataBlock& data) {
 
     l("el op comput complete, setting outputs");
 
-    //return s;
+
     // update index attrs from op elements
     thisStrataOpT* opPtr = getStrataOp<thisT>(thisMObject()); /* this can be null?????*/
     if (opPtr == nullptr) {
@@ -485,7 +476,6 @@ MStatus StrataElementOpNode::compute(const MPlug& plug, MDataBlock& data) {
     l("after compute op get size: " + std::to_string(opPtr->elementsAdded.size()));
     MArrayDataHandle elArrDH = data.outputArrayValue (aStElementOut);
     StrataManifold& manifold = opPtr->value();
-    //for (unsigned int i = 0; i < elArrDH.elementCount(); i++){
     for (unsigned int i = 0; i < static_cast<unsigned int>(opPtr->elementsAdded.size()); i++){
         l("try jump to output element: " + std::to_string(i));
         //continue;
@@ -508,16 +498,21 @@ MStatus StrataElementOpNode::compute(const MPlug& plug, MDataBlock& data) {
             el->elType);
         elArrDH.outputValue().child(aStElTypeIndex).setInt(
             el->elIndex);
+        switch (el->elType) {
+        case SElType::point: {
+            /* matrices*/
+            elArrDH.outputValue().child(aStPointFinalWorldMatrixOut).setMMatrix(
+                toMMatrix(manifold.pDataMap[elName].finalMatrix)
+            );
+        }
 
-        /* matrices*/
-        elArrDH.outputValue().child(aStPointFinalWorldMatrixOut).setMMatrix(
-            toMMatrix(manifold.pDataMap[elName].finalMatrix)
-        );
+        }
+        
 
         ///* parent info*/
         //MArrayDataHandle parentDH = elArrDH.outputValue().child(aStSpace)
         //switch (el->elType) {
-        //case StrataElType::point :{
+        //case SElType::point :{
         //
         //    SPointData& pData = manifold.pDataMap[el->name];
         //    for (int n = 0; n < static_cast<int>(pData.spaceDatas.size()); n++) {
