@@ -367,7 +367,7 @@ namespace ed {
 				//	EvalGraph<std::vector<ExpValue>>();
 			}
 
-			//Expression* exp = nullptr; // owner expression
+			Expression* exp = nullptr; // owner expression
 			template <typename ExpOpT, typename NodeT = ExpOpNode>
 			NodeT* addNode(const std::string& name = ""
 			)
@@ -560,7 +560,9 @@ namespace ed {
 				result.push_back(v);
 				return s;
 			}
-
+			virtual int getPrecedence() {
+				return 0;
+			}
 
 			virtual Status parse(
 				ExpGraph& graph,
@@ -568,14 +570,7 @@ namespace ed {
 				Token token,
 				int& outNodeIndex,
 				Status& s
-			) {
-				//LOG("NAME parse: " + str(token) + " " + str(outNodeIndex));
-				ExpOpNode* newNode = graph.addNode<NameAtom>();
-				outNodeIndex = newNode->index;
-				NameAtom* op = static_cast<NameAtom*>(newNode->expAtomPtr.get());
-				op->strName = token.lexeme();
-				return s;
-			}
+			);
 		};
 
 		struct AssignAtom : InfixParselet {
@@ -592,6 +587,9 @@ namespace ed {
 			}
 			MAKE_COPY_FNS(AssignAtom)
 
+			virtual int getPrecedence() {
+				return Precedence::ASSGIGNMENT;
+			}
 			virtual Status parse(
 				ExpGraph& graph,
 				ExpParser& parser,
@@ -723,6 +721,9 @@ namespace ed {
 
 				return s;
 			}
+			virtual int getPrecedence() {
+				return Precedence::CALL;
+			}
 		};
 
 		struct GetItemAtom : InfixParselet {
@@ -742,6 +743,10 @@ namespace ed {
 			{
 
 				return s;
+			}
+
+			virtual int getPrecedence() {
+				return Precedence::CALL;
 			}
 		};
 
@@ -813,6 +818,10 @@ namespace ed {
 
 				return s;
 			}
+
+			virtual int getPrecedence() {
+				return Precedence::SUM;
+			}
 		};
 
 
@@ -860,13 +869,8 @@ namespace ed {
 				}
 			}
 
-			ExpParser() {
-				registerParselet(Token::Kind::Identifier, std::make_unique<NameAtom>());
-				registerParselet(Token::Kind::String, std::make_unique<ConstantAtom>());
-				registerParselet(Token::Kind::Number, std::make_unique<ConstantAtom>());
-				//registerParselet(Token::Kind::Number, std::make_unique<ConstantAtom>());
-				//registerParselet(Token::Kind::Call, std::make_unique<NameAtom>());
-			}
+			ExpParser();
+
 			MAKE_COPY_FNS(ExpParser)
 
 			void registerParselet(Token::Kind token, std::unique_ptr<PrefixParselet> parselet) {
@@ -953,8 +957,11 @@ namespace ed {
 			}
 
 			int getPrecedence() {
-				/*auto itParser = mInfixParselets.find(lookAhead(0).getKind());
-				if (itParser != mInfixParselets.end()) return itParser->second->getPrecedence();*/
+				auto itParser = mInfixParselets.find(
+					lookAhead(0).getKind());
+				if (itParser != mInfixParselets.end()) {
+					return itParser->second->getPrecedence();
+				}
 
 				return 0;
 			}

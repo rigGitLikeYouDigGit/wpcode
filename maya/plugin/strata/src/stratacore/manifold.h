@@ -213,7 +213,7 @@ namespace ed {
 
 	struct SPointData : SElData {
 		SPointDriverData driverData;
-		std::vector<SPointSpaceData> spaceDatas; // datas for each driver
+		std::vector<SPointSpaceData> spaceDatas = {}; // datas for each driver
 		//MMatrix finalMatrix = MMatrix::identity; // final evaluated matrix in world space
 		Eigen::Affine3f finalMatrix = Eigen::Affine3f::Identity(); // final evaluated matrix in world space
 		//std::vector<std::string> nodeHistory; // each node that has affected this point, starting with creator

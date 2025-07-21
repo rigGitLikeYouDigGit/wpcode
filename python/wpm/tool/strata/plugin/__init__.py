@@ -185,11 +185,11 @@ def reloadPluginTest():
 	elOp.stElement_[1].stName_ = "pElbow"
 	elOp.stElement_[1].stPointWorldMatrixIn_ = ptB.worldMatrix_[0]
 	# set parents
-	elOp.stElement_[1].stSpaceExp = "pShoulder"
+	#elOp.stElement_[1].stSpaceExp = "pShoulder"
 
 	elOp.stElement_[2].stName_ = "pWrist"
 	elOp.stElement_[2].stPointWorldMatrixIn_ = ptC.worldMatrix_[0]
-	elOp.stElement_[2].stSpaceExp_ = "pElbow"
+	#elOp.stElement_[2].stSpaceExp_ = "pElbow"
 
 
 	# connect elbow driver to test space driving, and FK
@@ -201,7 +201,7 @@ def reloadPluginTest():
 
 	elOp.stElement_[3].stName_ = "pFinger"
 	elOp.stElement_[3].stPointWorldMatrixIn_ = ptD.worldOut
-	elOp.stElement_[3].stSpaceExp_ = "pWrist"
+	#elOp.stElement_[3].stSpaceExp_ = "pWrist"
 
 	driverLoc2 = WN.Locator.create("fingerDriver_LOC").tf()
 	driverLoc2Grp = WN.create("fingerDriver_GRP")
@@ -209,11 +209,11 @@ def reloadPluginTest():
 	driverLoc2Grp.translateZ_ = 2.0
 
 	# SET SHAPE OVERRIDE TARGETS FOR BACK PROPAGATION
-	shape.stDataIn_[0].stExpIn_ = "pElbow"
-	shape.stDataIn_[0].stMatrixIn_ = driverLoc.matrix_
+	#shape.stDataIn_[0].stExpIn_ = "pElbow"
+	#shape.stDataIn_[0].stMatrixIn_ = driverLoc.matrix_
 
-	shape.stDataIn_[1].stExpIn_ = "pWrist"
-	shape.stDataIn_[1].stMatrixIn_ = driverLoc2.matrix_
+	#shape.stDataIn_[1].stExpIn_ = "pWrist"
+	#shape.stDataIn_[1].stMatrixIn_ = driverLoc2.matrix_
 
 	driverLoc.rotateZ_ = 45
 

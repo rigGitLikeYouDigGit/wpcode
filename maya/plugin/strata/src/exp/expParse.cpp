@@ -9,6 +9,10 @@ const std::string test::tag("hello");
 
 //ExpGrammar baseGrammar;
 
+/* largely copied from https://github.com/jwurzer/bantam-cpp
+modified to produce an evalGraph after parsing
+*/
+
 
 Status ExpOpNode::eval(std::vector<ExpValue>& value, EvalAuxData* auxData, Status& s) {
 	/* pull in ExpValues from input nodes, join all arguments together - 
@@ -242,7 +246,8 @@ Status AssignAtom::parse(
 
 	// set the index of this variable in the parse state, as this node is most recent
 	// to modify it
-
+	/* feels a bit weird to reach this far back up to get the exp object
+	*/
 	graph.exp->parseStatus.varIndexMap[leftOp->strName] = newNode->index;
 	outNodeIndex = newNode->index;
 
@@ -250,6 +255,20 @@ Status AssignAtom::parse(
 }
 
 
+Status NameAtom::parse(
+	ExpGraph& graph,
+	ExpParser& parser,
+	Token token,
+	int& outNodeIndex,
+	Status& s
+) {
+	//LOG("NAME parse: " + str(token) + " " + str(outNodeIndex));
+	ExpOpNode* newNode = graph.addNode<NameAtom>();
+	outNodeIndex = newNode->index;
+	NameAtom* op = static_cast<NameAtom*>(newNode->expAtomPtr.get());
+	op->strName = token.lexeme();
+	return s;
+}
 
 Status GroupAtom::parse(
 	ExpGraph& graph,
@@ -259,10 +278,19 @@ Status GroupAtom::parse(
 	int& outNodeIndex,
 	Status& s
 ) {
-	s = parser.parseExpression(graph, outNodeIndex);
+	s = parser.parseExpression(graph, outNodeIndex, 0);
 	parser.consume(Token::Kind::RightParen, s);
 	return s;
 } 
+
+
+ExpParser::ExpParser() {
+	registerParselet(Token::Kind::Identifier, std::make_unique<NameAtom>());
+	registerParselet(Token::Kind::String, std::make_unique<ConstantAtom>());
+	registerParselet(Token::Kind::Number, std::make_unique<ConstantAtom>());
+	registerParselet(Token::Kind::LeftParen, std::make_unique<GroupAtom>());
+
+}
 
 Status ExpParser::parseExpression(
 	ExpGraph& graph,
@@ -271,17 +299,12 @@ Status ExpParser::parseExpression(
 ) {
 	Status s;
 	LOG("parser parseExpression");
-	int n = 10; 
+	
 	Token token = consume();
-	l("consumeToken:" + str(token));
 	auto it = mPrefixParselets.find(token.getKind());
-
-	if (it == mPrefixParselets.end()) { // if statements require brackets
-		// you utter embarrassment
-		//throw ParseException("Could not parse \"" + token.getText() + "\".");
-		l("END, returning");
-		STAT_ERROR(s, "Could not find prefixParselet for token: " + token.lexeme() + " , halting"); // why does VS still indent lines
-		// if they're not actually part of an if-statement
+	if (it == mPrefixParselets.end()) {
+		l("prefix not found for token:" + token.kindStr() + ", returning");
+		STAT_ERROR(s, "Could not find prefixParselet for token: " + token.lexeme() + " , halting"); 
 	}
 
 	PrefixParselet* prefix = it->second.get(); // strName is empty
@@ -399,6 +422,7 @@ Status Expression::parse() {
 
 	parseStatus = ExpParseStatus();
 	graph = ExpGraph();
+	graph.exp = this;
 	//graph.clear();
 	graph.addResultNode();
 
