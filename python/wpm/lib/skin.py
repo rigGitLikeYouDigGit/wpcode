@@ -2,7 +2,7 @@
 from __future__ import annotations
 import typing as T
 import numpy as np
-
+from scipy.sparse import dok_array, csc_array
 from wpm import cmds, om, WN
 
 """skins are super powerful to work with in code, but 
@@ -11,6 +11,100 @@ making it robust to a big scene is tough
 check for empty matrix indices, check empty weights,
 static bind matrices vs live, etc
 """
+
+
+def getSkinArraySparse(skFn:om.MFnDependencyNode)->csc_array:
+	"""return skin weights as a sparse array, giving massive memory savings
+	"""
+	matrixPlug = skFn.findPlug("matrix", False)
+	influenceIndices = matrixPlug.getExistingArrayAttributeIndices()
+	maxInfluenceIndex = max(influenceIndices)
+
+	# set up plugs used in iteration
+	weightListPlug = skFn.findPlug("weightList", False)
+	weightListMObj = weightListPlug.attribute()
+
+	nVertices = max(weightListPlug.getExistingArrayAttributeIndices()) + 1
+
+	weightsPlug = skFn.findPlug("weights", False)
+	leafPlug = om.MPlug(weightsPlug)
+
+	# array for final weights
+	# dok used for fast construction
+	weightArray = dok_array((nVertices, maxInfluenceIndex + 1), dtype=float)
+
+	# for vtx in range(nVertices):
+	for vtx in weightListPlug.getExistingArrayAttributeIndices():
+		weightsPlug.selectAncestorLogicalIndex(vtx, weightListMObj)
+		leafPlug.selectAncestorLogicalIndex(vtx, weightListMObj)
+
+		for index in weightsPlug.getExistingArrayAttributeIndices():
+			leafPlug.selectAncestorLogicalIndex(index)
+			weightArray[vtx, index] = leafPlug.asFloat()
+
+	# convert to final sparse type
+	arr = weightArray.tocsc()
+	arr.sort_indices()
+	return arr
+
+
+def setSkinArraySparse(skFn:om.MFnDependencyNode,
+				   weightArr:csc_array):
+	"""key to scipy sparse structures are 2 arrays describing shape:
+	arr.indices and arr.indptr
+
+	arr = dok_array((3, 3))
+		>> [ [0, 0, 0],
+			 [0, 0, 0],
+			 [0, 0, 0], ]
+	csc = arr.tocsc()
+	csc.sort_indices()
+	>> [0 0 0 0] ptr
+	>> [] indices
+
+	arr[0, 0] = 1.0
+	>> [0 1 1 1] ptr
+	>> [0] indices
+
+	arr[2, 2] = 1.0
+	>> [0 1 1 2] ptr
+	>> [0 2] indices
+
+	arr[2, 1] = 1.0
+	>> [0 1 2 3] ptr
+	>> [0 2 2] indices
+
+	and so on -
+	ptr is always 1 more than nRows, and
+
+	indices[ ptr[row] : ptr[row + 1] ]
+	gives all existing indices in that row
+	"""
+	nVertices, nWeights = weightArr.shape
+
+	weightListPlug = skFn.findPlug("weightList", False)
+	weightListMObj = weightListPlug.attribute()
+
+	weightsPlug = skFn.findPlug("weights", False)
+	leafPlug = om.MPlug(weightsPlug)
+
+	# for vtx in range(nVertices):
+	for vtx in range(nVertices):
+		# check if row exists in sparse array - if not, skip
+		if (weightArr.indptr[vtx] == weightArr.indptr[vtx + 1]): # no entries in this row
+			continue
+		weightsPlug.selectAncestorLogicalIndex(vtx, weightListMObj)
+		leafPlug.selectAncestorLogicalIndex(vtx, weightListMObj)
+
+		# first set all existing weight plugs to zero
+		for index in weightsPlug.getExistingArrayAttributeIndices():
+			leafPlug.selectAncestorLogicalIndex(index)
+			leafPlug.setFloat(0.0)
+		weightsPlug.setNumElements(weightArr.indptr[vtx] - weightArr.indptr[vtx + 1])
+
+		for index in weightArr.indices[ weightArr.indptr[vtx] : weightArr.indptr[vtx + 1]]:
+			leafPlug.selectAncestorLogicalIndex(index)
+			leafPlug.setFloat(weightArr[vtx, index])
 
 
 class SkinIndexMap:
@@ -27,7 +121,7 @@ class SkinIndexMap:
 	"""
 
 	def __init__(self, node:WN.SkinCluster
-	             ):
+				 ):
 		self.node : WN.SkinCluster = WN.SkinCluster(node)
 
 	def activeIndices(self)->np.array:

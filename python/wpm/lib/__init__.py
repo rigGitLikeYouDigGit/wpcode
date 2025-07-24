@@ -2,6 +2,12 @@
 
 from wpm import om
 
+"""ON STRUCTURE:
+lib can depend on WN if needed - 
+WN wrapper classes later can import lib functions dynamically,
+so we should be clear of loops
+"""
+
 def execPythonStringOnIdle(s:str):
 	"""wrapper for MGlobal.executeCommandOnIdle -
 	shunts a python string command through mel.

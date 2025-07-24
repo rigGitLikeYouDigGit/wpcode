@@ -18,6 +18,8 @@ from . import api
 from .bases import NodeBase, PlugBase
 from wplib.object import Signal, Adaptor
 
+from wpm.core.plug import broadcast, broadcastPlugPairs
+
 if T.TYPE_CHECKING:
 	from wpm import WN
 
@@ -108,7 +110,7 @@ class PlugMeta(type):
 
 TreeType = T.TypeVar("TreeType", bound="Plug") # type of the current class
 
-class Plug(PlugBase,
+class Plug(PlugBase, # this base class list will beat you up
            Adaptor,
            TreeInterface,
            metaclass=PlugMeta):

@@ -28,6 +28,207 @@ from .cache import getCache, om
 if T.TYPE_CHECKING:
 	pass
 
+# region BROADCASTING
+"""reminder of broadcasting rules:
+
+single -> single
+	obviously fine
+
+single -> compound
+	expand to length of compound, eg
+	[single, single, single] -> compound
+
+single -> array 
+	ERROR, ambiguous, could reasonably be first, last, all, etc
+	explicitly define array slice
+
+single -> [list / slice of plugs]
+	expand to length of list
+
+
+list / slice -> leaf
+	truncate to first value
+	[ list[0] ] -> leaf
+	
+array plug -> leaf
+	expand to array values
+	[ array[1], array[2] ] -> leaf
+		as above, truncate to first value
+
+
+		
+
+list / slice -> list / slice
+	truncate to shortest
+	con([a, b, c], [x, y, z, w])
+	con([a, b, c], [x, y, z])
+
+
+list / slice -> compound
+	expand compound
+	as above, truncate to shortest
+
+list / slice -> array
+	connect all plugs from start
+	
+	
+in short, always expand compound to array of children
+array plugs are only ones with special cases
+
+"""
+
+
+# endregion
+
+
+# sick of this, time to overengineer the hell out of it
+
+def getShape(data):
+	"""return a numpy-esque shape for the given set of data -
+	we only consider the first entry of each layer? in case structure
+	isn't homogenous"""
+
+
+
+class Broadcaster:
+
+	def __init__(self,
+
+
+	             ): pass
+
+def _getElementsSeq(obj:(tuple, list)):
+	return obj
+
+def _getElementsMPlug(obj:om.MPlug):
+	if obj.isCompound:
+		return tuple(obj.child(i) for i in range(obj.numChildren()))
+	if obj.isArray: # absolutely no damn idea
+		raise RuntimeError("nooooooooooooo")
+	return [obj]
+
+def _isLeaf(obj): #TODO: make superclass lookup maps for _isLeaf and _getElements
+	if isinstance(obj, PlugBase):
+		obj = obj.MPlug
+	if isinstance(obj, om.MPlug):
+		if obj.isElement:
+			return not (obj.isArray or obj.isCompound or obj.parent().isCompound)
+		return not (obj.isArray or obj.isCompound)
+	if isinstance(obj, (tuple, list)):
+		return False
+	return True
+
+def _getElements(obj):
+	"""return EXPANDABLE version of obj?
+	no, can't bake in 'only one level'
+	of immutability
+	or maybe we can, maybe that's the most sane thing to do
+	"""
+	if isinstance(obj, PlugBase):
+		obj = obj.MPlug
+	if isinstance(obj, om.MPlug):
+		return _getElementsMPlug(obj)
+	# if isinstance(obj, (tuple, list)):
+	# 	return obj
+	# return (obj, )
+	if isinstance(obj, (tuple, list)):
+		return list(obj)
+	return [obj]
+"""
+for arrays - 
+check if plug has sparse indices - eg if max logical index > max physical index
+if yes, treat it as a map - 
+if no, treat it as a dense sequence
+
+"""
+
+def _isImmutable(obj):
+	return isinstance(obj, (str, tuple, float, int, om.MMatrix, om.MPlug))
+
+def _complexSourceMatchesLeafTarget(possible, leaf):
+	"""MAYBE???
+	for the case of floatArray plugs, where a normally non-leaf value
+	might match a specific leaf target"""
+	return False
+
+def _complexSidesMatchDirect(src, dst):
+	""" check if 2 arbitrary complex objects
+	can easily be said to match -
+	EG if you have 2 compound attributes with the same structure.
+
+	in this case, this pair is yielded and no more recursion done
+	"""
+	return False
+
+def broadcast(a, b):
+	""" expand 2 inputs to a list of matched pairs
+	EITHER both are leaf
+	OR neither is leaf
+	OR left is leaf
+	OR right is leaf
+
+	not trying to check for depth yet, goes level-by-level from both roots in step
+
+
+	B is destination - structure to match
+
+	A- find a way to extend immutable entries
+	"""
+	#log("broadcast", a, b, _isLeaf(a), _isLeaf(b))
+	if _isLeaf(a) and _isLeaf(b):
+		yield (a, b)
+		return
+
+	# if target is a leaf, drill down until we hit a leaf in the source
+	if _isLeaf(b):
+		if _complexSourceMatchesLeafTarget(a, b):
+			yield (a, b)
+			return
+		# over-truncating is an error more than a help
+		raise RuntimeError("Tried to broadcast non-leaf source {} to leaf target {}".format(a, b))
+
+
+	# if source is a leaf, expand out targets
+	if _isLeaf(a):
+		for t in _getElements(b):
+			yield from broadcast(a, t)
+		return
+
+	# neither source nor dest is a leaf, it gets complicated
+		# check for direct match:
+	if _complexSidesMatchDirect(a, b):
+		yield a, b
+		return
+
+	targets = _getElements(b)
+	if _isImmutable(a):
+		#sources = [a] * len(targets)
+		sources = [_getElements(a)] * len(targets)
+		for left, right in zip(sources, targets):
+			yield from broadcast(left, right)
+		return
+
+	# truncate to shortest
+	sources = _getElements(a)
+	# truncate to shortest
+	shortestLen = min(len(sources), len(targets))
+
+	sources = sources[:shortestLen]
+	targets = targets[:shortestLen]
+	for src, dst in zip(sources, targets):
+		yield from broadcast(src, dst)
+
+
+
+def _triplePlugValidKeyMap(plug:om.MPlug):
+	"""for a given plug, if it's 3 or 4 long,
+	super annoying to work out the right key for it
+	 int index is preferred, but maybe we try and allow for
+	 "x", "X", "r", "R", "translateX" etc?
+
+	 """
+
+
 
 def getMPlug(plug, default=Sentinel.FailToFind)->om.MPlug:
 	if isinstance(plug, om.MPlug):
@@ -181,27 +382,6 @@ def arrayElement(plug:om.MPlug, index:int)->om.MPlug:
 
 #endregion
 
-# region BROADCASTING
-"""reminder of broadcasting rules:
-
-single -> single
-	obviously fine
-	
-single -> compound
-	expand to length of compound, eg
-	[single, single, single] -> compound
-
-single -> array 
-	ERROR, ambiguous, could reasonably be first, last, all, etc
-	explicitly define array slice
-
-single -> [list / slice of plugs]
-	expand to length of list
-
-
-"""
-
-#endregion
 
 
 
@@ -737,6 +917,9 @@ con([cAx, cAy, cAz], leafB)
 truncate to shortest?
 con([cAx], leafB)
 NO - the above errors, as it is too hidden
+
+BUT - if you explicitly supply single-item list? then it's allowed?
+
 
 con(leafA, compoundB)
 con(leafA, [cBx, cBy])
