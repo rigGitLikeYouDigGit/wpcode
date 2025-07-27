@@ -11,6 +11,15 @@ from wplib.maths import NPArrayLike, arr, to, ToType, toArr
 from wpm.core import cmds, om
 import maya.api.OpenMaya as om_
 
+"""the doubling api thing REALLY gets aggravating here, 
+hope it doesn't come back to bite us
+TODO: avoid duplicating core data types in api wrapper
+
+TODO: integrate ToType properly in function decorators for 
+	EFFORTLESS TYPE COERCION
+	wow I'm such a nerd I actually felt excited typing that
+"""
+
 mMatrixEdge = ToType(
 	fromTypes=(om.MMatrix, om.MFloatMatrix,
 	            om_.MMatrix, om_.MFloatMatrix),
@@ -23,6 +32,20 @@ mMatrixEdge = ToType(
 		]),
 	backFn=lambda v, t, **kw : t(v)
 )
+
+mMatrixEdge = ToType(
+	fromTypes=(om.MMatrix, om.MFloatMatrix,
+	            om_.MMatrix, om_.MFloatMatrix),
+	toTypes=(tuple, list,),
+	convertFn=lambda v, t, **kw : t([
+			[v[0], v[1], v[2], v[3]],
+			[v[4], v[5], v[6], v[7]],
+			[v[8], v[9], v[10], v[11]],
+			[v[12], v[13], v[14], v[15]]
+		]),
+	backFn=lambda v, t, **kw : t(v)
+)
+
 log("made matrix edge")
 log(ToType.typeGraph)
 def mTransformationMatrixToMMatrixFn(v:om.MTransformationMatrix,

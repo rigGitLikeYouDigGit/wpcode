@@ -371,8 +371,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 
 			def _resolveRef(**kwargs):
 				rootDex = self.dex()
-				foundDex : WpDex = rootDex.access(rootDex, path, values=False, one=True,
-				                                  )
+				foundDex : WpDex = rootDex.access(rootDex, path, values=False)
 
 				return foundDex.getValueProxy()
 

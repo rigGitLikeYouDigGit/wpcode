@@ -200,9 +200,9 @@ class WX(rx):
 		rootDex = self._kwargs["_dex"]
 		path = self._kwargs["_dexPath"]
 		if dex:
-			return rootDex.access(rootDex, path, values=False, one=True)
+			return rootDex.access(rootDex, path, values=False)
 		if proxy:
-			return rootDex.access(rootDex, path, values=False, one=True).getValueProxy()
+			return rootDex.access(rootDex, path, values=False).getValueProxy()
 		if value:
 			return self.rx.value
 

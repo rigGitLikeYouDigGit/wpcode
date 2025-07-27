@@ -16,17 +16,21 @@ from dataclasses import dataclass
 
 from wplib import log, Sentinel
 from wplib.wpstring import sliceFromString
-from wplib.sequence import flatten, isSeq
-from wplib.object import TypeNamespace
+from wplib.sequence import flatten, isSeq, toSeq, firstOrNone, getFirst
+from wplib.object import TypeNamespace, Broadcaster, ToType, to
 from wptree import Tree
 
 from .bases import PlugBase
 from .api import getMFn, mfnDataConstantTypeMap, getMObject
 from .cache import getCache, om
-
+from . import adaptor as _ # register all type conversions
 
 if T.TYPE_CHECKING:
 	pass
+
+
+
+
 
 # region BROADCASTING
 """reminder of broadcasting rules:
@@ -83,57 +87,79 @@ array plugs are only ones with special cases
 
 # sick of this, time to overengineer the hell out of it
 
+
+
 def getShape(data):
 	"""return a numpy-esque shape for the given set of data -
 	we only consider the first entry of each layer? in case structure
-	isn't homogenous"""
+	isn't homogenous
 
-
-
-class Broadcaster:
-
-	def __init__(self,
-
-
-	             ): pass
-
-def _getElementsSeq(obj:(tuple, list)):
-	return obj
-
-def _getElementsMPlug(obj:om.MPlug):
-	if obj.isCompound:
-		return tuple(obj.child(i) for i in range(obj.numChildren()))
-	if obj.isArray: # absolutely no damn idea
-		raise RuntimeError("nooooooooooooo")
-	return [obj]
-
-def _isLeaf(obj): #TODO: make superclass lookup maps for _isLeaf and _getElements
-	if isinstance(obj, PlugBase):
-		obj = obj.MPlug
-	if isinstance(obj, om.MPlug):
-		if obj.isElement:
-			return not (obj.isArray or obj.isCompound or obj.parent().isCompound)
-		return not (obj.isArray or obj.isCompound)
-	if isinstance(obj, (tuple, list)):
-		return False
-	return True
-
-def _getElements(obj):
-	"""return EXPANDABLE version of obj?
-	no, can't bake in 'only one level'
-	of immutability
-	or maybe we can, maybe that's the most sane thing to do
+	????????
 	"""
-	if isinstance(obj, PlugBase):
-		obj = obj.MPlug
-	if isinstance(obj, om.MPlug):
-		return _getElementsMPlug(obj)
-	# if isinstance(obj, (tuple, list)):
-	# 	return obj
-	# return (obj, )
-	if isinstance(obj, (tuple, list)):
-		return list(obj)
-	return [obj]
+
+	if isinstance(data, (tuple, list)):
+		return len(data) + getShape(data[0])  # ????
+	return ()
+
+
+class PlugBroadcaster(Broadcaster):
+
+	def _getElementsMPlug(self, obj: om.MPlug):
+		if obj.isCompound:
+			return tuple(obj.child(i) for i in range(obj.numChildren()))
+		if obj.isArray:  # absolutely no damn idea
+			raise RuntimeError("nooooooooooooo")
+		return [obj]
+
+	def _getElements(self, obj):
+		"""return EXPANDABLE version of obj?
+		no, can't bake in 'only one level'
+		of immutability
+		or maybe we can, maybe that's the most sane thing to do
+		"""
+		if plug := getMPlug(obj, None):
+			return self._getElementsMPlug(plug)
+		return super()._getElements(obj)
+		# if isinstance(obj, PlugBase):
+		# 	obj = obj.MPlug
+		# if isinstance(obj, om.MPlug):
+
+		# if isinstance(obj, (tuple, list)):
+		# 	return obj
+		# return (obj, )
+		# if isinstance(obj, (tuple, list)):
+		# 	return list(obj)
+		# return [obj]
+
+	def _isLeaf(self, obj):
+		if plug := getMPlug(obj, None):
+			if plug.isElement:
+				return not (plug.isArray or plug.isCompound or plug.parent().isCompound)
+			return not (plug.isArray or plug.isCompound)
+		return super()._isLeaf(obj)
+
+	def _isImmutable(self, obj):
+		return isinstance(obj, (str, tuple, float, int, om.MMatrix, om.MPlug))
+
+	def _complexSourceMatchesLeafTarget(self, possible, leaf):
+		"""MAYBE???
+		for the case of floatArray plugs, where a normally non-leaf value
+		might match a specific leaf target"""
+		return False
+
+	def _complexSidesMatchDirect(self, src, dst):
+		""" check if 2 arbitrary complex objects
+		can easily be said to match -
+		EG if you have 2 compound attributes with the same structure.
+
+		in this case, this pair is yielded and no more recursion done
+		"""
+		return False
+
+
+_broadcaster = PlugBroadcaster()
+# set this as default library broadcast function
+broadcast = _broadcaster.broadcast
 """
 for arrays - 
 check if plug has sparse indices - eg if max logical index > max physical index
@@ -142,81 +168,7 @@ if no, treat it as a dense sequence
 
 """
 
-def _isImmutable(obj):
-	return isinstance(obj, (str, tuple, float, int, om.MMatrix, om.MPlug))
 
-def _complexSourceMatchesLeafTarget(possible, leaf):
-	"""MAYBE???
-	for the case of floatArray plugs, where a normally non-leaf value
-	might match a specific leaf target"""
-	return False
-
-def _complexSidesMatchDirect(src, dst):
-	""" check if 2 arbitrary complex objects
-	can easily be said to match -
-	EG if you have 2 compound attributes with the same structure.
-
-	in this case, this pair is yielded and no more recursion done
-	"""
-	return False
-
-def broadcast(a, b):
-	""" expand 2 inputs to a list of matched pairs
-	EITHER both are leaf
-	OR neither is leaf
-	OR left is leaf
-	OR right is leaf
-
-	not trying to check for depth yet, goes level-by-level from both roots in step
-
-
-	B is destination - structure to match
-
-	A- find a way to extend immutable entries
-	"""
-	#log("broadcast", a, b, _isLeaf(a), _isLeaf(b))
-	if _isLeaf(a) and _isLeaf(b):
-		yield (a, b)
-		return
-
-	# if target is a leaf, drill down until we hit a leaf in the source
-	if _isLeaf(b):
-		if _complexSourceMatchesLeafTarget(a, b):
-			yield (a, b)
-			return
-		# over-truncating is an error more than a help
-		raise RuntimeError("Tried to broadcast non-leaf source {} to leaf target {}".format(a, b))
-
-
-	# if source is a leaf, expand out targets
-	if _isLeaf(a):
-		for t in _getElements(b):
-			yield from broadcast(a, t)
-		return
-
-	# neither source nor dest is a leaf, it gets complicated
-		# check for direct match:
-	if _complexSidesMatchDirect(a, b):
-		yield a, b
-		return
-
-	targets = _getElements(b)
-	if _isImmutable(a):
-		#sources = [a] * len(targets)
-		sources = [_getElements(a)] * len(targets)
-		for left, right in zip(sources, targets):
-			yield from broadcast(left, right)
-		return
-
-	# truncate to shortest
-	sources = _getElements(a)
-	# truncate to shortest
-	shortestLen = min(len(sources), len(targets))
-
-	sources = sources[:shortestLen]
-	targets = targets[:shortestLen]
-	for src, dst in zip(sources, targets):
-		yield from broadcast(src, dst)
 
 
 
@@ -230,7 +182,7 @@ def _triplePlugValidKeyMap(plug:om.MPlug):
 
 
 
-def getMPlug(plug, default=Sentinel.FailToFind)->om.MPlug:
+def getMPlug(plug, default:(T.Any, None)=Sentinel.FailToFind)->om.MPlug:
 	if isinstance(plug, om.MPlug):
 		return plug
 	try:
@@ -695,13 +647,20 @@ def _setDataOnPlugMObject(obj, data):
 
 
 def _setLeafPlugValue(plug:om.MPlug, data,
-                     toRadians=True):
+                     toRadians=True,
+                      _dgMod:om.MDGModifier=None
+                      ):
+	"""TODO: array-valued plug types -
+	MFloatArray, MDoubleArray, MVectorArray, MMPointArray, MMatrixArray, etc
+
+	run after broadcasting, set a leaf-level value on a leaf-level plug
+	"""
 
 	# we now need to check the attribute type of the plug
 	attribute = plug.attribute()
 	attrFn = getMFn(attribute)
 	attrFnType = type(attrFn)
-	if attrFnType is om.MFnUnitAttribute: # spaghett
+	if attrFnType == om.MFnUnitAttribute: # spaghett
 		if attrFn.unitType() == om.MFnUnitAttribute.kAngle and toRadians:
 			data = om.MAngle(data).asRadians()
 		if attrFn.unitType() == om.MFnUnitAttribute.kAngle and not isinstance(data, om.MAngle):
@@ -709,12 +668,14 @@ def _setLeafPlugValue(plug:om.MPlug, data,
 			return
 		setFn = getCache().unitAttrPlugMethodMap[attrFn.unitType()][1]
 		setFn(plug, data)
+		return
 
-	elif attrFnType is om.MFnNumericAttribute:
+	elif attrFnType == om.MFnNumericAttribute:
 		setMethod = getCache().numericAttrPlugMethodMap[attrFn.numericType()][1]
 		data = setMethod(plug, data)
+		return
 
-	elif attrFnType is om.MFnTypedAttribute:
+	elif attrFnType == om.MFnTypedAttribute:
 		# for a typed attribute, we need to create a new data MObject
 		# # populate plug if needed
 		# ensurePlugHasMObject(plug)
@@ -729,15 +690,24 @@ def _setLeafPlugValue(plug:om.MPlug, data,
 
 		if attrFn.attrType() == om.MFnData.kString:
 			dataMObject = om.MFnStringData().create(data)
+			plug.setMObject(dataMObject)
+		elif attrFn.attrType() in (om.MFnData.kNurbsCurve, om.MFnData.kMesh, om.MFnData.kNurbsSurface):
+			assert isinstance(data, om.MObject), "must directly specify MObject to set geometry plug: " + str(plug)
+			plug.setMObject(data)
 		else:
 			raise RuntimeError("unsupported typed attribute type {}".format(attrFn.attrType()))
-		plug.setMObject(dataMObject)
+		return
+
+	elif attrFnType == om.MFnMatrixAttribute:
+		plug.setMObject(om.MFnMatrixData().create( to(data, om.MMatrix )))
 		return
 
 
 def setPlugValue(plug:om.MPlug, data:T.Union[T.List, object],
                  fromDegrees=True,
-                 errorOnFormatMismatch=False):
+                 errorOnFormatMismatch=False,
+                 _dgMod:om.MDGModifier=None # might use this eventually
+                 ):
 	"""given a plug and data, set value on that plug and any plugs below it
 	expands data out to depth of plugs - eg vector arrays are preserved to
 	pass to vectorArray plugs
@@ -933,83 +903,83 @@ con(arrayA, leafB)
 connect with first index
 """
 
-def plugPairLogic(a:om.MPlug, b:om.MPlug,
-				  compoundFailsafe=False
-				  )\
-		->list[tuple[om.MPlug, om.MPlug]]:
-	"""given 2 MPlugs or lists of MPlugs,
-	return pairs of plugs defining (src, dst) for each
-	individual connection
-	error if formats do not adequately match
-
-	no logic options here, write other wrapper functions for specific
-	behaviour. This is confusing enough as it is
-
-	if compoundFailsafe, connect elements of compound directly even between
-	matching plugs - war flashbacks to maya2019 not
-	updating compound children properly
-
-	"""
-	aType = plugHType(a)
-	bType = plugHType(b)
-
-	# special case, both are single
-	if aType == HType.Leaf and bType == HType.Leaf:
-		return [(a, b)]
-
-	# if source is leaf
-	if aType == HType.Leaf:
-
-		if bType == HType.Compound:
-			# connect simple plug to all compound plugs
-			return [(a, i) for i in plugSubPlugs(b)]
-		else:
-			# b is array - connect simple to last
-			return plugPairLogic(a, newLastArrayElement(b))
-
-	aSubPlugs = plugSubPlugs(a)
-
-	# a is compound or array
-	# direct connection to leaf is illegal, too obscure
-	if bType == HType.Leaf:
-		raise TypeError("Array / compound plug {} cannot be directly connected to leaf plug {}".format((a, type(a)), (b, type(b))))
-
-	bSubPlugs = plugSubPlugs(b)
-
-	# if source is array (precludes source being compound)
-	if aType == HType.Array:
-
-		# dest is either compound or array - zip plugs and check recursively
-		pairs = []
-		for aSubPlug, bSubPlug in zip(aSubPlugs, bSubPlugs):
-			pairs.extend(plugPairLogic(aSubPlug, bSubPlug))
-		return pairs
-
-
-	elif aType == HType.Compound :
-		# error if destination is leaf, too obscure otherwise
-		if bType == HType.Leaf:
-			raise TypeError("Compound plug {} cannot be directly connected to leaf plug {}".format( (a, type(a)), (b, type(b)) ))
-
-		"""ambiguity here: con( compound, array ) could mean to connect elementwise
-		to array elements, or to connect entire plug to last array index
-		
-		last case is more common than first - go with that
-		"""
-		if bType == HType.Array:
-			return plugPairLogic(a, newLastArrayElement(b))
-		else: # both compound
-			# if number of children equal, connect directly
-			if len(aSubPlugs) == len(bSubPlugs):
-				return [ (a, b) ]
-			else: # zip to shortest
-				return list(zip(aSubPlugs, bSubPlugs))
+# def plugPairLogic(a:om.MPlug, b:om.MPlug,
+# 				  compoundFailsafe=False
+# 				  )\
+# 		->list[tuple[om.MPlug, om.MPlug]]:
+# 	"""given 2 MPlugs or lists of MPlugs,
+# 	return pairs of plugs defining (src, dst) for each
+# 	individual connection
+# 	error if formats do not adequately match
+#
+# 	no logic options here, write other wrapper functions for specific
+# 	behaviour. This is confusing enough as it is
+#
+# 	if compoundFailsafe, connect elements of compound directly even between
+# 	matching plugs - war flashbacks to maya2019 not
+# 	updating compound children properly
+#
+# 	"""
+# 	aType = plugHType(a)
+# 	bType = plugHType(b)
+#
+# 	# special case, both are single
+# 	if aType == HType.Leaf and bType == HType.Leaf:
+# 		return [(a, b)]
+#
+# 	# if source is leaf
+# 	if aType == HType.Leaf:
+#
+# 		if bType == HType.Compound:
+# 			# connect simple plug to all compound plugs
+# 			return [(a, i) for i in plugSubPlugs(b)]
+# 		else:
+# 			# b is array - connect simple to last
+# 			return plugPairLogic(a, newLastArrayElement(b))
+#
+# 	aSubPlugs = plugSubPlugs(a)
+#
+# 	# a is compound or array
+# 	# direct connection to leaf is illegal, too obscure
+# 	if bType == HType.Leaf:
+# 		raise TypeError("Array / compound plug {} cannot be directly connected to leaf plug {}".format((a, type(a)), (b, type(b))))
+#
+# 	bSubPlugs = plugSubPlugs(b)
+#
+# 	# if source is array (precludes source being compound)
+# 	if aType == HType.Array:
+#
+# 		# dest is either compound or array - zip plugs and check recursively
+# 		pairs = []
+# 		for aSubPlug, bSubPlug in zip(aSubPlugs, bSubPlugs):
+# 			pairs.extend(plugPairLogic(aSubPlug, bSubPlug))
+# 		return pairs
+#
+#
+# 	elif aType == HType.Compound :
+# 		# error if destination is leaf, too obscure otherwise
+# 		if bType == HType.Leaf:
+# 			raise TypeError("Compound plug {} cannot be directly connected to leaf plug {}".format( (a, type(a)), (b, type(b)) ))
+#
+# 		"""ambiguity here: con( compound, array ) could mean to connect elementwise
+# 		to array elements, or to connect entire plug to last array index
+#
+# 		last case is more common than first - go with that
+# 		"""
+# 		if bType == HType.Array:
+# 			return plugPairLogic(a, newLastArrayElement(b))
+# 		else: # both compound
+# 			# if number of children equal, connect directly
+# 			if len(aSubPlugs) == len(bSubPlugs):
+# 				return [ (a, b) ]
+# 			else: # zip to shortest
+# 				return list(zip(aSubPlugs, bSubPlugs))
 
 def tryConvertToMPlugs(struct:termType)->(om.MPlug, list[om.MPlug]):
 	"""iterate through structure, convert to mplugs if possible"""
 	if isinstance(struct, (tuple, list)):
 		return [tryConvertToMPlugs(i) for i in struct]
-	return getMPlugOrNone(struct) or struct
+	return getMPlug(struct, None) or struct
 
 def plugDrivers(dstPlug:om.MPlug)->list[om.MPlug]:
 	# some om functions don't allow keywords
@@ -1047,16 +1017,64 @@ def _set(plug, val, _dgMod=None):
 	if _dgMod is None: # leave to calling code to execute if specified
 		modifier.doIt()
 
-def conSet(src:(om.MPlug, object), dst:(om.MPlug, object), _dgMod:om.MDGModifier=None):
-	"""con() but with sets of plugs or objects"""
-	src = tryConvertToMPlugs(src)
-	dst = tryConvertToMPlugs(dst)
-	for pair in plugTreePairs(src, dst):
+"""
+semantics - 
+for setAttr, this order is backwards from normal maya, where you would say 'setAttr attribute (to) value'
+here we just stick to a basic order of (source, target)
+and hope it clicks eventually
+(other naming suggestions welcome)
+
+TEST:
+find a statement that must include "src", "dst" IN THAT ORDER
+which is readable
+
+drive( src, dst )?
+	' drive src with dst ' - unclear
+	' use src to drive dst '
+	
+set( src, dst )?
+	' set src to dst '
+	' set src with dst '
+	' set using src to drive dst '
+	- trash, also confuses with native setAttr, this can also connect
+
+equate( src, dst )?
+
+put( src, dst ) ?
+	' put src in dst ' - this seems quite good? can't see how you would misread the order
+	- 'put' may sound like a more static action than making a live connection
+
+use( src, dst ) ?
+	' use src as dst '
+	' use src to drive dst '
+	- this seems good
+
+
+"""
+def use(src:(om.MPlug, object), dst:(om.MPlug, list[om.MPlug]),
+        fromDegrees=True,
+        _dgMod:om.MDGModifier=None,
+        ):
+	"""con() but with sets of plugs or objects
+	DO WE convert to MPlugs before or after broadcasting?
+	complex addressing / expressions are all taken care of before this, here we
+	expect at most flat lists
+	"""
+	# src = tryConvertToMPlugs(src)
+	# dst = tryConvertToMPlugs(dst)
+	src = [getMPlug(i, i) for i in toSeq(src)]
+	dst = [getMPlug(i, i) for i in toSeq(dst)]
+	for pair in broadcast(src, dst):
+		if not isinstance(pair[1], om.MPlug):
+			raise RuntimeError("destination is not an MPlug")
 		if isinstance(pair[0], om.MPlug):
 			_con(*pair, _dgMod)
 		else:
 			#_set(*pair, _dgMod)
-			setPlugValue(pair[1], pair[0])
+			setPlugValue(pair[1], pair[0],
+			             fromDegrees=fromDegrees,
+
+			             )
 	#
 	# if isinstance(src, om.MPlug):
 	# 	con(src, dst, _dgMod)

@@ -34,7 +34,6 @@ def reloadWPM(andWp=True):
 	import wpm
 	return wpm
 
-import typing as T
 
 def isThisMaya():
 	try:
@@ -58,6 +57,3 @@ if isThisMaya():
 
 	# use to denote function arguments to accept either static values or plugs
 	PLUG_VAL = (Plug, object)
-
-	from wplib import log
-	from .lib.adaptor import to, arr, toArr

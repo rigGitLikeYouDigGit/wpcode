@@ -143,10 +143,21 @@ class SuperClassLookupMap:
 	can maybe pass this as param to class initialisation,
 	as well as defining at class scope, to set different type
 	overrides for different parts of the program
+
+	Explicit mappings set here are prioritised over function-based mappings
+
+	TODO: I don't know why I ended up with this specific usage of a filtered/conditional
+		dictionary so early, and with much more prolific usage than a more general
+		case, but if we ever need general filtered version, we should
+		factor out the caching and function lookups here to a base class
 	"""
+	matchFnT = callable[[type, T.Any], bool]
+
 	def __init__(self, classMap:dict[type, T.Any]=None):
-		self.classMap : dict[type, T.Any] = {}
-		self.cacheMap : dict[type, T.Any] = {}
+		self.classMap : dict[type, T.Any] = {} # defined mapping of { class : value }
+		self.cacheMap : dict[type, T.Any] = {} # cached map built as lookups are resolved
+		# cacheMap is invalidated whenever classMap is updated
+
 		self._hasMatchFunctions = False
 		if classMap is not None:
 			self.updateClassMap(classMap)
@@ -172,7 +183,8 @@ class SuperClassLookupMap:
 
 	def _sortMap(self):
 		"""sort the map by length of mro,
-		so that longest mro (lowest superclasses) are first"""
+		so that longest mro (lowest superclasses) are first
+		"""
 		self.classMap = dict(
 			sorted(self.classMap.items(),
 			       key=lambda i: len(i[0].__mro__) if isinstance(i[0], type) else 0,
@@ -181,8 +193,9 @@ class SuperClassLookupMap:
 		for i in self.classMap.keys():
 			if isinstance(i, types.FunctionType):
 				self._hasMatchFunctions = True
+				break
 
-	def updateClassMap(self, classMap:dict[(type, tuple[type, ...]), T.Any]):
+	def updateClassMap(self, classMap:dict[((type, matchFnT), tuple[type, ...]), T.Any]):
 		"""register a map of {type : value}"""
 		#log("updateClassMap", classMap)
 		self.classMap.update(self._expandTypeTupleKeys(classMap))
@@ -208,7 +221,7 @@ class SuperClassLookupMap:
 		#log(f"result {result}")
 		if result is Sentinel.FailToFind: # not found in map
 			if self._hasMatchFunctions: # check against functions now
-				for k, v in self.classMap.items():
+				for k, v in self.classMap.items(): # maybe we should keep functions in separate map
 					#log("check", k, v)
 					if isinstance(k, types.FunctionType):
 						if k(lookupCls):

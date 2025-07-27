@@ -2,6 +2,7 @@
 from .adaptor import Adaptor, ToType, to
 from .attrdict import AttrDict, TDefDict
 
+from .broadcast import Broadcaster
 from .builtinextension import UserSet, PostDecMethodWrapper
 
 from .namespace import TypeNamespace, Sentinel
@@ -21,6 +22,7 @@ from .excepthook import ExceptHookManager
 from .hashable import HashableMixin, UnHashableDict, UnHashableSet, HashFunctions, toHash
 
 from .metamagicdelegator import ClassMagicMethodMixin
+from .multiobject import MultiObject
 
 from .override import OverrideProvider
 

@@ -90,8 +90,8 @@ class Add(NodeOp):
 		log("plugB", plugB)
 		for i, (a, b) in enumerate(attr.plugTreePairs(plugA, plugB)):
 			node = WN.create("addDoubleLinear", dgMod=dgMod)
-			attr.conSet(a, node("input1"), _dgMod=dgMod)
-			attr.conSet(b, node("input2"), _dgMod=dgMod)
+			attr.use(a, node("input1"), _dgMod=dgMod)
+			attr.use(b, node("input2"), _dgMod=dgMod)
 			self.nodes.append(node)
 			self.outPlugs.append(node("output"))
 
@@ -108,7 +108,7 @@ def termTest():
 	tfB.translate.set(-2, -2, -2)
 
 	result = PlugTerm(tfA.translate) + PlugTerm(tfB.translate)
-	attr.conSet(result.value, tfC.translate)
+	attr.use(result.value, tfC.translate)
 
 
 

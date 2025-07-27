@@ -383,10 +383,7 @@ class ChimaeraNode(Modelled,
 					continue
 				# look at this beautiful line
 				#newValue.append(self.parent.getNodes(i.uid)[0]._attrMap[i.attr].resolve()[i.path])
-				foundNode : ChimaeraNode = self.parent.access(
-					self.parent, ref.uid, one=True, values=False,
-					uid=True
-				)
+				foundNode : ChimaeraNode = self.parent.access(self.parent, ref.uid, values=False, uid=True)
 				if not foundNode: continue
 				newValue.append(
 					foundNode.resolveAttribute(ref.attr)(ref.path)

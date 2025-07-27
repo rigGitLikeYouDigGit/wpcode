@@ -8,7 +8,7 @@ import unittest
 from collections import namedtuple
 
 from wplib import log
-from wplib.pathable import Pathable, DictPathable, IntPathable, SeqPathable
+from wplib.pathable import Pathable, DictPathAdaptor, IntPathAdaptor, SeqPathAdaptor
 
 
 class TestPathable(unittest.TestCase):
@@ -18,27 +18,27 @@ class TestPathable(unittest.TestCase):
 		"""check that type call returns the right
 		subtype for given object"""
 
-		self.assertIsInstance(Pathable({"a" : 1}), DictPathable)
-		self.assertIsInstance(Pathable(1), IntPathable)
-		self.assertIsInstance(Pathable([1, 2, 3]), SeqPathable)
+		self.assertIsInstance(Pathable({"a" : 1}), DictPathAdaptor)
+		self.assertIsInstance(Pathable(1), IntPathAdaptor)
+		self.assertIsInstance(Pathable([1, 2, 3]), SeqPathAdaptor)
 
 	def test_dictPathable(self):
 
 		obj = {"a" : 1, "b" : 2}
-		pathable = DictPathable(obj)
+		pathable = DictPathAdaptor(obj)
 		self.assertEqual(pathable["a"], 1)
 		self.assertEqual(pathable["b"], 2)
 
 		# more complex dict
 		obj = {"a" : {"b" : 2}}
-		pathable = DictPathable(obj)
+		pathable = DictPathAdaptor(obj)
 		self.assertEqual(pathable["a", "b"], 2)
 		# keys
 		self.assertEqual(pathable["a", "keys()"], ["b"])
 
 	def test_seqPathable(self):
 		obj = [1, 2, 3]
-		pathable = SeqPathable(obj)
+		pathable = SeqPathAdaptor(obj)
 		self.assertEqual(pathable[0], 1)
 		self.assertEqual(pathable[1], 2)
 		self.assertEqual(pathable[2], 3)
@@ -56,7 +56,7 @@ class TestPathable(unittest.TestCase):
 		pathable = Pathable(deepStructure)
 		self.assertEqual(pathable["a", "b", "c"], 1)
 		# access pathable item
-		item = pathable.access(pathable, ["a", "b", "c"], values=False, one=True)
+		item = pathable.access(pathable, ["a", "b", "c"], values=False)
 		self.assertEqual(item.obj, 1)
 		path = item.path()
 		self.assertEqual(path, ["a", "b", "c"])

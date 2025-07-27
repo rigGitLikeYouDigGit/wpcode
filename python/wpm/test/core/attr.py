@@ -16,10 +16,10 @@ def testPlugs():
 	# uvpin, array of compounds
 	uvPin = WN.UvPin.create() # HATE the casing on the classname
 	#TODO: whitelist/override some string atoms for generated names
-	result = plug.broadcast(
-		(0, 1), [uvPin.coordinate_[0], uvPin.coordinate_[1], uvPin.coordinate_[2]]
-	)
-	for i in result: print(i[0], i[1].name())
+	# result = plug.broadcast(
+	# 	(0, 1), [uvPin.coordinate_[0], uvPin.coordinate_[1], uvPin.coordinate_[2]]
+	# )
+	# for i in result: print(i[0], i[1].name())
 
 
 	result = plug.broadcast(

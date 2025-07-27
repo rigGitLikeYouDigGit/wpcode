@@ -387,11 +387,15 @@ class TreeInterface(Pathable,
 	parentChar = "^"
 
 
-	def _branchFromToken(self, token:keyT)->(TreeType, None):
-		""" given single address token, return a known branch or none """
+	def _branchesFromToken(self, token:keyT)->list[TreeType]:
+		""" given single address token, return zero or more found direct branches
+		TODO: add proper filtering, listing, wildcarding here etc
+		 """
 		if token == self.parentChar:
-			return self.parent
-		return self.branchMap().get(token)
+			return [self.parent]
+		if found := self.branchMap().get(token):
+			return [found]
+		return []
 
 	def getBranch(self, key:keyT,
 	              traverseParams:defaultTraverseParamCls()=None)->(TreeType, None):
@@ -412,14 +416,11 @@ class TreeInterface(Pathable,
 		return default
 
 	def _consumeFirstPathTokens(self, path: pathT, **kwargs) ->tuple[list[Pathable], pathT]:
-		#log("tree consume tokens", path, kwargs)
+		"""tree-specific syntax and wrapper for pathable logic -
+		this might be better split up somehow"""
 		token, *path = path
 		if not token:
 			return [self], path
-		# check if branch is directly found - return it if so
-		found = self._branchFromToken(token)
-		if found:
-			return [found], path
 		if token == ".." :
 			return [self.parent], path
 		# check if it's a special token
@@ -429,6 +430,12 @@ class TreeInterface(Pathable,
 			if token == "@V" : return [self.value], path
 			if token == "@AUX" : return [self.auxProperties], path
 			#return self.childObjects()
+
+		# check if branch is directly found - return it if so
+		found = self._branchesFromToken(token)
+		if found:
+			return found, path
+		# no branch found
 
 		# if branch should not be created, lookup is invalid
 		create = kwargs.get("create", self.lookupCreate)
@@ -462,8 +469,7 @@ class TreeInterface(Pathable,
 		#log("__call__", self, path, [type(i) for i in self.branches])
 
 		try:
-			result = self.access(self, path, one=one, values=False,
-			                     create=create, **kwargs)
+			result = self.access(self, path, values=False, create=create, **kwargs)
 			#log("_call return", result)
 		except Exception as e:
 			print("unable to index path", path)

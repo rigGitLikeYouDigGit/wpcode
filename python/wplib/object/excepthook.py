@@ -37,6 +37,7 @@ class ExceptHookManager:
 			print("calling except hook", key)
 			hook(exc_type, exc_value, exc_traceback)
 		if self._prevHook:
+			print("calling prev hook", self._prevHook)
 			self._prevHook(exc_type, exc_value, exc_traceback)
 
 	def unregisterHook(self, key:T.Any):

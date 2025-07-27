@@ -9,11 +9,11 @@ from copy import deepcopy
 import fnmatch
 from pathlib import Path
 
-from wplib.object import Adaptor
+from wplib.object import Adaptor, MultiObject
 from wplib.log import log
 from wplib.object import DeepVisitor, VisitAdaptor
 from wplib.typelib import isImmutable
-from wplib import sequence, Sentinel, TypeNamespace
+from wplib import sequence, Sentinel, TypeNamespace, constant
 
 """if at first
 try
@@ -25,7 +25,12 @@ try
 
 but I think we're finally getting somewhere
 
-move this to lib.object
+imagine we have Tree(Pathable)
+	to be the actual data structure with name, val, metadata
+but then we also have TreePathAdaptor(PathAdaptor)
+	to map out the metadata as well
+seems fully useless
+
 """
 
 
@@ -78,6 +83,9 @@ class Pathable(#Adaptor
 	would mean you only have to check "isinstance(branch, Tree)" to change any processing
 	logic, access would be indentical
 
+	gonna be honest this class scares me a bit, dancing on the edge of
+	inability to add new stuff to it for the multi-object slicing
+
 	"""
 
 	@classmethod
@@ -104,6 +112,20 @@ class Pathable(#Adaptor
 			def flatten(cls, results:(list[T.Any], list[Pathable]))->T.Any:
 				"""flatten results"""
 				return results[0]
+
+		class List(_Base):
+			"""return all found results in simple list"""
+			@classmethod
+			def flatten(cls, results:(list[T.Any], list[Pathable]))->T.Any:
+				"""flatten results"""
+				return results
+
+		class Multi(_Base):
+			"""wrap all given results in a MultiObject for further indexing
+			"""
+			@classmethod
+			def flatten(cls, results:(list[T.Any], list[Pathable])) ->PathableSelection:
+				return PathableSelection(results)
 
 	#adaptorTypeMap = Adaptor.makeNewTypeMap()
 
@@ -431,12 +453,79 @@ class Pathable(#Adaptor
 			return sequence.toSeq(arg)
 		return arg
 
+
+	# def _accessInnerBreadthFirst(self,
+	#                              objs: list[Pathable],
+	#                              path:pathT
+	#                  )->list[Pathable]:
+	# 	"""do one single iteration over all objects, save results, then do it again -
+	# 	this might not make any difference.
+	# 	"""
+	# 	foundObjs = []
+	#
+	# 	for obj in objs:
+	# 		branchPath = sequence.flatten(deepcopy(path))
+	# 		newPathables, newPath = obj._consumeFirstPathTokens(branchPath, **kwargs)
+	# 		foundObjs.extend(obj._accessInnerDepthFirst(newPathables, newPath))
+	# 	return foundObjs
+	#
+	# 	objs = foundObjs
+	# 	# log("path", path)
+	#
+	# 	path = sequence.flatten(path)
+	#
+	# 	if not path:  # if you pass an empty tuple path
+	# 		foundPathables.append(pathable)
+	# 		continue
+	#
+	# 	newPathables, newPath = pathable._consumeFirstPathTokens(path)
+	#
+	# 	newPathables = [i if isinstance(i, Pathable)
+	# 	                else cls.getPathAdaptorType()(i, parent=pathable, name=path[0])
+	# 	                for i in newPathables]
+	# 	if not newPath:  # terminate
+	# 		foundPathables.extend(newPathables)
+	# 		continue
+	# 	newPaths.append(newPath)
+	# 	newToAccess.extend(newPathables)
+
+	#def _accessInnerDepthFirst(self,
+	def _accessInner(self,
+	                             objs: list[Pathable],
+	                             path: pathT,
+	                            **kwargs
+	                             ) -> list[Pathable]:
+		"""TODO:
+			is there merit in returning a final path map, of { exact path to object : object } ?
+			no, that's literally just the address attribute of pathable
+			"""
+		if not path:
+			return objs
+		foundObjs = []
+
+		for obj in objs:
+			branchPath = sequence.flatten(deepcopy(path)) # do we still need the flatten here?
+			newPathables, newPath = obj._consumeFirstPathTokens(branchPath, **kwargs)
+			newPathables = [i if isinstance(i, Pathable)
+			                else obj.getPathAdaptorType()(i, parent=obj, name=path[0])
+			                for i in newPathables]
+			foundObjs.extend(obj._accessInner(newPathables, newPath))
+		return foundObjs
+
+	#### ok this bit is sweater vomit, can work out better way of setting defaults at some point
 	@classmethod
-	def access(cls, obj:(Pathable, T.Iterable[Pathable]), path:pathT, one:(bool, None)=True,
+	def getDefaultSeqSingleCombineMode(cls):
+		return cls.Combine.First
+
+	@classmethod
+	def getDefaultSeqArrayCombineMode(cls):
+		return cls.Combine.List
+
+	@classmethod
+	def access(cls,
+	           obj: (Pathable, T.Iterable[Pathable]), path: pathT,
 	           values=True, default=Sentinel.FailToFind,
-	           combine:Combine.T()=Combine.First,
-	           **kwargs
-	           )->(T.Any, list[T.Any], Pathable, list[Pathable]):
+	           combine: (Combine.T(), None, bool) = None, **kwargs) ->(T.Any, list[T.Any], Pathable, list[Pathable]):
 		"""access an object at a path
 		outer function only serves to avoid recursion on linear paths -
 		DO NOT override this directly, we should delegate max logic
@@ -451,6 +540,17 @@ class Pathable(#Adaptor
 		if values, return actual result values
 		if not, return Pathable objects
 
+		if combine is True, just return flat first value (shorthand for combine=Combine.First)
+		if combine is None, return flat first if single result, list otherwise
+		if combine is False, return raw result list
+
+		if combine is some other mode, return that mode.flatten()
+
+		BreadthFirst : run one level over all pathables, recombine that level,
+			then run again
+
+		DepthFirst : fully pursue each path on each pathable
+
 		:raises Pathable.PathKeyError
 
 		TODO: how to integrate "false" children like Dict["keys()"] ?
@@ -458,59 +558,62 @@ class Pathable(#Adaptor
 
 		TODO: error management - makes sense to me to throw an error if
 			a pathable gets a token it can't interpret
+
+		TODO: this shouldn't be a classmethod
 		"""
 		# catch the case of access(obj, [])
 		#log("ACCESS start ", obj, path)
 		if not path: return obj
 		path = cls.toPath(path)
 		toAccess = list(sequence.toSeq(obj))
-		for i, val in enumerate(toAccess):
-			if not isinstance(val, (cls, Pathable)):
-				toAccess[i] = cls.getPathAdaptorType()(val) # create new root objects
-		# toAccess = [cls.getPathAdaptorType()(i) if not isinstance(i, Pathable) else i for i in toAccess ]
-		#log("ACCESS", toAccess, path)
+		# for i, val in enumerate(toAccess):
+		# 	if not isinstance(val, (cls, Pathable)):
+		# 		toAccess[i] = cls.getPathAdaptorType()(val) # create new root objects
+		toAccess = [cls.getPathAdaptorType()(i) if not isinstance(i, Pathable) else i for i in toAccess ]
+
+		foundPathables = cls._accessInner(
+			toAccess, path, **kwargs
+		)
 
 
-		foundPathables = [] # end results of path access - unstructured
-		paths = [deepcopy(path) for i in range(len(toAccess))]
-		#log("access paths", paths)
-		depthA = 0
-		while paths:
-			#newPaths = [None] * len(toAccess)
-			newPaths = []
-			newToAccess = []
-			#log( " "* depthA + "outer iter", paths)
-			depthA += 1
-			depthB = 1
-			for pathId, (path, pathable) \
-					in enumerate(zip(paths, toAccess)):
-				#log("path", path)
+		# if iteration == constant.Iteration.depthFirst:
+		# 	foundPathables, endPaths = cls._accessInnerDepthFirst(
+		# 		toAccess, path
+		# 	)
+		# elif iteration == constant.Iteration.breadthFirst:
+		# 	foundPathables, endPaths = cls._accessInnerBreadthFirst(
+		# 		toAccess, path
+		# 	)
+		# else:
+		# 	raise RuntimeError("no iteration direction specified for pathable", iteration)
 
-				####### DEFEAT ######
-				path = sequence.flatten(path)
-
-				if not path: # if you pass an empty tuple path
-					foundPathables.append(pathable)
-					continue
-
-				#log((" " * (depthA + depthB)), "path iter", path, pathable)
-				depthB += 1
-
-				newPathables, newPath = pathable._consumeFirstPathTokens(path)
-				#log("found", newPathables, newPath)
-				# TODO: EDGE CASE when we need to wrap in a temp thing like a string,
-				#  path[0] NOT GUARANTEED to be the same as the first path tokens
-				newPathables = [i if isinstance(i, Pathable)
-				                else cls.getPathAdaptorType()(i, parent=pathable, name=path[0])
-				                for i in newPathables]
-				if not newPath: # terminate
-					foundPathables.extend(newPathables)
-					continue
-				newPaths.append(newPath)
-				newToAccess.extend(newPathables)
-			paths = newPaths
-			toAccess = newToAccess
-			#log("end paths access", paths, toAccess, foundPathables)
+		# while paths: # continue until all pathables consume all path tokens and output no new ones
+		# 	newPaths = []
+		# 	newToAccess = []
+		# 	for pathId, (path, pathable) \
+		# 			in enumerate(zip(paths, toAccess)):
+		# 		#log("path", path)
+		#
+		# 		path = sequence.flatten(path)
+		#
+		# 		if not path: # if you pass an empty tuple path
+		# 			foundPathables.append(pathable)
+		# 			continue
+		#
+		#
+		# 		newPathables, newPath = pathable._consumeFirstPathTokens(path)
+		#
+		# 		newPathables = [i if isinstance(i, Pathable)
+		# 		                else cls.getPathAdaptorType()(i, parent=pathable, name=path[0])
+		# 		                for i in newPathables]
+		# 		if not newPath: # terminate
+		# 			foundPathables.extend(newPathables)
+		# 			continue
+		# 		newPaths.append(newPath)
+		# 		newToAccess.extend(newPathables)
+		# 	paths = newPaths
+		# 	toAccess = newToAccess
+		# 	#log("end paths access", paths, toAccess, foundPathables)
 
 		# combine / flatten results
 		results = foundPathables
@@ -524,14 +627,20 @@ class Pathable(#Adaptor
 		if values:
 			results = [r.obj for r in results]
 
-		if one is None: # shape explicitly not specified, return natural shape of result
+		if combine is None: # shape explicitly not specified, return natural shape of result
 			# why would you ever do this
 			if len(results) == 1:
-				return results[0]
-			return results
-
-		if one:
-			return combine.flatten(results)
+				#results = cls.Combine.First.flatten(results)
+				results = cls.getDefaultSeqSingleCombineMode().flatten(results)
+			else:
+				#results = cls.Combine.List.flatten(results)
+				results = cls.getDefaultSeqArrayCombineMode().flatten(results)
+		elif combine == True:
+			results = cls.Combine.First.flatten(results)
+		elif combine == False:
+			results = cls.Combine.List.flatten(results)
+		else:
+			results = combine.flatten(results)
 		return results
 
 	# def ref(self, path:DexPathable.pathT="")->DexRef:
@@ -548,16 +657,20 @@ class Pathable(#Adaptor
 		"""
 		#log("getitem", item)
 
-		return self.access(self, list(sequence.toSeq(item)), one=None)
+		return self.access(self, list(sequence.toSeq(item)))
 
 
 keyT = Pathable.keyT
 pathT = Pathable.pathT
 
+class PathableSelection(MultiObject):
+	"""test for returning filter / search from branches of pathable
+	"""
+
 class PathAdaptor(Pathable, Adaptor):
 	adaptorTypeMap = Adaptor.makeNewTypeMap()
 
-class DictPathable(PathAdaptor):
+class DictPathAdaptor(PathAdaptor):
 	"""
 	list is single path
 	tuple forms a slice
@@ -604,10 +717,10 @@ class DictPathable(PathAdaptor):
 		return [self.branchMap()[token]], path
 
 
-class SeqPathable(PathAdaptor):
+class SeqPathAdaptor(PathAdaptor):
 	forTypes = (list, tuple)
 
-class IntPathable(PathAdaptor):
+class IntPathAdaptor(PathAdaptor):
 	"""this could just be a simple one
 	OR
 	consider the idea of indexing into an int path,
@@ -621,14 +734,14 @@ class IntPathable(PathAdaptor):
 	def _buildChildren(self):
 		return []
 
-class StringPathable(PathAdaptor):
+class StringAdaptor(PathAdaptor):
 	forTypes = (str,)
 
 	def _buildChildren(self):
 		return []
 
 from pathlib import Path, PurePath
-class PathPathable(PathAdaptor):
+class PathPathAdaptor(PathAdaptor):
 	"""TODO: I don't know how this should interact
 	with the separate type hierarchy below
 	"""
@@ -666,13 +779,13 @@ class PathPathable(PathAdaptor):
 # 	def _buildBranchMap(self) ->dict[keyT, Pathable]:
 # 		return {}
 ### test for abstracting this to use in file folders
-class DirPathable(Pathable):
+class DirPathAdaptor(Pathable):
 	"""
 
 	TODO: how should we integrate this with smartFolder
 	"""
 	
-	def __init__(self, name, parent:DirPathable):
+	def __init__(self, name, parent:DirPathAdaptor):
 		super().__init__(obj=self, parent=parent, name=name)
 		self._diskPath = self.parent.diskPath() / self.name
 
@@ -698,11 +811,11 @@ class DirPathable(Pathable):
 			children[childDir.name] = child
 		return children
 
-	def _buildChildPathable(self, obj:Path, name:keyT)->(DirPathable, None):
+	def _buildChildPathable(self, obj:Path, name:keyT)->(DirPathAdaptor, None):
 		"""we pass a Path object as obj, check if that should be a full
 		Asset wrapper or not"""
 		if not obj.is_dir(): return
-		return DirPathable(name=name, parent=self)
+		return DirPathAdaptor(name=name, parent=self)
 
 	@classmethod
 	def isValidDir(cls, path:Path):
@@ -711,7 +824,7 @@ class DirPathable(Pathable):
 		"""
 		return True
 
-class RootDirPathable(DirPathable):
+class RootDirPathAdaptor(DirPathAdaptor):
 	"""same as above, but acting as a local root
 	TODO: this is just temp, all tied up with how we manage local
 		roots and overrides in Pathable

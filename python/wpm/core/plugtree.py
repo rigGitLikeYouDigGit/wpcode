@@ -8,7 +8,7 @@ import numpy as np
 
 from wptree import TreeInterface
 from wplib.sequence import flatten
-from wplib.object import UnHashableDict
+from wplib.object import UnHashableDict, Sentinel, MultiObject
 from wplib import log
 
 #from setFnMap
@@ -17,6 +17,7 @@ from . import bases, plug as pluglib
 from . import api
 from .bases import NodeBase, PlugBase
 from wplib.object import Signal, Adaptor
+from wplib.pathable import PathableSelection
 
 from wpm.core.plug import broadcast, broadcastPlugPairs
 
@@ -30,6 +31,7 @@ if T.TYPE_CHECKING:
 # 		from wpm.core.node.base import WN
 # 		_WNCache = WN
 # 	return _WNCache
+
 
 class PlugMeta(type):
 	"""Metaclass to initialise plug wrapper from mplug
@@ -242,11 +244,6 @@ class Plug(PlugBase, # this base class list will beat you up
 	def branchMap(self) -> dict[str, TreeType]:
 		return {k : Plug(v) for k, v in pluglib.subPlugMap(self.MPlug).items()}
 
-	def _branchFromToken(self, token:keyT)->(TreeType, None):
-		""" given single address token, return a known branch or none """
-		if token == self.parentChar:
-			return self.getParent()
-		return self.branchMap().get(token)
 
 	def __eq__(self, other:Plug):
 		return self.MPlug is other.MPlug
@@ -307,8 +304,11 @@ class Plug(PlugBase, # this base class list will beat you up
 		return om.MVector(self.getValue())
 	def valueMMatrix(self)->om.MMatrix:
 		return om.MMatrix(self.getValue())
-	
+
+	###### REGION ACCESS & SYNTAX ####
 	def __call__(self, *args, **kwargs):
+		""" allow calling with no args to get value of the plug
+		"""
 		if not args and not kwargs:
 			return self.getValue()
 		return super().__call__(*args, **kwargs)
@@ -317,15 +317,21 @@ class Plug(PlugBase, # this base class list will beat you up
 		"""check if plug has been accessed directly by name -
 		always has a trailing underscore"""
 		if(item[-1] == "_" and item[0] != "_"): # don't trigger on private or magic methods
-			#if (foundPlug := self.plug(item[:-1])) is not None:
 			if (foundPlug := self.getBranch(item[:-1])) is not None:
 				return foundPlug
-			raise TypeError("no maya plug found for ", item)
-		return super().__getattribute__(item)
+			raise TypeError("no child maya plug from", self, "found for ", item)
+		return super().__getattr__(item)
 
 	def __setattr__(self, item:str, val):
 		"""check if plug has been accessed directly by name -
-		always has a trailing underscore"""
+		always has a trailing underscore
+
+		if we try and set attributes on a plug selection, for now we error as normal
+		if they're not found on any of the elements
+		we could set some special janky flag to allow it?
+
+		or the multiObject will catch it
+		"""
 		if(item[-1] == "_" and item[0] != "_"):
 			item = item[:-1]
 			#if (foundPlug := self.plug(item[:-1])) is not None:
@@ -337,20 +343,30 @@ class Plug(PlugBase, # this base class list will beat you up
 			                "on ", self.strPath(root=True), self.branchMap())
 		return super().__setattr__(item, val)
 
-	def __getitem__(self, *address:(str, tuple),
-	                **kwargs):
-		"""override normal tree behaviour on getitem and setitem
-		to return full Plug objects - just to get closer to normal Maya syntax
-		"""
-		first = address[0]
-		if isinstance(first, int):
-			if self.MPlug.isArray:
-				if(len(address) == 1):
-					return Plug(self.MPlug.elementByLogicalIndex(first))
-				return Plug(self.MPlug.elementByLogicalIndex(first))[address[1:]]
-		raise NotImplementedError
 
-	def __setitem__(self, *address:(str, tuple)#, value,
+	""" follow normal pathable/tree behaviour at top levels, 
+	"""
+	# def __getitem__(self, *address:(str, tuple),
+	#                 ):
+	# 	"""override normal tree behaviour on getitem and setitem
+	# 	to return full Plug objects - just to get closer to normal Maya syntax
+	#
+	# 	CONSIDER dropping into first array element if none given?
+	# 	"""
+	# 	first = address[0]
+	# 	if isinstance(first, int):
+	# 		if self.MPlug.isArray:
+	# 			if(len(address) == 1):
+	# 				return Plug(self.MPlug.elementByLogicalIndex(first))
+	# 			return Plug(self.MPlug.elementByLogicalIndex(first))[address[1:]]
+	# 		raise TypeError("can't index into array plug", self)
+	# 	if isinstance(first, str):
+	# 		if self.MPlug.isCompound:
+	# 			return pluglib.subPlugMap(self.MPlug)[first]
+	# 		raise TypeError("can't string index a non-compound plug directly")
+	# 	raise NotImplementedError
+
+	def __setitem__(self, *address:(str, tuple), value,
 	                #**kwargs
 	                ):
 		"""override normal tree behaviour on getitem and setitem
@@ -360,23 +376,29 @@ class Plug(PlugBase, # this base class list will beat you up
 			I think there's still a case for deep addressing and wildcarding in plugs,
 			but it's likely not worth the effort
 		"""
-		address, value = address[:-1], address[-1]
-		first = address[0]
-		nextPlug : Plug = None
-		if isinstance(first, int):
-			if self.MPlug.isArray:
-				nextPlug = Plug(self.MPlug.elementByLogicalIndex(first))
-			elif self.MPlug.isCompound:
-				nextPlug = Plug(self.MPlug.child(first))
-			else:
-				raise TypeError("cannot use setItem on leaf plug")
+		#address, value = address[:-1], address[-1]
+		foundBranches = self.access(self, address, values=False,
+		                            combine=self.Combine.List)
+		if not foundBranches:
+			raise KeyError("found no plugs to set from", self, "with address", address)
+		pluglib.use(value, foundBranches)
 
-			if len(address) == 1:
-				nextPlug.set(value)
-			else:
-				nextPlug.__setitem__(*address[1:], value)
-			return
-		raise NotImplementedError
+		# first = address[0]
+		# nextPlug : Plug = None
+		# if isinstance(first, int):
+		# 	if self.MPlug.isArray:
+		# 		nextPlug = Plug(self.MPlug.elementByLogicalIndex(first))
+		# 	elif self.MPlug.isCompound:
+		# 		nextPlug = Plug(self.MPlug.child(first))
+		# 	else:
+		# 		raise TypeError("cannot use setItem on leaf plug")
+		#
+		# 	if len(address) == 1:
+		# 		nextPlug.set(value)
+		# 	else:
+		# 		nextPlug.__setitem__(*address[1:], value)
+		# 	return
+		# raise NotImplementedError
 
 	#endregion
 
@@ -595,6 +617,15 @@ class Plug(PlugBase, # this base class list will beat you up
 		return self(-1)
 
 	#end
+
+
+
+class PlugSelection(MultiObject):
+	"""don't know yet how best to integrate this with
+	Pathable, so trying to work backwards
+	"""
+
+
 
 
 if T.TYPE_CHECKING:

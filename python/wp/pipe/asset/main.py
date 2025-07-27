@@ -10,7 +10,7 @@ import orjson
 from wplib import log, wpstring as libstr, Sentinel
 from wplib.object import UidElement, SmartFolder, DiskDescriptor, VisitAdaptor, Visitable
 from wplib.object.visitor import PARAMS_T, CHILD_LIST_T
-from wplib.pathable import Pathable, DirPathable, RootDirPathable
+from wplib.pathable import Pathable, DirPathAdaptor, RootDirPathAdaptor
 from wplib.sequence import toSeq, flatten
 
 from wp.constant import getAssetRoot, WP_ROOT
@@ -28,7 +28,7 @@ retrievable by exactly the same path system
 
 """
 
-class Show(DirPathable):
+class Show(DirPathAdaptor):
 	"""
 	TODO:
 	 - add proper support for show-level rules here
@@ -144,7 +144,7 @@ class Show(DirPathable):
 		return result
 
 
-class StepDir(DirPathable):
+class StepDir(DirPathAdaptor):
 	"""represent an empty category folder for assets -
 	it's a shame to need these but otherwise the asset
 	system seems decently intuitive
@@ -306,7 +306,7 @@ class Asset(Pathable, Visitable):
 
 		assetTokens = [i for i in assetTokens if not "." in i and not i.startswith("_")]
 		#log(assetTokens)
-		return show.access(show, assetTokens, one=True)
+		return show.access(show, assetTokens)
 
 	@classmethod
 	def fromPath(cls, path, allowStepDirs=False, default=Sentinel.FailToFind)->Asset:
@@ -362,14 +362,14 @@ def topLevelAssetFiles(show:Show):
 	searchDir = show.diskPath() / "*" / "*" / "*" / "_asset.json"
 	return glob.glob(str(searchDir))
 
-class AssetRoot(RootDirPathable):
+class AssetRoot(RootDirPathAdaptor):
 	"""simplifies all kinds of logic to have a persistent root node
 	holding shows as first children"""
 
 	def __init__(self):
 		super().__init__(path=WP_ROOT, name="")
 
-	def _buildChildPathable(self, obj: Path, name: keyT) -> (DirPathable, None):
+	def _buildChildPathable(self, obj: Path, name: keyT) -> (DirPathAdaptor, None):
 		"""we pass a Path object as obj, check if that should be a full
 		Asset wrapper or not"""
 		if not Show.isValidDir(obj):

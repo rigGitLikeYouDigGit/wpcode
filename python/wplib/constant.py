@@ -20,3 +20,8 @@ IMMUTABLE_TYPES = (
 # for packing function arguments in tuple
 argsKwargsType = T.Tuple[T.Tuple, T.Dict[str, object]]
 
+# constants for iteration/direction behaviour
+class Iteration: # what should this be called
+	depthFirst = "depthFirst"
+	breadthFirst = "breadthFirst"
+
