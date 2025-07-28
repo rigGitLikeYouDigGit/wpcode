@@ -151,7 +151,7 @@ class SuperClassLookupMap:
 		case, but if we ever need general filtered version, we should
 		factor out the caching and function lookups here to a base class
 	"""
-	matchFnT = callable[[type, T.Any], bool]
+	matchFnT = T.Callable[[type, T.Any], bool]
 
 	def __init__(self, classMap:dict[type, T.Any]=None):
 		self.classMap : dict[type, T.Any] = {} # defined mapping of { class : value }

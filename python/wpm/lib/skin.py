@@ -252,7 +252,7 @@ def resetSkinCluster(skc:EdNode, influenceList:list[PlugTree]):
 		plug.set(om.MMatrix())
 
 	for i, plug in enumerate(influenceList):
-		plug.con(plug, skc("matrix", i))
+		plug.use(plug, skc("matrix", i))
 
 
 def setWeightArray(skc, weightArr: np.ndarray = None):

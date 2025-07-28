@@ -182,14 +182,14 @@ def makeEphNode(name:str, pos:np.ndarray)->EphNode:
 		i.translate.set(pos)
 
 	# connect message attrs
-	refJnt("inputGrp").con(inputGrp("refJnt"))
-	refJnt("inputJnt").con(inputJnt("refJnt"))
-	refJnt("outputJnt").con(outputJnt("refJnt"))
+	refJnt("inputGrp").use(inputGrp("refJnt"))
+	refJnt("inputJnt").use(inputJnt("refJnt"))
+	refJnt("outputJnt").use(outputJnt("refJnt"))
 
-	inputGrp("inputJnt").con(inputJnt("inputGrp"))
-	inputGrp("outputJnt").con(outputJnt("inputGrp"))
+	inputGrp("inputJnt").use(inputJnt("inputGrp"))
+	inputGrp("outputJnt").use(outputJnt("inputGrp"))
 
-	inputJnt("outputJnt").con(outputJnt("inputJnt"))
+	inputJnt("outputJnt").use(outputJnt("inputJnt"))
 
 	return EphNode.fromNodes(refJnt, inputGrp, inputJnt, outputJnt)
 

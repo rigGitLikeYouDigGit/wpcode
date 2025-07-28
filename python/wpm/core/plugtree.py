@@ -411,7 +411,7 @@ class Plug(PlugBase, # this base class list will beat you up
 		or connect another live plug to it"""
 		if otherPlug := pluglib.getMPlug(val, default=None):
 			log("CON", otherPlug, "TO", self.MPlug)
-			pluglib.con(otherPlug, self.MPlug)
+			pluglib.use(otherPlug, self.MPlug)
 		else:
 			pluglib.setPlugValue(self.MPlug, val)
 
@@ -428,14 +428,14 @@ class Plug(PlugBase, # this base class list will beat you up
 		"""self >> other
 		drive other with this plug ( if other is a plug )"""
 		if(otherPlug := pluglib.getMPlug(other)):
-			pluglib.con(self.MPlug, otherPlug)
+			pluglib.use(self.MPlug, otherPlug)
 			return
 		raise TypeError
 	def __rlshift__(self, other):
 		"""other << self
 		drive other with self (if other is a plug"""
 		if (otherPlug := pluglib.getMPlug(other)):
-			pluglib.con(self.MPlug, otherPlug)
+			pluglib.use(self.MPlug, otherPlug)
 			return
 		raise TypeError
 	def __rrshift__(self, other):
@@ -510,25 +510,25 @@ class Plug(PlugBase, # this base class list will beat you up
 		return plug
 
 
-	def con(self, otherPlug:(plugParamType,
-	                         list[plugParamType]),
-	        _dgMod=None):
-		"""connect this plug to the given plug or plugs"""
-		dgMod = _dgMod or om.MDGModifier()
-
-		# allow for passing multiple trees to connect to
-		if not isinstance(otherPlug, (list, tuple)):
-			otherPlug = (otherPlug,)
-
-		for otherPlug in otherPlug:
-			# check if other object has a .plug attribute to use
-			log("other plug start", otherPlug, type(otherPlug))
-			otherPlug = self._filterPlugParam(otherPlug)
-			log("other plug end", otherPlug, type(otherPlug))
-
-			log("con:", self.MPlug, otherPlug)
-			pluglib.con(self.MPlug, otherPlug, dgMod)
-		dgMod.doIt()
+	# def con(self, otherPlug:(plugParamType,
+	#                          list[plugParamType]),
+	#         _dgMod=None):
+	# 	"""connect this plug to the given plug or plugs"""
+	# 	dgMod = _dgMod or om.MDGModifier()
+	#
+	# 	# allow for passing multiple trees to connect to
+	# 	if not isinstance(otherPlug, (list, tuple)):
+	# 		otherPlug = (otherPlug,)
+	#
+	# 	for otherPlug in otherPlug:
+	# 		# check if other object has a .plug attribute to use
+	# 		log("other plug start", otherPlug, type(otherPlug))
+	# 		otherPlug = self._filterPlugParam(otherPlug)
+	# 		log("other plug end", otherPlug, type(otherPlug))
+	#
+	# 		log("use:", self.MPlug, otherPlug)
+	# 		pluglib.use(self.MPlug, otherPlug, dgMod)
+	# 	dgMod.doIt()
 
 	# region networking
 	def driver(self)->("Plug", None):

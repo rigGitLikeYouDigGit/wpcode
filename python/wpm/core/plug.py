@@ -64,8 +64,8 @@ array plug -> leaf
 
 list / slice -> list / slice
 	truncate to shortest
-	con([a, b, c], [x, y, z, w])
-	con([a, b, c], [x, y, z])
+	use([a, b, c], [x, y, z, w])
+	use([a, b, c], [x, y, z])
 
 
 list / slice -> compound
@@ -218,6 +218,9 @@ class HType: # maybe this should be a proper Enum
 	Array = 3
 
 def plugHType(mPlug:om.MPlug)->int:
+	"""both an array and an array element plug will
+	return true for isCompound if they represent a compound attribute -
+	thus we check first for array, then compound"""
 	return HType.Array if mPlug.isArray else (HType.Compound if mPlug.isCompound else HType.Leaf)
 
 def plugSubPlugs(mPlug:om.MPlug)->list[om.MPlug]:
@@ -614,9 +617,14 @@ def _leafPlugValue(plug:om.MPlug,
 
 	return data
 
+def isTriplePlug(plug:om.MPlug):
+	"""test if plug represents a triple element like a colour or vector
+	"""
 
 def plugValue(plug:om.MPlug,
-              asDegrees=True):
+              asDegrees=True,
+              returnMap=False
+              ):
 	"""return a corresponding python data for a plug's value
 	returns nested list of individual values
 
@@ -628,14 +636,17 @@ def plugValue(plug:om.MPlug,
 	hType = plugHType(plug)
 	if hType == HType.Leaf:
 		return _leafPlugValue(plug, asDegrees=asDegrees)
-	elif hType == HType.Compound:
-		valMap = {k : plugValue(v, asDegrees) for k, v in subPlugMap(plug).items()}
-		if len(valMap) in (3, 4) and all(isinstance(i, (int, float)) for i in valMap.values()):
-			return list(valMap.values())
-
 	subPlugs = plugSubPlugs(plug)
-	#if subPlugs:
-	return [plugValue(i) for i in subPlugs]
+	if hType == HType.Array:
+		return [plugValue(i) for i in subPlugs]
+
+	valMap = {k : plugValue(v, asDegrees) for k, v in subPlugMap(plug).items()}
+	if len(valMap) in (3, 4) and all(isinstance(i, (int, float)) for i in valMap.values()):
+		return list(valMap.values()) # triple attributes to tuples
+	if returnMap:
+		return valMap
+	return list(valMap.values())
+
 
 
 #endregion
@@ -654,58 +665,84 @@ def _setLeafPlugValue(plug:om.MPlug, data,
 	MFloatArray, MDoubleArray, MVectorArray, MMPointArray, MMatrixArray, etc
 
 	run after broadcasting, set a leaf-level value on a leaf-level plug
+
+
+	SO -
+	if you have a k3Double or k2Float attribute, which generates its own leaf attributes,
+	om.MFnAttribute( leafPlug.attribute() ) will ERROR on getting name, numericType, etc
+	it doesn't exist / isn't valid with the mfns
+
+	2 courses of action - try to check at every higher level if we hit a triple attribute,
+		and have a special way of setting them early before leaf level -
+			could be viable
+	easier: check apiType() of the MObject of the plug -
+
+	transform.translate plug.attribute().apiType() -> kAttribute3Double
+	transform.translateX plug.attribute().apiType() -> kDoubleLinearAttribute
+
+	NEVERMIND, I'll delete this next commit, but it's because (naively, like an idiot)
+		I assumed child attributes of a Numeric attribute would also be Numeric attributes
+
+	transform.translate : MFnNumericAttribute , kAttribute3Double , k3Double numeric type etc
+	transform.translateX : MFnUnitAttribute, kDistance
+
+	getMFn already accounts for this, so depend on the type it gives
 	"""
+	modifier = _dgMod or om.MDGModifier()
 
 	# we now need to check the attribute type of the plug
 	attribute = plug.attribute()
 	attrFn = getMFn(attribute)
 	attrFnType = type(attrFn)
 	if attrFnType == om.MFnUnitAttribute: # spaghett
-		if attrFn.unitType() == om.MFnUnitAttribute.kAngle and toRadians:
-			data = om.MAngle(data).asRadians()
-		if attrFn.unitType() == om.MFnUnitAttribute.kAngle and not isinstance(data, om.MAngle):
-			plug.setMAngle(om.MAngle(data, om.MAngle.kDegrees))
-			return
-		setFn = getCache().unitAttrPlugMethodMap[attrFn.unitType()][1]
-		setFn(plug, data)
-		return
+		if attrFn.unitType() == om.MFnUnitAttribute.kAngle:
+			if toRadians:
+				data = om.MAngle(data).asRadians()
+			if not isinstance(data, om.MAngle):
+				data = om.MAngle(data, om.MAngle.kDegrees)
+				modifier.newPlugValueMAngle(plug, data)
+		elif attrFn.unitType() == om.MFnUnitAttribute.kTime:
+			modifier.newPlugValueMTime(plug, om.MTime(data))
+		elif attrFn.unitType() == om.MFnUnitAttribute.kDistance:
+			modifier.newPlugValueMDistance(plug, om.MDistance(data))
+		else:
+			raise RuntimeError("Unknown/unsupported typed attr plug", plug)
 
 	elif attrFnType == om.MFnNumericAttribute:
-		setMethod = getCache().numericAttrPlugMethodMap[attrFn.numericType()][1]
-		data = setMethod(plug, data)
-		return
+		if attrFn.numericType() == om.MFnNumericData.kInt:
+			modifier.newPlugValueInt(plug, data)
+		elif attrFn.numericType() == om.MFnNumericData.kLong:
+			modifier.newPlugValueInt(plug, data)
+		elif attrFn.numericType() == om.MFnNumericData.kShort:
+			modifier.newPlugValueShort(plug, data)
+		elif attrFn.numericType() == om.MFnNumericData.kBoolean:
+			modifier.newPlugValueBool(plug, data)
+		elif attrFn.numericType() == om.MFnNumericData.kFloat:
+			modifier.newPlugValueFloat(plug, data)
+		elif attrFn.numericType() == om.MFnNumericData.kDouble:
+			modifier.newPlugValueDouble(plug, data)
 
 	elif attrFnType == om.MFnTypedAttribute:
-		# for a typed attribute, we need to create a new data MObject
-		# # populate plug if needed
-		# ensurePlugHasMObject(plug)
-		# print("set leaf plug value", plug, data)
-		# try:
-		# 	obj = plug.asMObject()
-		# 	oldData = _dataFromPlugMObject(obj)
-		# # return data
-		# except RuntimeError:  # "unexpected internal failure"
-		#
-		# 	pass
-
 		if attrFn.attrType() == om.MFnData.kString:
-			dataMObject = om.MFnStringData().create(data)
-			plug.setMObject(dataMObject)
+			# dataMObject = om.MFnStringData().create(data)
+			# plug.setMObject(dataMObject)
+			modifier.newPlugValueString(str(data))
 		elif attrFn.attrType() in (om.MFnData.kNurbsCurve, om.MFnData.kMesh, om.MFnData.kNurbsSurface):
 			assert isinstance(data, om.MObject), "must directly specify MObject to set geometry plug: " + str(plug)
-			plug.setMObject(data)
+			#plug.setMObject(data)
+			modifier.newPlugValue(plug, data)
 		else:
 			raise RuntimeError("unsupported typed attribute type {}".format(attrFn.attrType()))
-		return
 
 	elif attrFnType == om.MFnMatrixAttribute:
-		plug.setMObject(om.MFnMatrixData().create( to(data, om.MMatrix )))
-		return
+		modifier.newPlugValue(plug, om.MFnMatrixData().create( to(data, om.MMatrix )))
+
+	if not _dgMod:
+		modifier.doIt()
 
 
 def setPlugValue(plug:om.MPlug, data:T.Union[T.List, object],
                  fromDegrees=True,
-                 errorOnFormatMismatch=False,
                  _dgMod:om.MDGModifier=None # might use this eventually
                  ):
 	"""given a plug and data, set value on that plug and any plugs below it
@@ -716,26 +753,23 @@ def setPlugValue(plug:om.MPlug, data:T.Union[T.List, object],
 	copied out to the length of plugs for that level
 
 	"""
-	plug = getMPlug(plug)
-	subPlugs = plugSubPlugs(plug)
-	if plugHType(plug) == HType.Leaf:
-		return _setLeafPlugValue(plug, data)
+	modifier = _dgMod or om.MDGModifier()
 
-	log("plug", plug.name(), plugHType(plug))
+	dst = [getMPlug(i, i) for i in toSeq(plug)]
+	for pair in broadcast(data, dst):
+		if not isinstance(pair[1], om.MPlug):
+			raise RuntimeError("destination is not an MPlug")
+		if isinstance(pair[0], om.MPlug):
+			value = plugValue(plug)
+		else:
+			value = pair[0]
+		_setLeafPlugValue(pair[1], value,
+		             toRadians=fromDegrees,
+		                  _dgMod=_dgMod
 
-	if not isinstance(data, (list, tuple)):
-		data = [data]
-
-	if errorOnFormatMismatch:
-		assert len(subPlugs) == len(data), "incorrect format passed to setPlugData - \n length of {} \n and {} \n must match".format(subPlugs, data)
-	# copy out last array value if insufficient length
-	if len(data) > len(subPlugs):
-		data = (*data, *(copy.deepcopy(data[-1])
-		                 for i in range(len(subPlugs) - len(data))))
-	for subPlug, dataItem in zip(subPlugs, data):
-		setPlugValue(subPlug, dataItem,
-		             errorOnFormatMismatch=errorOnFormatMismatch)
-	return
+		             )
+	if _dgMod is None: # leave to calling code to execute if specified
+		modifier.doIt()
 
 
 #endregion
@@ -878,28 +912,28 @@ def checkCompoundConnection(compPlugA:om.MPlug,
 
 
 """
-con(leafA, leafB)
+use(leafA, leafB)
 fine
 
-con(compoundA, leafB)
+use(compoundA, leafB)
 decompose into list
-con([cAx, cAy, cAz], leafB)
+use([cAx, cAy, cAz], leafB)
 truncate to shortest?
-con([cAx], leafB)
+use([cAx], leafB)
 NO - the above errors, as it is too hidden
 
 BUT - if you explicitly supply single-item list? then it's allowed?
 
 
-con(leafA, compoundB)
-con(leafA, [cBx, cBy])
+use(leafA, compoundB)
+use(leafA, [cBx, cBy])
 
-con([a, b, c], [x, y, z, w])
-con([a, b, c], [x, y, z])
+use([a, b, c], [x, y, z, w])
+use([a, b, c], [x, y, z])
 
-con(leafA, arrayB)
+use(leafA, arrayB)
 connect to last (new) available index
-con(arrayA, leafB)
+use(arrayA, leafB)
 connect with first index
 """
 
@@ -961,7 +995,7 @@ connect with first index
 # 		if bType == HType.Leaf:
 # 			raise TypeError("Compound plug {} cannot be directly connected to leaf plug {}".format( (a, type(a)), (b, type(b)) ))
 #
-# 		"""ambiguity here: con( compound, array ) could mean to connect elementwise
+# 		"""ambiguity here: use( compound, array ) could mean to connect elementwise
 # 		to array elements, or to connect entire plug to last array index
 #
 # 		last case is more common than first - go with that
@@ -987,22 +1021,33 @@ def plugDrivers(dstPlug:om.MPlug)->list[om.MPlug]:
 	                           False # asSrc
 	)
 
-def con(srcPlug:om.MPlug, dstPlug:om.MPlug, _dgMod:om.MDGModifier=None):
-	"""pair up given plugs, add connections to dg modifier, execute
-	if a modifier is passed in, we assume it is under external control,
-	 and do not execute it within this function"""
+def use(src:(T.Any, om.MPlug), dst:om.MPlug,
+        fromDegrees=True,
+        _dgMod:om.MDGModifier=None):
+	"""use() but with sets of plugs or objects
+	DO WE convert to MPlugs before or after broadcasting?
+	complex addressing / expressions are all taken care of before this, here we
+	expect at most flat lists
+	"""
 	modifier = _dgMod or om.MDGModifier()
-	plugPairs = plugPairLogic(srcPlug, dstPlug)
-	# print("pairs", [(i.name(), j.name()) for i, j in plugPairs])
-	for src, dst in plugPairs:
-		# disconnect any existing plugs
-		for prevDriver in plugDrivers(dst):
-			modifier.disconnect(prevDriver, dst)
-		modifier.connect(src, dst)
+
+	src = [getMPlug(i, i) for i in toSeq(src)]
+	dst = [getMPlug(i, i) for i in toSeq(dst)]
+	for pair in broadcast(src, dst):
+		if not isinstance(pair[1], om.MPlug):
+			raise RuntimeError("destination is not an MPlug")
+		if isinstance(pair[0], om.MPlug):
+			_con(pair[0], pair[1], _dgMod)
+		else:
+			_setLeafPlugValue(pair[1], pair[0],
+			             toRadians=fromDegrees,
+			                  _dgMod=_dgMod
+
+			             )
 	if _dgMod is None: # leave to calling code to execute if specified
 		modifier.doIt()
 
-def _con(a, b, _dgMod=None):
+def _con(a:om.MPlug, b:om.MPlug, _dgMod:om.MDGModifier=None):
 	modifier = _dgMod or om.MDGModifier()
 	# disconnect any existing plugs
 	for prevDriver in plugDrivers(b):
@@ -1011,11 +1056,6 @@ def _con(a, b, _dgMod=None):
 	if _dgMod is None: # leave to calling code to execute if specified
 		modifier.doIt()
 
-def _set(plug, val, _dgMod=None):
-	modifier = _dgMod or om.MDGModifier()
-	modifier.newPlugValue(plug, val)
-	if _dgMod is None: # leave to calling code to execute if specified
-		modifier.doIt()
 
 """
 semantics - 
@@ -1051,35 +1091,12 @@ use( src, dst ) ?
 
 
 """
-def use(src:(om.MPlug, object), dst:(om.MPlug, list[om.MPlug]),
-        fromDegrees=True,
-        _dgMod:om.MDGModifier=None,
-        ):
-	"""con() but with sets of plugs or objects
-	DO WE convert to MPlugs before or after broadcasting?
-	complex addressing / expressions are all taken care of before this, here we
-	expect at most flat lists
-	"""
-	# src = tryConvertToMPlugs(src)
-	# dst = tryConvertToMPlugs(dst)
-	src = [getMPlug(i, i) for i in toSeq(src)]
-	dst = [getMPlug(i, i) for i in toSeq(dst)]
-	for pair in broadcast(src, dst):
-		if not isinstance(pair[1], om.MPlug):
-			raise RuntimeError("destination is not an MPlug")
-		if isinstance(pair[0], om.MPlug):
-			_con(*pair, _dgMod)
-		else:
-			#_set(*pair, _dgMod)
-			setPlugValue(pair[1], pair[0],
-			             fromDegrees=fromDegrees,
+# def use(src:(om.MPlug, object), dst:(om.MPlug, list[om.MPlug]),
+#         fromDegrees=True,
+#         _dgMod:om.MDGModifier=None,
+#         ):
 
-			             )
-	#
-	# if isinstance(src, om.MPlug):
-	# 	con(src, dst, _dgMod)
-	# else:
-	# 	setPlugValue(src, dst, _dgMod)
+
 
 
 #endregion

@@ -584,25 +584,25 @@ def checkCompoundConnection(compPlugA:om.MPlug,
 
 
 """
-con(leafA, leafB)
+use(leafA, leafB)
 fine
 
-con(compoundA, leafB)
+use(compoundA, leafB)
 decompose into list
-con([cAx, cAy, cAz], leafB)
+use([cAx, cAy, cAz], leafB)
 truncate to shortest?
-con([cAx], leafB)
+use([cAx], leafB)
 NO - the above errors, as it is too hidden
 
-con(leafA, compoundB)
-con(leafA, [cBx, cBy])
+use(leafA, compoundB)
+use(leafA, [cBx, cBy])
 
-con([a, b, c], [x, y, z, w])
-con([a, b, c], [x, y, z])
+use([a, b, c], [x, y, z, w])
+use([a, b, c], [x, y, z])
 
-con(leafA, arrayB)
+use(leafA, arrayB)
 connect to last (new) available index
-con(arrayA, leafB)
+use(arrayA, leafB)
 connect with first index
 """
 
@@ -664,7 +664,7 @@ def plugPairLogic(a:om.MPlug, b:om.MPlug,
 		if bType == HType.Leaf:
 			raise TypeError("Compound plug {} cannot be directly connected to leaf plug {}".format( (a, type(a)), (b, type(b)) ))
 
-		"""ambiguity here: con( compound, array ) could mean to connect elementwise
+		"""ambiguity here: use( compound, array ) could mean to connect elementwise
 		to array elements, or to connect entire plug to last array index
 		
 		last case is more common than first - go with that
@@ -721,7 +721,7 @@ def _set(plug, val, _dgMod=None):
 		modifier.doIt()
 
 def conSet(src:(om.MPlug, object), dst:(om.MPlug, object), _dgMod:om.MDGModifier=None):
-	"""con() but with sets of plugs or objects"""
+	"""use() but with sets of plugs or objects"""
 	src = tryConvertToMPlugs(src)
 	dst = tryConvertToMPlugs(dst)
 	for pair in plugTreePairs(src, dst):
@@ -732,7 +732,7 @@ def conSet(src:(om.MPlug, object), dst:(om.MPlug, object), _dgMod:om.MDGModifier
 			setPlugValue(pair[1], pair[0])
 	#
 	# if isinstance(src, om.MPlug):
-	# 	con(src, dst, _dgMod)
+	# 	use(src, dst, _dgMod)
 	# else:
 	# 	setPlugValue(src, dst, _dgMod)
 

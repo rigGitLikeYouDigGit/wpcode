@@ -121,8 +121,8 @@ class Subtract(NodeOp):
 		"""add plugs to the node"""
 		for i, (a, b) in enumerate(plugLeafPairs(plugA, plugB)):
 			node = WN.create("plusMinusAverage", dgMod=dgMod)
-			a.con(node("input1D[0]"), dgMod=dgMod)
-			b.con(node("input1D[1]"), dgMod=dgMod)
+			a.use(node("input1D[0]"), dgMod=dgMod)
+			b.use(node("input1D[1]"), dgMod=dgMod)
 			node.attr("operation").set(2)
 			self.nodes.append(node)
 			self.outPlugs.append(node("output1D"))

@@ -42,6 +42,21 @@ def isThisMaya():
 	except ModuleNotFoundError:
 		return False
 
+
+def findKey(namespace, value):
+	"""put this somewhere
+	find the constant name for a given value in a given namespace
+	"""
+	vMap = {}
+	for k, v in namespace.__dict__.items():
+		try:
+			vMap[v] = k
+		except:
+			pass
+	return vMap.get(value)
+
+
+
 if isThisMaya():
 	from .core import (
 		cmds, om, oma, omui, omr, # wrapped maya modules
