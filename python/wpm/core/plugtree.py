@@ -9,7 +9,7 @@ import numpy as np
 from wptree import TreeInterface
 from wplib.sequence import flatten
 from wplib.object import UnHashableDict, Sentinel, MultiObject
-from wplib import log
+from wplib import log, Pathable
 
 #from setFnMap
 from .cache import om
@@ -180,8 +180,8 @@ class Plug(PlugBase, # this base class list will beat you up
 				 plug:T.Optional[om.MPlug, str],
 				 ):
 		""""""
-		self.MPlug = plug
-		self.hType : pluglib.HType = pluglib.plugHType(self.MPlug)
+		self.MPlug = pluglib.getMPlug(plug)
+		self.hType = pluglib.plugHType(self.MPlug)
 		TreeInterface.__init__(self, None)
 
 
@@ -317,7 +317,9 @@ class Plug(PlugBase, # this base class list will beat you up
 		"""check if plug has been accessed directly by name -
 		always has a trailing underscore"""
 		if(item[-1] == "_" and item[0] != "_"): # don't trigger on private or magic methods
-			if (foundPlug := self.getBranch(item[:-1])) is not None:
+			#if (foundPlug := self.getBranch(item[:-1])
+			if (foundPlug := self.access(item[:-1])
+			) is not None:
 				return foundPlug
 			raise TypeError("no child maya plug from", self, "found for ", item)
 		return super().__getattr__(item)
@@ -346,59 +348,71 @@ class Plug(PlugBase, # this base class list will beat you up
 
 	""" follow normal pathable/tree behaviour at top levels, 
 	"""
-	# def __getitem__(self, *address:(str, tuple),
-	#                 ):
-	# 	"""override normal tree behaviour on getitem and setitem
-	# 	to return full Plug objects - just to get closer to normal Maya syntax
-	#
-	# 	CONSIDER dropping into first array element if none given?
-	# 	"""
-	# 	first = address[0]
-	# 	if isinstance(first, int):
-	# 		if self.MPlug.isArray:
-	# 			if(len(address) == 1):
-	# 				return Plug(self.MPlug.elementByLogicalIndex(first))
-	# 			return Plug(self.MPlug.elementByLogicalIndex(first))[address[1:]]
-	# 		raise TypeError("can't index into array plug", self)
-	# 	if isinstance(first, str):
-	# 		if self.MPlug.isCompound:
-	# 			return pluglib.subPlugMap(self.MPlug)[first]
-	# 		raise TypeError("can't string index a non-compound plug directly")
-	# 	raise NotImplementedError
+	@classmethod
+	def getDefaultSeqSingleCombineMode(cls):
+		return cls.Combine.First
 
-	def __setitem__(self, *address:(str, tuple), value,
+	@classmethod
+	def getDefaultSeqArrayCombineMode(cls):
+		return cls.Combine.Multi
+
+	def _consumeFirstPathTokens(self, path:pathT, **kwargs
+	                            )->tuple[list[Pathable], pathT]:
+		"""process a path token
+		OVERRIDE to implement custom syntax - really this is the ONLY function
+		that has to be swapped out.
+
+		leave it as method on this class for now, but things like plugins for
+		different syntax in different cases wouldn't be difficult
+		:param **kwargs:
+		"""
+		#log("consume first path tokens", path)
+		if not path:
+			return [self], path
+		token, *path = path
+		if result := self._branchesFromToken(token):
+			return result, path
+		raise Pathable.PathKeyError(f"Invalid token {token} for {self} branches:\n{self.branchMap()}")
+
+	def _branchesFromToken(self, token:keyT)->list[TreeType]:
+		""" given single address token, return zero or more found direct branches
+		TODO: add proper filtering, listing, wildcarding here etc
+		 """
+		#log("branches from token", token)
+		if baseResult := super()._branchesFromToken(token):
+			return baseResult
+		# allow finding indices of arrays that don't exist
+		if self.hType == pluglib.HType.Array:
+			if isinstance(token, slice):
+				return [Plug(i) for i in pluglib.arrayPlugSlice(self.MPlug, token)]
+			if isinstance(token, int):
+				return [Plug(pluglib.arrayElement(self.MPlug, token))]
+
+		return []
+
+
+	def __getitem__(self, *address:(str, tuple),
+	                )->T:
+		""" returns direct value of lookup branch
+		:rtype T
+		"""
+		return self(*self.toPath(address),
+		            #address,
+		            )
+	def __setitem__(self, *address:(str, tuple),# value,
 	                #**kwargs
 	                ):
 		"""override normal tree behaviour on getitem and setitem
 		to return full Plug objects - just to get closer to normal Maya syntax
 
-		TODO: work out rules around dispatching to deeper addresses, broadcasting etc -
-			I think there's still a case for deep addressing and wildcarding in plugs,
-			but it's likely not worth the effort
 		"""
-		#address, value = address[:-1], address[-1]
+		#log("__setitem__", self, address)
+		address, value = address[:-1], address[-1]
 		foundBranches = self.access(self, address, values=False,
 		                            combine=self.Combine.List)
 		if not foundBranches:
 			raise KeyError("found no plugs to set from", self, "with address", address)
 		pluglib.use(value, foundBranches)
-
-		# first = address[0]
-		# nextPlug : Plug = None
-		# if isinstance(first, int):
-		# 	if self.MPlug.isArray:
-		# 		nextPlug = Plug(self.MPlug.elementByLogicalIndex(first))
-		# 	elif self.MPlug.isCompound:
-		# 		nextPlug = Plug(self.MPlug.child(first))
-		# 	else:
-		# 		raise TypeError("cannot use setItem on leaf plug")
-		#
-		# 	if len(address) == 1:
-		# 		nextPlug.set(value)
-		# 	else:
-		# 		nextPlug.__setitem__(*address[1:], value)
-		# 	return
-		# raise NotImplementedError
 
 	#endregion
 
@@ -409,16 +423,16 @@ class Plug(PlugBase, # this base class list will beat you up
 	def setValue(self, val):
 		"""top-level method to set this plug's value,
 		or connect another live plug to it"""
-		if otherPlug := pluglib.getMPlug(val, default=None):
-			log("CON", otherPlug, "TO", self.MPlug)
-			pluglib.use(otherPlug, self.MPlug)
-		else:
-			pluglib.setPlugValue(self.MPlug, val)
+		pluglib.use(val, self.MPlug)
 
-	def set(self, *value):
-		if len(value) == 1:
-			value = value[0]
-		self.setValue(value)
+	def set(self, val): # is it faster to wrap method like this or set attribute?
+		pluglib.use(val, self.MPlug)
+
+	def use(self, other): # is it more readable to say "use" here?
+		pluglib.use(other, self.MPlug)
+
+	# set = setValue ### test if this is faster sometime
+
 	def __lshift__(self, other:(Plug, T.Any)):
 		"""self << other
 		drive this plug with other
@@ -430,14 +444,14 @@ class Plug(PlugBase, # this base class list will beat you up
 		if(otherPlug := pluglib.getMPlug(other)):
 			pluglib.use(self.MPlug, otherPlug)
 			return
-		raise TypeError
+		raise TypeError("other", other, "is not an MPlug")
 	def __rlshift__(self, other):
 		"""other << self
 		drive other with self (if other is a plug"""
 		if (otherPlug := pluglib.getMPlug(other)):
 			pluglib.use(self.MPlug, otherPlug)
 			return
-		raise TypeError
+		raise TypeError("other", other, "is not an MPlug")
 	def __rrshift__(self, other):
 		"""other >> self
 		drive self with other"""
@@ -461,20 +475,11 @@ class Plug(PlugBase, # this base class list will beat you up
 			return self.MPlug
 		raise NotImplementedError
 
-	def nBranches(self):
-		if self.MPlug.isArray:
-			return self.MPlug.evaluateNumElements()
-		if self.MPlug.isCompound:
-			return self.MPlug.numChildren()
-		return 0
-
-
 	def arrayMPlugs(self):
 		"""return MPlug objects for each existing element in index
 		always returns 1 more than number of real plugs (as always
 		one left open)
 		"""
-
 		if self.MPlug.evaluateNumElements() == 0:
 			self.addNewElement()
 
@@ -509,26 +514,6 @@ class Plug(PlugBase, # this base class list will beat you up
 			plug = pluglib.getMPlug(plug)
 		return plug
 
-
-	# def con(self, otherPlug:(plugParamType,
-	#                          list[plugParamType]),
-	#         _dgMod=None):
-	# 	"""connect this plug to the given plug or plugs"""
-	# 	dgMod = _dgMod or om.MDGModifier()
-	#
-	# 	# allow for passing multiple trees to connect to
-	# 	if not isinstance(otherPlug, (list, tuple)):
-	# 		otherPlug = (otherPlug,)
-	#
-	# 	for otherPlug in otherPlug:
-	# 		# check if other object has a .plug attribute to use
-	# 		log("other plug start", otherPlug, type(otherPlug))
-	# 		otherPlug = self._filterPlugParam(otherPlug)
-	# 		log("other plug end", otherPlug, type(otherPlug))
-	#
-	# 		log("use:", self.MPlug, otherPlug)
-	# 		pluglib.use(self.MPlug, otherPlug, dgMod)
-	# 	dgMod.doIt()
 
 	# region networking
 	def driver(self)->("Plug", None):
@@ -570,11 +555,12 @@ class Plug(PlugBase, # this base class list will beat you up
 			plugMap[checkBranch] = checkBranch._singleDestinations()
 		return plugMap
 
-	def breakConnections(self, incoming=True, outgoing=True, includeBranches=True):
+	def breakConnections(self, incoming=True, outgoing=True, includeBranches=True,
+	                     _dgMod:om.MDGModifier=None):
 		"""disconnects all incoming / outgoing edges from this plug,
 		or all of its branches"""
 		#checkBranches = self.allBranches(includeSelf=True) if includeBranches else [self]
-		dgMod = om.MDGModifier()
+		dgMod = _dgMod or om.MDGModifier()
 		if incoming:
 			driverMap = self.drivers(includeBranches=includeBranches)
 			for driver, driven in driverMap.items():
@@ -584,21 +570,12 @@ class Plug(PlugBase, # this base class list will beat you up
 			for driver, drivens in driverMap.items():
 				for driven in drivens:
 					dgMod.disconnect(driver.MPlug, driven.MPlug)
-		dgMod.doIt()
+
+		if _dgMod is None:
+			dgMod.doIt()
 
 
 	# endregion
-
-	def driverOrGet(self)->Plug:
-		"""if plug is driven by live input,
-		return driving plug
-		else return its static value"""
-		if self.driver():
-			return self.driver()
-		return self.getValue()
-
-	#def driveOrSet(self, plugOrValue):
-
 
 	# region convenience
 	@property

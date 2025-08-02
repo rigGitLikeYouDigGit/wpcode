@@ -151,7 +151,8 @@ class Broadcaster:
 
 		A- find a way to extend immutable entries
 		"""
-		# log("broadcast", a, b, _isLeaf(a), _isLeaf(b))
+		#log("broadcast", a, b)
+		#print( self._isLeaf(a), self._isLeaf(b))
 		isLeafA = self._isLeaf(a)
 		isLeafB = self._isLeaf(b)
 		if isLeafA and isLeafB:

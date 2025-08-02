@@ -438,6 +438,7 @@ class Pathable(#Adaptor
 		different syntax in different cases wouldn't be difficult
 		:param **kwargs:
 		"""
+		#log("consume first path tokens", path)
 		token, *path = path
 		if not token:
 			return [self], path
@@ -490,7 +491,8 @@ class Pathable(#Adaptor
 	# 	newToAccess.extend(newPathables)
 
 	#def _accessInnerDepthFirst(self,
-	def _accessInner(self,
+	@classmethod
+	def _accessInner(cls,
 	                             objs: list[Pathable],
 	                             path: pathT,
 	                            **kwargs
@@ -499,6 +501,7 @@ class Pathable(#Adaptor
 			is there merit in returning a final path map, of { exact path to object : object } ?
 			no, that's literally just the address attribute of pathable
 			"""
+		#log("access inner", cls, objs, path)
 		if not path:
 			return objs
 		foundObjs = []
@@ -562,19 +565,23 @@ class Pathable(#Adaptor
 		TODO: this shouldn't be a classmethod
 		"""
 		# catch the case of access(obj, [])
-		#log("ACCESS start ", obj, path)
-		if not path: return obj
+		#log("ACCESS start ", cls, obj, path)
 		path = cls.toPath(path)
+		if not path: return obj
 		toAccess = list(sequence.toSeq(obj))
 		# for i, val in enumerate(toAccess):
 		# 	if not isinstance(val, (cls, Pathable)):
 		# 		toAccess[i] = cls.getPathAdaptorType()(val) # create new root objects
 		toAccess = [cls.getPathAdaptorType()(i) if not isinstance(i, Pathable) else i for i in toAccess ]
 
-		foundPathables = cls._accessInner(
-			toAccess, path, **kwargs
-		)
-
+		try:
+			#log("before access inner", cls, obj)
+			foundPathables = cls._accessInner(
+				toAccess, path=path, **kwargs
+			)
+		except:
+			log("errorfn", cls._accessInner)
+			raise
 
 		# if iteration == constant.Iteration.depthFirst:
 		# 	foundPathables, endPaths = cls._accessInnerDepthFirst(
@@ -627,6 +634,7 @@ class Pathable(#Adaptor
 		if values:
 			results = [r.obj for r in results]
 
+		#log("RESULTS:", results, combine)
 		if combine is None: # shape explicitly not specified, return natural shape of result
 			# why would you ever do this
 			if len(results) == 1:
@@ -636,11 +644,13 @@ class Pathable(#Adaptor
 				#results = cls.Combine.List.flatten(results)
 				results = cls.getDefaultSeqArrayCombineMode().flatten(results)
 		elif combine == True:
-			results = cls.Combine.First.flatten(results)
+			results = cls.getDefaultSeqSingleCombineMode().flatten(results)
 		elif combine == False:
-			results = cls.Combine.List.flatten(results)
+			results = cls.getDefaultSeqArrayCombineMode().flatten(results)
 		else:
 			results = combine.flatten(results)
+
+		#log("end results:", results)
 		return results
 
 	# def ref(self, path:DexPathable.pathT="")->DexRef:

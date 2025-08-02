@@ -418,9 +418,13 @@ class TreeInterface(Pathable,
 	def _consumeFirstPathTokens(self, path: pathT, **kwargs) ->tuple[list[Pathable], pathT]:
 		"""tree-specific syntax and wrapper for pathable logic -
 		this might be better split up somehow"""
-		token, *path = path
-		if not token:
+		if not path:
 			return [self], path
+		token, *path = path
+		#if not token: #TODO: does wrong stuff if you pass it 0
+		if isinstance(token, str):
+			if not token: #TODO: does wrong stuff if you pass it 0
+				return [self], path
 		if token == ".." :
 			return [self.parent], path
 		# check if it's a special token
@@ -484,13 +488,13 @@ class TreeInterface(Pathable,
 		self(*self.toPath(key), **kwargs).value = value
 
 	def __getitem__(self, address:(str, tuple),
-	                **kwargs)->T:
+	                )->T:
 		""" returns direct value of lookup branch
 		:rtype T
 		"""
 		return self(*self.toPath(address),
 		            #address,
-		            **kwargs).value
+		            ).value
 
 
 	# connected nodes

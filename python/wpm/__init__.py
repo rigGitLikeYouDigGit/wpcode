@@ -34,6 +34,10 @@ def reloadWPM(andWp=True):
 	import wpm
 	return wpm
 
+from pathlib import Path
+MAYA_PY_ROOT = Path(__file__).parent
+
+from wplib import to, arr
 
 def isThisMaya():
 	try:

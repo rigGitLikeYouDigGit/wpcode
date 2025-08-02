@@ -8,7 +8,7 @@ import sys, os, traceback
 
 from pathlib import Path
 
-from wpm import log
+from wplib import log
 
 from maya.api import OpenMaya as om, OpenMayaRender as omr
 from maya import cmds

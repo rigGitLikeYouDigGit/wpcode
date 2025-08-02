@@ -134,7 +134,7 @@ class PlugBroadcaster(Broadcaster):
 	def _isLeaf(self, obj):
 		if plug := getMPlug(obj, None):
 			if plug.isElement:
-				return not (plug.isArray or plug.isCompound or plug.parent().isCompound)
+				return not (plug.isArray or plug.isCompound)
 			return not (plug.isArray or plug.isCompound)
 		return super()._isLeaf(obj)
 
@@ -256,6 +256,40 @@ def subPlugMap(mPlug)->dict[(int, str), om.MPlug]:
 		#         for i in range(mPlug.numChildren())}
 	return {}
 
+
+def arrayPlugSlicePhysicalIndices(mPlug:om.MPlug, sl:slice)->T.Iterable[int]:
+	"""simpler function returning only indices - could be useful
+	so we don't have to recover indices of sparse plugs eventually
+	only consider physical indices
+	"""
+	nElements = mPlug.evaluateNumElements()
+	if sl.stop is None: # do we just error here? or assume that you mean the max existing index?
+		if sl.start is None: # mans just slicin for love of the slicin
+			return range(0, nElements, sl.step)
+		return range(sl.start, nElements, sl.step)
+	if sl.start is None:
+		return range(0, sl.stop, sl.step)
+	return range(sl.start, sl.stop, sl.step)
+
+
+def arrayPlugSlice(mPlug:om.MPlug, sl:slice, physical=True):
+	"""common logic for slice operations on mplugs
+	NB: I found out a slice can contain any objects, not just ints
+	if stop but no start, return all plugs up to that point
+
+	TODO: do we have separate syntax for logical plug lookups? returning none if not found??
+		not yet we don't, physical addresses always
+	"""
+	if physical:
+		return (mPlug.elementByPhysicalIndex(i) for i in arrayPlugSlicePhysicalIndices(mPlug, sl))
+	raise NotImplementedError
+
+
+def clearPlugElements(mPlug:om.MPlug):
+	"""up to/after certain index?
+	"""
+
+
 # def plugLeafName(mPlug:om.MPlug)->(int, str):
 # 	if(mPlug.isElement):
 # 		return mPlug.partialName(useLongNames=1)
@@ -263,10 +297,10 @@ def subPlugMap(mPlug)->dict[(int, str), om.MPlug]:
 # def plugPhysicalIndex(elementPlug:om.MPlug):
 # 	elementPlug.array().evaluateNumElements
 #
-# def parentPlug(mPlug:om.MPlug)->om.MPlug:
-# 	return mPlug.array() if mPlug.isElement else(
-# 		mPlug.parent() if mPlug.isChild else None
-# 	)
+def plugParent(mPlug:om.MPlug)->om.MPlug:
+	return mPlug.array() if mPlug.isElement else(
+		mPlug.parent() if mPlug.isChild else None
+	)
 
 class PlugData(NamedTuple):
 	"""test caching structural data to cut down on iteration -
@@ -726,7 +760,7 @@ def _setLeafPlugValue(plug:om.MPlug, data,
 		if attrFn.attrType() == om.MFnData.kString:
 			# dataMObject = om.MFnStringData().create(data)
 			# plug.setMObject(dataMObject)
-			modifier.newPlugValueString(str(data))
+			modifier.newPlugValueString(plug, str(data))
 		elif attrFn.attrType() in (om.MFnData.kNurbsCurve, om.MFnData.kMesh, om.MFnData.kNurbsSurface):
 			assert isinstance(data, om.MObject), "must directly specify MObject to set geometry plug: " + str(plug)
 			#plug.setMObject(data)
@@ -1029,21 +1063,23 @@ def use(src:(T.Any, om.MPlug), dst:om.MPlug,
 	complex addressing / expressions are all taken care of before this, here we
 	expect at most flat lists
 	"""
+	#log("use", src, dst)
 	modifier = _dgMod or om.MDGModifier()
 
-	src = [getMPlug(i, i) for i in toSeq(src)]
-	dst = [getMPlug(i, i) for i in toSeq(dst)]
-	for pair in broadcast(src, dst):
-		if not isinstance(pair[1], om.MPlug):
-			raise RuntimeError("destination is not an MPlug")
-		if isinstance(pair[0], om.MPlug):
-			_con(pair[0], pair[1], _dgMod)
-		else:
-			_setLeafPlugValue(pair[1], pair[0],
-			             toRadians=fromDegrees,
-			                  _dgMod=_dgMod
+	src = ([getMPlug(i, i) for i in toSeq(src)])
+	dst = ([getMPlug(i, i) for i in toSeq(dst)])
+	for s, d in zip(src, dst):
+		for pair in broadcast(s, d):
+			if not isinstance(pair[1], om.MPlug):
+				raise RuntimeError("destination is not an MPlug")
+			if isinstance(pair[0], om.MPlug):
+				_con(pair[0], pair[1], _dgMod)
+			else:
+				_setLeafPlugValue(pair[1], pair[0],
+				             toRadians=fromDegrees,
+				                  _dgMod=_dgMod
 
-			             )
+				             )
 	if _dgMod is None: # leave to calling code to execute if specified
 		modifier.doIt()
 

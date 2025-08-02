@@ -60,6 +60,8 @@ class MultiObject:
 	def __init__(self, objs: T.Iterable[object]):
 		self.objs = list(objs)
 
+	def __str__(self):
+		return f"<{type(self).__name__}({self.objs})>"
 
 	# steal callables of all objects in list?
 	# nah way too slow
