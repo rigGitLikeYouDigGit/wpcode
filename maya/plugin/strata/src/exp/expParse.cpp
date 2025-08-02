@@ -278,9 +278,33 @@ Status GroupAtom::parse(
 	int& outNodeIndex,
 	Status& s
 ) {
-	s = parser.parseExpression(graph, outNodeIndex, 0);
-	parser.consume(Token::Kind::RightParen, s);
+	/* copying logic from CallAtom parse - 
+	* a Group atom just adds single value to graph, unless multiple specified - 
+	* emulate tuple in Python
+	*/
+
+	LOG("groupAtom parse");
+
+	DirtyNode* newNode = graph.addNode<GroupAtom>();
+	outNodeIndex = newNode->index;
+
+
+	// parse arg lists and add to input list
+	if (!parser.match(Token::Kind::RightParen)) {
+		do {
+			int argIndex = -1;
+			s = parser.parseExpression(graph, argIndex, 0);
+			CWRSTAT(s, "error parsing arg from CallAtom, halting");
+			newNode->inputs.push_back(argIndex);
+		} while (parser.match(Token::Kind::Comma));
+		parser.consume(Token::Kind::RightParen, s);
+		CWRSTAT(s, "error finding rightParen for callAtom");
+	}
 	return s;
+
+	//s = parser.parseExpression(graph, outNodeIndex, 0);
+	//parser.consume(Token::Kind::RightParen, s);
+	//return s;
 } 
 
 

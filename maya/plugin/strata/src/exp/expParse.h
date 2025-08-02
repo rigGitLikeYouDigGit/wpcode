@@ -957,8 +957,11 @@ namespace ed {
 			}
 
 			int getPrecedence() {
-				auto itParser = mInfixParselets.find(
-					lookAhead(0).getKind());
+				auto k = lookAhead(0);
+				auto kKind = k.getKind();
+				/*auto itParser = mInfixParselets.find(
+					lookAhead(0).getKind());*/
+				auto itParser = mInfixParselets.find(kKind);
 				if (itParser != mInfixParselets.end()) {
 					return itParser->second->getPrecedence();
 				}

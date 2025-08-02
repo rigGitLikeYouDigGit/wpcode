@@ -44,7 +44,7 @@ void DirtyGraph::nodePropagateDirty(int opIndex) {
 	// propagate dirty stuff forwards to all nodes
 	// we add bools to the base state - 
 	// can't use false arguments to set clean with this function
-	LOG("node propagate dirty: " + ed::str(opIndex));
+	//LOG("node propagate dirty: " + ed::str(opIndex));
 	DirtyNode* seedNode = getNode(opIndex);
 
 	// if all flags match in dirty map, we consider this node has been visited, and skip tree
@@ -57,7 +57,7 @@ void DirtyGraph::nodePropagateDirty(int opIndex) {
 	//for (auto nextNode : it) {
 	while (it != it.end()) {
 		if (*it == nullptr) {
-			l("iterator reached end null");
+			//l("iterator reached end null");
 			break;
 		}
 		DirtyNode* nextNode = *it;
@@ -66,7 +66,7 @@ void DirtyGraph::nodePropagateDirty(int opIndex) {
 			continue;
 		}
 		
-		l("check node: " + nextNode->name);
+		//l("check node: " + nextNode->name);
 		bool allMatch = true;
 		for (auto pair : seedNode->dirtyMap) {
 			if (!(nextNode->dirtyMap.count(pair.first))) { // propagate if not found
@@ -99,26 +99,26 @@ int DirtyGraph::mergeOther(const DirtyGraph& other, Status& s) {
 
 	returns FIRST INDEX of added nodes, or -1 if none have been added
 	*/
-	LOG("dirtyGraph mergeOther");
+	//LOG("dirtyGraph mergeOther");
 	int resultIndex = -1;
 	NodeDelta nDelta = getNodeDelta(other);
 	// copy nodes to add (required for correct edge delta
 	for (std::string nodeName : nDelta.nodesToAdd) {
-		l("adding other node:" + nodeName);
+		//l("adding other node:" + nodeName);
 		if (nodeName.empty()) {
-			l("other had an empty node name, exiting");
+			//l("other had an empty node name, exiting");
 			return -1;
 		}
 		//importNode(other, other.nameIndexMap.find(nodeName))
 		int otherIndex = other.nameIndexMap.at(nodeName);
 		DirtyNode* importedNode = importNode(other, otherIndex);
-		l("dirtyGraph imported node is in this graph: " + str(importedNode->graphPtr == this));
+		//l("dirtyGraph imported node is in this graph: " + str(importedNode->graphPtr == this));
 		if (resultIndex == -1) {
 			resultIndex = importedNode->index;
 		}
 		/* check that imported node has a name*/
 		if (importedNode->name.empty()) {
-			l("imported node name is empty, exiting");
+			//l("imported node name is empty, exiting");
 			return -1;
 		}
 	}

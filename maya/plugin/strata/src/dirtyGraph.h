@@ -165,7 +165,7 @@ namespace ed {
 		//rule of five (apparently?)
 		inline void copyOtherNodesVector(const DirtyGraph& other) {
 			// function to deep-copy all nodes in the given vector from the argument graph
-			LOG("COPY OTHER NODES dirtyGraph");
+			//LOG("COPY OTHER NODES dirtyGraph");
 			nodes.clear();
 			nodes.reserve(other.nodes.size());
 			for (auto& ptr : other.nodes) {
@@ -178,7 +178,7 @@ namespace ed {
 		}
 
 		virtual void copyOther(const DirtyGraph& other) {
-			LOG("GRAPH COPY OTHER, other out index:" + str(other.getOutputIndex()));
+			//LOG("GRAPH COPY OTHER, other out index:" + str(other.getOutputIndex()));
 			this->copyOtherNodesVector(other);
 			nameIndexMap = other.nameIndexMap;
 			_outputIndex = other._outputIndex;
@@ -1080,19 +1080,19 @@ namespace ed {
 
 		template <typename T>
 		auto cloneShared(bool copyAllResults) const {
-			LOG("EvalGraph cloneShared");
+			//LOG("EvalGraph cloneShared");
 			return std::shared_ptr<T>(
 				static_cast<T*>(T::clone_impl(copyAllResults))); }
 		//auto cloneShared(bool copyAllResults) const { return std::shared_ptr<T>(dynamic_cast<T*>(clone_impl(copyAllResults))); }
 		virtual EvalGraph<VT>* clone_impl(bool copyAllResults) const {
-			LOG("EvalGraph clone impl");
+			//LOG("EvalGraph clone impl");
 			auto newPtr = new EvalGraph<VT>(*this);
 			//newPtr->copyOther(*this, copyAllResults);
 			return newPtr;
 		};
 
 		virtual void copyOther(const EvalGraph& other, bool copyAllResults=true) {
-			LOG("EVAL GRAPH COPY OTHER, other nodes: " + str(other.nodes.size()))
+			//LOG("EVAL GRAPH COPY OTHER, other nodes: " + str(other.nodes.size()))
 			DirtyGraph::copyOther(other);
 			//nodeDatas = other.nodeDatas;
 			/* if graph is empty, it doesn't matter*/

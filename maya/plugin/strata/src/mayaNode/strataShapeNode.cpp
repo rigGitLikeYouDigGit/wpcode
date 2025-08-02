@@ -89,7 +89,7 @@ MStatus StrataShapeNode::initialize() {
     cFn.addChild(aStMatrixOut);
     aStCurveOut = tFn.create("stCurveOut", "stCurveOut", MFnData::kNurbsCurve);
     tFn.setDefault(MFnNurbsCurveData().create());
-    cFn.addChild(aStMatrixOut);
+    cFn.addChild(aStCurveOut);
 
     aStShowPoints = nFn.create("stShowPoints", "stShowPoints", MFnNumericData::kFloat, 1.0);
     nFn.setChannelBox(true);

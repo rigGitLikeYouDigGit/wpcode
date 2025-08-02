@@ -272,8 +272,7 @@ Status& edgeCreateNew(
 	eData.creatorNode = op.name; // this op created this data
 	eData.index = outPtr->globalIndex;
 
-	// check if point has a driver - if it's a point, snap to it
-	//expAuxData.exp
+
 	s = param.driverExp.result(resultVals, &expAuxData);
 	CWRSTAT(s, "error reading driver exp");
 	std::vector<int> drivers = expAuxData.expValuesToElements(*resultVals, s);
@@ -303,6 +302,8 @@ Status& edgeCreateNew(
 		}
 		eData.driverDatas.push_back(eDriver);
 	}
+
+	s = value.buildEdgeData(s, eData);
 	return s;
 
 }

@@ -164,9 +164,7 @@ def reloadPluginTest():
 	elOp.stElement_[0].stPointWorldMatrixIn_ = ptA.worldMatrix_[0]
 	#return
 	log(elOp.stElement_, elOp, type(elOp))
-	# connect up element to shape
-	shape : WN.StrataShape = WN.StrataShape.create("newShape")
-	shape.stInput_[0] = elOp.stOutput_
+
 
 	# el2 = WN.createNode("strataElementOp", "el2Op")
 	# shape.stInput_[1] = el2.stOutput_
@@ -184,6 +182,15 @@ def reloadPluginTest():
 
 	elOp.stElement_[1].stName_ = "pElbow"
 	elOp.stElement_[1].stPointWorldMatrixIn_ = ptB.worldMatrix_[0]
+
+	##### TEMP CRV
+	elOp.stElement_[2].stName_ = "eArmCrv"
+	elOp.stElement_[2].stDriverExp_ = "pShoulder, pElbow"
+
+	# connect up element to shape
+	shape : WN.StrataShape = WN.StrataShape.create("newShape")
+	shape.stInput_[0] = elOp.stOutput_
+	return
 	# set parents
 	#elOp.stElement_[1].stSpaceExp = "pShoulder"
 

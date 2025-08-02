@@ -352,18 +352,18 @@ public:
 
 				/* get some info from the CPV shader:
 				*    |found shader
-   |param: C_4F, COLOR0 t:'Float4', 
-   |param: dimmer,  t:'Float', 
-   |param: selectionHiddenColor,  t:'Float4', 
-   |param: isSelectionHighlightingON,  t:'Boolean', 
-   |param: Pm, POSITION t:'Float3', 
-   |param: WorldViewProj, worldviewprojection t:'Float4x4Row', 
-   |param: DepthPriority, DepthPriority t:'Float', 
-   |param: orthographic, isorthographic t:'Boolean', 
-   |param: depthPriorityThreshold, mayadepthprioritythreshold t:'Float', 
-   |param: depthPriorityScale, mayadepthprioirtyscale t:'Float', 
-   |param: Instanced,  t:'Boolean', 
-   |param: MultiDraw,  t:'Integer',
+			   |param: C_4F, COLOR0 t:'Float4', 
+			   |param: dimmer,  t:'Float', 
+			   |param: selectionHiddenColor,  t:'Float4', 
+			   |param: isSelectionHighlightingON,  t:'Boolean', 
+			   |param: Pm, POSITION t:'Float3', 
+			   |param: WorldViewProj, worldviewprojection t:'Float4x4Row', 
+			   |param: DepthPriority, DepthPriority t:'Float', 
+			   |param: orthographic, isorthographic t:'Boolean', 
+			   |param: depthPriorityThreshold, mayadepthprioritythreshold t:'Float', 
+			   |param: depthPriorityScale, mayadepthprioirtyscale t:'Float', 
+			   |param: Instanced,  t:'Boolean', 
+			   |param: MultiDraw,  t:'Integer',
 
    color is float4
 				*/

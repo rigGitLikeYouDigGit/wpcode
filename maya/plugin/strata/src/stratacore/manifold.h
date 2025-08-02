@@ -335,7 +335,8 @@ namespace ed {
 		Eigen::MatrixX3f finalNormals = {}; // worldspace normals 
 
 		Eigen::MatrixX3f finalPoints = {}; // densely sampled final points in worldspace - use for querying
-
+		
+		int _bufferStartIndex = -1;
 
 		DECLARE_DEFINE_CLONABLE_METHODS(thisT)
 
@@ -350,7 +351,7 @@ namespace ed {
 		}
 
 		inline Eigen::Vector3f samplePos(const float t) {
-			/* sample all parents, combine based on weights
+			/* sample curve at 
 			*/
 		}
 
@@ -358,7 +359,16 @@ namespace ed {
 			/* point count before resampling - 
 			curve has point at each driver, and (segmentPointCount) points
 			in each span between them*/
-			return static_cast<int>(driverDatas.size() + denseCount * (driverDatas.size() - 1));
+			//return static_cast<int>(driverDatas.size() + denseCount * (driverDatas.size() - 1));
+			return static_cast<int>(denseCount * (driverDatas.size() - 1));
+		}
+
+		inline int densePointCount() const {
+			/* point count before resampling -
+			curve has point at each driver, and (segmentPointCount) points
+			in each span between them*/
+			//return static_cast<int>(driverDatas.size() + denseCount * (driverDatas.size() - 1));
+			return static_cast<int>(denseCount * (driverDatas.size() - 1));
 		}
 
 		inline int nSpans() {
@@ -1265,7 +1275,10 @@ namespace ed {
 		}
 
 		Status& buildEdgeDrivers(Status& s, SEdgeData& eData) {
-
+			/* build driver matrices for this edge - 
+			* sample driver elements, get worldspace matrices
+			* DO NOT sample into parent space, that will be done when curve is eval'd
+			*/
 			Eigen::MatrixX3f driverPoints(static_cast<int>(eData.driverDatas.size()), 3);
 			std::vector<float> inContinuities(driverPoints.rows());
 
@@ -1393,122 +1406,22 @@ namespace ed {
 		//	*/
 
 
-		inline Float3Array getWireframePointGnomonVertexPositionArray(Status& s) {
-			/* return flat float3 array for gnomon positions only on points
-			* each point has 4 coords - point itself, and then 0.1 units in x, y, z of that point
-			*/
-			//LOG("Wireframe gnomon pos array " + str(pDataMap.size()));
-			Float3Array result(pDataMap.size() * 4);
-			int i = 0;
-			std::string name;
-			for (auto& p : pointIndexGlobalIndexMap) {
-				name = getEl(p.second)->name;
-				Affine3f mat = pDataMap.at(name).finalMatrix;
-				//COUT << mat.matrix() << std::endl;
-				result[i * 4] = mat.translation();
-				//result[i * 4 + 1] = pDataMap.at(name).finalMatrix * Eigen::Vector3f{ 1, 0, 0 };
-				result[i * 4 + 1] = mat * Vector3f{ 1, 0, 0 };
-				result[i * 4 + 2] = mat * Eigen::Vector3f{ 0, 1, 0 };
-				result[i * 4 + 3] = mat * Eigen::Vector3f{ 0, 0, 1 };
-				i += 1;
-			}
-			return result;
-		}
-		inline IndexList getWireframePointIndexArray(Status& s) {
-			/* return index array for point gnomons
-			* intended to emit as separate lines, so half is duplication
-			*/
-			//LOG("Wireframe point index list array: " + str(pDataMap.size()));
-			IndexList result(pDataMap.size() * 3 * 2);
-			//int i = 0;
-			std::string name;
-			for (int i = 0; i < static_cast<int>(pDataMap.size()); i++) {
-				result[i * 6] = i * 4;
-				result[i * 6 + 1] = i * 4 + 1;
-				result[i * 6 + 2] = i * 4;
-				result[i * 6 + 3] = i * 4 + 2;
-				result[i * 6 + 4] = i * 4;
-				result[i * 6 + 5] = i * 4 + 3;
-			}
-			return result;
-		}
+		inline Float3Array getWireframePointGnomonVertexPositionArray(Status& s);
+		inline IndexList getWireframePointIndexArray(Status& s);
 
-		Status& getWireframeSingleEdgeGnomonVertexPositionArray(Status& s, Float3Array& outArr, SElement* el, int arrStartIndex) {
-			SEdgeData& d = eDataMap[el->name];
-			int n;
-			float u;
-			Eigen::Affine3f aff;
-			Eigen::Vector3f uvn;
-			for (int i = 0; i < d.densePointCount(); i++) {
-				n = arrStartIndex + (i * 4);
-				u = 1.0f / float(d.densePointCount() - 1) * float(i);
-				uvn[0] = u;
-				uvn[1] = 0; uvn[2] = 0;
-				s = edgeDataMatrixAt(s, aff, eDataMap[el->name], uvn);
+		Status& getWireframeSingleEdgeGnomonVertexPositionArray(Status& s, Float3Array& outArr, SElement* el, int arrStartIndex);
 
-				outArr[n] = d.finalCurve.eval(u);
-				outArr[n + 1] = (aff * Eigen::Vector3f{ 1, 0, 0 }).data();
-				outArr[n + 2] = aff * Eigen::Vector3f{ 0, 1, 0 };
-				outArr[n + 3] = aff * Eigen::Vector3f{ 0, 0, 1 };
-			}
-			return s;
-		}
+		//Status& setWireframeSingleEdgeVertexPositionArray(Status& s, Float3Array& outArr, SElement* el, int arrStartIndex);
 
-		void setGnomonIndexList(unsigned int* result, unsigned int i) {
-			result[i * 4] = i * 4;
-			result[i * 4 + 1] = i * 4 + 1;
-			result[i * 4 + 2] = i * 4;
-			result[i * 4 + 3] = i * 4 + 2;
-			result[i * 4 + 4] = i * 4;
-			result[i * 4 + 5] = i * 4 + 3;
-		}
+		Float3Array getWireframeEdgeVertexPositionArray(Status& s);
 
-		inline Float3Array getWireframeEdgeGnomonVertexPositionArray(Status& s) {
-			// return all edge 
-			int totalPositionEntries = 0;
-			int totalIndexEntries = 0;
-			for (auto& p : eDataMap) {
-				SEdgeData& edata = p.second;
-				totalPositionEntries += edata.densePointCount();
-				totalIndexEntries += edata.densePointCount() * 4;
-			}
-			Float3Array posResult(totalPositionEntries);
-			IndexList indexResult(totalIndexEntries);
-			int posStartIndex = 0;
-			for (auto& p : eDataMap) {
-				SEdgeData& edata = p.second;
-				SElement& el = elements[edata.index];
-				getWireframeSingleEdgeGnomonVertexPositionArray(
-					s,
-					posResult,
-					&el,
-					posStartIndex
-				);
-				posStartIndex += edata.densePointCount() * 4;
-				//setGnomonIndexList()
-			}
-			return posResult;
-		}
+		IndexList getWireframeEdgeVertexIndexList(Status& s);
 
-		inline IndexList getWireframeEdgeGnomonVertexIndexList(Status& s) {
-			int totalIndexEntries = 0;
-			for (auto& p : eDataMap) {
-				SEdgeData& edata = p.second;
-				totalIndexEntries += edata.densePointCount() * 4;
-			}
-			IndexList indexResult(totalIndexEntries);
-			int posStartIndex = 0;
-			for (auto& p : eDataMap) {
-				SEdgeData& edata = p.second;
-				SElement& el = elements[edata.index];
-				for (unsigned int n = 0; n < static_cast<unsigned int>(edata.densePointCount()); n++) {
-					setGnomonIndexList(indexResult.data(), posStartIndex);
-					posStartIndex += 6;
-				}
-				///posStartIndex += edata.densePointCount() * 6;
-			}
-			return indexResult;
-		}
+		void setGnomonIndexList(unsigned int* result, unsigned int i);
+
+		inline Float3Array getWireframeEdgeGnomonVertexPositionArray(Status& s);
+
+		inline IndexList getWireframeEdgeGnomonVertexIndexList(Status& s);
 
 
 		std::string printInfo() {
