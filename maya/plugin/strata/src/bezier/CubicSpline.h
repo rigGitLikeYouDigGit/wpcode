@@ -150,7 +150,9 @@ namespace bez
                 splines_.emplace_back(new CubicBezierSpline(&control_points[i * 3]));
             }
         }
-        CubicBezierPath(const Eigen::MatrixX3f& control_points) {
+        CubicBezierPath(
+            const Eigen::MatrixX3f& control_points,
+            bool closed=false) {
         //CubicBezierPath(const Eigen::Matrix3Xf& control_points) {
         //CubicBezierPath(const Eigen::Matrix<float, 3, -1>& control_points) {
             
@@ -161,16 +163,21 @@ namespace bez
             //int num_points = 4;
             /////////////////////
             int num_splines = num_points / 3;
+            if (!closed) {
+                num_splines = num_splines - 1;
+            }
+
             for (int i = 0; i < num_splines; ++i)
             {
                 splines_.emplace_back(new CubicBezierSpline(
                     control_points.row(i * 3).matrix(),
-                    control_points.row(i * 3 + 1).matrix(),
-                    control_points.row(i * 3 + 2).matrix(),
-                    control_points.row(i * 3 + 3).matrix()
-                    )
+                    control_points.row((i * 3 + 1) % num_points).matrix(),
+                    control_points.row((i * 3 + 2) % num_points).matrix(),
+                    control_points.row((i * 3 + 3) % num_points).matrix()
+                )
                 );
             }
+
         }
         CubicBezierPath(std::vector < std::unique_ptr<CubicBezierSpline>> splines);
         CubicBezierPath(std::vector < CubicBezierSpline> splines);

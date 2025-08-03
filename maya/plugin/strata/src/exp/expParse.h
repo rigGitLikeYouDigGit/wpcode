@@ -25,7 +25,7 @@
 #include "../status.h"
 #include "../macro.h"
 #include "../dirtyGraph.h"
-#include "../stratacore/manifold.h"
+//#include "../stratacore/manifold.h"
 
 #include "../factory.h"
 #include "expLex.h"
@@ -90,8 +90,11 @@ int main()
 
 */
 namespace ed {
+	struct StrataManifold;
 
 	namespace expns {
+
+
 
 #define MAKE_COPY_FNS(classT)\
 		~classT() = default;\
@@ -162,14 +165,6 @@ namespace ed {
 			// we just use strings for vartypes, makes it easier to declare new types, 
 			// check for matching / valid conversions, operations etc
 
-			struct Type {
-				static constexpr const char* number = "number";
-				static constexpr const char* string = "string";
-
-			};
-
-			std::string t = Type::number;
-
 
 
 
@@ -177,6 +172,14 @@ namespace ed {
 			std::vector<float> numberVals;
 			std::vector<std::string> stringVals;
 			// store values in flat arraus
+
+			struct Type {
+				static constexpr const char* number = "number";
+				static constexpr const char* string = "string";
+
+			};
+
+			std::string t = Type::number;
 
 			void copyOther(const ExpValue& other) {
 				t = other.t;
@@ -645,10 +648,7 @@ namespace ed {
 				Status& s
 			);
 
-			virtual Status eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, std::vector<ExpValue>& result, Status& s)
-			{
-				return s;
-			}
+			virtual Status eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, std::vector<ExpValue>& result, Status& s);
 
 			virtual int getPrecedence() {
 				return Precedence::CALL;

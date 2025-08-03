@@ -2,6 +2,8 @@
 
 #include "manifold.h"
 
+//#include "../exp/expParse.h"
+
 #include "../libEigen.h"
 
 using namespace ed;
@@ -18,7 +20,7 @@ std::string ed::SPointData::strInfo() {
 	result += " mat: " + str(finalMatrix) + ">";
 	return result;
 }
-inline Float3Array ed::StrataManifold::getWireframePointGnomonVertexPositionArray(Status& s) {
+Float3Array ed::StrataManifold::getWireframePointGnomonVertexPositionArray(Status& s) {
 	/* return flat float3 array for gnomon positions only on points
 	* each point has 4 coords - point itself, and then 0.1 units in x, y, z of that point
 	*/
@@ -39,7 +41,7 @@ inline Float3Array ed::StrataManifold::getWireframePointGnomonVertexPositionArra
 	}
 	return result;
 }
-inline IndexList ed::StrataManifold::getWireframePointIndexArray(Status& s) {
+IndexList ed::StrataManifold::getWireframePointIndexArray(Status& s) {
 	/* return index array for point gnomons
 	* intended to emit as separate lines, so half is duplication
 	*/
@@ -88,7 +90,7 @@ void ed::StrataManifold::setGnomonIndexList(unsigned int* result, unsigned int i
 	result[i * 4 + 5] = i * 4 + 3;
 }
 
-inline Float3Array ed::StrataManifold::getWireframeEdgeGnomonVertexPositionArray(Status& s) {
+Float3Array ed::StrataManifold::getWireframeEdgeGnomonVertexPositionArray(Status& s) {
 	// return all edge 
 	int totalPositionEntries = 0;
 	int totalIndexEntries = 0;
@@ -115,7 +117,7 @@ inline Float3Array ed::StrataManifold::getWireframeEdgeGnomonVertexPositionArray
 	return posResult;
 }
 
-inline IndexList ed::StrataManifold::getWireframeEdgeGnomonVertexIndexList(Status& s) {
+IndexList ed::StrataManifold::getWireframeEdgeGnomonVertexIndexList(Status& s) {
 	int totalIndexEntries = 0;
 	for (auto& p : eDataMap) {
 		SEdgeData& edata = p.second;
@@ -165,7 +167,7 @@ Float3Array ed::StrataManifold::getWireframeEdgeVertexPositionArray(Status& s) {
 		//const int arrStartIndex = i * eData.densePointCount();
 		const int arrStartIndex = eData._bufferStartIndex;
 		for (int pt = 0; pt < eData.densePointCount(); pt++) { // could also parallel this by curve segment
-			float u = (1.0 / (eData.densePointCount() - 1)) * pt;
+			float u = (1.0f / (eData.densePointCount() - 1)) * pt;
 			const Vector3f uvn{ u, 0.0, 0.0 };
 			Vector3f posVec; // converting between eigen and normal float3 is sad
 			s = edgePosAt(s, posVec, eData, uvn);
@@ -181,11 +183,210 @@ IndexList ed::StrataManifold::getWireframeEdgeVertexIndexList(Status& s) {
 	/* assume we emit each edge as a continuous line
 	*/
 	IndexList result(eDataMap.size() * 2);
-	
+	int i = 0;
 	for (auto& p : eDataMap) {
 		SEdgeData& eData = p.second;
-		result[i] = eData._bufferStartIndex;
-		result[i + 1] = eData._bufferStartIndex + eData.densePointCount();
+		result[i * 2] = eData._bufferStartIndex;
+		result[i * 2 + 1] = eData._bufferStartIndex + eData.densePointCount();
 	}
 
+	return result;
+
 }
+
+Status& ed::StrataManifold::pointSpaceMatrix(Status& s, Affine3f& outMat, SPointData& data) {
+	/* get space matrix for point space datas
+	if space data EXISTS, it means something
+
+	todo: do we actually need to store names in space datas?
+	seems like we can just use integers, won't be dynamic unless we add a way
+	to edit structure of graph in history
+	*/
+	LOG("pointSpaceMatrix");
+
+	if (data.spaceDatas.size() == 0) {
+		l("no space datas, space matrix is identity");
+		outMat = Affine3f::Identity();
+		return s;
+	}
+	if (data.spaceDatas.size() == 1) {
+		l("single space data, look up UVN");
+		auto spaceEl = getEl(data.spaceDatas[0].name);
+		s = matrixAt(s, outMat, spaceEl, data.spaceDatas[0].uvn);
+		outMat = outMat * data.spaceDatas[0].offset; // add space-specific, child-specific offset
+		return s;
+	}
+	VectorXf weights(data.spaceDatas.size());
+	std::vector<Affine3f> tfs(data.spaceDatas.size());
+	for (int i = 0; static_cast<int>(data.spaceDatas.size()); i++) {
+		auto spaceEl = getEl(data.spaceDatas[i].name);
+		weights(i) = data.spaceDatas[0].weight;
+		s = matrixAt(s, tfs[i], spaceEl, data.spaceDatas[i].uvn);
+		tfs[i] = tfs[i] * data.spaceDatas[i].offset;
+	}
+	outMat = blendTransforms(tfs, weights);
+	return s;
+}
+
+Status& ed::StrataManifold::computePointData(Status& s, SPointData& data//, bool doProjectToDrivers=false
+) {
+	/* given all space data is built, find final matrix
+	*
+	* DO WE PROJECT TO DRIVERS HERE???
+	* no, it's only one call outside - be explicit in calling code
+	*/
+	LOG("compute point data: " + getEl(data.index)->name);
+	l(data.strInfo());
+	if (data.spaceDatas.size()) { // no parent, just literal data
+		Affine3f spaceMat = Affine3f::Identity();
+		s = pointSpaceMatrix(s, spaceMat, data);
+		l("found space mat:" + str(spaceMat));
+		//data.finalMatrix = spaceMat * data.finalMatrix;
+		data.finalMatrix = spaceMat; // oh god oh god is this correct
+		/* each space holds its own offset, so there should be no reason to
+		pull from any existing data on main pData object */
+	}
+	//if (doProjectToDrivers) {
+	//	l("projectingToDrivers");
+	//	s = pointProjectToDrivers(s, data.finalMatrix, getEl(data.index));
+	//}
+	l("final matrix: " + str(data.finalMatrix));
+	return s;
+}
+
+Status& ed::StrataManifold::pointProjectToDrivers(Status& s, Affine3f& mat, SElement* el) {
+	/* project/snap given matrix to driver of point
+	(there should of course be a maximum of 1 driver for a point)
+	*/
+	LOG("point project to drivers: " + el->name);
+	SElement* driverEl = getEl(el->drivers[0]);
+	if (driverEl == nullptr) {
+		l("driver ptr not found, skipping");
+		return s;
+	}
+	switch (driverEl->elType) {
+	case SElType::point: {
+		SPointData& driverData = pDataMap[driverEl->name];
+		mat.translation() = driverData.finalMatrix.translation();
+		break;
+
+	}
+	}
+	return s;
+
+}
+
+Status& ed::StrataManifold::edgeParentDataFromDrivers(Status& s, SEdgeData& eData, SEdgeParentData& pData)
+{
+	/*Assumes edge data already has final drivers set up
+	*
+	*/
+	int parentElIndex = getEl(pData.index)->elIndex;
+	Eigen::Array3Xf cvs(eData.nBezierCVs(), 3);
+	eData.rawBezierCVs(cvs);
+	Eigen::Affine3f outMat;
+	for (int i = 0; i < cvs.size(); i++) {
+
+		//s = edgeInSpaceOf(s, cvs.row(i), parentElIndex, cvs.row(i));
+	}
+
+	return s;
+
+}
+
+Status& ed::StrataManifold::buildEdgeDrivers(Status& s, SEdgeData& eData) {
+	/* build driver matrices for this edge -
+	* sample driver elements, get worldspace matrices
+	* DO NOT sample into parent space, that will be done when curve is eval'd
+	*/
+	Eigen::MatrixX3f driverPoints(static_cast<int>(eData.driverDatas.size()), 3);
+	std::vector<float> inContinuities(driverPoints.rows());
+
+
+	// set base matrices on all points, eval driver at saved UVN
+	for (int i = 0; i < static_cast<int>(eData.driverDatas.size()); i++) {
+		matrixAt(s,
+			eData.driverDatas[i].finalMatrix,
+			getEl(eData.driverDatas[i].index),
+			eData.driverDatas[i].uvn
+		);
+		driverPoints.row(i) = eData.driverDatas[i].finalMatrix.translation();
+		inContinuities[i] = eData.driverDatas[i].continuity;
+	}
+
+	Eigen::MatrixX3f pointsAndTangents = cubicTangentPointsForBezPoints(
+		driverPoints,
+		eData.closed,
+		inContinuities.data()
+	);
+
+	eData.finalCurve = bez::CubicBezierPath(pointsAndTangents);
+
+	/// TODO //// 
+	//// resample these back into driver's space? or no point since they'll be sampled into PARENT's space anyway
+	// what is man talkin about
+	int nCVs = static_cast<int>(eData.driverDatas.size());
+	for (int i = 0; i < nCVs; i++) {
+		int thisI = (i * 3) % nCVs;
+		int prevI = (i * 3 - 1 + nCVs) % nCVs;
+		int nextI = (i * 3 + 1) % nCVs;
+		eData.driverDatas[thisI].prevTan = pointsAndTangents.row(prevI);
+		eData.driverDatas[thisI].postTan = pointsAndTangents.row(nextI);
+	}
+
+
+	return s;
+}
+
+Status& ed::StrataManifold::buildEdgeData(Status& s, SEdgeData& eData) {
+	/* construct final dense array for data, assuming all parents and driver indices are set in data
+
+	build base curve matrices in worldspace,
+	then get into space of each driver
+
+	but we can only work in worldspace when curve is freshly added, otherwise
+	we can only save driver-space versions
+	*/
+
+	// Bezier control points for each span
+
+	s = buildEdgeDrivers(s, eData);
+
+	return s;
+}
+
+
+//std::vector<int> ed::StrataManifold::expValuesToElements(std::vector<ExpValue>& values, Status& s) {
+//	/* resolve all possible values to elements */
+//
+//	std::vector<int> result;
+//	if (!values.size()) { return result; }
+//	LOG("expValuesToElements: " + str(values.size()));
+//	for (size_t vi = 0; vi < values.size(); vi++) {
+//		//for (auto& v : values) {
+//		ExpValue& v = values[vi];
+//		//l("check value:" + v.printInfo());
+//		for (auto& f : v.numberVals) { // check for integer indices
+//			int id = fToInt(f);
+//			//SElement* ptr = manifold->getEl(id);
+//			SElement* ptr = getEl(id);
+//			if (ptr == nullptr) { // index not found in manifold
+//				continue;
+//			}
+//			if (!seqContains(result, id)) { // add unique value found
+//				result.push_back(id);
+//			}
+//		}
+//		for (auto& s : v.stringVals) { // check for string names
+//			// patterns will already have been expanded by top level
+//			SElement* ptr = manifold->getEl(s);
+//			if (ptr == nullptr) {
+//				continue;
+//			}
+//			if (!seqContains(result, ptr->globalIndex)) { // add unique value found
+//				result.push_back(ptr->globalIndex);
+//			}
+//		}
+//	}
+//	return result;
+//}

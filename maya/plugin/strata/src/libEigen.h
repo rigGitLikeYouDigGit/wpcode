@@ -254,6 +254,7 @@ namespace ed {
 
 		Eigen::MatrixX3<T> result(inPoints.rows() * 3, 3);
 		int nPoints = static_cast<int>(inPoints.rows());
+		int nOutPoints = nPoints * 3;
 
 		// set tangent vectors for each one (scaling done later)
 		// also includes start and end, as if it were closed
@@ -261,35 +262,46 @@ namespace ed {
 		int outI, nextOutI, prevOutI;
 		for (int i = 0; i < nPoints; i++) {
 			nextInI = (i + 1) % nPoints;
-			prevInI = (i - 1) % nPoints;
+			prevInI = (i - 1 + nPoints) % nPoints;
 
 			outI = i * 3;
-			nextOutI = (i* 3 + 1) % nPoints;
-			prevOutI = (i* 3 - 1) % nPoints;
+			nextOutI = (i* 3 + 1) % nOutPoints;
+			prevOutI = (i* 3 - 1 + nOutPoints) % nOutPoints;
 
-			auto thisPos = inPoints.row(i);
-			auto nextPos = inPoints.row(nextInI);
-			auto prevPos = inPoints.row(prevInI);
+			Vector3<T> thisPos = inPoints.row(i);
+			Vector3<T> nextPos = inPoints.row(nextInI);
+			Vector3<T> prevPos = inPoints.row(prevInI);
 
 			// set start point from originals
 			result.row(outI) = thisPos;
 
 			// vector from prev ctl pt to next
-			auto tanVec = nextPos - prevPos;
+			Vector3<T> tanVec = nextPos - prevPos;
 			//thisDriver.baseTan = tanVec;
 
-			auto toThisVec = thisPos - prevPos;
+			/* if only 2 points, the normal tangent idea breaks down -
+			* we just take the vector between them here
+			*/
+			if (nPoints == 2) {
+				tanVec = nextPos - thisPos / T(3.0);
+			}
+
+			Vector3<T> toThisVec = thisPos - prevPos;
 			// vector from this ctl pt to next
-			auto toNextVec = nextPos - thisPos;
+			Vector3<T> toNextVec = nextPos - thisPos;
 			//auto toPrevVec = nextPos - thisPos;
 
+			////// DEFAULTS - still testing here, maybe we allow this to be set by primvar or something
+			T defaultTanScaleFactor = T(3.0);
+			T defaultTanSmoothMinFactor = T(0.2);
+
 			// forwards tan scale factor
-			T nextTanScale = tanVec.dot(toNextVec) - (tanVec.dot(toThisVec)) / T(3.0);
-			nextTanScale = -sminQ<T>(-nextTanScale, T(0.0), T(0.2));
+			T nextTanScale = tanVec.dot(toNextVec) - (tanVec.dot(toThisVec)) / defaultTanScaleFactor;
+			nextTanScale = -sminQ<T>(-nextTanScale, T(0.0), defaultTanSmoothMinFactor);
 
 			// back tan scale factor
-			T prevTanScale = tanVec.dot(-toThisVec) - (tanVec.dot(toThisVec)) / T(3.0);
-			prevTanScale = -sminQ<T>(-prevTanScale, T(0.0), T(0.2));
+			T prevTanScale = tanVec.dot(-toThisVec) - (tanVec.dot(toThisVec)) / defaultTanScaleFactor;
+			prevTanScale = -sminQ<T>(-prevTanScale, T(0.0), defaultTanSmoothMinFactor);
 
 			result.row(nextOutI) = tanVec.normalized() * nextTanScale;
 			result.row(prevOutI) = -tanVec.normalized() * prevTanScale;
@@ -311,19 +323,19 @@ namespace ed {
 		// check continuity
 		for (int i = 0; i < nPoints; i++) {
 			nextInI = (i + 1) % nPoints;
-			prevInI = (i - 1) % nPoints;
+			prevInI = (i - 1 + nPoints) % nPoints;
 
-			outI = i * 3;
-			nextOutI = (i * 3 + 1) % nPoints;
-			prevOutI = (i * 3 - 1) % nPoints;
+			outI = i * 3; 
+			nextOutI = (i * 3 + 1) % nOutPoints;
+			prevOutI = (i * 3 - 1 + nOutPoints) % nOutPoints;
 
-			int nextPtI = ((i + 1) * 3) % nPoints;
-			int nextPtPrevTanI = ((i + 1) * 3 - 1) % nPoints;
-			int nextPtNextTanI = ((i + 1) * 3 + 1) % nPoints;
+			int nextPtI = ((i + 1) * 3) % nOutPoints;
+			int nextPtPrevTanI = ((i + 1) * 3 - 1 + nOutPoints) % nOutPoints;
+			int nextPtNextTanI = ((i + 1) * 3 + 1) % nOutPoints;
 
-			int prevPtI = ((i - 1) * 3) % nPoints;
-			int prevPtPrevTanI = ((i - 1) * 3 - 1) % nPoints;
-			int prevPtNextTanI = ((i - 1) * 3 + 1) % nPoints;
+			int prevPtI = ((i - 1) * 3 + nOutPoints) % nOutPoints;
+			int prevPtPrevTanI = ((i - 1) * 3 - 1 + nOutPoints) % nOutPoints;
+			int prevPtNextTanI = ((i - 1) * 3 + 1 + nOutPoints) % nOutPoints;
 
 
 			// blend between next tangent point and next point, based on continuity

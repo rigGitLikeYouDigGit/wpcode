@@ -16301,6 +16301,16 @@
           "parentName": ""
         },
         {
+          "name": "stCurveOut",
+          "type": 574,
+          "typeName": "kTypedAttribute",
+          "isArray": false,
+          "isInput": true,
+          "isOutput": true,
+          "shortName": "stCurveOut",
+          "parentName": "stDataOut"
+        },
+        {
           "name": "stDataIn",
           "type": 576,
           "typeName": "kCompoundAttribute",

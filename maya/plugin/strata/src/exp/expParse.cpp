@@ -1,9 +1,17 @@
 
 #include "expParse.h"
 
+#include "../stratacore/manifold.h" // fine to tightly couple here, this expression language is never meant to be standalone
+
 #include "../logger.h"
+
+
+
 using namespace ed;
 using namespace ed::expns;
+
+//using ed::expns::StrataManifold = ed::StrataManifold;
+
 
 const std::string test::tag("hello");
 
@@ -48,13 +56,18 @@ Status ExpOpNode::eval(std::vector<ExpValue>& value, EvalAuxData* auxData, Statu
 	return s;
 }
 
-//Status parseLine(std::string srcLine, Expression* e, int& resultNodeId) {
-//	// parse a single line or enclosed span, set the result id to the node in the graph to pass on
-//	// if brackets/ sub scope encountered, recurse 
-//
-//	//std::stack<Token> stack;
-//
-//}
+
+Status GroupAtom::eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, std::vector<ExpValue>& result, Status& s)
+{
+	/* merge incoming values into one - 
+	* result will already have entry from input 0
+	*/
+	for (auto i = 1; i < argList.size(); i++) {
+		result.push_back(argList[i]);
+	}
+	return s;
+
+}
 
 Status validateAndParseStrings(std::string srcStr, std::vector<Token>& parsedTokens) {
 	/* check for syntax errors I guess? I won't lie, I have no memory of this entire file
@@ -86,6 +99,11 @@ Status validateAndParseStrings(std::string srcStr, std::vector<Token>& parsedTok
 			}
 
 			return s;
+		}
+
+		/* skip whitespaces */
+		if (token.is_one_of(Token::Kind::Space, Token::Kind::Space)) {
+			continue;
 		}
 
 		i += 1;
@@ -141,6 +159,8 @@ Status validateAndParseStrings(std::string srcStr, std::vector<Token>& parsedTok
 			parsedTokens.back().append(token.lexeme());
 			continue;
 		}
+
+		
 		parsedTokens.push_back(token);
 	}
 	return s;
@@ -196,17 +216,24 @@ Status CallAtom::parse(
 	LOG("callAtom parse");
 	DirtyNode* newNode = nullptr;
 	DirtyNode* leftNode = graph.getNode(leftIndex);
-	if (leftNode->name == resultCallName) {
-		DEBUGS("found call result node in graph, using for top-level return");
-		newNode = graph.getResultNode();
-	}
-	else {
-		newNode = graph.addNode<CallAtom>();
-		outNodeIndex = newNode->index;
+	//if (leftNode->name == resultCallName) {
+	//	DEBUGS("found call result node in graph, using for top-level return");
+	//	newNode = graph.getResultNode();
+	//}
+	//else {
+	//	newNode = graph.addNode<CallAtom>();
+	//	outNodeIndex = newNode->index;
 
-		// add name of function to call inputs
-		newNode->inputs.push_back(leftIndex);
-	}
+	//	// add name of function to call inputs
+	//	newNode->inputs.push_back(leftIndex);
+	//}
+	
+	newNode = graph.addNode<CallAtom>();
+	outNodeIndex = newNode->index;
+
+	// add name of function to call inputs
+	newNode->inputs.push_back(leftIndex);
+
 	// parse arg lists and add to input list
 	if (!parser.match(Token::Kind::RightParen)) {
 		do {
@@ -262,11 +289,17 @@ Status NameAtom::parse(
 	int& outNodeIndex,
 	Status& s
 ) {
+	/* lookup first to reuse nodes if possible */
 	//LOG("NAME parse: " + str(token) + " " + str(outNodeIndex));
-	ExpOpNode* newNode = graph.addNode<NameAtom>();
+	ExpOpNode* newNode = graph.getNode<ExpOpNode>("NAME_" + token.lexeme());
+	if (newNode == nullptr) {
+		newNode = graph.addNode<NameAtom>("NAME_" + token.lexeme());
+
+		NameAtom* op = static_cast<NameAtom*>(newNode->expAtomPtr.get());
+		op->strName = token.lexeme();
+	}
 	outNodeIndex = newNode->index;
-	NameAtom* op = static_cast<NameAtom*>(newNode->expAtomPtr.get());
-	op->strName = token.lexeme();
+
 	return s;
 }
 
@@ -296,7 +329,7 @@ Status GroupAtom::parse(
 			s = parser.parseExpression(graph, argIndex, 0);
 			CWRSTAT(s, "error parsing arg from CallAtom, halting");
 			newNode->inputs.push_back(argIndex);
-		} while (parser.match(Token::Kind::Comma));
+		} while (parser.match(Token::Kind::Comma) || parser.match(Token::Kind::Space));
 		parser.consume(Token::Kind::RightParen, s);
 		CWRSTAT(s, "error finding rightParen for callAtom");
 	}
@@ -325,19 +358,28 @@ Status ExpParser::parseExpression(
 	LOG("parser parseExpression");
 	
 	Token token = consume();
+	while (token.getKind() == Token::Kind::Space) {
+		token = next();
+		token = consume();
+	}
 	auto it = mPrefixParselets.find(token.getKind());
 	if (it == mPrefixParselets.end()) {
 		l("prefix not found for token:" + token.kindStr() + ", returning");
 		STAT_ERROR(s, "Could not find prefixParselet for token: " + token.lexeme() + " , halting"); 
 	}
 
+	DirtyNode* topNode = graph.getNode(outNodeIndex); // get top node beforehand
+
 	PrefixParselet* prefix = it->second.get(); // strName is empty
 	Status parseS;
 	prefix->parse(graph,  *this, token, outNodeIndex, parseS); // remove copy here if possible
 	CWRSTAT(parseS, "error parsing prefix ");
 	
-	graph.setOutputNode(0);
-	graph.getNode(graph.getOutputIndex())->inputs.push_back(outNodeIndex);
+	//graph.setOutputNode(0);
+	//graph.getNode(graph.getOutputIndex())->inputs.push_back(outNodeIndex);
+	//graph.getNode(outNodeIndex)->inputs.push_back(outNodeIndex);
+
+
 
 	int limit = 100;
 	int i = 0;
@@ -367,6 +409,13 @@ Status ExpParser::parseExpression(
 		// no idea if this is right
 		outNodeIndex = outInfixNodeIndex;
 	}
+
+	/* add final node to inputs of top?*/
+	if (topNode != nullptr) {
+		topNode->inputs.push_back(outNodeIndex);
+	}
+
+
 	return s;
 }
 
@@ -448,7 +497,7 @@ Status Expression::parse() {
 	graph = ExpGraph();
 	graph.exp = this;
 	//graph.clear();
-	graph.addResultNode();
+	//graph.addResultNode();
 
 	parser.resetTokens(parsedTokens);
 

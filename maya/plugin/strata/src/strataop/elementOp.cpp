@@ -300,9 +300,7 @@ Status& edgeCreateNew(
 			break;
 		}
 		}
-		eData.driverDatas.push_back(eDriver);
 	}
-
 	s = value.buildEdgeData(s, eData);
 	return s;
 
