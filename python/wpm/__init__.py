@@ -70,7 +70,9 @@ if isThisMaya():
 		Plug,
 		getSceneGlobals, # scene wrappers
 		api,
-	getMFn, getMPlug, getMObject, getMFnType
+	getMFn, getMPlug, getMObject, getMDagPath, getMFnType,
+	use
+
 
 	)
 

@@ -9,6 +9,8 @@ from wplib import log
 
 from wplib.object import UserDecorator
 
+"""TODO: refactor to use To, move this into To actually
+"""
 
 """decorator to automatically convert arguments to a single
 annotated type"""

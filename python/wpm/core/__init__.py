@@ -11,7 +11,7 @@ from .patch import cmds, om, omr, oma, omui
 from .api import (
 	MObjectRegister, apiTypeMap, apiTypeCodeMap, apiCodeNameMap, apiTypeDataMap,
 	mfnDataConstantTypeMap,
-	getMFn, asMFn, getCache, getMObject, getMFnType, toMFnDag, toMFnDep, toMFnMesh,
+	getMFn, asMFn, getCache, getMObject, getMDagPath, getMFnType, toMFnDag, toMFnDep, toMFnMesh,
 	toMFnCurve, toMFnSurface, toMFnTransform,
 	isDag, isShape, isTransform,
 	classConstantValueToNameMap,
@@ -29,7 +29,7 @@ from .scene import getSceneGlobals, setupGlobals
 from wpm.core.callbackowner import CallbackOwner
 
 from . import plug
-from .plug import getMPlug
+from .plug import getMPlug, use
 
 """
 

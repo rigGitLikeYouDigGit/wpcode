@@ -2,6 +2,7 @@
 from __future__ import annotations
 import typing as T
 
+import fnmatch
 from enum import Enum
 from wplib.sentinel import Sentinel
 """
@@ -24,14 +25,26 @@ def enumKeyLookup(key:T.Union[Enum, str], data:dict, default=Sentinel.FailToFind
 	return value maching either enum object
 	or enum value
 	if default not given, raises keyError on missing"""
-	result = Sentinel.FailToFind
+
 	try:
 		result = data[key.value]
-	except:
-		result = data[key]
-	if result is Sentinel.FailToFind:
-		if default is Sentinel.FailToFind:
-			raise KeyError(f"key {key} not found in {data}")
-		return default
-	return result
+		return result
+	except KeyError:
+		try:
+			result = data[key]
+			return result
+		except KeyError:
+			if default is Sentinel.FailToFind:
+				raise KeyError(f"key {key} not found in {data}")
+			return default
+
+def fnMatchGet(d:dict, pattern:str, returnTies=True):
+	"""maybe this should be put in a different "filter" library
+	or something -
+	return all values (or key, value ties) where the key matches the
+	given pattern through fnMatch"""
+	matching = fnmatch.filter(d.keys(), pattern)
+	if returnTies:
+		return [(i, d[i]) for i in matching]
+	return [d[i] for i in matching]
 

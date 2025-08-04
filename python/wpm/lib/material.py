@@ -33,6 +33,7 @@ def shadingGroupPlugsFromMaterial(materialNode:om.MObject)->T.List[om.MPlug]:
 def assignMaterialToMesh(materialNode:om.MObject, meshNode:om.MObject,
                          dgMod=None)->om.MDGModifier:
 	"""assign material to mesh
+	expects a shape node for mesh
 	"""
 
 	# get shading group

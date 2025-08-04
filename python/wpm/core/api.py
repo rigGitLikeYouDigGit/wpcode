@@ -1,12 +1,15 @@
 
 """lib for core openmaya stuff
-mainly MObject cache"""
+mainly MObject cache
+
+much of this stuff can be retired, it's been superseded
+"""
 
 from __future__ import annotations
 
 import typing as T
 
-from wplib import sequence
+from wplib import sequence, inheritance
 from wplib.object import UserSet
 
 
@@ -211,10 +214,16 @@ def isTransform(obj:om.MObject):
 def isShape(obj:om.MObject):
 	return getCache().isShape(obj)
 
+def classConstants(cls, inherited=True)->dict[str, int]:
+	if inherited:
+		constMap = inheritance.mroMergedDict(cls)
+	else:
+		constMap = dict(cls.__dict__)
+	return {k:v for k, v in constMap.items() if k.startswith('k')}
 
 def classConstantValueToNameMap(cls):
 	"""return a dict mapping class constants to their names"""
-	return {v:k for k,v in cls.__dict__.items() if k.startswith('k')}
+	return {v:k for k,v in classConstants(cls).items()}
 
 
 class MObjectSet(UserSet):

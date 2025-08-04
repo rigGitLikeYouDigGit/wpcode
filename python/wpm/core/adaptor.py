@@ -46,8 +46,8 @@ mMatrixEdge = ToType(
 	backFn=lambda v, t, **kw : t(v)
 )
 
-log("made matrix edge")
-log(ToType.typeGraph)
+# log("made matrix edge")
+# log(ToType.typeGraph)
 def mTransformationMatrixToMMatrixFn(v:om.MTransformationMatrix,
                                      t:type[om.MMatrix],
                                      **kwargs)->om.MMatrix:

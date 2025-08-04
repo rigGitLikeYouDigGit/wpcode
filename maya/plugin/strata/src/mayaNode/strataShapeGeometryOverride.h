@@ -58,8 +58,8 @@ public:
 	static const char* sDormantWireframeRenderItemName;
 	static const char* sShadedRenderItemName;*/
 
-	static constexpr char* sStPointRenderItemName = "stPRI";
-	static constexpr char* sStEdgeRenderItemName = "stERI";
+	static constexpr const char* sStPointRenderItemName = "stPRI";
+	static constexpr const char* sStEdgeRenderItemName = "stERI";
 
 	inline Status getShapeMObj(MObject& result) {
 		Status s;
@@ -233,6 +233,8 @@ public:
 	}
 
 	inline std::string paramTypeName(MShaderInstance::ParameterType t) {
+		/* used to debug parametre names - check _makePointRenderItem() for 
+		found info*/
 		switch (t)
 		{
 		case MHWRender::MShaderInstance::kInvalid:
@@ -283,6 +285,122 @@ public:
 		}
 	}
 
+	MRenderItem* _makePointRenderItem(
+		const MDagPath& path,
+		const MShaderManager* shaderManager
+		) 
+	{
+		/*
+					// Create the new render item with the given name.
+			// We designate this item as a UI "decoration" and will not be
+			// involved in rendering aspects such as casting shadows
+			*/
+		LOG("create point render item")
+		MRenderItem* renderItem = MHWRender::MRenderItem::Create(sStPointRenderItemName,
+			MHWRender::MRenderItem::DecorationItem,
+			MHWRender::MGeometry::kLines
+		);
+		// We want this render item to show up when in all mode ( Wireframe, Shaded, Textured and BoundingBox)
+		auto wireframeColor = MHWRender::MGeometryUtilities::wireframeColor(path);
+		auto displayStatus = MHWRender::MGeometryUtilities::displayStatus(path);
+		MGeometry::DrawMode drawMode = MGeometry::kAll;
+		unsigned int depthPriority = MHWRender::MRenderItem::sSelectionDepthPriority;
+		MColor color = wireframeColor;
+		bool isEnable = true; // isWireFrameRenderItemEnabled
+
+		renderItem->setDrawMode(MGeometry::kAll);
+		// Set selection priority: on top of everything
+		renderItem->depthPriority(depthPriority);
+		// Get an instance of a 3dSolidShader from the shader manager.
+		MShaderInstance* shader = shaderManager->getStockShader(MShaderManager::k3dCPVSolidShader);
+		if (shader != nullptr)
+		{
+			//l("found shader");
+			renderItem->setShader(shader);
+
+			/* get some info from the CPV shader:
+			*    |found shader
+		   |param: C_4F, COLOR0 t:'Float4',
+		   |param: dimmer,  t:'Float',
+		   |param: selectionHiddenColor,  t:'Float4',
+		   |param: isSelectionHighlightingON,  t:'Boolean',
+		   |param: Pm, POSITION t:'Float3',
+		   |param: WorldViewProj, worldviewprojection t:'Float4x4Row',
+		   |param: DepthPriority, DepthPriority t:'Float',
+		   |param: orthographic, isorthographic t:'Boolean',
+		   |param: depthPriorityThreshold, mayadepthprioritythreshold t:'Float',
+		   |param: depthPriorityScale, mayadepthprioirtyscale t:'Float',
+		   |param: Instanced,  t:'Boolean',
+		   |param: MultiDraw,  t:'Integer',
+
+color is float4.
+huh.
+			 */
+			renderItem->enable(true);
+			// Once assigned, no need to hold on to shader instance
+			// not sure how this works
+			shaderManager->releaseShader(shader);
+		}
+
+		return renderItem;
+	}
+
+	MRenderItem* _makeEdgeRenderItem(
+		const MDagPath& path,
+		const MShaderManager* shaderManager
+	)
+	{
+		/* render item for edge curves - 
+		* consider here if the Strata manipulation context can hook in to display 
+		* curve attributes as colours, or edge thickness?
+		*/
+		LOG("create edge render item")
+		MRenderItem* renderItem = MHWRender::MRenderItem::Create(sStEdgeRenderItemName,
+			MHWRender::MRenderItem::DecorationItem,
+			MHWRender::MGeometry::kLines
+		);
+		auto wireframeColor = MHWRender::MGeometryUtilities::wireframeColor(path);
+		auto displayStatus = MHWRender::MGeometryUtilities::displayStatus(path);
+		MGeometry::DrawMode drawMode = MGeometry::kAll; 
+		MColor color = wireframeColor; // later expose wireframe opacity / colour per shape node
+		bool isEnable = true; // isWireFrameRenderItemEnabled
+
+		renderItem->setDrawMode(MGeometry::kAll);
+		// Set selection priority: on top of everything
+		renderItem->depthPriority(MHWRender::MRenderItem::sSelectionDepthPriority);
+		// Get an instance of a 3dSolidShader from the shader manager.
+		//MShaderInstance* shader = shaderManager->getStockShader(MShaderManager::k3dCPVSolidShader);
+		MShaderInstance* shader = shaderManager->getStockShader(MShaderManager::k3dSolidShader); // no CPV yet?
+		shader->setParameter("solidColor", &color);
+		if (shader != nullptr)
+		{
+			renderItem->setShader(shader);
+			renderItem->enable(true);
+			
+			shaderManager->releaseShader(shader);
+		}
+		return renderItem;
+	}
+
+	MRenderItem* _makeEdgeTangentsRenderItem(
+		const MDagPath& path,
+		const MShaderManager* shaderManager
+	) { 
+		/* separate item to display tangent points on edges - 
+		this could probably be a UIDrawable instead*/
+	}
+
+	MRenderItem* _makeEdgeDataRenderItem(
+		const MDagPath& path,
+		const MShaderManager* shaderManager
+	); /* sketch, probably the most sane way to display upvectors along edge as a separate item,
+	only updated if needed etc
+	*/
+	/* should we have a more uniform way of displaying meta value on geometry points, on interpolated coords etc?
+	*/
+
+
+
 	void updateRenderItems(const MDagPath& path, MHWRender::MRenderItemList& renderItems) override {
 		/* largely copied from the geometryOverrideExample2 in the maya devkit
 		*
@@ -290,20 +408,24 @@ public:
 		* all points
 		* each edge
 		* each sub-patch
+		* 
+		* this method syncs the render items that should exist for this override - normally should only be necessary
+		* to set them up at the node's creation
+		* 
 		*/
-		LOG("UPDATE RENDER ITEMS: " + std::string(path.fullPathName().asChar()) + " " + ed::str(renderItems.length()));
+		//LOG("UPDATE RENDER ITEMS: " + std::string(path.fullPathName().asChar()) + " " + ed::str(renderItems.length()));
 		if (!path.isValid()) {
-			l("returning invalid path");
+			//l("returning invalid dag path");
 			return;
 		}
 		MRenderer* renderer = MRenderer::theRenderer();
 		if (!renderer) {
-			l("returning no renderer");
+			//l("returning no renderer");
 			return;
 		}
 		const MShaderManager* shaderManager = renderer->getShaderManager();
 		if (!shaderManager) {
-			l("returning no shader manager");
+			//l("returning no shader manager");
 			return;
 		}
 		MStatus ms(MS::kSuccess);
@@ -314,99 +436,20 @@ public:
 		// Update the wireframe render item used when the object will be selected
 		bool isWireFrameRenderItemEnabled = displayStatus == MHWRender::kLead || displayStatus == MHWRender::kActive;
 
-		MGeometry::DrawMode drawMode = MGeometry::kAll;
-		unsigned int depthPriority = MHWRender::MRenderItem::sSelectionDepthPriority;
-		MColor color = wireframeColor;
-		bool isEnable = true; // isWireFrameRenderItemEnabled
 
 		///////// render item for points
-		MHWRender::MRenderItem* renderItem = nullptr;
 		// Try to find the active wireframe render item.
 		// If the returning index is smaller than 0, that means 
 		// the render item does't exists yet. So, create it.
 		int renderItemIndex = renderItems.indexOf(sStPointRenderItemName);
-		l("point render item index:" + std::to_string(renderItemIndex));
 		if (renderItemIndex < 0)
 		{
-			l("create render item: " + ed::str(renderItemIndex));
-			// Create the new render item with the given name.
-			// We designate this item as a UI "decoration" and will not be
-			// involved in rendering aspects such as casting shadows
-			renderItem = MHWRender::MRenderItem::Create(sStPointRenderItemName,
-				MHWRender::MRenderItem::DecorationItem,
-				MHWRender::MGeometry::kLines
-			);
-			// We want this render item to show up when in all mode ( Wireframe, Shaded, Textured and BoundingBox)
-			//renderItem->setDrawMode(MGeometry::kWireframe);
-			renderItem->setDrawMode(MGeometry::kAll);
-			// Set selection priority: on top of everything
-			renderItem->depthPriority(depthPriority);
-			// Get an instance of a 3dSolidShader from the shader manager.
-			//MShaderInstance* shader = shaderManager->getStockShader(MShaderManager::k3dSolidShader);
-			MShaderInstance* shader = shaderManager->getStockShader(MShaderManager::k3dCPVSolidShader);
-			//MShaderInstance* shader = shaderManager->getStockShader(MShaderManager::k3dFloat3NumericShader);
-			if (shader != nullptr)
-			{
-				l("found shader");
-				renderItem->setShader(shader);
-
-				/* get some info from the CPV shader:
-				*    |found shader
-			   |param: C_4F, COLOR0 t:'Float4', 
-			   |param: dimmer,  t:'Float', 
-			   |param: selectionHiddenColor,  t:'Float4', 
-			   |param: isSelectionHighlightingON,  t:'Boolean', 
-			   |param: Pm, POSITION t:'Float3', 
-			   |param: WorldViewProj, worldviewprojection t:'Float4x4Row', 
-			   |param: DepthPriority, DepthPriority t:'Float', 
-			   |param: orthographic, isorthographic t:'Boolean', 
-			   |param: depthPriorityThreshold, mayadepthprioritythreshold t:'Float', 
-			   |param: depthPriorityScale, mayadepthprioirtyscale t:'Float', 
-			   |param: Instanced,  t:'Boolean', 
-			   |param: MultiDraw,  t:'Integer',
-
-   color is float4
-				*/
-				//MStringArray paramList;
-				//shader->parameterList(paramList);
-				//for (int pi = 0; pi < paramList.length(); pi++) {
-				//	MString paramName = paramList[pi];
-				//	MString paramSemantic = shader->parameterSemantic(paramName, ms);
-				//	MShaderInstance::ParameterType paramType = shader->parameterType(paramName);
-				//	l("param: " + paramName + ", " + paramSemantic + " t:" + paramTypeName(paramType).c_str());
-				//}
-
-				renderItem->enable(true);
-				// Once assigned, no need to hold on to shader instance
-				shaderManager->releaseShader(shader);
-			}
-			else {
-				l("no shader found");
-			}
-			// The item must be added to the persistent list to be considered
-			// for update / rendering
+			MHWRender::MRenderItem* renderItem = _makePointRenderItem(
+				path, shaderManager
+				);
 			renderItems.append(renderItem);
 		}
-		else
-		{
-			l("retrieving render item");
-			renderItem = renderItems.itemAt(renderItemIndex);
-		}
-		if (renderItem != nullptr)
-		{
-			l("found render item, updating it");
-			MHWRender::MShaderInstance* shader = renderItem->getShader();
-			if (shader)
-			{
-				// Set the shader color parameter
-				//shader->setParameter("solidColor", &color.r);
-			}
-			//renderItem->enable(isEnable); 
-			renderItem->enable(true);
-		}
-		else {
-			l("renderItem is still null");
-		}
+
 	}
 	/* where do we actually build the requirements,
 	need to properly call for vertex / index buffers there*/

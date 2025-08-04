@@ -4,7 +4,7 @@ import pprint
 from wplib import log
 
 
-def grayCode(n=4):
+def grayCode(n=4)->list[str]:
 	""" generates full cycle of a Gray code,
 	of 'bit depth' n
 	currently outputs an array of length 2 ^ n
