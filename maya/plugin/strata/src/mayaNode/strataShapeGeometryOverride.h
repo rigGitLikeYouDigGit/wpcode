@@ -285,6 +285,76 @@ public:
 		}
 	}
 
+	MString shaderParamInfo(MShaderInstance* ins, MString& param) {
+		MStatus s;
+		auto val = "param:" + param + "\n";
+		val += MString("type:") + MString(paramTypeName(ins->parameterType(param)).c_str()) + "\n";
+		val += MString("semantic:") + MString(ins->parameterSemantic(param, s)) + "\n";
+		//val += MString("default:") + MString(ed::str(ins->parameterDefaultValue(param, s)).c_str()) + "\n";
+		val += MString("array:") + MString(ed::str(ins->isArrayParameter(param)).c_str()) + "\n";
+		val += MString("varying:") + MString(ed::str(ins->isVaryingParameter(param)).c_str()) + "\n";
+
+		return val;
+	}
+
+	void shaderInstanceInfo(MShaderInstance* ins, MString name) {
+		/* print all info for all params on shader -
+		use for debugging and info gathering
+		*/
+
+		MStringArray names;
+		ins->parameterList(names);
+		LOG("shader data: " + name);
+		for (unsigned int i = 0; i < names.length(); i++) {
+			//l("param:" + names[i]);
+			l(shaderParamInfo(ins, names[i]));
+		}
+	}
+
+	std::vector<std::pair<MShaderManager::MStockShader, std::string>> stockShaderTies() {
+
+		return {
+			{MShaderManager::k3dSolidShader, "k3dSolidShader"}, //!< An instance of a solid color shader for 3d rendering
+			{MShaderManager::k3dBlinnShader, "k3dBlinnShader" },	//!< An instance of a Blinn shader for 3d rendering
+			{MShaderManager::k3dDefaultMaterialShader, "k3dDefaultMaterialShader"}, //!< An instance of a stock "default material" shader for 3d rendering
+			{MShaderManager::k3dSolidTextureShader,"k3dSolidTextureShader"	},//!< An instance of a stock solid texture shader for 3d rendering
+			{MShaderManager::k3dCPVFatPointShader,"k3dCPVFatPointShader"},	//!< An instance of a stock color per vertex fat point shader for 3d rendering
+			{MShaderManager::k3dColorLookupFatPointShader,"k3dColorLookupFatPointShader"}, //!< An instance of a stock fat point shader using a 1D color texture lookup. Output is (RGB, 1.0f)
+			{MShaderManager::k3dOpacityLookupFatPointShader,"k3dOpacityLookupFatPointShader"}, //!< An instance of a stock fat point shader using a 1D color texture lookup. Output is (InsColor, A) where InsColor is a shader parameter.
+			{MShaderManager::k3dColorOpacityLookupFatPointShader,"k3dColorOpacityLookupFatPointShader"}, //!< An instance of a stock fat point shader using two 1D color textures lookup. Output is (RGB, A)
+			{MShaderManager::k3dShadowerShader,"k3dShadowerShader"}, //!< An instance of a stock shader which can be used when rendering shadow maps
+			{MShaderManager::k3dFatPointShader, "k3dFatPointShader"},//!< An instance of a stock fat point shader for 3d rendering
+			{MShaderManager::k3dThickLineShader, "k3dThickLineShader"},//!< An instance of a stock thick line shader for 3d rendering
+			{MShaderManager::k3dCPVThickLineShader,"k3dCPVThickLineShader"}, //!< An instance of a color per vertex stock thick line shader for 3d rendering
+			{MShaderManager::k3dDashLineShader,"k3dDashLineShader"}, 	//!< An instance of a stock dash line shader for 3d rendering
+			{MShaderManager::k3dCPVDashLineShader,"k3dCPVDashLineShader"}, //!< An instance of a color per vertex stock dash line shader for 3d rendering
+			{MShaderManager::k3dStippleShader,"k3dStippleShader"}, //!< An instance of a stipple shader for drawing 3d filled triangles
+			{MShaderManager::k3dThickDashLineShader,"k3dThickDashLineShader"},	//!< An instance of a stock thick dash line shader for 3d rendering.
+			{MShaderManager::k3dCPVThickDashLineShader,"k3dCPVThickDashLineShader"}, //!< An instance of a color per vertex stock thick dash line shader for 3d rendering.
+			{MShaderManager::k3dDepthShader,"k3dDepthShader"}, //!< An instance of a stock shader that can be used for 3d rendering of depth
+			{MShaderManager::k3dCPVSolidShader,"k3dCPVSolidShader"}, //!< An instance of a stock solid color per vertex shader for 3d rendering
+			{MShaderManager::k3dIntegerNumericShader,"k3dIntegerNumericShader"}, //!< An instance of a stock shader for drawing single integer values per vertex for 3d rendering.
+			{MShaderManager::k3dFloatNumericShader,"k3dFloatNumericShader"}, //!< An instance of a stock shader for drawing single float values values per vertex for 3d rendering.
+			{MShaderManager::k3dFloat2NumericShader,"k3dFloat2NumericShader"}, //!< An instance of a stock shader for drawing 2 float values per vertex for 3d rendering.
+			{MShaderManager::k3dFloat3NumericShader,"k3dFloat3NumericShader"}, //!< An instance of a stock shader for drawing 3 float values per vertex for 3d rendering.
+			{MShaderManager::k3dPointVectorShader,"k3dPointVectorShader"}, //!< An instance of a stock shader that can be used for 3d rendering of lines based on a point and a vector stream
+			{MShaderManager::k3dPointLightShadowerShader,"k3dPointLightShadowerShader"}, //!< An instance of a stock shader which can be used when rendering point light shadow maps
+			{MShaderManager::k3dStandardSurfaceShader,"k3dStandardSurfaceShader"}, //!< An instance of a standard surface shader for 3d rendering
+			{MShaderManager::k3dIsotropicStandardSurfaceShader,"k3dIsotropicStandardSurfaceShader"} //!< An instance of a standard surface shader for 3d rendering, without anisotropy support and tangent geometry requirement.
+		};
+	}
+
+	void dumpStockShaderInfo(MRenderItem* item, const MShaderManager* mgr) {
+		LOG("DUMP STOCK SHADERS:");
+		for (auto i : stockShaderTies()) {
+			//l("shader: " + i.second);
+			MShaderInstance* ins = mgr->getStockShader(i.first);
+			item->setShader(ins);
+			shaderInstanceInfo(ins, MString(i.second.c_str()));
+			mgr->releaseShader(ins);
+		}
+	}
+
 	MRenderItem* _makePointRenderItem(
 		const MDagPath& path,
 		const MShaderManager* shaderManager
@@ -311,6 +381,11 @@ public:
 		renderItem->setDrawMode(MGeometry::kAll);
 		// Set selection priority: on top of everything
 		renderItem->depthPriority(depthPriority);
+
+		// dump render item data
+		//dumpStockShaderInfo(renderItem,
+		//	shaderManager);
+
 		// Get an instance of a 3dSolidShader from the shader manager.
 		MShaderInstance* shader = shaderManager->getStockShader(MShaderManager::k3dCPVSolidShader);
 		if (shader != nullptr)
@@ -365,7 +440,7 @@ huh.
 		MColor color = wireframeColor; // later expose wireframe opacity / colour per shape node
 		bool isEnable = true; // isWireFrameRenderItemEnabled
 
-		renderItem->setDrawMode(MGeometry::kAll);
+		renderItem->setDrawMode(MGeometry::kAll); // later only in wireframe
 		// Set selection priority: on top of everything
 		renderItem->depthPriority(MHWRender::MRenderItem::sSelectionDepthPriority);
 		// Get an instance of a 3dSolidShader from the shader manager.
@@ -387,7 +462,7 @@ huh.
 		const MShaderManager* shaderManager
 	) { 
 		/* separate item to display tangent points on edges - 
-		this could probably be a UIDrawable instead*/
+		or pointVector */
 	}
 
 	MRenderItem* _makeEdgeDataRenderItem(
@@ -397,6 +472,9 @@ huh.
 	only updated if needed etc
 	*/
 	/* should we have a more uniform way of displaying meta value on geometry points, on interpolated coords etc?
+	* 
+	* render item for each entry of array attribute, options to change display mode?
+	* possible inputs for float or vector, array attribute or array value etc
 	*/
 
 
@@ -447,6 +525,15 @@ huh.
 			MHWRender::MRenderItem* renderItem = _makePointRenderItem(
 				path, shaderManager
 				);
+			renderItems.append(renderItem);
+		}
+		
+		// edge render item
+		renderItemIndex = renderItems.indexOf(sStEdgeRenderItemName);
+		if (renderItemIndex < 0) {
+			MHWRender::MRenderItem* renderItem = _makeEdgeRenderItem(
+				path, shaderManager
+			);
 			renderItems.append(renderItem);
 		}
 
