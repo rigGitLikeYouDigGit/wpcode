@@ -490,6 +490,11 @@ huh.
 		* this method syncs the render items that should exist for this override - normally should only be necessary
 		* to set them up at the node's creation
 		* 
+		* I THINK that without explicitly calling addVertexRequirement() on any render items, it just takes the union
+		* of all semantics of the shaders of each renderItem.
+		* Then if 2 use a Position buffer but only 1 uses a Normal buffer, it's on you to manage the indices
+		* in this method, since all the values will be combined.
+		* 
 		*/
 		//LOG("UPDATE RENDER ITEMS: " + std::string(path.fullPathName().asChar()) + " " + ed::str(renderItems.length()));
 		if (!path.isValid()) {
@@ -575,6 +580,7 @@ huh.
 		//return;
 		Status s;
 		MS ms(MS::kSuccess);
+
 		const MVertexBufferDescriptorList& vertexBufferDescriptorList = requirements.vertexRequirements();
 		for (int i = 0; i < vertexBufferDescriptorList.length(); i++)
 		{
@@ -585,6 +591,7 @@ huh.
 				continue;
 			}
 			l(desc.semanticName().asChar());
+			//l(desc.dataType());
 
 			l("VertexBufferDescriptor in list: " + desc.name()); // name seems empty here
 
@@ -601,29 +608,36 @@ huh.
 					l("could not create positionBuffer for vertex data");
 					return;
 				}
-				ed::Float3Array positions = manifold.getWireframePointGnomonVertexPositionArray(s);
-				if (!positions.size()) {
+
+				// indices in array to start at
+
+				int pointStart = 0;
+				int edgeStart = pointStart + manifold.getWireframePointGnomonVertexPositionLength();
+				// total positions:
+				int nPositions = edgeStart + 
+					manifold.getWireframeEdgeVertexPositionLength(); // then later visualisations, faces, tessellation, etc
+				if (!nPositions) {
 					l("returning empty manifold");
 					return;
 				}
-				if (s) {
-					l("ERROR getting position vertex buffer for manifold points");
+				//void* buffer = positionBuffer->acquire(static_cast<unsigned int>(nPositions), true /*writeOnly */);
+				ed::Float3* buffer = static_cast<ed::Float3*>(positionBuffer->acquire(static_cast<unsigned int>(nPositions), true /*writeOnly */));
+				// here we just trust the process that this will give us a buffer of Float3 * nPositions
+				// normally returns a void pointer
+				if (!buffer)
+				{
+					l(" could not acquire position buffer");
 					return;
 				}
-				l("position array:" + ed::str(positions.size()) + " : ");
 
-				void* buffer = positionBuffer->acquire(static_cast<unsigned int>(positions.size()), true /*writeOnly */);
-				if (buffer)
-				{
-					const std::size_t bufferSizeInByte = sizeof(ed::Float3Array::value_type) * positions.size();
-					memcpy(buffer, positions.data(), bufferSizeInByte);
-					// Transfer from CPU to GPU memory.
-					positionBuffer->commit(buffer);
-					l("committed position buffer");
-				}
-				else {
-					l("could not acquire point position buffer");
-				}
+				// PARALLEL
+				s = manifold.getWireframePointGnomonVertexPositionArray(s, buffer, 0);
+				s = manifold.getWireframeEdgeVertexPositionArray(s, buffer, edgeStart);
+
+				// Transfer from CPU to GPU memory.
+				positionBuffer->commit(buffer);
+				//l("committed position buffer");
+
 				break;
 
 
@@ -766,23 +780,11 @@ huh.
 		}
 
 
-		// what are we actually meant to do here?
-		const MIndexBufferDescriptorList& indexBufferDescriptorList = requirements.indexingRequirements();
-		l("get indexBufferDescriptors : " + ed::str(indexBufferDescriptorList.length()));
-		for (int i = 0; i < indexBufferDescriptorList.length(); i++) {
-
-			MIndexBufferDescriptor desc{};
-			if (!indexBufferDescriptorList.getDescriptor(i, desc)) {
-				l("descriptor: " + ed::str(i) + " not found, skipping");
-
-				continue;
-			}
-
-			l("IndexBufferDescriptor in list: " + desc.name());
-
-		}
-
 		//   Update indexing data for all appropriate render items
+		/* TODO: check if indexing needs updating
+		* we allocate separate index buffers here for separate render items -
+		* no idea if that's required
+		*/
 		const int numItems = renderItems.length();
 		l("update indexing all render items: " + ed::str(numItems));
 		for (int i = 0; i < numItems; i++)
@@ -811,7 +813,7 @@ huh.
 					continue;
 				}
 				l("got point indices: ");
-				DEBUGVI(indices);
+				//DEBUGVI(indices);
 				if (!indices.size()) {
 					l("got zero-length point indices, skipping");
 					continue;
@@ -819,6 +821,41 @@ huh.
 				void* buffer = indexBuffer->acquire(static_cast<unsigned int>(indices.size()), true /*writeOnly*/);
 				if (!buffer) {
 					l("could not acquire index buffer for points");
+					continue;
+				}
+
+				const std::size_t bufferSizeInByte =
+					sizeof(ed::IndexList::value_type) * indices.size();
+				l("before mcpy");
+				memcpy(buffer, indices.data(), bufferSizeInByte);
+				l("before commit");
+				// Transfer from CPU to GPU memory.
+				indexBuffer->commit(buffer);
+				l("before associate");
+				// Associate index buffer with render item
+				item->associateWithIndexBuffer(indexBuffer);
+				l("render item done");
+			}
+			if (item->name() == sStEdgeRenderItemName) {
+				l("edge renderItem");
+				// make index buffer to render point gnomons
+				MHWRender::MIndexBuffer* indexBuffer = data.createIndexBuffer(MHWRender::MGeometry::kUnsignedInt32);
+				if (indexBuffer == nullptr) {
+					l("invalid semantic used to create index buffer, aborting");
+					continue;
+				}
+				ed::IndexList indices = manifold.getWireframeEdgeVertexIndexList(s);
+				if (s) {
+					l("ERROR getting wireframe point index array, aborting");
+					continue;
+				}
+				if (!indices.size()) {
+					l("got zero-length edge indices, skipping");
+					continue;
+				}
+				void* buffer = indexBuffer->acquire(static_cast<unsigned int>(indices.size()), true /*writeOnly*/);
+				if (!buffer) {
+					l("could not acquire index buffer for edge");
 					continue;
 				}
 

@@ -123,6 +123,9 @@ namespace bez
 
     // A Bezier path is a set of Bezier splines which are connected.
     // (The last control point of a spline, is the first control pont of the next spline.)
+
+    /* TODO: remove pointers, fine for path to own all its splines densely
+    */
     struct CubicBezierPath : public ed::StaticClonable<CubicBezierPath>
     {
     public:
@@ -135,9 +138,12 @@ namespace bez
         //    copyOther(other); return *this;
         //}
 
-        std::vector<std::unique_ptr<CubicBezierSpline> > splines_;
-        std::unique_ptr<Eigen::ArrayXf> uToLengthMap_ = nullptr;
-        std::unique_ptr<ClosestPointSolver> solver_ = nullptr;
+        //std::vector<std::unique_ptr<CubicBezierSpline> > splines_;
+        //std::unique_ptr<Eigen::ArrayXf> uToLengthMap_ = nullptr;
+        //std::unique_ptr<ClosestPointSolver> solver_ = nullptr;
+        std::vector<CubicBezierSpline > splines_;
+        Eigen::ArrayXf uToLengthMap_;// = nullptr;
+        ClosestPointSolver solver_;// = nullptr;
 
         //using thisT::thisT;
         DECLARE_DEFINE_CLONABLE_METHODS(thisT)
@@ -211,7 +217,7 @@ namespace bez
 
         Eigen::Vector3f eval(float t) const {
             auto idT = global_to_local_param(t);
-            return toEig(splines_[idT.first].get()->EvaluateAt(t));
+            return toEig(splines_[idT.first].get()->EvaluateAt(idT.second));
         }
 
         void _buildULengthMap(int nSamples) {

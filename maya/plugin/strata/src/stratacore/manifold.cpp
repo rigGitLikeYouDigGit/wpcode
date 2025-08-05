@@ -31,9 +31,7 @@ Float3Array ed::StrataManifold::getWireframePointGnomonVertexPositionArray(Statu
 	for (auto& p : pointIndexGlobalIndexMap) {
 		name = getEl(p.second)->name;
 		Affine3f mat = pDataMap.at(name).finalMatrix;
-		//COUT << mat.matrix() << std::endl;
 		result[i * 4] = mat.translation();
-		//result[i * 4 + 1] = pDataMap.at(name).finalMatrix * Eigen::Vector3f{ 1, 0, 0 };
 		result[i * 4 + 1] = mat * Vector3f{ 1, 0, 0 };
 		result[i * 4 + 2] = mat * Eigen::Vector3f{ 0, 1, 0 };
 		result[i * 4 + 3] = mat * Eigen::Vector3f{ 0, 0, 1 };
@@ -41,6 +39,19 @@ Float3Array ed::StrataManifold::getWireframePointGnomonVertexPositionArray(Statu
 	}
 	return result;
 }
+Status& ed::StrataManifold::getWireframePointGnomonVertexPositionArray(Status& s, Float3* outArr, int startIndex) {
+	int i = 0;
+	for (auto& p : pDataMap) {
+		Affine3f mat = p.second.finalMatrix;
+		outArr[i * 4 + startIndex] = mat.translation();
+		outArr[i * 4 + 1 + startIndex] = mat * Vector3f{ 1, 0, 0 };
+		outArr[i * 4 + 2 + startIndex] = mat * Eigen::Vector3f{ 0, 1, 0 };
+		outArr[i * 4 + 3 + startIndex] = mat * Eigen::Vector3f{ 0, 0, 1 };
+		i += 1;
+	}
+	return s;
+}
+
 IndexList ed::StrataManifold::getWireframePointIndexArray(Status& s) {
 	/* return index array for point gnomons
 	* intended to emit as separate lines, so half is duplication
@@ -61,6 +72,8 @@ IndexList ed::StrataManifold::getWireframePointIndexArray(Status& s) {
 }
 
 Status& ed::StrataManifold::getWireframeSingleEdgeGnomonVertexPositionArray(Status& s, Float3Array& outArr, SElement* el, int arrStartIndex) {
+	/* TODO: cache this ffs, shouldn't sample every subcurve while drawing
+	*/
 	SEdgeData& d = eDataMap[el->name];
 	int n;
 	float u;
@@ -178,6 +191,45 @@ Float3Array ed::StrataManifold::getWireframeEdgeVertexPositionArray(Status& s) {
 	}
 	return result;
 }
+
+Status& ed::StrataManifold::getWireframeEdgeVertexPositionArray(Status& s, Float3* outArr, int startIndex) {
+	std::vector<int> indexStartMap(eDataMap.size() + 1);
+	indexStartMap[0] = 0;
+	int edgeStartIndex = 0;
+	int i = 0;
+	for (auto& p : eDataMap) {
+		SEdgeData& edata = p.second;
+		edata._bufferStartIndex = edgeStartIndex;
+		indexStartMap[i] = edgeStartIndex;
+		edgeStartIndex += edata.densePointCount();
+		/*indexStartMap[i] = edgeStartIndex;*/
+		i += 1;
+	}
+	//Float3Array result(totalIndexEntries);
+
+	// TODO: parallel this
+	//for (int i = 0; i < static_cast<int>(eDataMap.size()); i++) {
+	//i = 0;
+	for (auto& p : eDataMap){
+		/* get all positions for single edge*/
+		const SEdgeData& eData = p.second;
+		SElement* el = getEl(eData.index);
+
+		const int thisEdgeStartIndex = indexStartMap[el->elIndex];
+		for (int pt = 0; pt < eData.densePointCount(); pt++) { // could also parallel this by curve segment
+			float u = (1.0f / (eData.densePointCount() - 1)) * pt;
+			const Vector3f uvn{ u, 0.0, 0.0 };
+			Vector3f posVec; // converting between eigen and normal float3 is sad
+			s = edgePosAt(s, posVec, eData, uvn);
+			/* TODO: should we cache the final sampled points? seems like it might be
+			worth it, computing this much just to draw probably isn't great */
+			outArr[startIndex + thisEdgeStartIndex + pt] = posVec;
+		}
+		//i += 1;
+	}
+	return s;
+}
+
 
 IndexList ed::StrataManifold::getWireframeEdgeVertexIndexList(Status& s) {
 	/* assume we emit each edge as a continuous line

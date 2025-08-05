@@ -279,10 +279,11 @@ namespace ed {
 	if when a parent changes, we re-evaluate the UVNs of each SEdgeParentData.
 
 	*/
-	struct SEdgeParentData : StaticClonable<SEdgeParentData> {
+	struct SEdgeParentData// : StaticClonable<SEdgeParentData> 
+	{
 		using thisT = SEdgeParentData;
 		using T = SEdgeParentData;
-		DECLARE_DEFINE_CLONABLE_METHODS(thisT)
+		//DECLARE_DEFINE_CLONABLE_METHODS(thisT)
 
 		int index = -1; // feels cringe to copy the index on all of these  
 		// TEEECHNICALLLY this should be independent of any driver - 
@@ -306,7 +307,8 @@ namespace ed {
 	};
 
 
-	struct SEdgeData : SElData, StaticClonable<SEdgeData> {
+	struct SEdgeData : SElData//, StaticClonable<SEdgeData> 
+	{
 		/* need dense final result to pick up large changes in
 		parent space
 		*/
@@ -340,14 +342,17 @@ namespace ed {
 		
 		int _bufferStartIndex = -1;
 
-		DECLARE_DEFINE_CLONABLE_METHODS(thisT)
+		//DECLARE_DEFINE_CLONABLE_METHODS(thisT)
 
 
 		/*inline bez::ClosestPointSolver* closestSolver() {
 			return finalCurve.getSolver();
 		}*/
 
-		inline bool isClosed() {
+		inline bool isClosed() const {
+			if (!driverDatas.size()) {
+				return false;
+			}
 			return driverDatas[0].finalMatrix.translation().isApprox(
 				driverDatas.back().finalMatrix.translation());
 		}
@@ -362,6 +367,9 @@ namespace ed {
 			curve has point at each driver, and (segmentPointCount) points
 			in each span between them*/
 			//return static_cast<int>(driverDatas.size() + denseCount * (driverDatas.size() - 1));
+			if (isClosed()) {
+				return static_cast<int>(denseCount * (driverDatas.size()));
+			}
 			return static_cast<int>(denseCount * (driverDatas.size() - 1));
 		}
 
@@ -370,6 +378,9 @@ namespace ed {
 			curve has point at each driver, and (segmentPointCount) points
 			in each span between them*/
 			//return static_cast<int>(driverDatas.size() + denseCount * (driverDatas.size() - 1));
+			if (isClosed()) {
+				return static_cast<int>(denseCount * (driverDatas.size()));
+			}
 			return static_cast<int>(denseCount * (driverDatas.size() - 1));
 		}
 
@@ -495,18 +506,6 @@ namespace ed {
 		// world matrix transform of this manifold
 		Affine3f worldMat = Affine3f::Identity();
 
-		//std::vector<SPointData> pointDatas;
-		//std::vector<SEdgeData> edgeDatas;
-		//std::vector<SFaceData> faceDatas;
-
-		//StrataManifold& operator=(const StrataManifold& other) noexcept {
-		//	copyOther(other); 
-		//	return *this; 
-		//}
-			//classT& operator=(classT&& other) noexcept {
-			//	\
-			//		takeOther(other); \
-			//		return *this; 
 		inline SElData* elData(int globalElId, SElType elT) {
 			switch (elT) {
 			//case SElType::point: return &pointDatas[pointIndexGlobalIndexMap[globalElId]];
@@ -958,8 +957,10 @@ namespace ed {
 
 			// check if we need full matrix
 			if (EQ(uvn[1], 0.0f) && EQ(uvn[2], 0.0f)) {
-				out = d.parentDatas[0].parentCurve.eval(uvn[0]);
-				return s;
+				if (d.parentDatas.size()) {
+					out = d.parentDatas[0].parentCurve.eval(uvn[0]);
+					return s;
+				}
 			}
 			Eigen::Affine3f curveMat;
 			s = edgeDataMatrixAt(s, curveMat, d, uvn);
@@ -1259,15 +1260,28 @@ namespace ed {
 		//	* each point has 4 coords - point itself, and then 0.1 units in x, y, z of that point
 		//	*/
 
-
+		int getWireframePointGnomonVertexPositionLength() {
+			return static_cast<int>(pDataMap.size()) * 4;
+		}
 		Float3Array getWireframePointGnomonVertexPositionArray(Status& s);
+		Status& getWireframePointGnomonVertexPositionArray(Status& s, Float3* outArr, int startIndex);
 		IndexList getWireframePointIndexArray(Status& s);
 
 		Status& getWireframeSingleEdgeGnomonVertexPositionArray(Status& s, Float3Array& outArr, SElement* el, int arrStartIndex);
 
 		//Status& setWireframeSingleEdgeVertexPositionArray(Status& s, Float3Array& outArr, SElement* el, int arrStartIndex);
 
+		int getWireframeEdgeVertexPositionLength() {
+			int result = 0;
+			for (auto& p : eDataMap) {
+				result += p.second.densePointCount();
+			}
+			return result;
+
+		}
 		Float3Array getWireframeEdgeVertexPositionArray(Status& s);
+		Status& getWireframeEdgeVertexPositionArray(Status& s, Float3* outArr, int startIndex);
+
 
 		IndexList getWireframeEdgeVertexIndexList(Status& s);
 
