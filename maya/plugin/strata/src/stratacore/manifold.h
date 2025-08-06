@@ -417,7 +417,7 @@ namespace ed {
 			lower = driverDatas[spanIndex];
 			upper = driverDatas[spanIndex + 1];
 		}
-
+		Status& buildFinalBuffers(Status& s);
 
 	};
 
@@ -961,6 +961,8 @@ namespace ed {
 					out = d.parentDatas[0].parentCurve.eval(uvn[0]);
 					return s;
 				}
+				out = d.finalCurve.eval(uvn[0]);
+				return s;
 			}
 			Eigen::Affine3f curveMat;
 			s = edgeDataMatrixAt(s, curveMat, d, uvn);
@@ -998,13 +1000,6 @@ namespace ed {
 		static inline Status& edgeDataMatrixAt(Status& s, Eigen::Affine3f& out, const SEdgeData& d, const Eigen::Vector3f& uvn
 		) {/* if we don't cache a final dense curve for edge data,
 			we would have to eval all parents here, then blend between them.
-			but in turn, each of those parents would need their parents eval'd - 
-			
-			so querying a single point at the end of a complex chain WOULD cause the 
-			entire manifold to be queried back to the source.
-			
-			maybe this could be useful, in the future,
-			but for now it is anti-Strata
 
 			we could also output the exact curve position? to save a sample?
 			*/

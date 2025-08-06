@@ -78,6 +78,9 @@ copy( vec.begin(), vec.end(), ostream_iterator<float>(MStreamUtils::stdOutStream
 #define EQ(a, b) \
 	(abs(a - b) < EPS)\
 
+#define EQF(a, b) \
+	(abs(a - b) < EPS_F)\
+
 // to tune of twinkle twinkle little star
 #define PI 3.141592653589
 

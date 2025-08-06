@@ -53,7 +53,7 @@ namespace bez
     }
 #endif // !USE_SIMD_OPTIMIZATION
 
-    constexpr int ArithmeticSum(int n) { return n * (1 + n) / 2; }
+    //constexpr int ArithmeticSum(int n) { return n * (1 + n) / 2; }
 
     //class CubicBezierSpline
     //{
@@ -96,19 +96,23 @@ namespace bez
     }*/
 
     CubicBezierPath::CubicBezierPath(
-        std::vector < std::unique_ptr<CubicBezierSpline>> splines) : 
-            splines_(std::move(splines)) {}
+        //std::vector < std::unique_ptr<CubicBezierSpline>> splines) : 
+        std::vector < CubicBezierSpline> splines) : 
+            //splines_(std::move(splines)) {}
+            splines_(splines) {}
 
     CubicBezierPath::CubicBezierPath(std::vector < CubicBezierPath>& splines) {
+        // merge multiple paths into this one
         for (CubicBezierPath& path : splines) {
-            for (std::unique_ptr<CubicBezierSpline>& ptr : path.splines_) {
-                ptr->cloneUnique();
-                splines_.push_back(ptr->cloneUnique());
+            for (CubicBezierSpline& spline : path.splines_) {
+                //ptr->cloneUnique();
+                //splines_.push_back(ptr->cloneUnique());
+                splines_.push_back(spline);
             }
         }
     }
 
-    CubicBezierPath::~CubicBezierPath() {}
+    //CubicBezierPath::~CubicBezierPath() {}
 
     WorldSpace CubicBezierPath::ClosestPointToPath(
         const WorldSpace& position,
@@ -124,7 +128,8 @@ namespace bez
         float splineN = 0.0f;
         for (const auto& spline : splines_)
         {
-            const float dist_sq = spline->ClosestPointToSpline(position, solver->Get(), spline_position, u);
+            //const float dist_sq = spline->ClosestPointToSpline(position, solver->Get(), spline_position, u);
+            const float dist_sq = spline.ClosestPointToSpline(position, solver->Get(), spline_position, u);
             if (dist_sq < min_dist_sq)
             {
                 min_dist_sq = dist_sq;
@@ -140,8 +145,10 @@ namespace bez
     WorldSpace CubicBezierPath::tangentAt(float t) const {
         auto r = global_to_local_param(t);
         return (1.0f / 0.0001f) * (
-            splines_[r.first].get()->EvaluateAt(std::max(1.0f, r.second + 0.0001f)) -
-            splines_[r.first].get()->EvaluateAt(std::min(0.0f, r.second - 0.0001f)));
+            //splines_[r.first].get()->EvaluateAt(std::max(1.0f, r.second + 0.0001f)) -
+            //splines_[r.first].get()->EvaluateAt(std::min(0.0f, r.second - 0.0001f)));
+            splines_[r.first].EvaluateAt(std::max(1.0f, r.second + 0.0001f)) -
+            splines_[r.first].EvaluateAt(std::min(0.0f, r.second - 0.0001f)));
     }
 
     Eigen::Vector3f CubicBezierPath::tangentAt(float t, Eigen::Vector3f& basePos) const {
@@ -151,10 +158,12 @@ namespace bez
         */
         auto r = global_to_local_param(t);
         if (t > 0.999) { // sample backwards, negate result vector
-            Eigen::Vector3f tanPos = toEig(splines_[r.first].get()->EvaluateAt(t - 0.0001f));
+            //Eigen::Vector3f tanPos = toEig(splines_[r.first].get()->EvaluateAt(t - 0.0001f));
+            Eigen::Vector3f tanPos = toEig(splines_[r.first].EvaluateAt(t - 0.0001f));
             return (1.0f / 0.0001f) * (basePos - tanPos);
         }
-        Eigen::Vector3f tanPos = toEig(splines_[r.first].get()->EvaluateAt(t + 0.0001f));
+        //Eigen::Vector3f tanPos = toEig(splines_[r.first].get()->EvaluateAt(t + 0.0001f));
+        Eigen::Vector3f tanPos = toEig(splines_[r.first].EvaluateAt(t + 0.0001f));
         return (1.0f / 0.0001f) * tanPos - basePos;
 
     }
@@ -198,69 +207,18 @@ namespace bez
 
 
 
-    class QuinticSolver
-    {
-    public:
-        QuinticSolver(float tolerance);
-        int Solve(
-            const Polynomial5& polynomial,
-            std::array<float, 5>& out_roots,
-            const float interval_min,
-            const float interval_max) const;
-    private:
-        struct SturmInterval
-        {
-            SturmInterval()
-            {}
-
-            SturmInterval(float _min, float _max, int _sign_min, int _sign_max, int _id, int _roots)
-                : min(_min), max(_max), sign_min(_sign_min), sign_max(_sign_max), id(_id), expected_roots(_roots)
-            {}
-
-            float min = 0.0f;
-            float max = 1.0f;
-            int sign_min = 0; // Sign changes for the minimum bound.
-            int sign_max = 1; // Sign changes for the max bound.
-            int id = 0; // Id shared between this interval and its sibling.
-            int expected_roots = 2; // Total roots expected in this interval and its sibling.
-        };
-
-        struct Interval
-        {
-            float min;
-            float max;
-
-            Interval& operator=(const SturmInterval& sturm_interval)
-            {
-                min = sturm_interval.min;
-                max = sturm_interval.max;
-                return *this;
-            }
-        };
-
-        typedef std::array<float, ArithmeticSum(5 + 1)> SturmSequence5;
-
-        float tolerance_;
-        uint32 max_divisions_;
-
-        // Memory for the stack of intervals being searched. The goal of this is to avoid any memory allocations
-        // during the solver. If the tolerance is low, this could just be put on the stack instead.
-        mutable std::vector<SturmInterval> interval_storage_;
-
-        void BuildSturmSequence(const Polynomial5& polynomial, SturmSequence5& out_sturm_polynomials) const;
-        int CountSturmSignChanges(const SturmSequence5& sturm_polynomials, const float t) const;
-        float SolveBisection(const Polynomial5& polynomial, const float interval_min, const float interval_max) const;
-    };
 
     ClosestPointSolver::ClosestPointSolver() :
-        solver_(new QuinticSolver(kTolerance))
+        //solver_(new QuinticSolver(kTolerance))
+        solver_(kTolerance)
     {}
 
     ClosestPointSolver::~ClosestPointSolver() {}
 
     const QuinticSolver* ClosestPointSolver::Get() const
     {
-        return solver_.get();
+        //return solver_.get();
+        return &solver_;
     }
 
     QuinticSolver::QuinticSolver(float tolerance)

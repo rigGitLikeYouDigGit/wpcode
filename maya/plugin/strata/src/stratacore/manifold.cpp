@@ -20,6 +20,18 @@ std::string ed::SPointData::strInfo() {
 	result += " mat: " + str(finalMatrix) + ">";
 	return result;
 }
+
+Status& ed::SEdgeData::buildFinalBuffers(Status& s) {
+	/*
+	assumes we have a final curve built in worldspace - 
+	sample upvectors to normals by dense params
+	*/
+
+	return s;
+
+}
+
+
 Float3Array ed::StrataManifold::getWireframePointGnomonVertexPositionArray(Status& s) {
 	/* return flat float3 array for gnomon positions only on points
 	* each point has 4 coords - point itself, and then 0.1 units in x, y, z of that point
@@ -403,6 +415,8 @@ Status& ed::StrataManifold::buildEdgeData(Status& s, SEdgeData& eData) {
 	// Bezier control points for each span
 
 	s = buildEdgeDrivers(s, eData);
+
+	s = eData.buildFinalBuffers(s);
 
 	return s;
 }

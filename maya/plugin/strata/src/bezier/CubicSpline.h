@@ -18,7 +18,66 @@ namespace bez
     //using StaticClonable = ed::StaticClonable;
 
     class CubicBezierSpline;
-    class QuinticSolver;
+    struct Polynomial5;
+
+    constexpr int ArithmeticSum(int n) { return n * (1 + n) / 2; }
+
+
+    class QuinticSolver
+    {
+    public:
+        QuinticSolver(float tolerance);
+        int Solve(
+            const Polynomial5& polynomial,
+            std::array<float, 5>& out_roots,
+            const float interval_min,
+            const float interval_max) const;
+    private:
+        struct SturmInterval
+        {
+            SturmInterval()
+            {
+            }
+
+            SturmInterval(float _min, float _max, int _sign_min, int _sign_max, int _id, int _roots)
+                : min(_min), max(_max), sign_min(_sign_min), sign_max(_sign_max), id(_id), expected_roots(_roots)
+            {
+            }
+
+            float min = 0.0f;
+            float max = 1.0f;
+            int sign_min = 0; // Sign changes for the minimum bound.
+            int sign_max = 1; // Sign changes for the max bound.
+            int id = 0; // Id shared between this interval and its sibling.
+            int expected_roots = 2; // Total roots expected in this interval and its sibling.
+        };
+
+        struct Interval
+        {
+            float min;
+            float max;
+
+            Interval& operator=(const SturmInterval& sturm_interval)
+            {
+                min = sturm_interval.min;
+                max = sturm_interval.max;
+                return *this;
+            }
+        };
+
+        typedef std::array<float, ArithmeticSum(5 + 1)> SturmSequence5;
+
+        float tolerance_;
+        uint32 max_divisions_;
+
+        // Memory for the stack of intervals being searched. The goal of this is to avoid any memory allocations
+        // during the solver. If the tolerance is low, this could just be put on the stack instead.
+        mutable std::vector<SturmInterval> interval_storage_;
+
+        void BuildSturmSequence(const Polynomial5& polynomial, SturmSequence5& out_sturm_polynomials) const;
+        int CountSturmSignChanges(const SturmSequence5& sturm_polynomials, const float t) const;
+        float SolveBisection(const Polynomial5& polynomial, const float interval_min, const float interval_max) const;
+    };
 
     class ClosestPointSolver
     {
@@ -28,7 +87,8 @@ namespace bez
 
         const QuinticSolver* Get() const;
     private:
-        std::unique_ptr<QuinticSolver> solver_;
+        //std::unique_ptr<QuinticSolver> solver_;
+        QuinticSolver solver_;
     };
 
     
@@ -126,7 +186,7 @@ namespace bez
 
     /* TODO: remove pointers, fine for path to own all its splines densely
     */
-    struct CubicBezierPath : public ed::StaticClonable<CubicBezierPath>
+    struct CubicBezierPath //: public ed::StaticClonable<CubicBezierPath>
     {
     public:
         using thisT = CubicBezierPath;
@@ -146,14 +206,18 @@ namespace bez
         ClosestPointSolver solver_;// = nullptr;
 
         //using thisT::thisT;
-        DECLARE_DEFINE_CLONABLE_METHODS(thisT)
+        //DECLARE_DEFINE_CLONABLE_METHODS(thisT)
 
         //CubicBezierPath(const WorldSpace* control_points, const int num_points) {
+        
+        thisT() {}
+
         thisT(const WorldSpace* control_points, const int num_points) {
             int num_splines = num_points / 3;
             for (int i = 0; i < num_splines; ++i)
             {
-                splines_.emplace_back(new CubicBezierSpline(&control_points[i * 3]));
+                //splines_.emplace_back(new CubicBezierSpline(&control_points[i * 3]));
+                splines_.emplace_back(CubicBezierSpline(&(control_points[i * 3])));
             }
         }
         CubicBezierPath(
@@ -175,7 +239,8 @@ namespace bez
 
             for (int i = 0; i < num_splines; ++i)
             {
-                splines_.emplace_back(new CubicBezierSpline(
+                //splines_.emplace_back(new CubicBezierSpline(
+                splines_.emplace_back(CubicBezierSpline(
                     control_points.row(i * 3).matrix(),
                     control_points.row((i * 3 + 1) % num_points).matrix(),
                     control_points.row((i * 3 + 2) % num_points).matrix(),
@@ -194,7 +259,7 @@ namespace bez
         Eigen::Vector3f ClosestPointToPath(const Eigen::Vector3f& position, const ClosestPointSolver* solver) const;
         //float ClosestU(const Eigen::Vector3f& position, const ClosestPointSolver* solver) const;
 
-        ~CubicBezierPath();
+        //~CubicBezierPath();
 
         
 
@@ -217,34 +282,42 @@ namespace bez
 
         Eigen::Vector3f eval(float t) const {
             auto idT = global_to_local_param(t);
-            return toEig(splines_[idT.first].get()->EvaluateAt(idT.second));
+            //return toEig(splines_[idT.first].get()->EvaluateAt(idT.second));
+            return toEig(splines_[idT.first].EvaluateAt(idT.second)); 
         }
 
         void _buildULengthMap(int nSamples) {
             /* invalidates any previously stored cache, builds 
             length map for all contained splines*/
-            std::unique_ptr<Eigen::ArrayXf> result = std::make_unique<Eigen::ArrayXf>();
-            Eigen::ArrayXf& resultRef = *result;
-            result->resize(nSamples * splines_.size());
+            //std::unique_ptr<Eigen::ArrayXf> result = std::make_unique<Eigen::ArrayXf>();
+            Eigen::ArrayXf result;// = std::make_unique<Eigen::ArrayXf>();
+            //Eigen::ArrayXf& resultRef = *result;
+            Eigen::ArrayXf& resultRef = result;
+            //result->resize(nSamples * splines_.size());
+            result.resize(nSamples * splines_.size());
 
             float prevMax = 0;
             for (int i = 0; i < static_cast<int>(splines_.size()); i++) {
-                auto splineMap = splines_[i].get()->uToLengthMap(nSamples);
+                //auto splineMap = splines_[i].get()->uToLengthMap(nSamples);
+                auto splineMap = splines_[i].uToLengthMap(nSamples);
                 for (int n = 0; n < nSamples; n++) {
                     resultRef(i * nSamples + n) = splineMap(n) + prevMax;
                 }
                 prevMax += splineMap[nSamples - 1];
             }
-            uToLengthMap_.reset(std::move(result.get()));
+            //uToLengthMap_.reset(std::move(result.get()));
+            uToLengthMap_ = result;
         }
 
         int N_SAMPLES = 50;
 
         Eigen::ArrayXf& getUToLengthMap(int nSamples) {
-            if (uToLengthMap_.get() == nullptr) {
+            if (uToLengthMap_.rows() == 0) {
+            //if (uToLengthMap_.get() == nullptr) {
                 _buildULengthMap(nSamples);
             }
-            return *(uToLengthMap_.get());
+            //return *(uToLengthMap_.get());
+            return uToLengthMap_;
         }
 
         float length() {
@@ -252,15 +325,17 @@ namespace bez
         }
 
         inline ClosestPointSolver* getSolver() {
-            if (solver_ == nullptr) {
-                solver_ = std::make_unique<ClosestPointSolver>();
-            }
-            return solver_.get();
+            return &solver_;
+            //if (solver_ == nullptr) {
+            //    solver_ = std::make_unique<ClosestPointSolver>();
+            //}
+            //return solver_.get();
         }
 
         void transform(Eigen::Affine3f& mat) {
             for (auto& i : splines_) {
-                i.get()->transform(mat);
+                //i.get()->transform(mat);
+                i.transform(mat);
             }
         }
 
