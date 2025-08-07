@@ -53,6 +53,9 @@ namespace ed {
             //_logDepth = std::max(_logDepth, 0);
             //DEBUGS("log init before print:" + std::to_string(_logDepth));
             if (_logDepth) {
+                if (hush) {
+                    return;
+                }
                 COUT << '\n';
             }
             

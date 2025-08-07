@@ -88,6 +88,7 @@
     <ClCompile Include="src\logger.cpp" />
     <ClCompile Include="src\mayaNode\frameCurve.cpp" />
     <ClCompile Include="src\eigtest.cpp" />
+    <ClCompile Include="src\api.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\MInclude.h">

@@ -182,15 +182,13 @@ def reloadPluginTest():
 
 	elOp.stElement_[1].stName_ = "pElbow"
 	elOp.stElement_[1].stPointWorldMatrixIn_ = ptB.worldMatrix_[0]
+	ptB.translateY_ = 2
 
-	##### TEMP CRV
-	elOp.stElement_[2].stName_ = "eArmCrv"
-	elOp.stElement_[2].stDriverExp_ = "pShoulder, pElbow"
+	# ##### TEMP CRV
+	# elOp.stElement_[2].stName_ = "eArmCrv"
+	# elOp.stElement_[2].stDriverExp_ = "pShoulder, pElbow"
 
-	# connect up element to shape
-	shape : WN.StrataShape = WN.StrataShape.create("newShape")
-	shape.stInput_[0] = elOp.stOutput_
-	return
+
 	# set parents
 	#elOp.stElement_[1].stSpaceExp = "pShoulder"
 
@@ -198,6 +196,14 @@ def reloadPluginTest():
 	elOp.stElement_[2].stPointWorldMatrixIn_ = ptC.worldMatrix_[0]
 	#elOp.stElement_[2].stSpaceExp_ = "pElbow"
 
+	##### TEMP CRV
+	elOp.stElement_[3].stName_ = "eArmCrv"
+	elOp.stElement_[3].stDriverExp_ = "pShoulder, pElbow, pWrist"
+
+	# connect up element to shape
+	shape : WN.StrataShape = WN.StrataShape.create("newShape")
+	shape.stInput_[0] = elOp.stOutput_
+	return
 
 	# connect elbow driver to test space driving, and FK
 	driverLoc = WN.Locator.create("elbowDriver_LOC")

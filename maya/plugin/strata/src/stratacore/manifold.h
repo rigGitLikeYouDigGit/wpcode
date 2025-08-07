@@ -506,6 +506,10 @@ namespace ed {
 		// world matrix transform of this manifold
 		Affine3f worldMat = Affine3f::Identity();
 
+		// cached indices for drawing buffers
+		int _nEdgeVertexBufferEntries = -1;
+		int _edgeVertexBufferEntryStart = -1;
+
 		inline SElData* elData(int globalElId, SElType elT) {
 			switch (elT) {
 			//case SElType::point: return &pointDatas[pointIndexGlobalIndexMap[globalElId]];

@@ -432,7 +432,8 @@ huh.
 		LOG("create edge render item")
 		MRenderItem* renderItem = MHWRender::MRenderItem::Create(sStEdgeRenderItemName,
 			MHWRender::MRenderItem::DecorationItem,
-			MHWRender::MGeometry::kLines
+			MHWRender::MGeometry::kLineStrip //lines gives individual straight lines
+	
 		);
 		auto wireframeColor = MHWRender::MGeometryUtilities::wireframeColor(path);
 		auto displayStatus = MHWRender::MGeometryUtilities::displayStatus(path);
@@ -516,6 +517,10 @@ huh.
 		// Get the inherited DAG display properties.
 		auto wireframeColor = MHWRender::MGeometryUtilities::wireframeColor(path);
 		auto displayStatus = MHWRender::MGeometryUtilities::displayStatus(path);
+
+		float wireCol[4] = {0, 0, 0, 1};
+
+		ed::defaultWireColourForDisplay(displayStatus, wireCol);
 		// Update the wireframe render item used when the object will be selected
 		bool isWireFrameRenderItemEnabled = displayStatus == MHWRender::kLead || displayStatus == MHWRender::kActive;
 
@@ -532,7 +537,12 @@ huh.
 				);
 			renderItems.append(renderItem);
 		}
+		//renderItemIndex = renderItems.indexOf(sStPointRenderItemName);
 		
+		/* TODO:
+		only render edges if they're fully contained in faces, unless we're viewing
+		in wireframe
+		*/
 		// edge render item
 		renderItemIndex = renderItems.indexOf(sStEdgeRenderItemName);
 		if (renderItemIndex < 0) {
@@ -541,6 +551,11 @@ huh.
 			);
 			renderItems.append(renderItem);
 		}
+		renderItemIndex = renderItems.indexOf(sStEdgeRenderItemName);
+		// update wireframe colour
+		MHWRender::MRenderItem* edgeRenderItem = renderItems.itemAt(renderItemIndex);
+		edgeRenderItem->getShader()->setParameter("solidColor", wireCol);
+
 
 	}
 	/* where do we actually build the requirements,
@@ -580,6 +595,8 @@ huh.
 		//return;
 		Status s;
 		MS ms(MS::kSuccess);
+
+		ed::Float3Array debugPositions;
 
 		const MVertexBufferDescriptorList& vertexBufferDescriptorList = requirements.vertexRequirements();
 		for (int i = 0; i < vertexBufferDescriptorList.length(); i++)
@@ -634,6 +651,7 @@ huh.
 				s = manifold.getWireframePointGnomonVertexPositionArray(s, buffer, 0);
 				s = manifold.getWireframeEdgeVertexPositionArray(s, buffer, edgeStart);
 
+				debugPositions = ed::Float3Array(buffer, buffer + nPositions);
 				// Transfer from CPU to GPU memory.
 				positionBuffer->commit(buffer);
 				//l("committed position buffer");
@@ -836,8 +854,9 @@ huh.
 				item->associateWithIndexBuffer(indexBuffer);
 				l("render item done");
 			}
+
 			if (item->name() == sStEdgeRenderItemName) {
-				l("edge renderItem");
+				//l("edge renderItem");
 				// make index buffer to render point gnomons
 				MHWRender::MIndexBuffer* indexBuffer = data.createIndexBuffer(MHWRender::MGeometry::kUnsignedInt32);
 				if (indexBuffer == nullptr) {

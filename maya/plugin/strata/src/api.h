@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <map>
 
 #include "MInclude.h"
 #include "macro.h"
@@ -39,12 +40,65 @@ namespace ed {
 		return newBind;
 	}
 
+	/* I still don't know how to access a user's actual colour preferences, so 
+	for now we just use defaults
+	*/
+	static void defaultWireColourForDisplay(MHWRender::DisplayStatus displayStatus, float* col4Arr) {
+		switch (displayStatus) {
+			case MHWRender::kLead:
+				//static const float theColor[] = { 0.0f, 0.8f, 0.0f, 1.0f };
+				col4Arr[0] = 0.4f;
+				col4Arr[1] = 1.0f;
+				col4Arr[2] = 0.8f;
+				col4Arr[3] = 1.0f;
+				return;
+			case MHWRender::kActive:
+				col4Arr[0] = 1;
+				col4Arr[1] = 1;
+				col4Arr[2] = 1;
+				col4Arr[3] = 1.0f;
+				return;
+			case MHWRender::kHilite:
+			case MHWRender::kActiveComponent:
+				col4Arr[0] = 0.0f;
+				col4Arr[1] = 0.5f;
+				col4Arr[2] = 0.7f;
+				col4Arr[3] = 1.0f;
+				return;
+			case MHWRender::kTemplate:
+				col4Arr[0] = 0.45f;
+				col4Arr[1] = 0.45f;
+				col4Arr[2] = 0.45f;
+				col4Arr[3] = 1.0f;
+				return;
+			case MHWRender::kActiveTemplate:
+				col4Arr[0] = 1.0f;
+				col4Arr[1] = 0.5f;
+				col4Arr[2] = 0.5f;
+				col4Arr[3] = 1.0f;
+				return;
+			case MHWRender::kDormant:
+				col4Arr[0] = 0.0f;
+				col4Arr[1] = 0.01f;
+				col4Arr[2] = 0.3f;
+				col4Arr[3] = 1.0f;
+				return;
+			default:
+				col4Arr[0] = 0.0;
+				col4Arr[1] = 0;
+				col4Arr[2] = 0.0f;
+				col4Arr[3] = 1.0f;
+				return;
+		}
+	};
+
 	const double defaultNeutral[3] = { 0.0, 0.0, 0.0 };
 
 	static MObject makeVectorAttr(
 		MString name,
 		MFnNumericAttribute& nFn,
-		const double defaultVal[3] = defaultNeutral)
+		const double defaultVal[3] = defaultNeutral
+	)
 	{
 		MObject xObj = nFn.create(name + "X", name + "X",
 			MFnNumericData::kDouble, defaultVal[0]);

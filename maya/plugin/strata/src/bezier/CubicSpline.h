@@ -239,14 +239,21 @@ namespace bez
 
             for (int i = 0; i < num_splines; ++i)
             {
-                //splines_.emplace_back(new CubicBezierSpline(
-                splines_.emplace_back(CubicBezierSpline(
+                //CubicBezierSpline spl(
+                //    control_points.row(i * 3).matrix(),
+                //    control_points.row((i * 3 + 1) % num_points).matrix(),
+                //    control_points.row((i * 3 + 2) % num_points).matrix(),
+                //    control_points.row((i * 3 + 3) % num_points).matrix()
+                //);
+                //splines_.emplace_back(spl);
+
+                splines_.emplace_back(
                     control_points.row(i * 3).matrix(),
                     control_points.row((i * 3 + 1) % num_points).matrix(),
                     control_points.row((i * 3 + 2) % num_points).matrix(),
                     control_points.row((i * 3 + 3) % num_points).matrix()
-                )
                 );
+                int b = 2;
             }
 
         }

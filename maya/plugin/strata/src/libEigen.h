@@ -250,6 +250,9 @@ namespace ed {
 		float* inContinuities = nullptr
 	) 
 	{
+		/* build 'clever' auto-tangent scaling setup - 
+		TODO: check if some drivers define a specific tangent or normal plane
+		*/
 		// treat open and closed the same, just discount final span if not closed
 
 		Eigen::MatrixX3<T> result(inPoints.rows() * 3, 3);
@@ -258,33 +261,44 @@ namespace ed {
 
 		// set tangent vectors for each one (scaling done later)
 		// also includes start and end, as if it were closed
-		int nextInI, prevInI;
-		int outI, nextOutI, prevOutI;
+		int nextInI, prevInI; // next and prev driver points
+		int outI, nextOutI, prevOutI; // this out point, and out tangents to next and previous out points
 		for (int i = 0; i < nPoints; i++) {
 			nextInI = (i + 1) % nPoints;
 			prevInI = (i - 1 + nPoints) % nPoints;
+			Vector3<T> thisPos = inPoints.row(i);
+			Vector3<T> nextPos = inPoints.row(nextInI);
+			Vector3<T> prevPos = inPoints.row(prevInI);
 
 			outI = i * 3;
 			nextOutI = (i* 3 + 1) % nOutPoints;
 			prevOutI = (i* 3 - 1 + nOutPoints) % nOutPoints;
 
-			Vector3<T> thisPos = inPoints.row(i);
-			Vector3<T> nextPos = inPoints.row(nextInI);
-			Vector3<T> prevPos = inPoints.row(prevInI);
 
 			// set start point from originals
 			result.row(outI) = thisPos;
+			Vector3<T> tanVec;
+			if (nPoints == 2) {
+				if (nextInI == 0 && !closed) { // this is the last point, need prev tangent pointing straight back at start
+					tanVec = (nextPos - thisPos) * T(0.3);
+					result.row(nextOutI) = thisPos - tanVec;
+					result.row(prevOutI) = thisPos + tanVec;
+					continue;
+				}
+				tanVec = (nextPos - thisPos) * T(0.3);
+				result.row(nextOutI) = thisPos + tanVec;
+				result.row(prevOutI) = thisPos - tanVec;
+				continue;
+			}
 
 			// vector from prev ctl pt to next
-			Vector3<T> tanVec = nextPos - prevPos;
+			tanVec = nextPos - prevPos;
 			//thisDriver.baseTan = tanVec;
 
 			/* if only 2 points, the normal tangent idea breaks down -
 			* we just take the vector between them here
 			*/
-			if (nPoints == 2) {
-				tanVec = nextPos - thisPos / T(3.0);
-			}
+
 
 			Vector3<T> toThisVec = thisPos - prevPos;
 			// vector from this ctl pt to next
@@ -305,6 +319,11 @@ namespace ed {
 
 			result.row(nextOutI) = tanVec.normalized() * nextTanScale;
 			result.row(prevOutI) = -tanVec.normalized() * prevTanScale;
+		}
+
+		// if only 2 points, continuities don't matter
+		if (nPoints == 2) {
+			return result;
 		}
 
 		// if we don't care about continuities, return

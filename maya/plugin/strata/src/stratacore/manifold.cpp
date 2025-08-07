@@ -211,12 +211,17 @@ Status& ed::StrataManifold::getWireframeEdgeVertexPositionArray(Status& s, Float
 	int i = 0;
 	for (auto& p : eDataMap) {
 		SEdgeData& edata = p.second;
-		edata._bufferStartIndex = edgeStartIndex;
-		indexStartMap[i] = edgeStartIndex;
+		edata._bufferStartIndex = edgeStartIndex + startIndex; // store start index on data for later index list
+		indexStartMap[i] = edgeStartIndex; 
 		edgeStartIndex += edata.densePointCount();
 		/*indexStartMap[i] = edgeStartIndex;*/
 		i += 1;
 	}
+	
+	// cache indices on object
+	_nEdgeVertexBufferEntries = edgeStartIndex;
+	_edgeVertexBufferEntryStart = startIndex;
+
 	//Float3Array result(totalIndexEntries);
 
 	// TODO: parallel this
@@ -245,13 +250,20 @@ Status& ed::StrataManifold::getWireframeEdgeVertexPositionArray(Status& s, Float
 
 IndexList ed::StrataManifold::getWireframeEdgeVertexIndexList(Status& s) {
 	/* assume we emit each edge as a continuous line
+	* 
+	* seems line indices need to be dense - 
 	*/
-	IndexList result(eDataMap.size() * 2);
+	IndexList result(_nEdgeVertexBufferEntries);
 	int i = 0;
 	for (auto& p : eDataMap) {
 		SEdgeData& eData = p.second;
-		result[i * 2] = eData._bufferStartIndex;
-		result[i * 2 + 1] = eData._bufferStartIndex + eData.densePointCount();
+		int n = 0;
+		for (n; n < eData.densePointCount(); n++) {
+			result[eData._bufferStartIndex - _edgeVertexBufferEntryStart + n] = eData._bufferStartIndex + n;
+		}
+		result[eData._bufferStartIndex - _edgeVertexBufferEntryStart + n - 1] = -1;
+		/*result[i * 2] = eData._bufferStartIndex;
+		result[i * 2 + 1] = eData._bufferStartIndex + eData.densePointCount()-1;*/
 	}
 
 	return result;

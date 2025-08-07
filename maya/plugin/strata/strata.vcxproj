@@ -318,6 +318,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\api.cpp" />
     <ClCompile Include="src\bezier\math\misc.cpp" />
     <ClCompile Include="src\bezier\math\tridiagonal.cpp" />
     <ClCompile Include="src\eigtest.cpp" />
