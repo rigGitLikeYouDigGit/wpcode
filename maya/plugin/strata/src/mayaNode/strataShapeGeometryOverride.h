@@ -430,10 +430,13 @@ huh.
 		* curve attributes as colours, or edge thickness?
 		*/
 		LOG("create edge render item")
+
+		const std::size_t strideInBytes =
+				sizeof(ed::IndexList::value_type) * ed::ST_EDGE_DENSE_NPOINTS;
 		MRenderItem* renderItem = MHWRender::MRenderItem::Create(sStEdgeRenderItemName,
 			MHWRender::MRenderItem::DecorationItem,
-			MHWRender::MGeometry::kLineStrip //lines gives individual straight lines
-	
+			MHWRender::MGeometry::kLineStrip, //lines gives individual straight lines
+			strideInBytes
 		);
 		auto wireframeColor = MHWRender::MGeometryUtilities::wireframeColor(path);
 		auto displayStatus = MHWRender::MGeometryUtilities::displayStatus(path);
@@ -455,6 +458,19 @@ huh.
 			
 			shaderManager->releaseShader(shader);
 		}
+		
+		/* index mapping to consolidate all sub-curves into single render item
+		*/
+		MHWRender::MIndexBufferDescriptor curveIdxDesc(
+			MHWRender::MIndexBufferDescriptor::kEdgeLine,
+			"subCurveIndexBuffer",
+			MHWRender::MGeometry::kLineStrip,
+			ed::ST_EDGE_DENSE_NPOINTS
+		);
+		
+		//MGeometryIndexMapping scIndexMapping;
+		//scIndexMapping.updateSource(0,)
+
 		return renderItem;
 	}
 

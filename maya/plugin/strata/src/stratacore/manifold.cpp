@@ -237,7 +237,13 @@ Status& ed::StrataManifold::getWireframeEdgeVertexPositionArray(Status& s, Float
 			float u = (1.0f / (eData.densePointCount() - 1)) * pt;
 			const Vector3f uvn{ u, 0.0, 0.0 };
 			Vector3f posVec; // converting between eigen and normal float3 is sad
+
 			s = edgePosAt(s, posVec, eData, uvn);
+
+			/// TEST DEBUG
+			auto pair = eData.finalCurve.global_to_local_param(u);
+			//posVec = toEigConst(eData.finalCurve.splines_[pair.first].control_points_[pt % 4]);
+
 			/* TODO: should we cache the final sampled points? seems like it might be
 			worth it, computing this much just to draw probably isn't great */
 			outArr[startIndex + thisEdgeStartIndex + pt] = posVec;
@@ -253,15 +259,24 @@ IndexList ed::StrataManifold::getWireframeEdgeVertexIndexList(Status& s) {
 	* 
 	* seems line indices need to be dense - 
 	*/
+	// add entry for -1 after each curve
+	//IndexList result(_nEdgeVertexBufferEntries + static_cast<int>(eDataMap.size()));
 	IndexList result(_nEdgeVertexBufferEntries);
 	int i = 0;
 	for (auto& p : eDataMap) {
 		SEdgeData& eData = p.second;
 		int n = 0;
 		for (n; n < eData.densePointCount(); n++) {
+			//result[eData._bufferStartIndex - _edgeVertexBufferEntryStart + n + i] = eData._bufferStartIndex + n;
 			result[eData._bufferStartIndex - _edgeVertexBufferEntryStart + n] = eData._bufferStartIndex + n;
 		}
-		result[eData._bufferStartIndex - _edgeVertexBufferEntryStart + n - 1] = -1;
+		//result[eData._bufferStartIndex - _edgeVertexBufferEntryStart + n + i ] = -1;
+		//result[eData._bufferStartIndex - _edgeVertexBufferEntryStart + n + i ] = UINT_MAX;
+		//result[eData._bufferStartIndex - _edgeVertexBufferEntryStart + n + i ] = UINT_MAX;
+		//result[eData._bufferStartIndex - _edgeVertexBufferEntryStart + n + i ] = nan;
+		i += 1;
+
+		//result[eData._bufferStartIndex - _edgeVertexBufferEntryStart + n - 1] = -1;
 		/*result[i * 2] = eData._bufferStartIndex;
 		result[i * 2 + 1] = eData._bufferStartIndex + eData.densePointCount()-1;*/
 	}

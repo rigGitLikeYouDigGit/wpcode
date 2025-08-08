@@ -688,7 +688,225 @@ MPointArray ed::curvePointsFromEditPointsAndTangents(
 	return MPointArray();
 }
 
+template<typename T>
+inline Eigen::MatrixX3<T> ed::cubicTangentPointsForBezPoints(
+	const Eigen::MatrixX3<T>& inPoints,
+	const bool closed,
+	float* inContinuities// = nullptr
+)
+{
+	/* build 'clever' auto-tangent scaling setup -
+	TODO: check if some drivers define a specific tangent or normal plane
+	*/
+	// treat open and closed the same, just discount final span if not closed
 
+	Eigen::MatrixX3<T> result(inPoints.rows() * 3, 3);
+	int nPoints = static_cast<int>(inPoints.rows());
+	int nOutPoints = nPoints * 3;
+
+	// set tangent vectors for each one (scaling done later)
+	// also includes start and end, as if it were closed
+	int nextInI, prevInI; // next and prev driver points
+	int outI, nextOutI, prevOutI; // this out point, and out tangents to next and previous out points
+	for (int i = 0; i < nPoints; i++) {
+		nextInI = (i + 1) % nPoints;
+		prevInI = (i - 1 + nPoints) % nPoints;
+		Vector3<T> thisPos = inPoints.row(i);
+		Vector3<T> nextPos = inPoints.row(nextInI);
+		Vector3<T> prevPos = inPoints.row(prevInI);
+
+		// set simple in-outs for ends of open curves
+		// continuity should avoid s-curves later in function
+		if ((i == 0) && (!closed)) {
+			prevPos = thisPos + (thisPos - nextPos) * T(0.1);
+		}
+		if ((i == (nPoints - 1)) && (!closed)) {
+			nextPos = thisPos + (nextPos - thisPos) * T(0.1);
+		}
+
+
+		outI = i * 3;
+		nextOutI = (i * 3 + 1) % nOutPoints;
+		prevOutI = (i * 3 - 1 + nOutPoints) % nOutPoints;
+
+
+		// set start point from originals
+		result.row(outI) = thisPos;
+		Vector3<T> tanVec;
+		if (nPoints == 2) {
+			if (nextInI == 0 && !closed) { // this is the last point, need prev tangent pointing straight back at start
+				tanVec = (nextPos - thisPos) * T(0.3);
+				result.row(nextOutI) = thisPos - tanVec;
+				result.row(prevOutI) = thisPos + tanVec;
+				continue;
+			}
+			tanVec = (nextPos - thisPos) * T(0.3);
+			result.row(nextOutI) = thisPos + tanVec;
+			result.row(prevOutI) = thisPos - tanVec;
+			continue;
+		}
+
+		// vector from prev ctl pt to next
+		tanVec = nextPos - prevPos;
+		Vector3<T> tanDir = tanVec.normalized();
+		//thisDriver.baseTan = tanVec;
+
+		/* if only 2 points, the normal tangent idea breaks down -
+		* we just take the vector between them here
+		*/
+		//if ((i == 0) && (!closed)) {
+		//	tanVec = nextPos - thisPos;
+		//}
+		//if ((i == (nPoints - 1)) && (!closed)) {
+		//	tanVec = thisPos - prevPos;
+		//} 
+
+
+		Vector3<T> toThisVec = thisPos - prevPos;
+		// vector from this ctl pt to next
+		Vector3<T> toNextVec = nextPos - thisPos;
+		//auto toPrevVec = nextPos - thisPos;
+
+		////// DEFAULTS - still testing here, maybe we allow this to be set by primvar or something
+		T defaultTanScaleFactor = T(1.5);
+		T defaultTanSmoothMinFactor = T(0.2);
+
+		// forwards tan scale factor
+		//T nextTanScale = (tanDir.dot(toNextVec) - (tanDir.dot(toThisVec))) / defaultTanScaleFactor;
+		T nextTanScale = (tanDir.dot(toNextVec)) / defaultTanScaleFactor;
+		nextTanScale = -sminQ<T>(-nextTanScale, T(-0.2), defaultTanSmoothMinFactor);
+
+		// back tan scale factor
+		//T prevTanScale = (tanDir.dot(-toThisVec) - (tanDir.dot(toThisVec))) / defaultTanScaleFactor;
+		T prevTanScale = tanDir.dot(toThisVec) / defaultTanScaleFactor;
+
+		// clamp tangent to at least 0.1 - later use continuity here
+		prevTanScale = -sminQ<T>(-prevTanScale, T(-0.2), defaultTanSmoothMinFactor);
+
+		result.row(nextOutI) = thisPos + tanDir * nextTanScale;
+		result.row(prevOutI) = thisPos + -tanDir * prevTanScale;
+	}
+
+	return result;
+
+	// if only 2 points, continuities don't matter
+	if (nPoints == 2) {
+		return result;
+	}
+
+	// if we don't care about continuities, return
+	if (inContinuities == nullptr) {
+		return result;
+	}
+
+
+	// set ends if not continuous
+	// if not closed, ends are not continuous
+	if (!closed) {
+		inContinuities[0] = T(0.0);
+		inContinuities[nPoints - 1] = T(0.0);
+	}
+
+	// check continuity
+	for (int i = 0; i < nPoints; i++) {
+		nextInI = (i + 1) % nPoints;
+		prevInI = (i - 1 + nPoints) % nPoints;
+
+		outI = i * 3;
+		nextOutI = (i * 3 + 1) % nOutPoints;
+		prevOutI = (i * 3 - 1 + nOutPoints) % nOutPoints;
+
+		int nextPtI = ((i + 1) * 3) % nOutPoints;
+		int nextPtPrevTanI = ((i + 1) * 3 - 1 + nOutPoints) % nOutPoints;
+		int nextPtNextTanI = ((i + 1) * 3 + 1) % nOutPoints;
+
+		int prevPtI = ((i - 1) * 3 + nOutPoints) % nOutPoints;
+		int prevPtPrevTanI = ((i - 1) * 3 - 1 + nOutPoints) % nOutPoints;
+		int prevPtNextTanI = ((i - 1) * 3 + 1 + nOutPoints) % nOutPoints;
+
+
+		// blend between next tangent point and next point, based on continuity
+		//double postTanLen = thisDriver.postTan.norm();
+		auto postTanLen = result.row(nextOutI).norm();
+		Eigen::Vector3<T> nextOutV(result.row(nextOutI)); 
+		Eigen::Vector3<T> nextPtV(result.row(nextPtI));
+		Eigen::Vector3<T> nextPtPlusPrevTanV(result.row(nextPtI) + result.row(nextPtPrevTanI));
+		Eigen::Vector3<T> outV(result.row(outI));
+
+		// use continuity of next point to check where sharp target should be
+		Eigen::Vector3<T> targetLerpV = lerp(
+			nextPtV, nextPtPlusPrevTanV,
+			static_cast<T>(inContinuities[nextInI])
+		);
+		// use continuity of this point to check how strongly tangent should lerp to that target
+
+		result.row(nextOutI) = lerp(
+			nextOutV,
+			targetLerpV,
+			static_cast<T>(inContinuities[i])
+		);
+
+		//result.row(nextOutI) = lerp(
+		//	Eigen::Vector3<T>(result.row(nextOutI)),
+		//	Eigen::Vector3<T>(lerp(
+		//			//nextDriver.pos(),
+		//			Eigen::Vector3<T>(result.row(nextPtI)),
+		//			//Eigen::Vector3f(nextDriver.pos() + nextDriver.prevTan),
+		//			Eigen::Vector3<T>(result.row(nextPtI) + result.row(nextPtPrevTanI)),
+		//			//Eigen::Vector3f(nextDriver.pos() + nextDriver.preTan).matrix(),
+		//			//nextDriver.continuity
+		//			T(inContinuities[nextInI])
+		//		) - Eigen::Vector3<T>(result.row(outI))),
+		//		T(inContinuities[i])
+		//);
+
+		//thisDriver.postTan = thisDriver.postTan.normalized() * postTanLen;
+		result.row(nextOutI) = result.row(nextOutI).normalized() * postTanLen;
+
+		// prev tan
+		//double prevTanLen = thisDriver.prevTan.norm();
+		//thisDriver.prevTan = lerp(
+		//	thisDriver.postTan,
+		//	(lerp(
+		//		prevDriver.pos(),
+		//		Eigen::Vector3f(prevDriver.pos() + prevDriver.postTan),
+		//		prevDriver.continuity
+		//	) - thisDriver.pos()).eval(),
+		//	thisDriver.continuity
+		//);
+		//thisDriver.prevTan = thisDriver.prevTan.normalized() * prevTanLen;
+
+		T prevTanLen = T(result.row(prevOutI).norm());
+		result.row(prevOutI) = lerp(
+			Eigen::Vector3<T>(result.row(prevOutI)),
+			Eigen::Vector3<T>(
+				lerp(
+
+					Eigen::Vector3<T>(result.row(prevPtI)),
+					Eigen::Vector3<T>(result.row(prevPtI) + result.row(prevPtNextTanI)),
+					T(inContinuities[prevInI])
+
+				) - Eigen::Vector3<T>(result.row(outI))),
+			T(inContinuities[i])
+
+		);
+
+	}
+
+	return result;
+
+}
+
+template Eigen::MatrixX3<float> ed::cubicTangentPointsForBezPoints<float>(
+	const Eigen::MatrixX3<float>& inPoints,
+	const bool closed,
+	float* inContinuities
+);
+template Eigen::MatrixX3<double> ed::cubicTangentPointsForBezPoints<double>(
+	const Eigen::MatrixX3<double>& inPoints,
+	const bool closed,
+	float* inContinuities
+);
 
 Eigen::MatrixX3f ed::makeRMFNormals(
 	Eigen::MatrixX3f& positions,

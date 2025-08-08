@@ -91,6 +91,8 @@ namespace ed {
 	int constexpr ST_TARGET_MODE_GLOBAL = 1;
 	//int MATRIX_MODE_LOCAL_O
 
+	int constexpr ST_EDGE_DENSE_NPOINTS = 10;
+
 	//struct ExpValue;
 
 	struct SElement {
@@ -318,7 +320,9 @@ namespace ed {
 		//std::array<SEdgeParentData, stMaxParents> parentDatas; // curves in space of each driver
 		std::vector<SEdgeParentData> parentDatas; // curves in space of each driver
 		
-		int denseCount = 5; // number of dense sub-spans in each segment
+		//int denseCount = 10; // number of dense sub-spans in each segment
+		/* TODO: adaptive by arc length? adaptive by screen size?
+		*/
 
 		bool closed = false;
 		/* don't keep live splines, output from parent system etc - 
@@ -368,9 +372,9 @@ namespace ed {
 			in each span between them*/
 			//return static_cast<int>(driverDatas.size() + denseCount * (driverDatas.size() - 1));
 			if (isClosed()) {
-				return static_cast<int>(denseCount * (driverDatas.size()));
+				return static_cast<int>(ST_EDGE_DENSE_NPOINTS * (driverDatas.size()));
 			}
-			return static_cast<int>(denseCount * (driverDatas.size() - 1));
+			return static_cast<int>(ST_EDGE_DENSE_NPOINTS * (driverDatas.size() - 1));
 		}
 
 		inline int densePointCount() const {
@@ -379,12 +383,15 @@ namespace ed {
 			in each span between them*/
 			//return static_cast<int>(driverDatas.size() + denseCount * (driverDatas.size() - 1));
 			if (isClosed()) {
-				return static_cast<int>(denseCount * (driverDatas.size()));
+				return static_cast<int>(ST_EDGE_DENSE_NPOINTS * (driverDatas.size()));
 			}
-			return static_cast<int>(denseCount * (driverDatas.size() - 1));
+			return static_cast<int>(ST_EDGE_DENSE_NPOINTS * (driverDatas.size() - 1));
 		}
 
 		inline int nSpans() {
+			if (isClosed()) {
+				return static_cast<int>(driverDatas.size());
+			}
 			return static_cast<int>(driverDatas.size()) - 1;
 		}
 

@@ -83,5 +83,7 @@ so we mute all warnings from including maya headers
 
 #include <maya/MHWGeometry.h>
 #include <maya/MGeometry.h>
+#include <maya/MIndexMapper.h>
+#include <maya/MGeometryExtractor.h>
 
 #pragma warning( pop ) 

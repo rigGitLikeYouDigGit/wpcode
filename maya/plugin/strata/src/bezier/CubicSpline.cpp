@@ -10,6 +10,8 @@
 #include <xmmintrin.h>
 #include <smmintrin.h>
 
+using namespace Eigen;
+
 //#define USE_SIMD_OPTIMIZATION
 
 namespace bez
@@ -110,6 +112,74 @@ namespace bez
                 splines_.push_back(spline);
             }
         }
+    }
+
+    CubicBezierPath::CubicBezierPath(
+        const MatrixX3f& control_points,
+        bool closed) {
+        //CubicBezierPath(const Eigen::Matrix3Xf& control_points) {
+        //CubicBezierPath(const Eigen::Matrix<float, 3, -1>& control_points) {
+
+        int num_points = static_cast<int>(control_points.rows());
+        //int num_points = static_cast<int>(control_points.rows());
+
+        ////// TEMP TEMP TEMP ////// FIX THISS /////
+        //int num_points = 4;
+        /////////////////////
+        int num_splines = num_points / 3;
+        if (!closed) {
+            num_splines = num_splines - 1;
+        }
+
+        splines_.resize(num_splines);
+
+        for (int i = 0; i < num_splines; i++)
+        {
+            //CubicBezierSpline spl(
+            //    control_points.row(i * 3).matrix(),
+            //    control_points.row((i * 3 + 1) % num_points).matrix(),
+            //    control_points.row((i * 3 + 2) % num_points).matrix(),
+            //    control_points.row((i * 3 + 3) % num_points).matrix()
+            //);
+            //splines_.emplace_back(spl);
+
+            //splines_.emplace_back(
+            //    control_points.row(i * 3).matrix(),
+            //    control_points.row((i * 3 + 1) % num_points).matrix(),
+            //    control_points.row((i * 3 + 2) % num_points).matrix(),
+            //    control_points.row((i * 3 + 3) % num_points).matrix()
+            //);
+            /*splines_.emplace_back(
+                Eigen::Vector3f(control_points.row(i * 3)),
+                Eigen::Vector3f(control_points.row((i * 3 + 1))),
+                Eigen::Vector3f(control_points.row((i * 3 + 2))),
+                Eigen::Vector3f(control_points.row((i * 3 + 3)))
+            );*/
+
+            Vector3f a(control_points.row(i * 3));
+            Vector3f b(control_points.row((i * 3 + 1)));
+            Vector3f c(control_points.row((i * 3 + 2)));
+            Vector3f d(control_points.row((i * 3 + 3)));
+
+            //CubicBezierSpline sp(a, b, c, d);
+            CubicBezierSpline& sp = splines_[i];
+            sp.control_points_[0] = a;
+            sp.control_points_[1] = b;
+            sp.control_points_[2] = c;
+            sp.control_points_[3] = d;
+            sp.Initialize();
+
+
+            // EMPLACE_BACK was resetting the first spline to all 0s?
+            // no idea why
+
+            /*splines_.emplace_back(
+                a, b, c, d
+            );*/
+            //splines_.push_back(sp);
+            int N = 2;
+        }
+
     }
 
     //CubicBezierPath::~CubicBezierPath() {}
@@ -513,6 +583,19 @@ namespace bez
         )
     {
         //std::copy(control_points, control_points + 4, control_points_.begin());
+        control_points_[0] = WorldSpace(a);
+        control_points_[1] = WorldSpace(b);
+        control_points_[2] = WorldSpace(c);
+        control_points_[3] = WorldSpace(d);
+
+        Initialize();
+    }
+    CubicBezierSpline::CubicBezierSpline(
+        Eigen::Vector3f& a,
+        Eigen::Vector3f& b,
+        Eigen::Vector3f& c,
+        Eigen::Vector3f& d) 
+    {
         control_points_[0] = WorldSpace(a);
         control_points_[1] = WorldSpace(b);
         control_points_[2] = WorldSpace(c);
