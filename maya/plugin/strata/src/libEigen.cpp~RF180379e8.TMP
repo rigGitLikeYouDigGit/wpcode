@@ -981,53 +981,36 @@ bez::CubicBezierPath ed::splitBezPath(bez::CubicBezierPath& crv, float lowT, flo
 			res.aPts.row(2),
 			res.aPts.row(3)
 		);
+		newCrv.Initialize();
 		//newCrv = bez::CubicBezierPath(subcrvs);
 		if (EQ(lowT, 0.0)) { // if start at 0, just return
-			newCrv.Initialize();
 			return newCrv;
 		}
-		newCrv.splines_[i].Initialize();
 		// split lower half
 		lowT = lowT * idParam.second; // multiply to remap into new, shorter curve
-		idParam = newCrv.global_to_local_param(lowT);
+		idParam = newCrv.global_to_local_param(highT);
 		res = splitBezSpline(newCrv.splines_[idParam.first].pointsAsMatrix(), idParam.second);
 		bez::CubicBezierPath nnewCrv;
 		nnewCrv.splines_.resize(newCrv.splines_.size() - idParam.first);
 		//std::vector<bez::CubicBezierSpline> newSubcrvs(newCrv.splines_.size() - idParam.first);
 
 		i = 0;
-		for (i = 1; i < (newCrv.splines_.size() - idParam.first); i++) {
+		for (i = 0; i < (newCrv.splines_.size() - idParam.first); i++) {
 			nnewCrv.splines_[i] = newCrv.splines_[i + idParam.first];
 		}
-		nnewCrv.splines_[0] = bez::CubicBezierSpline(
-			res.bPts.row(0),
-			res.bPts.row(1),
-			res.bPts.row(2),
-			res.bPts.row(3)
+		subcrvs[i] = bez::CubicBezierSpline(
+			res.aPts.row(0),
+			res.aPts.row(1),
+			res.aPts.row(2),
+			res.aPts.row(3)
 		);
-		nnewCrv.Initialize();
-		return nnewCrv;
+	}
+	else {
+		
 	}
 
-	// only trim low part
-	auto idParam = crv.global_to_local_param(lowT);
-	auto res = splitBezSpline(crv.splines_[idParam.first].pointsAsMatrix(), idParam.second);
-	bez::CubicBezierPath nnewCrv;
-	nnewCrv.splines_.resize(crv.splines_.size() - idParam.first);
-	//std::vector<bez::CubicBezierSpline> newSubcrvs(newCrv.splines_.size() - idParam.first);
 
-	int i = 0;
-	for (i = 1; i < (crv.splines_.size() - idParam.first); i++) {
-		nnewCrv.splines_[i] = crv.splines_[i + idParam.first];
-	}
-	nnewCrv.splines_[0] = bez::CubicBezierSpline(
-		res.bPts.row(0),
-		res.bPts.row(1),
-		res.bPts.row(2),
-		res.bPts.row(3)
-	);
-	nnewCrv.Initialize();
-	return nnewCrv;
+	return 
 }
 
 #endif // !ED_LIB_EIGEN

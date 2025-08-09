@@ -737,6 +737,54 @@ namespace bez
 
 }
 
+/*
+
+a way from scratchapixel to eval dense points on a bezier curve in sequence
+with an iterative "fast forwards differences" method
+void evalBezierCurveFFD(const uint32_t &divs, const Vec3f &P0, const Vec3f &P1, const Vec3f &P2, const Vec3f &P3, Vec3f *B)
+{
+#if 1
+    float h = 1.f / divs;
+    Vec3f b0 = P0;
+    Vec3f fph = 3 * (P1 - P0) * h;
+    Vec3f fpphh = (6 * P0 - 12 * P1 + 6 * P2) * h * h;
+    Vec3f fppphhh = (-6 * P0 + 18 * P1 - 18 * P2 + 6 * P3) * h * h * h;
+    B[0] = b0;
+    for (uint32_t i = 1; i <= divs; ++i) {
+        B[i] = B[i - 1] + fph + fpphh / 2 + fppphhh / 6;
+        // update bd, bdd
+        fph = fph + fpphh + fppphhh / 2;
+        fpphh = fpphh + fppphhh;
+    }
+#else
+    Vec3f b0 = P0;
+    Vec3f bd0 = 3 * (P1 - P0);
+    Vec3f bdd0 = (6 * P0 - 12 * P1 + 6 * P2);
+    Vec3f bddd0 = (-6 * P0 + 18 * P1 - 18 * P2 + 6 * P3);
+    for (uint32_t i = 0; i <= divs; ++i) {
+        float x = i / (float)divs;
+        B[i] = b0 + bd0 * x + bdd0 * x * x / 2 + bddd0 * x * x * x / 6;
+    }
+#endif
+}
+
+void evalBezierPatchFFD(const uint32_t &divs, const Vec3f *controlPoints, Vec3f *&P)
+{
+    // generate grid
+    Vec3f controlPointsV[4][divs + 1];
+    for (uint16_t i = 0; i < 4; ++i) {
+        evalBezierCurveFFD(divs, controlPoints[i], controlPoints[4 + i],
+            controlPoints[8 + i], controlPoints[12 + i], controlPointsV[i]);
+    }
+    for (uint16_t i = 0; i <= divs; ++i) {
+        evalBezierCurveFFD(divs, controlPointsV[0][i], controlPointsV[1][i],
+            controlPointsV[2][i], controlPointsV[3][i], P + i * (divs + 1));
+    }
+}
+
+*/
+
+
 #ifdef USE_SIMD_OPTIMIZATION
 #include "CubicSplineSimd.inl"
 #endif // USE_SIMD_OPTIMIZATION

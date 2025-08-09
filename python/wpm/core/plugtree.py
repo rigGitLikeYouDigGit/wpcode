@@ -501,6 +501,17 @@ class Plug(PlugBase, # this base class list will beat you up
 		"""
 		pluglib.ensureOneArrayElement(self.MPlug)
 
+	def getFreeEl(self)->Plug:
+		"""return the free last index of array plug -
+		DOES NOT CHECK for connections, only one more than
+		number of indices currently populated"""
+		assert self.hType == pluglib.HType.Array
+		return Plug(self.MPlug.elementByLogicalIndex(
+			self.MPlug.elementByPhysicalIndex(
+				self.MPlug.evaluateNumElements() - 1
+			).logicalIndex() + 1
+		))
+
 	plugParamType = (str, "Plug", om.MPlug)
 
 	def _filterPlugParam(self, plug:plugParamType)->om.MPlug:
@@ -804,14 +815,17 @@ class PlugDescriptor:
 	# # TEMP
 	def __set__(self, instance:(Plug, WN),
 	            value:(Plug, Plug, WN, T.Any )):
-		try:
-			# try and connect value if it's another plug
-
-			instance.plug(self.name) << pluglib.getMPlug(value)
-			return
-		except (AttributeError, TypeError):
-			pass
-		instance.plug(self.name).set(value)
+		#pluglib.use(value, instance.plug(self.name))
+		#pluglib.use(value, )
+		instance.plug(self.name).use(value)
+		# try:
+		# 	# try and connect value if it's another plug
+		#
+		# 	instance.plug(self.name) << pluglib.getMPlug(value)
+		# 	return
+		# except (AttributeError, TypeError):
+		# 	pass
+		# instance.plug(self.name).set(value)
 
 
 

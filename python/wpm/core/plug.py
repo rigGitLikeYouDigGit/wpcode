@@ -154,7 +154,15 @@ class PlugBroadcaster(Broadcaster):
 
 		in this case, this pair is yielded and no more recursion done
 		"""
-		return False
+		dstPlug = getMPlug(dst)
+		if dstPlug.isArray:
+			return None
+		if not dstPlug.isCompound:
+			return None
+		srcElements = self._getElements(src)
+		if len(srcElements) == dstPlug.numChildren():
+			return [(srcElements[i], dstPlug.child(i)) for i in range(dstPlug.numChildren())]
+		return None
 
 
 _broadcaster = PlugBroadcaster()
@@ -196,7 +204,13 @@ def getMPlug(plug, default:(T.Any, None)=Sentinel.FailToFind)->om.MPlug:
 
 	# check for initialising with (node object, attr object)
 	if isinstance(plug, (tuple, list)):
-		return om.MPlug(plug[0], plug[1])
+		try:
+			return om.MPlug(plug[0], plug[1])
+		except (TypeError, ValueError) as e:
+			if default is Sentinel.FailToFind:
+				print("error getting MPlug from", plug)
+				raise e
+			return default
 
 	if not isinstance(plug, str):
 		if default is Sentinel.FailToFind:
@@ -1062,14 +1076,20 @@ def use(src:(T.Any, om.MPlug), dst:om.MPlug,
 	DO WE convert to MPlugs before or after broadcasting?
 	complex addressing / expressions are all taken care of before this, here we
 	expect at most flat lists
+
+	use( node.translate, (1, 2, 3) )
+	^ whatever we do must stand up to this
 	"""
 	#log("use", src, dst)
 	modifier = _dgMod or om.MDGModifier()
 
-	src = ([getMPlug(i, i) for i in toSeq(src)])
-	dst = ([getMPlug(i, i) for i in toSeq(dst)])
+	src = ([getMPlug(i, i) for i in (src if isinstance(src, list) else [src])])
+	dst = ([getMPlug(i, i) for i in (dst if isinstance(dst, list) else [dst])])
+	#log(src, dst)
 	for s, d in zip(src, dst):
+		#log("zip", s, d)
 		for pair in broadcast(s, d):
+			#log("pair", pair)
 			if not isinstance(pair[1], om.MPlug):
 				raise RuntimeError("destination is not an MPlug")
 			if isinstance(pair[0], om.MPlug):

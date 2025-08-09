@@ -125,14 +125,17 @@ class Broadcaster:
 		"""
 		return False
 
-	def _complexSidesMatchDirect(self, src, thisDst):
+	def _complexSidesMatchDirect(self, src, thisDst)->(None, list[tuple]):
 		""" check if 2 arbitrary complex objects
 		can easily be said to match -
 		EG if you have 2 compound attributes with the same structure.
 
 		in this case, this pair is yielded and no more recursion done
+
+		RETURN FINAL PAIRS FROM THIS FUNCTION
+		or None if no match
 		"""
-		return False
+		return None
 
 	def _isImmutable(self, obj):
 		return isinstance(obj, (str, tuple, float, int))#, om.MMatrix, om.MPlug))
@@ -175,8 +178,10 @@ class Broadcaster:
 
 		# neither source nor dest is a leaf, it gets complicated
 		# check for direct match:
-		if self._complexSidesMatchDirect(a, b):
-			yield a, b
+		if complexPairs := self._complexSidesMatchDirect(a, b):
+			for i in complexPairs:
+				yield from self.broadcast(i[0], i[1])
+			#yield a, b
 			return
 
 		targets = self._getElements(b)

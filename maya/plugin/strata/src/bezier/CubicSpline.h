@@ -154,7 +154,8 @@ namespace bez
         }
 
         Eigen::Matrix<float, 4, 3> pointsAsMatrix() {
-            /* return a copy, probably best*/
+            /* return a copy, probably best
+            TODO: work out how to return ref*/
             Eigen::Matrix<float, 4, 3> result;
             
             result.row(0) = toEig(control_points_.at(0));
@@ -234,7 +235,11 @@ namespace bez
 
         //~CubicBezierPath();
 
-        
+        void Initialize() { // call after directly editing curves
+            for (auto& sp : splines_) {
+                sp.Initialize();
+            }
+        }
 
         WorldSpace CubicBezierPath::tangentAt(float t) const;
         Eigen::Vector3f CubicBezierPath::tangentAt(float t, Eigen::Vector3f& basePos) const;

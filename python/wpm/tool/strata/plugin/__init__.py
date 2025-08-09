@@ -153,7 +153,10 @@ def reloadPluginTest():
 	pluginAid.updateGeneratedNodeClasses()
 
 
-
+	# crossPtB = makeStrataPoint("crossB").tf()
+	# #crossPtB.translate_ = (3, 0, -2)
+	# crossPtB.translate_ = (3, 0, -2)
+	# return
 
 	# create single strata shape
 	elOp: WN.StrataElementOp = WN.createNode("strataElementOp", "newElOp")
@@ -203,6 +206,25 @@ def reloadPluginTest():
 	# connect up element to shape
 	shape : WN.StrataShape = WN.StrataShape.create("newShape")
 	shape.stInput_[0] = elOp.stOutput_
+
+
+	# get a bit weird with it
+	crossPtA = makeStrataPoint("crossA").tf()
+	crossPtA.translate_ = (2, 0, 2)
+	elPlug = elOp.stElement_.getFreeEl()
+	elPlug.stName_ = "pCrossA"
+	elPlug.stPointWorldMatrixIn_ = crossPtA.worldMatrix_[0]
+
+	crossPtB = makeStrataPoint("crossB").tf()
+	crossPtB.translate_ = (2, 0, -2)
+	elPlug = elOp.stElement_.getFreeEl()
+	elPlug.stName_ = "pCrossB"
+	elPlug.stPointWorldMatrixIn_ = crossPtB.worldMatrix_[0]
+
+	crossEl = elOp.stElement_.getFreeEl()
+	crossEl.stName_ = "eCross"
+	#crossEl.stDriverExp_ = "pCrossA, pCrossB" # works
+	crossEl.stDriverExp_ = "pCrossA, eArmCrv, pCrossB"
 	return
 
 	# connect elbow driver to test space driving, and FK

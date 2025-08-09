@@ -367,7 +367,7 @@ Status& ed::StrataManifold::pointProjectToDrivers(Status& s, Affine3f& mat, SEle
 
 }
 
-Status& ed::StrataManifold::edgeParentDataFromDrivers(Status& s, SEdgeData& eData, SEdgeParentData& pData)
+Status& ed::StrataManifold::edgeParentDataFromDrivers(Status& s, SEdgeData& eData, SEdgeSpaceData& pData)
 {
 	/*Assumes edge data already has final drivers set up
 	*
@@ -445,6 +445,15 @@ Status& ed::StrataManifold::buildEdgeData(Status& s, SEdgeData& eData) {
 
 	s = eData.buildFinalBuffers(s);
 
+	return s;
+}
+
+
+Status& ed::StrataManifold::buildFaceDrivers(Status& s, SFaceData& fData) {
+	return s;
+}
+
+Status& ed::StrataManifold::buildFaceData(Status& s, SFaceData& fData) {
 	return s;
 }
 

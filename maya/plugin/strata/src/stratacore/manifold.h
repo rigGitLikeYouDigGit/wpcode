@@ -272,19 +272,19 @@ namespace ed {
 	/* so to generate a full curve,
 	for each separate parent, we transpose driver points and vectors
 	into that parent's space,
-	then do the spline operations, get a dense vector of UVN parametres, and save that dense data as an SEdgeParentData.
+	then do the spline operations, get a dense vector of UVN parametres, and save that dense data as an SEdgeSpaceData.
 	maybe we also cache the final result in world space.
 
 	this is done on the op that first creates the edge and creates its data.
 
 	on later iterations of the graph,
-	if when a parent changes, we re-evaluate the UVNs of each SEdgeParentData.
+	if when a parent changes, we re-evaluate the UVNs of each SEdgeSpaceData.
 
 	*/
-	struct SEdgeParentData// : StaticClonable<SEdgeParentData> 
+	struct SEdgeSpaceData// : StaticClonable<SEdgeSpaceData> 
 	{
-		using thisT = SEdgeParentData;
-		using T = SEdgeParentData;
+		using thisT = SEdgeSpaceData;
+		using T = SEdgeSpaceData;
 		//DECLARE_DEFINE_CLONABLE_METHODS(thisT)
 
 		int index = -1; // feels cringe to copy the index on all of these  
@@ -317,8 +317,7 @@ namespace ed {
 		using thisT = SEdgeData;
 		using T = SEdgeData;
 		std::vector<SEdgeDriverData> driverDatas; // drivers of this edge
-		//std::array<SEdgeParentData, stMaxParents> parentDatas; // curves in space of each driver
-		std::vector<SEdgeParentData> parentDatas; // curves in space of each driver
+		std::vector<SEdgeSpaceData> spaceDatas; // curves in space of each driver
 		
 		//int denseCount = 10; // number of dense sub-spans in each segment
 		/* TODO: adaptive by arc length? adaptive by screen size?
@@ -329,6 +328,10 @@ namespace ed {
 		all temporary during construction
 		posSpline is FINAL spline of all points on this edge
 		*/
+		
+		/* for splitting edges and components, results will be
+		clipped components with one master driver*/
+		bool isClipped = false;
 
 		Eigen::ArrayX3d uvnOffsets = {}; // final dense offsets should only be in space of final built curve?
 		// maybe???? 
@@ -346,12 +349,6 @@ namespace ed {
 		
 		int _bufferStartIndex = -1;
 
-		//DECLARE_DEFINE_CLONABLE_METHODS(thisT)
-
-
-		/*inline bez::ClosestPointSolver* closestSolver() {
-			return finalCurve.getSolver();
-		}*/
 
 		inline bool isClosed() const {
 			if (!driverDatas.size()) {
@@ -430,10 +427,44 @@ namespace ed {
 
 
 
+	struct SFaceDriverData {
+		int index = -1; // index of driver component
+		std::array<Vector3f, 2> uvns = { // full uvn vectors likely unnecessary
+			Vector3f{0.0f, 0.0f, 0.0f},
+			Vector3f{0.0f, 0.0f, 0.0f},
+		};
 
+	};
+
+	struct SFaceSpaceData {
+
+	};
+
+	struct SubPatchData {
+		/* save data for single subpatch - 
+		*/
+		int subIndex = -1;
+		int faceIndex = -1;
+	};
 
 	struct SFaceData : SElData {
 		//std::string name; // probably generated, but still needed for semantics?
+		std::vector<SEdgeDriverData> driverDatas; // drivers of this edge
+		std::vector<SEdgeSpaceData> spaceDatas; // curves in space of each driver
+
+		Vector3f centrePos; // central point of this surface
+		Vector3f centreNormal; 
+		/* normal at centre of face - all subpatch curves must end with this as their normal*/
+
+		/* connected islands of drivers? */
+		std::vector<std::vector<int>> connectedDrivers;
+
+		/* tangent vectors at midpoints of driver edges
+		multiply and average to find centrePos
+		multiply by how far?
+		good question
+		*/
+		std::vector<Vector3f> midEdgeTangents; 
 	};
 
 
@@ -968,8 +999,8 @@ namespace ed {
 
 			// check if we need full matrix
 			if (EQ(uvn[1], 0.0f) && EQ(uvn[2], 0.0f)) {
-				if (d.parentDatas.size()) {
-					out = d.parentDatas[0].parentCurve.eval(uvn[0]);
+				if (d.spaceDatas.size()) {
+					out = d.spaceDatas[0].parentCurve.eval(uvn[0]);
 					return s;
 				}
 				out = d.finalCurve.eval(uvn[0]);
@@ -1190,11 +1221,16 @@ namespace ed {
 
 		Status& pointProjectToDrivers(Status& s, Affine3f& mat, SElement* el);
 
-		Status& edgeParentDataFromDrivers(Status& s, SEdgeData& eData, SEdgeParentData& pData);
+		Status& edgeParentDataFromDrivers(Status& s, SEdgeData& eData, SEdgeSpaceData& pData);
 
 		Status& buildEdgeDrivers(Status& s, SEdgeData& eData);
 
 		Status& buildEdgeData(Status& s, SEdgeData& eData);
+
+		Status& buildFaceDrivers(Status& s, SFaceData& fData);
+
+		Status& buildFaceData(Status& s, SFaceData& fData);
+
 
 		Status& buildPointData(Status& s, SPointData& eData) {
 			/* construct final dense array for data, assuming all parents and driver indices are set in data
