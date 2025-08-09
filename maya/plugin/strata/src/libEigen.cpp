@@ -770,30 +770,39 @@ inline Eigen::MatrixX3<T> ed::cubicTangentPointsForBezPoints(
 		////// DEFAULTS - still testing here, maybe we allow this to be set by primvar or something
 		T defaultTanScaleFactor = T(1.5);
 		T defaultTanSmoothMinFactor = T(0.2);
+		T defaultTanMinScale = T(0.2);
+
+		T tanLength(tanVec.norm());
 
 		// forwards tan scale factor
 		//T nextTanScale = (tanDir.dot(toNextVec) - (tanDir.dot(toThisVec))) / defaultTanScaleFactor;
 		T nextTanScale = (tanDir.dot(toNextVec)) / defaultTanScaleFactor;
-		nextTanScale = -sminQ<T>(-nextTanScale, T(-0.2), defaultTanSmoothMinFactor);
+		nextTanScale = -sminQ<T>(-nextTanScale, -defaultTanMinScale, defaultTanSmoothMinFactor);
 
 		// back tan scale factor
 		//T prevTanScale = (tanDir.dot(-toThisVec) - (tanDir.dot(toThisVec))) / defaultTanScaleFactor;
 		T prevTanScale = tanDir.dot(toThisVec) / defaultTanScaleFactor;
-
-		// clamp tangent to at least 0.1 - later use continuity here
-		prevTanScale = -sminQ<T>(-prevTanScale, T(-0.2), defaultTanSmoothMinFactor);
+		prevTanScale = -sminQ<T>(-prevTanScale, -defaultTanMinScale, defaultTanSmoothMinFactor);
+		// later use continuity here for min tangent length
 
 		result.row(nextOutI) = thisPos + tanDir * nextTanScale;
 		result.row(prevOutI) = thisPos + -tanDir * prevTanScale;
 	}
 
-	return result;
+	//return result;
 
 	// if only 2 points, continuities don't matter
 	if (nPoints == 2) {
 		return result;
 	}
 
+	// if open, special-case end tangents before continuities?
+	if (!closed && (nPoints != 2)) {
+		result.row(1) = result.row(0) + (result.row(2) - result.row(1)) / 3.0;
+		result.row((nPoints - 1) * 3 - 1) = result.row((nPoints - 1) * 3 + 1) + 
+			( result.row((nPoints - 1) * 3 - 1) - result.row((nPoints - 1) * 3 + 1)) / 3.0;
+	}
+	return result;
 	// if we don't care about continuities, return
 	if (inContinuities == nullptr) {
 		return result;
