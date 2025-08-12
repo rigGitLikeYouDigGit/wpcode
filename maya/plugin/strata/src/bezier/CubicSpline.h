@@ -9,6 +9,9 @@
 
 /* todo:
 bounds / centroid
+
+REFIT EVERYTHING WITH EIGEN
+WorldSpace vector type is doin ma head in
 */
 
 
@@ -119,9 +122,7 @@ namespace bez
         float ClosestPointToSpline(const WorldSpace& position, const QuinticSolver* solver, WorldSpace& closest, float& u) const;
         float ClosestPointToSpline(const WorldSpace& position, const QuinticSolver* solver, WorldSpace& closest) const;
         WorldSpace EvaluateAt(const float t) const;
-        Eigen::Vector3f eval(const float t) const {
-            return toEig(EvaluateAt(t));
-        }
+        Eigen::Vector3f eval(const float t) const;
 
         WorldSpace tangentAt(float t);
 
@@ -231,9 +232,12 @@ namespace bez
         Eigen::Vector3f ClosestPointToPath(const WorldSpace& position, const ClosestPointSolver* solver, float& u, Eigen::Vector3f& tan) const;
         WorldSpace ClosestPointToPath(const WorldSpace& position, const ClosestPointSolver* solver) const;
         Eigen::Vector3f ClosestPointToPath(const Eigen::Vector3f& position, const ClosestPointSolver* solver) const;
-        //float ClosestU(const Eigen::Vector3f& position, const ClosestPointSolver* solver) const;
 
-        //~CubicBezierPath();
+
+        Eigen::Vector3f ClosestPointToPath(
+            const Eigen::Vector3f& position,
+            const ClosestPointSolver* solver,
+            float& u) const;
 
         void Initialize() { // call after directly editing curves
             for (auto& sp : splines_) {
@@ -241,11 +245,11 @@ namespace bez
             }
         }
 
-        WorldSpace CubicBezierPath::tangentAt(float t) const;
+        Eigen::Vector3f CubicBezierPath::tangentAt(float t) const;
         Eigen::Vector3f CubicBezierPath::tangentAt(float t, Eigen::Vector3f& basePos) const;
 
 
-        std::pair<int, float> global_to_local_param(float t) const {
+        std::pair<int, float> globalToLocalParam(float t) const {
             int number_of_curves = static_cast<int>(splines_.size());
             int curve_index;
             if (t == 1) {
@@ -259,7 +263,7 @@ namespace bez
         }
 
         Eigen::Vector3f eval(float t) const {
-            auto idT = global_to_local_param(t);
+            auto idT = globalToLocalParam(t);
             //return toEig(splines_[idT.first].get()->EvaluateAt(idT.second));
             return toEig(splines_[idT.first].EvaluateAt(idT.second)); 
         }

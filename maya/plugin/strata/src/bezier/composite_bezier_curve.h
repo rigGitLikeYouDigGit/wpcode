@@ -69,7 +69,7 @@ namespace bez {
         vector<BezierCurve> _bezier_curves;
     };
 
-    std::pair<int, double> global_to_local_param(double t, int number_of_curves);
+    std::pair<int, double> globalToLocalParam(double t, int number_of_curves);
 
 }
 

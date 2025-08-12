@@ -422,20 +422,23 @@ huh.
 
 	MRenderItem* _makeEdgeRenderItem(
 		const MDagPath& path,
-		const MShaderManager* shaderManager
+		const MShaderManager* shaderManager,
+		const MString name
 	)
 	{
-		/* render item for edge curves - 
-		* consider here if the Strata manipulation context can hook in to display 
-		* curve attributes as colours, or edge thickness?
+		/* we need a separate render item for each edge, couldn't figure out strides
+		* and it makes it easier to do stuff like highlighting separate curves later on
 		*/
 		LOG("create edge render item")
 
 		const std::size_t strideInBytes =
 				sizeof(ed::IndexList::value_type) * ed::ST_EDGE_DENSE_NPOINTS;
-		MRenderItem* renderItem = MHWRender::MRenderItem::Create(sStEdgeRenderItemName,
+				//sizeof(ed::IndexList::value_type) * 1;
+		//MRenderItem* renderItem = MHWRender::MRenderItem::Create(sStEdgeRenderItemName,
+		MRenderItem* renderItem = MHWRender::MRenderItem::Create(name,
 			MHWRender::MRenderItem::DecorationItem,
 			MHWRender::MGeometry::kLineStrip, //lines gives individual straight lines
+			//MHWRender::MGeometry::kPatch, //lines gives individual straight lines
 			strideInBytes
 		);
 		auto wireframeColor = MHWRender::MGeometryUtilities::wireframeColor(path);
@@ -458,18 +461,6 @@ huh.
 			
 			shaderManager->releaseShader(shader);
 		}
-		
-		/* index mapping to consolidate all sub-curves into single render item
-		*/
-		MHWRender::MIndexBufferDescriptor curveIdxDesc(
-			MHWRender::MIndexBufferDescriptor::kEdgeLine,
-			"subCurveIndexBuffer",
-			MHWRender::MGeometry::kLineStrip,
-			ed::ST_EDGE_DENSE_NPOINTS
-		);
-		
-		//MGeometryIndexMapping scIndexMapping;
-		//scIndexMapping.updateSource(0,)
 
 		return renderItem;
 	}
@@ -559,21 +550,91 @@ huh.
 		only render edges if they're fully contained in faces, unless we're viewing
 		in wireframe
 		*/
-		// edge render item
-		renderItemIndex = renderItems.indexOf(sStEdgeRenderItemName);
-		if (renderItemIndex < 0) {
-			MHWRender::MRenderItem* renderItem = _makeEdgeRenderItem(
-				path, shaderManager
-			);
-			renderItems.append(renderItem);
+		
+		/* build separate renderItem for each edge
+		*/
+		
+		for (auto& p : manifold.eDataMap) {
+			int lookupEdgeIndex = renderItems.indexOf(p.first.c_str());
+			if (lookupEdgeIndex < 0) {
+				MHWRender::MRenderItem* renderItem = _makeEdgeRenderItem(
+					path, shaderManager,
+					p.first.c_str()
+				);
+				renderItems.append(renderItem);
+				lookupEdgeIndex = renderItems.indexOf(p.first.c_str());
+			}
+			MHWRender::MRenderItem* edgeRenderItem = renderItems.itemAt(lookupEdgeIndex);
+			edgeRenderItem->getShader()->setParameter("solidColor", wireCol);
 		}
-		renderItemIndex = renderItems.indexOf(sStEdgeRenderItemName);
-		// update wireframe colour
-		MHWRender::MRenderItem* edgeRenderItem = renderItems.itemAt(renderItemIndex);
-		edgeRenderItem->getShader()->setParameter("solidColor", wireCol);
 
+		/* trim render items that don't exist anymore
+		this feels REVOLTINGLY slow
+		*/
+		int nItems = renderItems.length();
+		for (int i = 0; i < nItems; i++) {
+			/* iterate from end*/
+			int n = nItems - i - 1;
+			MHWRender::MRenderItem* item = renderItems.itemAt(n);
+			// is it the points item (do we even have these separate?)
+			if (item->name() == sStPointRenderItemName) {
+				continue;
+			}
+			// does it exist in edge data map
+			if (manifold.eDataMap.find(item->name().asChar()) != manifold.eDataMap.end()) {
+				continue; // found it, continue
+			}
+			// does it exist in face data map
+			if (manifold.fDataMap.find(item->name().asChar()) != manifold.fDataMap.end()) {
+				continue;
+			}
+			// not found in any map, remove
+			renderItems.removeAt(n);
+		}
 
 	}
+
+	void syncEdgeRenderItem(const MHWRender::MRenderItem* item,
+		ed::SEdgeData& eData, MHWRender::MGeometry& data) {
+		Status s;
+		MHWRender::MIndexBuffer* indexBuffer = data.createIndexBuffer(MHWRender::MGeometry::kUnsignedInt32);
+		if (indexBuffer == nullptr) {
+			//l("invalid semantic used to create index buffer, aborting");
+			return;
+		}
+		ed::IndexList indices = manifold.getWireframeEdgeVertexIndexList(s, eData);
+		if (s) {
+			//l("ERROR getting wireframe point index array, aborting");
+			return;
+		}
+		if (!indices.size()) {
+			//l("got zero-length edge indices, skipping");
+			return;
+		}
+		void* buffer = indexBuffer->acquire(static_cast<unsigned int>(indices.size()), true /*writeOnly*/);
+		if (!buffer) {
+			//l("could not acquire index buffer for edge");
+			return;
+		}
+
+		const std::size_t bufferSizeInByte =
+			sizeof(ed::IndexList::value_type) * indices.size();
+		//l("before mcpy");
+		memcpy(buffer, indices.data(), bufferSizeInByte);
+		//l("before commit");
+		// Transfer from CPU to GPU memory.
+		indexBuffer->commit(buffer);
+		//l("before associate");
+		// Associate index buffer with render item
+		item->associateWithIndexBuffer(indexBuffer);
+		//l("render item done");
+	}
+
+	void syncFaceRenderItem(const MHWRender::MRenderItem* item,
+		ed::SFaceData& fData, MHWRender::MGeometry& data) {
+
+	}
+
 	/* where do we actually build the requirements,
 	need to properly call for vertex / index buffers there*/
 	void populateGeometry(
@@ -871,40 +932,23 @@ huh.
 				l("render item done");
 			}
 
+			// check for item name in data maps
+			auto foundEdge = manifold.eDataMap.find(item->name().asChar());
+			if (foundEdge != manifold.eDataMap.end()) {
+				syncEdgeRenderItem(item, foundEdge->second, data);
+				continue;
+			}
+
+			auto foundFace = manifold.fDataMap.find(item->name().asChar());
+			if (foundFace != manifold.fDataMap.end()) {
+				syncFaceRenderItem(item, foundFace->second, data);
+				continue;
+			}
+
 			if (item->name() == sStEdgeRenderItemName) {
 				//l("edge renderItem");
 				// make index buffer to render point gnomons
-				MHWRender::MIndexBuffer* indexBuffer = data.createIndexBuffer(MHWRender::MGeometry::kUnsignedInt32);
-				if (indexBuffer == nullptr) {
-					l("invalid semantic used to create index buffer, aborting");
-					continue;
-				}
-				ed::IndexList indices = manifold.getWireframeEdgeVertexIndexList(s);
-				if (s) {
-					l("ERROR getting wireframe point index array, aborting");
-					continue;
-				}
-				if (!indices.size()) {
-					l("got zero-length edge indices, skipping");
-					continue;
-				}
-				void* buffer = indexBuffer->acquire(static_cast<unsigned int>(indices.size()), true /*writeOnly*/);
-				if (!buffer) {
-					l("could not acquire index buffer for edge");
-					continue;
-				}
-
-				const std::size_t bufferSizeInByte =
-					sizeof(ed::IndexList::value_type) * indices.size();
-				l("before mcpy");
-				memcpy(buffer, indices.data(), bufferSizeInByte);
-				l("before commit");
-				// Transfer from CPU to GPU memory.
-				indexBuffer->commit(buffer);
-				l("before associate");
-				// Associate index buffer with render item
-				item->associateWithIndexBuffer(indexBuffer);
-				l("render item done");
+				
 			}
 		}
 	}

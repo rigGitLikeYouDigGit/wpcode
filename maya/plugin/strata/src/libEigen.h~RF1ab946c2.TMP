@@ -46,30 +46,6 @@ namespace ed {
 		return ss.str();
 	}
 
-/* sketch for a way of testing tradeoffs between caching vs computing - 
-* Not sure if it's viable for more complex things.
-need to be careful nothing modifies _dir if cached
-*/
-#define ST_RAY_CACHE_DIR 1
-	struct Ray {
-		Vector3f o;
-		Vector3f span;
-#if ST_RAY_CACHE_DIR
-		Vector3f _dir;
-		//inline Vector3f dir() {
-		//	return _dir;
-		//}
-		inline Vector3f& dir() {
-			return _dir;
-		}
-#else
-		inline Vector3f dir() {
-			return span.normalized();
-		}
-#endif
-
-	};
-
 	template<class T>
 	//inline void Quaternion<T>::computeAngleAxis(T& radians, Vector<3, T>& axis) const
 	inline void computeAngleAxis(Eigen::Quaternion<T>& q, T& radians, Eigen::Vector3<T>& axis)
@@ -792,12 +768,63 @@ need to be careful nothing modifies _dir if cached
 
 	bez::CubicBezierPath splitBezPath(bez::CubicBezierPath& crv, float lowT, float highT);
 
-	std::tuple<float, Vector3f, float, Vector3f> closestBezPointToRay(bez::CubicBezierPath& crv, Vector3f rayO, Vector3f raySpan,
-		int initRaySamples=10, int mutualIters=3
-	);
+	std::tuple<float, Vector3f, float, Vector3f> nearestBezPointToLine(bez::CubicBezierPath& crv, Vector3f ptA, Vector3f ptB,
+		int lineSamples=10);
 
-	//std::tuple<float, Vector3f> closestBezPointWeighted(bez::CubicBezierPath& crv, Vector3f pos,
-	//	int samplesPerSpan)
+	//static Matrix3Xf matTest;
+	//static Eigen::Matrix3Xf matTest;
+
+	//// TODO: template this?
+	//inline Eigen::MatrixX3f subSampleBezSpline(bez::CubicBezierSpline& baseCrv, int nSpans) {
+	//	/* create control points for given number of segments on bezier spline. 
+	//	*/
+
+	//	Eigen::MatrixX3f resultPoints(nSpans * 3 + 1, 3);
+
+	//	Eigen::Matrix<float, 4, 3> cvs = baseCrv.pointsAsMatrix();
+	//	
+	//	float step = (1.0f / float(nSpans * 3 + 1));
+	//	BezSplitPts splitPts;
+	//	for (int i = 0; i < nSpans - 1; i++) {
+	//		
+	//		splitPts = splitBezSpline(cvs, step * (i + 1));
+	//		resultPoints.row(i * 3) = splitPts.aPts.row(0);
+	//		resultPoints.row(i * 3 + 1) = splitPts.aPts.row(1);
+	//		resultPoints.row(i * 3 + 2) = splitPts.aPts.row(2);
+	//		
+	//		cvs = splitPts.bPts;
+
+	//		if (EQ(step * (i + 1), 1.0f)) {
+	//			resultPoints.row((i + 1) * 3) = splitPts.bPts.row(0);
+	//			resultPoints.row((i + 1) * 3 + 1) = splitPts.bPts.row(1);
+	//			resultPoints.row((i + 1) * 3 + 2) = splitPts.bPts.row(2);
+	//			resultPoints.row((i + 1) * 3 + 3) = splitPts.bPts.row(3);
+	//		}
+	//	}
+
+	//	return resultPoints;
+	//}
+
+
+	//inline Eigen::MatrixX3f subSampleBezPathPts(bez::CubicBezierPath& baseCrv, int spansPerSpan) {
+	//	/* create a new bezier path with given number of subspans, per-span
+	//	* TODO: parallel
+	//	*/
+	//	Eigen::MatrixX3f result(baseCrv.splines_.size() * spansPerSpan * 3 + 1, 3);
+
+	//	for (int i = 0; i < static_cast<int>(baseCrv.splines_.size()); i++) { // parallel
+	//		int startIndex = i * spansPerSpan * 3;
+	//		int indexSpan = 3 * spansPerSpan + 1;
+	//		bez::CubicBezierSpline& splineRef = *baseCrv.splines_[i].get();
+	//		Eigen::MatrixX3f segmentSpansResult = subSampleBezSpline(splineRef, spansPerSpan);
+	//		DEBUGS("BEFORE STD COPY")
+	//		std::copy(segmentSpansResult.data(), segmentSpansResult.data() + indexSpan,
+	//			result.data() + startIndex
+	//		) ;
+	//		DEBUGS("AFTER STD COPY")
+	//	}
+	//	return result;
+	//}
 
 
 	Eigen::MatrixX3f makeRMFNormals(
@@ -808,25 +835,18 @@ need to be careful nothing modifies _dir if cached
 	);
 
 
-	Eigen::MatrixX3f makeRMFNormals(
-		bez::CubicBezierPath& crv,
-		const Eigen::MatrixX3f& targetNormals,
-		const int nSamples
-	);
+	/// MatrixX3f gives a static assert error, every time ._.
+	/*MatrixX3f test() {
+		MatrixX3f result(5, 3);
+		return result;
+	}*/
 
+	//Matrix3Xf test() {
+	//	Matrix3Xf result(5, 3);
+	//	return result;
+	//}
 
-	static void covariance(const Ref<const MatrixXf> x, const Ref<const MatrixXf> y, Ref<MatrixXf> C)
-	{
-		const float num_observations = static_cast<float>(x.rows());
-		const RowVectorXf x_mean = x.colwise().sum() / num_observations;
-		const RowVectorXf y_mean = y.colwise().sum() / num_observations;
-		C = (x.rowwise() - x_mean).transpose() * (y.rowwise() - y_mean) / num_observations;
-	}
+	//typedef MX3f Eigen::Mat
 
-	/* and to call:
-	MatrixXf m1, m2, m3
-	cov(m1, m2, m3);
-	cov(m1.leftCols<3>(), m2.leftCols<3>(), m3.topLeftCorner<3,3>());
-*/
 
 }

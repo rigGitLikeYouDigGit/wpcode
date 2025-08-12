@@ -63,7 +63,7 @@ namespace bez {
         if(t < 0 || t > 1){
             throw std::domain_error("Composite Bezier curve only defined on [0,1].");
         }
-        std::pair<int, double> local_param = global_to_local_param(t, static_cast<int>(_bezier_curves.size()));
+        std::pair<int, double> local_param = globalToLocalParam(t, static_cast<int>(_bezier_curves.size()));
         return _bezier_curves[local_param.first](local_param.second);
     }
 
@@ -78,7 +78,7 @@ namespace bez {
     }
 
 
-    std::pair<int, double> global_to_local_param(double t, int number_of_curves){
+    std::pair<int, double> globalToLocalParam(double t, int number_of_curves){
         int curve_index;
         if (t == 1){
             curve_index = number_of_curves - 1;

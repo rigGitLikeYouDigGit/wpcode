@@ -1052,7 +1052,7 @@ namespace ed {
 		
 			// get normals
 			int a; int b; 
-			float t = getArrayIndicesTForU(static_cast<int>(d.finalNormals.size()), uvn(0), a, b);
+			float t = getArrayIndicesTForU(static_cast<int>(d.finalNormals.rows()), uvn(0), a, b);
 			Vector3f normal = lerp<Vector3f>(d.finalNormals.row(a), d.finalNormals.row(b), smoothstepCubic(t));
 
 			// make base frame
@@ -1326,6 +1326,8 @@ namespace ed {
 
 
 		IndexList getWireframeEdgeVertexIndexList(Status& s);
+		IndexList getWireframeEdgeVertexIndexList(Status& s, SEdgeData& eData);
+		IndexList getWireframeEdgeVertexIndexListPATCH(Status& s);
 
 		void setGnomonIndexList(unsigned int* result, unsigned int i);
 

@@ -25,7 +25,22 @@ Status& ed::SEdgeData::buildFinalBuffers(Status& s) {
 	/*
 	assumes we have a final curve built in worldspace - 
 	sample upvectors to normals by dense params
+
+	how do we tell the system what upvectors should be?
+	no idea :)
 	*/
+
+	MatrixX3f targetNormals(1, 3);
+	targetNormals.row(0) = Vector3f{ 0, 1, 0 }; // ABSOLUTE TRASH
+	/* I know but consider cases where we just have a literal curve with no drivers,
+	where we only have 1, etc
+	*/
+	finalNormals = makeRMFNormals(
+		finalCurve,
+		targetNormals,
+		densePointCount()
+	);
+
 
 	return s;
 
@@ -241,7 +256,7 @@ Status& ed::StrataManifold::getWireframeEdgeVertexPositionArray(Status& s, Float
 			s = edgePosAt(s, posVec, eData, uvn);
 
 			/// TEST DEBUG
-			auto pair = eData.finalCurve.global_to_local_param(u);
+			auto pair = eData.finalCurve.globalToLocalParam(u);
 			//posVec = toEigConst(eData.finalCurve.splines_[pair.first].control_points_[pt % 4]);
 
 			/* TODO: should we cache the final sampled points? seems like it might be
@@ -282,7 +297,56 @@ IndexList ed::StrataManifold::getWireframeEdgeVertexIndexList(Status& s) {
 	}
 
 	return result;
+}
 
+IndexList ed::StrataManifold::getWireframeEdgeVertexIndexList(Status& s, SEdgeData& eData) {
+	/*separate buffer for each edge - 
+	* seems super wasteful
+	*/
+	IndexList result(eData.densePointCount());
+	for (int n = 0; n < eData.densePointCount(); n++) {
+		result[n] = eData._bufferStartIndex + n;
+	}
+	return result;
+}
+
+IndexList ed::StrataManifold::getWireframeEdgeVertexIndexListPATCH(Status& s) {
+	/* assume we emit each edge as a continuous line
+	*
+	* seems line indices need to be dense -
+	*/
+	// add entry for -1 after each curve
+	//IndexList result(_nEdgeVertexBufferEntries + static_cast<int>(eDataMap.size()));
+	//IndexList result(_nEdgeVertexBufferEntries / ST_EDGE_DENSE_NPOINTS);
+	//int i = 0;
+
+	//for (auto& p : eDataMap) {
+	//	
+	//	SEdgeData& eData = p.second;
+	//	result[i] = eData._bufferStartIndex;
+	//	//int n = 0;
+	//	//for (n; n < eData.densePointCount(); n++) {
+	//	//	//result[eData._bufferStartIndex - _edgeVertexBufferEntryStart + n + i] = eData._bufferStartIndex + n;
+	//	//	result[eData._bufferStartIndex - _edgeVertexBufferEntryStart + n] = eData._bufferStartIndex + n;
+	//	//}
+	//	
+	//	//result[eData._bufferStartIndex - _edgeVertexBufferEntryStart + n + i ] = -1;
+	//	//result[eData._bufferStartIndex - _edgeVertexBufferEntryStart + n + i ] = UINT_MAX;
+	//	//result[eData._bufferStartIndex - _edgeVertexBufferEntryStart + n + i ] = UINT_MAX;
+	//	//result[eData._bufferStartIndex - _edgeVertexBufferEntryStart + n + i ] = nan;
+	//	i += 1;
+
+	//	//result[eData._bufferStartIndex - _edgeVertexBufferEntryStart + n - 1] = -1;
+	//	/*result[i * 2] = eData._bufferStartIndex;
+	//	result[i * 2 + 1] = eData._bufferStartIndex + eData.densePointCount()-1;*/
+	//}
+
+	IndexList result(ST_EDGE_DENSE_NPOINTS);
+	for (int i = 0; i < result.size(); i++) {
+		result[i] = i;
+	}
+
+	return result;
 }
 
 Status& ed::StrataManifold::pointSpaceMatrix(Status& s, Affine3f& outMat, SPointData& data) {

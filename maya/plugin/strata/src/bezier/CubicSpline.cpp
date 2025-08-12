@@ -212,13 +212,14 @@ namespace bez
         return min_position;
     }
 
-    WorldSpace CubicBezierPath::tangentAt(float t) const {
-        auto r = global_to_local_param(t);
+
+    Vector3f CubicBezierPath::tangentAt(float t) const {
+        auto r = globalToLocalParam(t);
         return (1.0f / 0.0001f) * (
             //splines_[r.first].get()->EvaluateAt(std::max(1.0f, r.second + 0.0001f)) -
             //splines_[r.first].get()->EvaluateAt(std::min(0.0f, r.second - 0.0001f)));
-            splines_[r.first].EvaluateAt(std::max(1.0f, r.second + 0.0001f)) -
-            splines_[r.first].EvaluateAt(std::min(0.0f, r.second - 0.0001f)));
+            splines_[r.first].eval(std::max(1.0f, r.second + 0.0001f)) -
+            splines_[r.first].eval(std::min(0.0f, r.second - 0.0001f)));
     }
 
     Eigen::Vector3f CubicBezierPath::tangentAt(float t, Eigen::Vector3f& basePos) const {
@@ -226,14 +227,14 @@ namespace bez
         * basePos should be original sampled position on curve
         * NOT NORMALISED
         */
-        auto r = global_to_local_param(t);
+        auto r = globalToLocalParam(t);
         if (t > 0.999) { // sample backwards, negate result vector
             //Eigen::Vector3f tanPos = toEig(splines_[r.first].get()->EvaluateAt(t - 0.0001f));
-            Eigen::Vector3f tanPos = toEig(splines_[r.first].EvaluateAt(t - 0.0001f));
+            Eigen::Vector3f tanPos = (splines_[r.first].eval(t - 0.0001f));
             return (1.0f / 0.0001f) * (basePos - tanPos);
         }
         //Eigen::Vector3f tanPos = toEig(splines_[r.first].get()->EvaluateAt(t + 0.0001f));
-        Eigen::Vector3f tanPos = toEig(splines_[r.first].EvaluateAt(t + 0.0001f));
+        Eigen::Vector3f tanPos = (splines_[r.first].eval(t + 0.0001f));
         return (1.0f / 0.0001f) * tanPos - basePos;
 
     }
@@ -267,13 +268,33 @@ namespace bez
         return toEig(ClosestPointToPath(WorldSpace(position), solver));
     }
 
-    //float CubicBezierPath::ClosestUToPath(
-    //    const Eigen::Vector3f& position,
-    //    const ClosestPointSolver* solver) const
-    //{
-    //    return toEig(ClosestPointToPath(WorldSpace(position), solver));
-    //}
+    Eigen::Vector3f CubicBezierPath::ClosestPointToPath(
+        const Eigen::Vector3f& position,
+        const ClosestPointSolver* solver,
+        float& u) const
+    {
+        WorldSpace min_position{ 0.f, 0.f, 0.f };
+        float min_dist_sq = std::numeric_limits<float>::max();
 
+        // The closest point on the path, is the closest point from the set of closest points to each spline.
+        WorldSpace spline_position{ 0.f, 0.f, 0.f };
+        u = 0.0f;
+        float splineN = 0.0f;
+        for (const auto& spline : splines_)
+        {
+            //const float dist_sq = spline->ClosestPointToSpline(position, solver->Get(), spline_position, u);
+            const float dist_sq = spline.ClosestPointToSpline(position, solver->Get(), spline_position, u);
+            if (dist_sq < min_dist_sq)
+            {
+                min_dist_sq = dist_sq;
+                min_position = spline_position;
+                u = u + splineN;
+            }
+            splineN += 1.0f;
+        }
+        u /= float(splines_.size()); // normalise u across whole path
+        return toEig(min_position);
+    }
 
 
 
@@ -713,6 +734,13 @@ namespace bez
     {
         // The polynomial for is faster at evaluating than the parametric.
         return t * (polynomial_form_[2] + t * (polynomial_form_[1] + t * polynomial_form_[0])) + polynomial_form_[3];
+    }
+
+    Eigen::Vector3f CubicBezierSpline::eval(
+        const float t) const
+    {
+        // The polynomial for is faster at evaluating than the parametric.
+        return toEig( t * (polynomial_form_[2] + t * (polynomial_form_[1] + t * polynomial_form_[0])) + polynomial_form_[3] );
     }
 
     WorldSpace CubicBezierSpline::tangentAt(float t) {

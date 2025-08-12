@@ -954,6 +954,50 @@ Eigen::MatrixX3f ed::makeRMFNormals(
 	return resultNs;
 }
 
+Eigen::MatrixX3f ed::makeRMFNormals(
+	bez::CubicBezierPath& crv,
+	const Eigen::MatrixX3f& targetNormals,
+	const int nSamples
+) {/*
+	as above, but working on only positions and tangents
+	*/
+
+	Eigen::MatrixX3f resultNs(nSamples, 3);
+
+	//Eigen::Vector3f ri = targetNormals.row(0);
+	resultNs.row(0) = targetNormals.row(0);
+	
+	float u, nextU;
+	float step = 1.0f / (nSamples - 1);
+	for (int i = 0; i < nSamples - 1; i++) {
+		u = step * i;
+		nextU = step * (i + 1);
+		/*Vector3f xi = positions.row(i);
+		Vector3f ti = tangents.row(i).normalized();*/
+		Vector3f xi = crv.eval(u);
+		Vector3f ti = crv.tangentAt(u, xi).normalized();
+
+		//Vector3f xiPlus1 = positions.row(i + 1);
+		Vector3f xiPlus1 = crv.eval(nextU);
+		Vector3f v1 = xiPlus1 - xi;
+		float c1 = v1.dot(v1);
+		float ttf = (v1.dot(resultNs.row(i)));
+		Vector3f ttv = v1 * (2.0 / c1) * ttf;
+		Vector3f ttr = Vector3f(resultNs.row(i)) - ttv;
+		//Vector3f rLi = resultNs.row(i) - v1 * (2.0 / c1) * (v1.dot(resultNs.row(i)));
+		Vector3f rLi = ttr;
+		Vector3f tLi = ti - (2.0 / c1) * (v1.dot(ti)) * v1;
+
+		//Vector3f tiPlus1 = tangents.row(i + 1).normalized(); // next point's tangent
+		Vector3f tiPlus1 = crv.tangentAt(nextU, xiPlus1).normalized(); // next point's tangent
+		Vector3f v2 = tiPlus1 - tLi;
+		float c2 = v2.dot(v2);
+		Vector3f riPlus1 = rLi - (2.0 / c2) * (v2.dot(rLi)) * v2; // final reflected normal
+		resultNs.row(i + 1) = riPlus1.normalized();
+	}
+	return resultNs;
+}
+
 bez::CubicBezierPath ed::splitBezPath(bez::CubicBezierPath& crv, float lowT, float highT) {
 	/* return new bez path split at the given param(s)
 	* only split twice if we need to
@@ -964,8 +1008,9 @@ bez::CubicBezierPath ed::splitBezPath(bez::CubicBezierPath& crv, float lowT, flo
 	}
 	// can't work out how to declare vars in higher scope like this
 	//bez::CubicBezierPath& newCrv = crv;
+	// so for now this function is ugly and not factored
 	if (!EQ(highT, 0)) { // return first half
-		auto idParam = crv.global_to_local_param(highT);
+		auto idParam = crv.globalToLocalParam(highT);
 		auto res = splitBezSpline(crv.splines_[idParam.first].pointsAsMatrix(), idParam.second);
 		//std::vector<bez::CubicBezierSpline> subcrvs(idParam.first + 1);
 		int i = 0;
@@ -989,7 +1034,7 @@ bez::CubicBezierPath ed::splitBezPath(bez::CubicBezierPath& crv, float lowT, flo
 		newCrv.splines_[i].Initialize();
 		// split lower half
 		lowT = lowT * idParam.second; // multiply to remap into new, shorter curve
-		idParam = newCrv.global_to_local_param(lowT);
+		idParam = newCrv.globalToLocalParam(lowT);
 		res = splitBezSpline(newCrv.splines_[idParam.first].pointsAsMatrix(), idParam.second);
 		bez::CubicBezierPath nnewCrv;
 		nnewCrv.splines_.resize(newCrv.splines_.size() - idParam.first);
@@ -1010,7 +1055,7 @@ bez::CubicBezierPath ed::splitBezPath(bez::CubicBezierPath& crv, float lowT, flo
 	}
 
 	// only trim low part
-	auto idParam = crv.global_to_local_param(lowT);
+	auto idParam = crv.globalToLocalParam(lowT);
 	auto res = splitBezSpline(crv.splines_[idParam.first].pointsAsMatrix(), idParam.second);
 	bez::CubicBezierPath nnewCrv;
 	nnewCrv.splines_.resize(crv.splines_.size() - idParam.first);
@@ -1028,6 +1073,48 @@ bez::CubicBezierPath ed::splitBezPath(bez::CubicBezierPath& crv, float lowT, flo
 	);
 	nnewCrv.Initialize();
 	return nnewCrv;
+}
+
+std::tuple<float, Vector3f, float, Vector3f> ed::closestBezPointToRay(bez::CubicBezierPath& crv, Vector3f rayO, Vector3f raySpan,
+	int initRaySamples, int mutualIters) {
+	/* return curve param, closest bez point, line param, closest line point*/
+	//Vector3f rayDir = raySpan.normalized();
+	float d = std::numeric_limits<float>::max();
+	float bezU = 0;
+	float rayU = 0;
+	float checkD; //z
+
+	Vector3f rayPos;
+	Vector3f bezPos;
+
+	// is there a way to do this without copying results to check here? I guess copy only the distance and the iteration
+	float minBezU = 0;
+	float minRayU = 0;
+
+	Vector3f minRayPos;
+	Vector3f minBezPos;
+	for (int i = 0; i < initRaySamples; i++) {
+		 rayU = 1.0f / (initRaySamples - 1) * i;
+		 bezPos = crv.ClosestPointToPath(rayO + raySpan * rayU, crv.getSolver(), bezU);
+		 checkD = (bezPos - (rayO + raySpan * rayU)).squaredNorm();
+		 if (checkD < d) {
+			 minBezU = bezU;
+			 minBezPos = bezPos;
+			 minRayU = rayU;
+			 minRayPos = rayO + raySpan * rayU;
+			 d = checkD;
+		 }
+	}
+
+	/* iterative mutual closest point from found positions*/
+	for (int i = 0; i < mutualIters; i++) {
+		minBezPos = crv.ClosestPointToPath(rayO + raySpan * minRayU, crv.getSolver(), minBezU);
+		minRayU = closestTAlongRay(raySpan, rayO, minBezPos) / raySpan.norm();
+		minRayU = clamp01(minRayU);
+	}
+
+	return std::make_tuple(minBezU, minBezPos, minRayU, rayPos);
+
 }
 
 #endif // !ED_LIB_EIGEN
