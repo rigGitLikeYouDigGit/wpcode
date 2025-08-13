@@ -4,7 +4,7 @@ from __future__ import annotations
 import bpy
 
 from pathlib import Path
-from tree.lib.object import TypeNamespace
+from wplib.object import TypeNamespace
 from wpblend.lib import listDescendents, selection, select, clearSelection
 
 """create new io-collection with given name

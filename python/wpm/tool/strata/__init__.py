@@ -24,4 +24,7 @@ i'm all about it
 
 
 might change the name to Strata
+
+
+this is now rewritten in maya/plugin/strata
 """

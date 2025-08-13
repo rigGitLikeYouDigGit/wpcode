@@ -1,0 +1,132 @@
+// maya-facing front end to 3d-printed slicer shader
+
+
+# version 430
+
+#define OGSFX 1
+
+// look at this repulsive code
+#define HIDE_OGSFX_UNIFORMS 0
+#define HIDE_OGSFX_STREAMS 1
+#define HIDE_OGSFX_CODE 1
+
+#include "3dPrintShaderVertex.glsl"
+#include "3dPrintShaderFragment.glsl"
+
+uniform texture2D PrintDiffuseMap;
+uniform sampler2D PrintDiffuseSampler <string UIGroup="Textures";>= sampler_state
+{
+	Texture = <PrintDiffuseMap>;
+	TEXTURE_MIN_FILTER = NEAREST;
+	TEXTURE_MAG_FILTER = NEAREST;
+	TEXTURE_WRAP_S = REPEAT;
+	TEXTURE_WRAP_T = REPEAT;
+	TEXTURE_WRAP_R = REPEAT;
+};
+
+uniform texture1D TestArray;
+
+
+uniform vec3 baseDiffuse <
+	string UIGroup="Main";
+	string UIWidget = "ColorPicker";
+>;
+
+// float defining general scale of model, bounding box is fine
+
+
+uniform float layerHeight <string UIGroup="Main";>= 0.2;
+uniform float layerEdgeRoundness <string UIGroup="Main";>= 0.1;
+
+
+uniform vec3 layerDir <
+    string UIGroup = "Main"; > ;
+
+
+// ---- volume raytracing settings
+
+uniform float globalScale <string UIGroup="volumeSettings";>= 1.0;
+uniform int nSlices <string UIGroup="volumeSettings";> = 64;
+uniform int nRaySteps <string UIGroup="volumeSettings";> = 64;
+uniform float isovalue <string UIGroup="volumeSettings";> = 0.5;
+uniform vec3 volumeOffset <string UIGroup="volumeSettings";>;
+
+uniform float focalLength <string UIGroup="volumeSettings";>= 5.0;
+uniform float testRayStep <string UIGroup="volumeSettings";> = 0.05;
+uniform float tetDifferencesRange <string UIGroup="volumeSettings";> = 0.05;
+
+// sampler for flipbook texture of slices
+uniform texture2D PrintVolumeMap;
+uniform sampler2D PrintVolumeSampler <string UIGroup="volumeSettings";>= sampler_state
+{
+	Texture = <PrintVolumeMap>;
+	TEXTURE_MIN_FILTER = NEAREST;
+	TEXTURE_MAG_FILTER = NEAREST;
+	TEXTURE_WRAP_S = CLAMP_TO_EDGE;
+	TEXTURE_WRAP_T = CLAMP_TO_EDGE;
+	TEXTURE_WRAP_R = CLAMP_TO_EDGE;
+};
+
+
+
+uniform bool debugColours <string UIGroup="Main";> = False;
+
+
+// code definition
+
+#define HIDE_OGSFX_UNIFORMS 1
+#define HIDE_OGSFX_STREAMS 0
+#define HIDE_OGSFX_CODE 1
+
+#include "3dPrintShaderVertex.glsl"
+#include "3dPrintShaderFragment.glsl"
+
+
+//**********
+//	Code handling:
+//
+//	We need to load the vertex stage and fragment stage in two
+//	different GLSLShader blocks in order to specify them in the
+//	technique definition below:
+//
+
+#define HIDE_OGSFX_UNIFORMS 1
+#define HIDE_OGSFX_STREAMS 1
+#define HIDE_OGSFX_CODE 0
+
+
+
+// link main files
+GLSLShader VS {
+#include "3dPrintShaderVertex.glsl"
+}
+
+GLSLShader FS {
+  #include "3dPrintShaderFragment.glsl"
+}
+
+
+GLSLShader PassVertex {
+    void main(){
+
+    }
+}
+
+
+// define technique
+technique Main
+<
+//tell Maya to support transparency for this technique
+string Transparency = "Transparent";
+
+// Disable consolidation -- the displacement uses the World matrix which is modified when the consolidation is active
+string handlesConsolidatedGeometry = "false";
+>
+{
+
+
+  // eye passes
+  pass p0 { VertexShader (in appdata, out vertexOutput) = VS;
+    PixelShader (in vertexOutput, out fragmentOutput) = FS;
+  }
+}

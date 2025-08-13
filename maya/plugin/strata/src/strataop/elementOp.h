@@ -51,27 +51,18 @@ namespace ed {
 		*/
 		using StrataOp::StrataOp;
 
-		//// populate these if literal worldspace inputs are given
-		//std::map<StrataName, SPointData> namePointDataMap; 
-		//std::map<StrataName, SEdgeData> nameEdgeDataMap; 
-
 		std::map<StrataName, ElOpParam> paramMap;
-		// is this the best way to iterate over dictionary in creation order?
 		std::vector<StrataName> paramNames = {};
 
 		virtual Status makeParams();
 
-		//std::vector<StrataName> elementsAdded = {}; // temp, used to pass information back out of op compute to maya
 		std::vector<StrataName> elementsAdded = {}; // temp, used to pass information back out of op compute to maya
 
-		///template <typename AuxT>
 		virtual Status eval(StrataManifold& value, EvalAuxData* auxData, Status& s);
 
 		virtual SAtomBackDeltaGroup bestFitBackDeltas(Status* s, StrataManifold& finalManifold, SAtomBackDeltaGroup& front);
 		Status& pointProcessTargets(Status& s, StrataManifold& finalManifold, SAtomBackDeltaGroup& deltaGrp, SElement* el);
 		
-		//virtual Status& setBackOffsetsAfterDeltas(Status& s, StrataManifold& manifold);
-
 		virtual StrataElementOp* clone_impl() const;
 
 	};

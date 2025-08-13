@@ -285,15 +285,7 @@ IndexList ed::StrataManifold::getWireframeEdgeVertexIndexList(Status& s) {
 			//result[eData._bufferStartIndex - _edgeVertexBufferEntryStart + n + i] = eData._bufferStartIndex + n;
 			result[eData._bufferStartIndex - _edgeVertexBufferEntryStart + n] = eData._bufferStartIndex + n;
 		}
-		//result[eData._bufferStartIndex - _edgeVertexBufferEntryStart + n + i ] = -1;
-		//result[eData._bufferStartIndex - _edgeVertexBufferEntryStart + n + i ] = UINT_MAX;
-		//result[eData._bufferStartIndex - _edgeVertexBufferEntryStart + n + i ] = UINT_MAX;
-		//result[eData._bufferStartIndex - _edgeVertexBufferEntryStart + n + i ] = nan;
 		i += 1;
-
-		//result[eData._bufferStartIndex - _edgeVertexBufferEntryStart + n - 1] = -1;
-		/*result[i * 2] = eData._bufferStartIndex;
-		result[i * 2 + 1] = eData._bufferStartIndex + eData.densePointCount()-1;*/
 	}
 
 	return result;

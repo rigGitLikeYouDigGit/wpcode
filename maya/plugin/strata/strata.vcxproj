@@ -325,6 +325,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="src\logger.cpp" />
     <ClCompile Include="src\mayaNode\frameCurve.cpp" />
     <ClCompile Include="src\mayaNode\strataShapeGeometryOverride.cpp" />
+    <ClCompile Include="src\strataop\expOp.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\MInclude.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\api.h" />
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\bezier\CubicSpline.cpp" />
@@ -401,6 +402,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="src\logger.h" />
     <ClInclude Include="src\mayaNode\frameCurve.h" />
     <ClInclude Include="src\mayaNode\strataShapeGeometryOverride.h" />
+    <ClInclude Include="src\strataop\expOp.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="F:\wp\code\maya\plugin\strata\ZERO_CHECK.vcxproj">

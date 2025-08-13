@@ -1,0 +1,48 @@
+
+
+constraints used to inject forces into system
+
+first plate in constraint is used as ground, used as coordinate space for that constraint
+
+in maya the synthesis process might get a bit mental - would be really cool
+to have it run live on the node
+
+would each plate need "input vertex position" and "trained vertex position?"
+might not be too crazy - separate "trained" attributes ?
+
+training process has to happen continuously with evaluation - normal
+evaluation goes forwards in node graph while training
+(effectively back-propagation) oes backwards, setting node trained inputs
+before evaluating again
+
+plate nodes in maya define the "rest" plate positions -
+no results of solver evaluation are available in graph
+before solver node itself
+
+
+solver step pseudo code -
+per constraint,
+    per vertex,
+        get its current and target position
+        assign translator to it (ignore rotators for now)
+per plate,
+    get average offset of its translators
+    get best fitting matrix
+    rotate plate
+
+repeat
+
+
+
+need to work out how to treat hard constraints vs soft -
+need to have some way to integrate forces on rigid bodies
+
+just solve hard constraints a load more than soft forces? seems to be the done thing
+
+add a "rigidWeight" to each plate, being its graph distance away from a rigid plate
+in the assembly. In constraints use the difference in rigid weight to add result forces
+assymetrically,
+
+
+
+

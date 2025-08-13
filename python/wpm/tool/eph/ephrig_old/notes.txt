@@ -1,0 +1,10 @@
+
+
+
+rig in any dcc is made of mirrored set of
+flat transforms in world space
+
+input transforms are formed of parent and child, to allow zeroing
+in whatever the current space is
+
+on rig evaluation (dragging), output is continuously cycled back to inputs

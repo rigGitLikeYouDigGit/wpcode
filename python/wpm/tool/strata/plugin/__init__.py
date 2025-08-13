@@ -225,6 +225,13 @@ def reloadPluginTest():
 	crossEl.stName_ = "eCross"
 	#crossEl.stDriverExp_ = "pCrossA, pCrossB" # works
 	crossEl.stDriverExp_ = "pCrossA, eArmCrv, pCrossB"
+
+	# CRY HAVOC
+	faceEl = elOp.stElement_.getFreeEl()
+	faceEl.stName_ = "fFace"
+	faceEl.stDriverExp_ = "eArmCrv, (eCross > eArmCrv)" # only use eCross on higher side of eArmCrv
+
+
 	return
 
 	# connect elbow driver to test space driving, and FK

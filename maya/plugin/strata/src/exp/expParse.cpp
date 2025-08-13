@@ -10,12 +10,9 @@
 using namespace ed;
 using namespace ed::expns;
 
-//using ed::expns::StrataManifold = ed::StrataManifold;
-
 
 const std::string test::tag("hello");
 
-//ExpGrammar baseGrammar;
 
 /* largely copied from https://github.com/jwurzer/bantam-cpp
 modified to produce an evalGraph after parsing

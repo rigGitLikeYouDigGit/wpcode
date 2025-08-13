@@ -5,7 +5,7 @@ import typing as T
 import numpy as np
 from collections import namedtuple
 
-from wpm import cmds, om, WN, createWN
+from wpm import cmds, om, WN
 
 """shelving until we have a proper character to test on - 
 at first glance this works, but needs proper integration
@@ -156,23 +156,23 @@ class EphNode:
 def makeEphNode(name:str, pos:np.ndarray)->EphNode:
 	"""create reference, input group, input joint and output joint"""
 
-	refJnt = createWN("joint", name=name + "Ref_JNT")
+	refJnt = WN("joint", name=name + "Ref_JNT")
 	addMessageAttr(refJnt, "inputGrp")
 	addMessageAttr(refJnt, "inputJnt")
 	addMessageAttr(refJnt, "outputJnt")
 
-	inputGrp = createWN("transform", name=name+"Input_GRP")
+	inputGrp = WN("transform", name=name+"Input_GRP")
 	addMessageAttr(inputGrp, "refJnt")
 	addMessageAttr(inputGrp, "inputJnt")
 	addMessageAttr(inputGrp, "outputJnt")
 
 
-	inputJnt = createWN("joint", name=name+"Input_JNT", parent=inputGrp)
+	inputJnt = WN("joint", name=name+"Input_JNT", parent=inputGrp)
 	addMessageAttr(inputJnt, "refJnt")
 	addMessageAttr(inputJnt, "inputGrp")
 	addMessageAttr(inputJnt, "outputJnt")
 
-	outputJnt = createWN("joint", name=name+"Output_JNT")
+	outputJnt = WN("joint", name=name+"Output_JNT")
 	addMessageAttr(outputJnt, "refJnt")
 	addMessageAttr(outputJnt, "inputGrp")
 	addMessageAttr(outputJnt, "inputJnt")
@@ -203,11 +203,11 @@ def main():
 	cmds.file(new=True, force=True)
 
 	# group holding reference transforms
-	refGrp = createWN("transform", name="refGrp")
+	refGrp = WN("transform", name="refGrp")
 	# group holding flat output transforms
-	outputGrp = createWN("transform", name="outputGrp")
+	outputGrp = WN("transform", name="outputGrp")
 	# group holding input transforms
-	inputGrp = createWN("transform", name="inputGrp")
+	inputGrp = WN("transform", name="inputGrp")
 
 	jointNames = "ABC"
 

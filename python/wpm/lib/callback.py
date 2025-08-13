@@ -98,9 +98,9 @@ class WpMayaIdleCallback(WpMayaCallback):
 
 	def attach(self,
 	           # mMessageAddCallbackFn,
-	           # attachPreArgs:tuple=(),
-	           # attachPostArgs:tuple=()
 	           idleEvent=event.MEventMessage.idle,
+	           attachPreArgs:tuple=(),
+	           attachPostArgs:tuple=(),
 	           ):
 		"""attach a secondary timer callback to keep re-attaching this
 		one after we unattach after firing
