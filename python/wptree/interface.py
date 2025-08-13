@@ -485,6 +485,7 @@ class TreeInterface(Pathable,
 	def __setitem__(self, key:(str, tuple), value:T, **kwargs):
 		""" assuming that setting tree valueExpressions is far more frequent than
 		setting actual tree objects """
+		kwargs["create"] = True
 		self(*self.toPath(key), **kwargs).value = value
 
 	def __getitem__(self, address:(str, tuple),

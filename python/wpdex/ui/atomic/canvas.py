@@ -9,7 +9,7 @@ from wpui.canvas import *
 from wplib.inheritance import resolveInheritedMetaClass, MetaResolver
 from wpdex import *
 from wpdex import WX
-from wpdex.ui import AtomicUiInterface
+from wpdex.ui.atomic.base import AtomicUiInterface
 
 
 

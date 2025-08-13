@@ -8,5 +8,5 @@ from idem.node import DCCSessionNode
 
 class MayaSessionNode(DCCSessionNode):
 	@classmethod
-	def dccProcessType(cls)->type[Maya]:
-		return Maya
+	def dccProcessType(cls)->type[MayaProcess]:
+		return MayaProcess

@@ -10,7 +10,7 @@ from wplib import inheritance, nxlib
 from wplib.maths import arr#,fromArr
 from wpdex.ui.atomic import ExpWidget
 from wpdex import WpDexProxy, WX, react
-from wpdex.ui import AtomicUiInterface
+#from wpdex.ui import AtomicUiInterface
 from wpui.widget.collapsible import ShrinkWrapWidget
 from .element import WpCanvasElement
 
