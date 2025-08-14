@@ -15,8 +15,8 @@ from wplib import astlib as wpast
 #from wplib.object.serialisable import Serialisable, compileFunctionFromString, serialise
 from wplib.object import DeepVisitor
 
-from wplib.expression import constant as expconstant
-from wplib.expression.evaluator import ExpEvaluator
+from wpexp import constant as expconstant
+from wpexp.evaluator import ExpEvaluator
 from wpexp.syntax import ExpSyntaxProcessor, SyntaxPasses
 
 from wplib.serial import Serialisable
