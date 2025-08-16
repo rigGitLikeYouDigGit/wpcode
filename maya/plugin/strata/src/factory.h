@@ -21,7 +21,7 @@
 #include <stdexcept>
 
 
-namespace ed {
+namespace strata {
 
 #ifndef UTIL_EXCEPTION_H_
 	//using std::logic_error;

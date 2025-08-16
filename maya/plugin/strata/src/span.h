@@ -32,7 +32,7 @@ http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/n4820.pdf
 // Various feature test macros
 
 #ifndef TCB_SPAN_NAMESPACE_NAME
-#define TCB_SPAN_NAMESPACE_NAME ed
+#define TCB_SPAN_NAMESPACE_NAME strata
 #endif
 
 #if __cplusplus >= 201703L || (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L)

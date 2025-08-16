@@ -9,7 +9,7 @@
 /* c++ basic string processing provided by standard library challenge
 * difficulty impossible
 */
-namespace ed {
+namespace strata {
 
 	inline void trimLeft(std::string str, const char* trimChars="\t\n\v\f\r ") {
 		str.erase(0, str.find_first_not_of(trimChars)); // left trim

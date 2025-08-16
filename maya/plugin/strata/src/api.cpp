@@ -1,10 +1,10 @@
 
 #include "api.h"
 
-using namespace ed;
+using namespace strata;
 
 
-//std::map<MHWRender::DisplayStatus, float[4]> ed::defaultWireColourMap = {
+//std::map<MHWRender::DisplayStatus, float[4]> strata::defaultWireColourMap = {
 //
 //}
 //

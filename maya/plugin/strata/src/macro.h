@@ -6,6 +6,7 @@
 
 #include <maya/MStreamUtils.h>
 #include <maya/MString.h>
+#include <maya/MGlobal.h>
 
 // debug macros
 #define COUT MStreamUtils::stdOutStream()
@@ -15,6 +16,7 @@
 #define MCHECK(stat,msg)             \
         if ( MS::kSuccess != stat ) {   \
                 cerr << __LINE__ << msg;            \
+				MGlobal::displayError(MString(msg)); \
                 return MS::kFailure;    \
         }
 

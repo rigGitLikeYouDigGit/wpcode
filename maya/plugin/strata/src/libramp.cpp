@@ -5,7 +5,7 @@
 #include <maya/MFloatArray.h>
 #include <maya/MRampAttribute.h>
 
-namespace ed {
+namespace strata {
 
 	struct RampPoint {
 		// pointers leading into maya float arrays

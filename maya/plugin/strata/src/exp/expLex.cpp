@@ -1,7 +1,7 @@
 
 #include "expLex.h"
-using namespace ed;
-using namespace ed::expns;
+using namespace strata;
+using namespace strata::expns;
 
 
 
@@ -214,6 +214,11 @@ Token Lexer::next() noexcept {
     case '<':
         return atom(Token::Kind::LessThan, -1);
     case '>':
+        /* check for >| operator */
+        if (*(m_beg + 1) == '|') { 
+            get();
+            return atom(Token::Kind::GreaterThanPipe);
+        }
         return atom(Token::Kind::GreaterThan, 1);
     case '=':
         return atom(Token::Kind::Equal);

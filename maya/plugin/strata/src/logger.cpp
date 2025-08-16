@@ -2,7 +2,7 @@
 
 #include "logger.h"
 
-using namespace ed;
+using namespace strata;
 
 
 volatile int Log::_logDepth = 0;

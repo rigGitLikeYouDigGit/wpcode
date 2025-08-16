@@ -27,7 +27,7 @@ namespace bez {
 	struct CubicBezierPath;
 }
 
-namespace ed {
+namespace strata {
 	/* copying various from Free Electron,
 	adapting to Eigen types
 	*/

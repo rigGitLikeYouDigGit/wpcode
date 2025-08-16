@@ -19,7 +19,7 @@
 #include "libEigen.h"
 #include "bezier/bezier.h"
 
-using namespace ed;
+using namespace strata;
 
 template <typename T>
 //inline void rotateVector(const Eigen::Matrix4<T>& lhs, const Eigen::Vector3<T>& in,
@@ -56,7 +56,7 @@ Eigen::Matrix4<T>& translate(
 	return lhs;
 }
 
-inline Status& ed::splineUVN(
+inline Status& strata::splineUVN(
 	Status& s,
 	//Eigen::Matrix4f& outMat,
 	Eigen::Affine3f& outMat,
@@ -94,7 +94,7 @@ inline Status& ed::splineUVN(
 }
 
 //
-//Status& ed::splineUVN(
+//Status& strata::splineUVN(
 //	Status& s,
 //	//Eigen::Matrix4f& outMat,
 //	Eigen::Affine3f& outMat,
@@ -575,7 +575,7 @@ inline void FEMatrixPower<MATRIX>::solve(MATRIX& B, const MATRIX& A,
 	}
 }
 
-MMatrixArray ed::curveMatricesFromDriverDatas(
+MMatrixArray strata::curveMatricesFromDriverDatas(
 	MMatrixArray controlMats, int segmentPointCount,
 	int rootIterations
 	) {
@@ -674,14 +674,14 @@ MMatrixArray ed::curveMatricesFromDriverDatas(
 }
 
 
-MPointArray ed::curvePointsFromEditPoints(
+MPointArray strata::curvePointsFromEditPoints(
 	MMatrixArray controlMats, int segmentPointCount
 	//int rootIterations
 ) {
 	return MPointArray();
 }
 
-MPointArray ed::curvePointsFromEditPointsAndTangents(
+MPointArray strata::curvePointsFromEditPointsAndTangents(
 	MMatrixArray controlMats, int segmentPointCount
 	//int rootIterations
 ) {
@@ -689,7 +689,7 @@ MPointArray ed::curvePointsFromEditPointsAndTangents(
 }
 
 template<typename T>
-inline Eigen::MatrixX3<T> ed::cubicTangentPointsForBezPoints(
+inline Eigen::MatrixX3<T> strata::cubicTangentPointsForBezPoints(
 	const Eigen::MatrixX3<T>& inPoints,
 	const bool closed,
 	float* inContinuities// = nullptr
@@ -906,18 +906,18 @@ inline Eigen::MatrixX3<T> ed::cubicTangentPointsForBezPoints(
 
 }
 
-template Eigen::MatrixX3<float> ed::cubicTangentPointsForBezPoints<float>(
+template Eigen::MatrixX3<float> strata::cubicTangentPointsForBezPoints<float>(
 	const Eigen::MatrixX3<float>& inPoints,
 	const bool closed,
 	float* inContinuities
 );
-template Eigen::MatrixX3<double> ed::cubicTangentPointsForBezPoints<double>(
+template Eigen::MatrixX3<double> strata::cubicTangentPointsForBezPoints<double>(
 	const Eigen::MatrixX3<double>& inPoints,
 	const bool closed,
 	float* inContinuities
 );
 
-Eigen::MatrixX3f ed::makeRMFNormals(
+Eigen::MatrixX3f strata::makeRMFNormals(
 	Eigen::MatrixX3f& positions,
 	Eigen::MatrixX3f& tangents,
 	const Eigen::MatrixX3f& targetNormals,
@@ -954,7 +954,7 @@ Eigen::MatrixX3f ed::makeRMFNormals(
 	return resultNs;
 }
 
-Eigen::MatrixX3f ed::makeRMFNormals(
+Eigen::MatrixX3f strata::makeRMFNormals(
 	bez::CubicBezierPath& crv,
 	const Eigen::MatrixX3f& targetNormals,
 	const int nSamples
@@ -998,7 +998,7 @@ Eigen::MatrixX3f ed::makeRMFNormals(
 	return resultNs;
 }
 
-bez::CubicBezierPath ed::splitBezPath(bez::CubicBezierPath& crv, float lowT, float highT) {
+bez::CubicBezierPath strata::splitBezPath(bez::CubicBezierPath& crv, float lowT, float highT) {
 	/* return new bez path split at the given param(s)
 	* only split twice if we need to
 	*/
@@ -1075,7 +1075,7 @@ bez::CubicBezierPath ed::splitBezPath(bez::CubicBezierPath& crv, float lowT, flo
 	return nnewCrv;
 }
 
-std::tuple<float, Vector3f, float, Vector3f> ed::closestBezPointToRay(bez::CubicBezierPath& crv, Vector3f rayO, Vector3f raySpan,
+std::tuple<float, Vector3f, float, Vector3f> strata::closestBezPointToRay(bez::CubicBezierPath& crv, Vector3f rayO, Vector3f raySpan,
 	int initRaySamples, int mutualIters) {
 	/* return curve param, closest bez point, line param, closest line point*/
 	//Vector3f rayDir = raySpan.normalized();

@@ -7,7 +7,7 @@
 #include "../stratacore/manifold.h"
 
 
-namespace ed {
+namespace strata {
 
 	MPointArray mPointsFromManifoldPoints(const StrataManifold& manifold) {
 		MPointArray result(manifold.pointDatas.size());

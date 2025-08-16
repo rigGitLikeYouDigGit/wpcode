@@ -6,7 +6,7 @@
 
 #include "lib.h"
 
-namespace ed {
+namespace strata {
 
     //static int _logDepth;
 
@@ -126,10 +126,10 @@ namespace ed {
 
 }
 
-//DEBUGS("log depth after object init" + std::to_string(ed::Log::_logDepth));\
+//DEBUGS("log depth after object init" + std::to_string(strata::Log::_logDepth));\
 
 #define LOG(msg) \
-    ed::Log l( std::string(__FUNCTION__) + " "+ std::string(__FILE__) + " "  + std::to_string(__LINE__) + " LOG:");\
+    strata::Log l( std::string(__FUNCTION__) + " "+ std::string(__FILE__) + " "  + std::to_string(__LINE__) + " LOG:");\
     l(msg);
     
 

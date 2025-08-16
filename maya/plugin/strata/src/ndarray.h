@@ -8,7 +8,7 @@
 #include "iterator.h"
 #include "macro.h"
 
-namespace ed {
+namespace strata {
 
 	template <typename VT>
 	struct NDArray {

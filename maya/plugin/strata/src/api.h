@@ -10,7 +10,7 @@
 #include <Eigen/Dense>
 
 #include "wpshared/enum.h"
-namespace ed {
+namespace strata {
 	using namespace Eigen;
 
 	// registering IDs of plugin nodes

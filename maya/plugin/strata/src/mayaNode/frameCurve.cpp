@@ -3,7 +3,7 @@
 #include "frameCurve.h"
 #include "../logger.h"
 
-using namespace ed;
+using namespace strata;
 using namespace Eigen;
 
 /*

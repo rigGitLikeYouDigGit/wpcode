@@ -32,7 +32,7 @@ we can't avoid value templating for a node included in an evaluation graph
 
 */
 
-namespace ed {
+namespace strata {
 
 	/*template <typename T>
 	inline std::set<T> setIntersect(

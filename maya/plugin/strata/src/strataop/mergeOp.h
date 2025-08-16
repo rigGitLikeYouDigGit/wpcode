@@ -12,7 +12,7 @@
 
 */
 
-namespace ed {
+namespace strata {
 
 
 	struct StrataMergeOp : StrataOp {

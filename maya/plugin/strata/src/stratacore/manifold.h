@@ -29,6 +29,10 @@
 #include "../lib.h"
 #include "../libEigen.h"
 
+#include "element.h"
+#include "pointData.h"
+#include "edgeData.h"
+
 #include "../logger.h"
 /*
 smooth topological manifold, made of points, edges and partial edges
@@ -67,117 +71,7 @@ for interaction through maya, consider setting up attributes in a map, and enter
 
 */
 
-namespace ed {
-
-	/* eventually we might use some kind of interning,
-	so trying to alias name strings right now
-	to make it easier to update later */
-	using StrataName = std::string;
-
-	using namespace Eigen;
-
-//int a = seqIndex(-5, 3);
-
-// don't need full int here but MAYBE in the long run, we'll need to make an enum attribute in maya for it
-	//BETTER_ENUM(SElType, int, point, edge, face);
-
-	enum SElType : short{ point, edge, face};
-
-	struct StrataManifold;
-
-	int constexpr stMaxParents = 3;
-
-	int constexpr ST_TARGET_MODE_LOCAL = 0;
-	int constexpr ST_TARGET_MODE_GLOBAL = 1;
-	//int MATRIX_MODE_LOCAL_O
-
-	int constexpr ST_EDGE_DENSE_NPOINTS = 10;
-
-	//struct ExpValue;
-
-	struct SElement {
-		// whenever an element is added to manifold, during graph eval, 
-		// that element is IMMUTABLE from then on, within that version of the graph
-		// so this system contains absolutely no live behaviour, only static connections and positions
-
-
-		StrataName name;
-		SElType elType = SElType::point;
-		// ANOTHER DAY, ANOTHER INABILITY TO USE CONST
-
-		int elIndex = -1; // index within this element's type - the 3rd point, the 3rd face etc
-		int globalIndex = -1; // unique global index across all elements
-		//std::vector<int> drivers; // topological drivers, not parent spaces
-		//std::vector<int> parents; // weighted parent influences
-
-		std::vector<StrataName> drivers; // topological drivers, not parent spaces
-		std::vector<StrataName> spaces; // weighted parent influences
-
-		std::vector<std::string> opHistory;
-
-		/* i think we need name vectors for these instead
-		*/
-
-		std::vector<int> edges; // edges that draw from this element
-		std::vector<int> points; // points that draw from this element
-		std::vector<int> faces; // faces that use this edge as a rib or boundary, or pass through this point
-		
-
-		// todo: bit fields
-		// todo: have all flags indicate a reason an element SHOULDN'T appear?
-		bool isInactive = false; // should this element (face) be rendered/meshed?
-		bool isInvalid = false; // does this element have an error in its history?
-		std::string errorMsg;
-
-		// face attributes for winding and orientation - 
-		// structural to result manifold, so put it here instead of in data
-		std::vector<bool> edgeOrients; // SURELY vector<bool> is cringe
-		// true for forwards, false for backwards
-		bool flipFace = 0; // if face as a whole should be flipped, after edge winding
-
-		SElement(StrataName elName, const SElType t=SElType::point) : name(elName), elType(t) {
-			//name = elName;
-			//elType = t;
-		};
-
-		inline bool hasDrivers() { return (drivers.size() > 0); }
-		inline bool hasParents() { return (spaces.size() > 0); }
-
-		// neighbours do not include child / driven elements
-		// topology functions only return raw ints from these structs - 
-		// manifold is needed to get rich pointers
-
-		// ...should these return std::set instead? uggggh
-
-		std::vector<int> otherNeighbourPoints(StrataManifold& manifold) {}
-		std::vector<int> otherNeighbourEdges(StrataManifold& manifold) {}
-		std::vector<int> otherNeighbourFaces(StrataManifold& manifold, bool requireSharedEdge = true) {}
-		/// topological sets - after Keenan Crane
-		// star is the set of all edges directly touching this element in it
-		// for faces this might include intersectors, not sure yet
-		std::vector<int> edgeStar(StrataManifold& manifold) {
-		}
-		// link is the set of all edges exactly one edge away from this element
-		std::vector<int> edgeLink(StrataManifold& manifold) {
-		}
-		// do the same for other element types
-
-
-		inline std::vector<int> intersectingElements(StrataManifold& manifold) {
-			/* this likely will be a very wide function -
-			if we want to define elements and expressions in a more topological way,
-			we need a general sense of intersection between elements -
-
-			2 edges that cross are intersecting, regardless of which one is driven
-			an edge that helps define a face intersects that face -
-				and the expression (face n edge) gives the sub-edge touching only the face.
-
-			maintain an order here if possible - list edge intersections in the direction of this edge,
-				list face intersections in the face's winding order, etc
-			*/
-		}
-
-	};
+namespace strata {
 
 	/*
 	for full separation, we might break things up further?
@@ -192,280 +86,8 @@ namespace ed {
 		float uvn[3] = { 0, 0, 0 };
 	};
 
-	struct SElData {
-		int index = -1;
-		std::string creatorNode;
-	};
-
-	struct SPointDriverData {
-	/* may not be entirely irrelevant*/ 
-		int index = -1;
-	};
-
-	// parent datas always relative in parent space - when applied, recover the original shape of element
-	struct SPointSpaceData { // parent data FOR a point, driver could be any type
-		//int index = -1;
-		std::string name; // name of parent space element
-		// has to be robust to storing/retrieving between graph iterations
-		float weight = 1.0;
-		Vector3f uvn = { 0, 0, 0 }; // uvn separate to offset in case point goes outside parent space area - 
-		// eg if point goes off edge of space surface
-		Affine3f offset = Eigen::Affine3f::Identity(); // translation is UVN, rotation is relative rotation from that position
-
-		std::string strInfo();
-	};
-
-	struct SPointData : SElData {
-		SPointDriverData driverData;
-		std::vector<SPointSpaceData> spaceDatas = {}; // datas for each driver
-		//MMatrix finalMatrix = MMatrix::identity; // final evaluated matrix in world space
-		Eigen::Affine3f finalMatrix = Eigen::Affine3f::Identity(); // final evaluated matrix in world space
-		//std::vector<std::string> nodeHistory; // each node that has affected this point, starting with creator
-
-		std::string strInfo();
-	};
 
 
-	// data for discrete hard connections between elements
-	struct SEdgeDriverData {
-		/* struct for a single driver OF an edge - get tangent, normal and twist
-		vectors for curve frame
-
-		// do we just use NAN values to show arrays being unused?
-
-		TODO: tension, param pinning etc?
-
-		tangents are held in driver, not parent, since they affect 
-
-		*/
-		int index = -1; // index of parent element
-		Eigen::Vector3f uvn = { 0, 0, 0 }; // uvn coords of parent element to sample for points on this edge
-		//float tan[3] = { NAN, 0, 0 }; // tangent of curve at this point - if left NAN is unused
-
-		// tangents normally inline, unless continuity is not 1
-
-		// tangents should be local to final matrix
-		// they're NOT, they're GLOBAL for now, it was too complicated for first version
-
-		Eigen::Vector3f baseTan = { 0, 0, 0 }; // vector from prev to next point
-		Eigen::Vector3f prevTan = { -1, 0, 0 }; // tangent leading to point
-		Eigen::Vector3f postTan = { 1, 0, 0 }; // tangent after point
-		float normal[3] = { NAN, 0, 1 }; // normal of curve at this point - if left NAN is unused
-		float orientWeight = 0.0; // how strongly matrix should contribute to curve tangent, vs auto behaviour
-		float continuity = 1.0; // how sharply to break tangents - maybe just use this to scale tangents in?
-		float twist = 0.0; // how much extra twist to add to point, on top of default curve frame
-		Eigen::Affine3f finalMatrix = Eigen::Affine3f::Identity();
-
-		inline Eigen::Vector3f pos() { return finalMatrix.translation(); }
-
-		inline Status& syncMatrix() {
-			/* update final matrix from local driver tangents, offsets etc
-			*/
-		}
-	};
-
-	// DRIVER datas are in space of the DRIVER
-	// PARENT datas are in space of the PARENT
-	// convert between them by multiplying out to world and back - 
-	// parent datas always overlap drivers at some point
-
-	/* so to generate a full curve,
-	for each separate parent, we transpose driver points and vectors
-	into that parent's space,
-	then do the spline operations, get a dense vector of UVN parametres, and save that dense data as an SEdgeSpaceData.
-	maybe we also cache the final result in world space.
-
-	this is done on the op that first creates the edge and creates its data.
-
-	on later iterations of the graph,
-	if when a parent changes, we re-evaluate the UVNs of each SEdgeSpaceData.
-
-	*/
-	struct SEdgeSpaceData// : StaticClonable<SEdgeSpaceData> 
-	{
-		using thisT = SEdgeSpaceData;
-		using T = SEdgeSpaceData;
-		//DECLARE_DEFINE_CLONABLE_METHODS(thisT)
-
-		int index = -1; // feels cringe to copy the index on all of these  
-		// TEEECHNICALLLY this should be independent of any driver - 
-		Eigen::ArrayXf weights; // per-dense-point weights for this parent
-		Eigen::ArrayX3f cvs; // UVN bezier control points - ordered {pt, tanOut, tanIn, pt, tanOut...} etc
-		bez::CubicBezierPath parentCurve; // curve in UVN space of parent, used for final interpolation
-
-		Eigen::MatrixX3f finalNormals; // worldspace normals // hopefully smoothstep interpolation is good enough
-
-		inline bez::ClosestPointSolver* closestSolver() {
-			return parentCurve.getSolver();
-		}
-
-		void initEmpty() {
-			/*initialise variables */
-			weights = Eigen::ArrayXf();
-			cvs = Eigen::ArrayX3f();
-			//parentCurve = bez::CubicBezierPath();
-			finalNormals = MatrixX3f();
-		}
-	};
-
-
-	struct SEdgeData : SElData//, StaticClonable<SEdgeData> 
-	{
-		/* need dense final result to pick up large changes in
-		parent space
-		*/
-		using thisT = SEdgeData;
-		using T = SEdgeData;
-		std::vector<SEdgeDriverData> driverDatas; // drivers of this edge
-		std::vector<SEdgeSpaceData> spaceDatas; // curves in space of each driver
-		
-		//int denseCount = 10; // number of dense sub-spans in each segment
-		/* TODO: adaptive by arc length? adaptive by screen size?
-		*/
-
-		bool closed = false;
-		/* don't keep live splines, output from parent system etc - 
-		all temporary during construction
-		posSpline is FINAL spline of all points on this edge
-		*/
-		
-		/* for splitting edges and components, results will be
-		clipped components with one master driver*/
-		bool isClipped = false;
-
-		Eigen::ArrayX3d uvnOffsets = {}; // final dense offsets should only be in space of final built curve?
-		// maybe???? 
-
-		//// IGNORE FOR NOW
-		/// brain too smooth
-		// surrender to ancestors
-		// become caveman
-
-		//Eigen::MatrixX3d finalPositions; // dense worldspace positions
-		bez::CubicBezierPath finalCurve; // dense? final curve // DENSE
-		Eigen::MatrixX3f finalNormals = {}; // worldspace normals 
-
-		Eigen::MatrixX3f finalPoints = {}; // densely sampled final points in worldspace - use for querying
-		
-		int _bufferStartIndex = -1;
-
-
-		inline bool isClosed() const {
-			if (!driverDatas.size()) {
-				return false;
-			}
-			return driverDatas[0].finalMatrix.translation().isApprox(
-				driverDatas.back().finalMatrix.translation());
-		}
-
-		inline Eigen::Vector3f samplePos(const float t) {
-			/* sample curve at 
-			*/
-		}
-
-		inline int densePointCount() {
-			/* point count before resampling - 
-			curve has point at each driver, and (segmentPointCount) points
-			in each span between them*/
-			//return static_cast<int>(driverDatas.size() + denseCount * (driverDatas.size() - 1));
-			if (isClosed()) {
-				return static_cast<int>(ST_EDGE_DENSE_NPOINTS * (driverDatas.size()));
-			}
-			return static_cast<int>(ST_EDGE_DENSE_NPOINTS * (driverDatas.size() - 1));
-		}
-
-		inline int densePointCount() const {
-			/* point count before resampling -
-			curve has point at each driver, and (segmentPointCount) points
-			in each span between them*/
-			//return static_cast<int>(driverDatas.size() + denseCount * (driverDatas.size() - 1));
-			if (isClosed()) {
-				return static_cast<int>(ST_EDGE_DENSE_NPOINTS * (driverDatas.size()));
-			}
-			return static_cast<int>(ST_EDGE_DENSE_NPOINTS * (driverDatas.size() - 1));
-		}
-
-		inline int nSpans() {
-			if (isClosed()) {
-				return static_cast<int>(driverDatas.size());
-			}
-			return static_cast<int>(driverDatas.size()) - 1;
-		}
-
-		inline int nCVs() {
-			// number of all cvs including tangent points
-			return static_cast<int>((driverDatas.size()) * 3);
-		}
-		inline int nBezierCVs() {
-			// number of cvs in use with bezier curves - basically shaving off start and end
-			return static_cast<int>((driverDatas.size() - 1) * 3 + 2);
-		}
-
-		inline void rawBezierCVs(Eigen::Array3Xf& arr) {
-			// ARRAY MUST BE CORRECTLY SIZED FIRST from nBezierCVs()
-			
-			//arr.resize(nBezierCVs());
-			for (int i = 0; i < driverDatas.size(); i++) {
-				if (i != 0) {
-					arr.row(i * 3 - 1) = driverDatas[i].pos() + driverDatas[i].prevTan;
-				}
-				arr.row(i * 3) = driverDatas[i].pos();
-
-				if (i != driverDatas.size() - 1) {
-					arr.row(i * 3 + 1) = driverDatas[i].pos() + driverDatas[i].postTan;
-				}
-			}
-		}
-
-		inline void driversForSpan(const int spanIndex, SEdgeDriverData& lower, SEdgeDriverData& upper) {
-			lower = driverDatas[spanIndex];
-			upper = driverDatas[spanIndex + 1];
-		}
-		Status& buildFinalBuffers(Status& s);
-
-	};
-
-
-
-	struct SFaceDriverData {
-		int index = -1; // index of driver component
-		std::array<Vector3f, 2> uvns = { // full uvn vectors likely unnecessary
-			Vector3f{0.0f, 0.0f, 0.0f},
-			Vector3f{0.0f, 0.0f, 0.0f},
-		};
-
-	};
-
-	struct SFaceSpaceData {
-
-	};
-
-	struct SubPatchData {
-		/* save data for single subpatch - 
-		*/
-		int subIndex = -1;
-		int faceIndex = -1;
-	};
-
-	struct SFaceData : SElData {
-		//std::string name; // probably generated, but still needed for semantics?
-		std::vector<SEdgeDriverData> driverDatas; // drivers of this edge
-		std::vector<SEdgeSpaceData> spaceDatas; // curves in space of each driver
-
-		Vector3f centrePos; // central point of this surface
-		Vector3f centreNormal; 
-		/* normal at centre of face - all subpatch curves must end with this as their normal*/
-
-		/* connected islands of drivers? */
-		std::vector<std::vector<int>> connectedDrivers;
-
-		/* tangent vectors at midpoints of driver edges
-		multiply and average to find centrePos
-		multiply by how far?
-		good question
-		*/
-		std::vector<Vector3f> midEdgeTangents; 
-	};
 
 
 	
@@ -768,6 +390,17 @@ namespace ed {
 		) {
 			return addElement(SElement(name, elT), outPtr);
 		}
+
+		Status& intersectingElements(
+			Status& s,
+			SElement* el,
+			std::vector<SElement*>& outEls
+		);
+
+		bool elementsCouldIntersect(
+			SElement* elA,
+			SElement* elB
+		);
 
 		//bool windFaceEdgeOrients(SElement* face) {
 		//	/* for each driver edge of a face,

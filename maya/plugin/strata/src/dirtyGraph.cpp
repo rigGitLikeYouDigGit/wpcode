@@ -1,7 +1,7 @@
 
 
 #include "dirtyGraph.h"
-using namespace ed;
+using namespace strata;
 
 
 std::map<std::string, DirtyNode*> DirtyNode::nameInputNodeMap() {
@@ -44,7 +44,7 @@ void DirtyGraph::nodePropagateDirty(int opIndex) {
 	// propagate dirty stuff forwards to all nodes
 	// we add bools to the base state - 
 	// can't use false arguments to set clean with this function
-	//LOG("node propagate dirty: " + ed::str(opIndex));
+	//LOG("node propagate dirty: " + strata::str(opIndex));
 	DirtyNode* seedNode = getNode(opIndex);
 
 	// if all flags match in dirty map, we consider this node has been visited, and skip tree

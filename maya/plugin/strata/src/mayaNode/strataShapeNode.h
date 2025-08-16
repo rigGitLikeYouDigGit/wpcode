@@ -48,7 +48,7 @@ if space index is given, use that if found; no effect if not
 for visibility, enabled, allow setting expression based overrides
 to show/hide groups and faces more precisely*/
 
-namespace ed {
+namespace strata {
 
 
 
@@ -56,15 +56,15 @@ namespace ed {
 
 
 
-//class StrataShapeNode : public MPxNode, public StrataOpNodeTemplate<ed::StrataMergeOp> {
+//class StrataShapeNode : public MPxNode, public StrataOpNodeTemplate<strata::StrataMergeOp> {
 //class StrataShapeNode : public MPxNode, public StrataOpNodeBase {
-//class StrataShapeNode : public MPxComponentShape, public StrataOpNodeTemplate<ed::StrataMergeOp> {
-class StrataShapeNode : public MPxSurfaceShape, public StrataOpNodeTemplate<ed::StrataMergeOp> {
+//class StrataShapeNode : public MPxComponentShape, public StrataOpNodeTemplate<strata::StrataMergeOp> {
+class StrataShapeNode : public MPxSurfaceShape, public StrataOpNodeTemplate<strata::StrataMergeOp> {
 public:
 	
-	using superT = StrataOpNodeTemplate<ed::StrataMergeOp>;
+	using superT = StrataOpNodeTemplate<strata::StrataMergeOp>;
 	using thisT = StrataShapeNode;
-	using thisStrataOpT = ed::StrataMergeOp;
+	using thisStrataOpT = strata::StrataMergeOp;
 
 	// cached values used for drawing
 	float pointOpacity = 1.0;
@@ -78,7 +78,7 @@ public:
 		return newObj;
 	}
 
-	ed::StrataOpGraph* syncOpGraphPtr(MDataBlock& data) {
+	strata::StrataOpGraph* syncOpGraphPtr(MDataBlock& data) {
 		/* return pointer to current graph,
 		if it doesn't exist set fresh graph*/
 		if (opGraphPtr) {
@@ -106,7 +106,7 @@ public:
 
 	MStatus addDeltaTarget(
 		MObject& nodeObj, MDataBlock& data, MDataHandle& elDH,
-		ed::StrataManifold& manifold, ed::SElement* finalEl, ed::SAtomBackDeltaGroup& deltaGrp
+		strata::StrataManifold& manifold, strata::SElement* finalEl, strata::SAtomBackDeltaGroup& deltaGrp
 	);
 
 	MStatus runShapeBackPropagation(MObject& nodeObj, MDataBlock& data);
@@ -114,7 +114,7 @@ public:
 	MStatus populateOutputs(MDataBlock& data);
 
 	virtual MStatus syncStrataParams(MObject& nodeObj, MDataBlock& data,
-		ed::StrataOp* opPtr, ed::StrataOpGraph* graphPtr);
+		strata::StrataOp* opPtr, strata::StrataOpGraph* graphPtr);
 
 	//virtual MStatus setDependentsDirty(const MPlug& plugBeingDirtied,
 	//	MPlugArray& affectedPlugs

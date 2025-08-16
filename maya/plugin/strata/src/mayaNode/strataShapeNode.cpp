@@ -17,7 +17,7 @@
 
 #include "../logger.h"
 
-using namespace ed;
+using namespace strata;
 
 MTypeId StrataShapeNode::kNODE_ID(0x00122CA3);
 MString StrataShapeNode::kNODE_NAME("strataShape");
@@ -268,7 +268,7 @@ int getSpaceIndex(
 
 MStatus StrataShapeNode::addDeltaTarget(
     MObject& nodeObj, MDataBlock& data, MDataHandle& elDH,
-    ed::StrataManifold& manifold, ed::SElement* finalEl, ed::SAtomBackDeltaGroup& deltaGrp
+    strata::StrataManifold& manifold, strata::SElement* finalEl, strata::SAtomBackDeltaGroup& deltaGrp
 ) {
     /* 
     * add a delta to be matched - 

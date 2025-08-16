@@ -89,7 +89,7 @@ int main()
 	func = multiply;
 
 */
-namespace ed {
+namespace strata {
 	struct StrataManifold;
 
 	namespace expns {

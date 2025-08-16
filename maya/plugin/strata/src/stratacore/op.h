@@ -13,7 +13,7 @@
 #include "opgraph.h"
 
 
-namespace ed {
+namespace strata {
 
 
 

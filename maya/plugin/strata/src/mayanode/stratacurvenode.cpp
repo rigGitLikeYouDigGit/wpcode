@@ -13,7 +13,7 @@
 #include "../libnurbs.h"
 
 
-using namespace ed;
+using namespace strata;
 
 
 MTypeId StrataCurve::kNODE_ID(0x00122C1F);

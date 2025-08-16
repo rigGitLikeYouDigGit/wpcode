@@ -3,7 +3,7 @@
 #include "op.h"
 #include "opgraph.h"
 
-using namespace ed;
+using namespace strata;
 
 Status StrataOp::eval(StrataManifold& value,
 	EvalAuxData* auxData, Status& s) {

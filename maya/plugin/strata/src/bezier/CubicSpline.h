@@ -18,7 +18,7 @@ WorldSpace vector type is doin ma head in
 
 namespace bez
 {
-    //using StaticClonable = ed::StaticClonable;
+    //using StaticClonable = strata::StaticClonable;
 
     class CubicBezierSpline;
     struct Polynomial5;
@@ -96,7 +96,7 @@ namespace bez
 
     
 
-    class CubicBezierSpline : public ed::StaticClonable<CubicBezierSpline>
+    class CubicBezierSpline : public strata::StaticClonable<CubicBezierSpline>
     {
     public:
         using thisT = CubicBezierSpline;
@@ -188,7 +188,7 @@ namespace bez
 
     /* TODO: remove pointers, fine for path to own all its splines densely
     */
-    struct CubicBezierPath //: public ed::StaticClonable<CubicBezierPath>
+    struct CubicBezierPath //: public strata::StaticClonable<CubicBezierPath>
     {
     public:
         using thisT = CubicBezierPath;

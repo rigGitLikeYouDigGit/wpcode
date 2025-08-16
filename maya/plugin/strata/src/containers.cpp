@@ -4,7 +4,7 @@
 
 #include "containers.h"
 
-using namespace ed;
+using namespace strata;
 
 //// ---------------------------------------------------------------------------------
 //// SmallList Implementation

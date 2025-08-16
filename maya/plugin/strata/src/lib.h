@@ -17,7 +17,7 @@
 
 #pragma warning(push)
 #pragma warning( disable : 4244)
-namespace ed {
+namespace strata {
 
 	template<typename T>
 	inline std::string str(T any) {

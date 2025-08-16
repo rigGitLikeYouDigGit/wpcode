@@ -17,7 +17,7 @@
 // ************************************************************************************
 
 
-namespace ed {
+namespace strata {
 	
 	typedef uint16_t uShort;
 	//#define USNULL uShort(1 << 16)
@@ -246,7 +246,7 @@ namespace ed {
 
 
 
-} // /ed
+} // /strata
 
 
 #endif

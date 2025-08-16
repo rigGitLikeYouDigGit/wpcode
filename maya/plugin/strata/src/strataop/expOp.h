@@ -10,7 +10,7 @@
 
 */
 
-//namespace ed {
+//namespace strata {
 //
 //	const int EL_OP_GLOBAL = 0;
 //	const int EL_OP_LOCAL = 1;

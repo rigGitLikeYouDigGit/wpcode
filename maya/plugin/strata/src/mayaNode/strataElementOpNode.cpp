@@ -17,7 +17,7 @@
 #include "../stringLib.h"
 #include "../strataop/elementOp.h"
 
-using namespace ed;
+using namespace strata;
 
 MTypeId StrataElementOpNode::kNODE_ID(0x00122CA2);
 MString StrataElementOpNode::kNODE_NAME("strataElementOp");

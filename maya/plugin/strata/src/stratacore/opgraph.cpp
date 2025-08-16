@@ -4,7 +4,7 @@
 #include "op.h"
 #include "../logger.h"
 
-using namespace ed;
+using namespace strata;
 void StrataOpGraph::copyOtherNodesVector(const StrataOpGraph& other) {
 	// function to deep-copy all nodes in the given vector from the argument graph
 	LOG("OpGraph COPY OTHER NODES");

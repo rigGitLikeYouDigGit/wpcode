@@ -6,13 +6,13 @@
 
 #include "../libEigen.h"
 
-using namespace ed;
+using namespace strata;
 
-std::string ed::SPointSpaceData::strInfo() {
+std::string strata::SPointSpaceData::strInfo() {
 	return "<PSData " + name + " w:" + str(weight) + " uvn:" + str(uvn) + " offset:" + str(offset) + ">";
 }
 
-std::string ed::SPointData::strInfo() {
+std::string strata::SPointData::strInfo() {
 	std::string result = "<PData driver:" + str(driverData.index) + " ";
 	for (auto& i : spaceDatas) {
 		result += i.strInfo() + " ";
@@ -21,7 +21,7 @@ std::string ed::SPointData::strInfo() {
 	return result;
 }
 
-Status& ed::SEdgeData::buildFinalBuffers(Status& s) {
+Status& strata::SEdgeData::buildFinalBuffers(Status& s) {
 	/*
 	assumes we have a final curve built in worldspace - 
 	sample upvectors to normals by dense params
@@ -46,8 +46,84 @@ Status& ed::SEdgeData::buildFinalBuffers(Status& s) {
 
 }
 
+Status& StrataManifold::intersectingElements(
+	Status& s,
+	SElement* el,
+	std::vector<SElement*>& outEls
+) {
+	return s;
+}
 
-Float3Array ed::StrataManifold::getWireframePointGnomonVertexPositionArray(Status& s) {
+bool StrataManifold::elementsCouldIntersect(
+	SElement* elA,
+	SElement* elB
+) {
+	/* return true if it's topologically possible that some elements
+	could intersect - still need to do fine checking later.
+	
+	Think of this like the broad phase of a collision check.
+	Efficiency is not on the cards
+
+	There are probably rules around dimensions here - 
+	like an intersection is only possible if one is a direct driver,
+	OR if a shared driver descends in dimension with each step
+
+	IE
+	curveA -> curveB
+	curveA -> pt1 -> curveC // still possible
+
+	curveA -> pt1 -> curveD -> curve C // not possible? unless they all align at exactly the same coords, do we allow that?
+	*/
+	
+	/* if histories of elements do not intersect at all, then clearly
+	* neither can they */
+
+	if (std::find(elA->drivers.begin(), elA->drivers.end(), elB->globalIndex) != elA->drivers.end()) {
+		return true;
+	}
+	if (std::find(elB->drivers.begin(), elB->drivers.end(), elA->globalIndex) != elB->drivers.end()) {
+		return true;
+	}
+	std::vector<int> result;
+	result.reserve(std::min(elA->drivers.size(), elB->drivers.size()));
+	auto intersect = std::set_intersection(
+		elA->drivers.begin(), elA->drivers.end(),
+		elB->drivers.begin(), elB->drivers.end(),
+		std::back_inserter(result)
+	);
+	if (!result.size()) { return false; }
+	
+	/* check if either appears in the history of the other*/
+
+	// guaranteed to be sorted in order?
+	/* higher dimensions need to be direct driver of end elements to guarantee
+	intersection - 
+	ie if 2 curves don't DIRECTLY lie on the same surface, there's no guarantee
+	*/
+
+	return true;
+}
+
+void getIntersections(
+	SElement* elA, SElement elB
+) {
+	/* what forms could an intersection even take?
+	
+	point/point - 
+		bool, yes or no
+	edge/edge - 
+		one or more points
+		shorter curve, if a subcurve or combined curve
+
+	face/face - 
+		one or more edges
+		one or more shared feature points?
+		subsurface
+	
+	*/
+}
+
+Float3Array strata::StrataManifold::getWireframePointGnomonVertexPositionArray(Status& s) {
 	/* return flat float3 array for gnomon positions only on points
 	* each point has 4 coords - point itself, and then 0.1 units in x, y, z of that point
 	*/
@@ -66,7 +142,7 @@ Float3Array ed::StrataManifold::getWireframePointGnomonVertexPositionArray(Statu
 	}
 	return result;
 }
-Status& ed::StrataManifold::getWireframePointGnomonVertexPositionArray(Status& s, Float3* outArr, int startIndex) {
+Status& strata::StrataManifold::getWireframePointGnomonVertexPositionArray(Status& s, Float3* outArr, int startIndex) {
 	int i = 0;
 	for (auto& p : pDataMap) {
 		Affine3f mat = p.second.finalMatrix;
@@ -79,7 +155,7 @@ Status& ed::StrataManifold::getWireframePointGnomonVertexPositionArray(Status& s
 	return s;
 }
 
-IndexList ed::StrataManifold::getWireframePointIndexArray(Status& s) {
+IndexList strata::StrataManifold::getWireframePointIndexArray(Status& s) {
 	/* return index array for point gnomons
 	* intended to emit as separate lines, so half is duplication
 	*/
@@ -98,7 +174,7 @@ IndexList ed::StrataManifold::getWireframePointIndexArray(Status& s) {
 	return result;
 }
 
-Status& ed::StrataManifold::getWireframeSingleEdgeGnomonVertexPositionArray(Status& s, Float3Array& outArr, SElement* el, int arrStartIndex) {
+Status& strata::StrataManifold::getWireframeSingleEdgeGnomonVertexPositionArray(Status& s, Float3Array& outArr, SElement* el, int arrStartIndex) {
 	/* TODO: cache this ffs, shouldn't sample every subcurve while drawing
 	*/
 	SEdgeData& d = eDataMap[el->name];
@@ -121,7 +197,7 @@ Status& ed::StrataManifold::getWireframeSingleEdgeGnomonVertexPositionArray(Stat
 	return s;
 }
 
-void ed::StrataManifold::setGnomonIndexList(unsigned int* result, unsigned int i) {
+void strata::StrataManifold::setGnomonIndexList(unsigned int* result, unsigned int i) {
 	result[i * 4] = i * 4;
 	result[i * 4 + 1] = i * 4 + 1;
 	result[i * 4 + 2] = i * 4;
@@ -130,7 +206,7 @@ void ed::StrataManifold::setGnomonIndexList(unsigned int* result, unsigned int i
 	result[i * 4 + 5] = i * 4 + 3;
 }
 
-Float3Array ed::StrataManifold::getWireframeEdgeGnomonVertexPositionArray(Status& s) {
+Float3Array strata::StrataManifold::getWireframeEdgeGnomonVertexPositionArray(Status& s) {
 	// return all edge 
 	int totalPositionEntries = 0;
 	int totalIndexEntries = 0;
@@ -157,7 +233,7 @@ Float3Array ed::StrataManifold::getWireframeEdgeGnomonVertexPositionArray(Status
 	return posResult;
 }
 
-IndexList ed::StrataManifold::getWireframeEdgeGnomonVertexIndexList(Status& s) {
+IndexList strata::StrataManifold::getWireframeEdgeGnomonVertexIndexList(Status& s) {
 	int totalIndexEntries = 0;
 	for (auto& p : eDataMap) {
 		SEdgeData& edata = p.second;
@@ -177,7 +253,7 @@ IndexList ed::StrataManifold::getWireframeEdgeGnomonVertexIndexList(Status& s) {
 	return indexResult;
 }
 
-Float3Array ed::StrataManifold::getWireframeEdgeVertexPositionArray(Status& s) {
+Float3Array strata::StrataManifold::getWireframeEdgeVertexPositionArray(Status& s) {
 	/* TODO: get positions of all edges in parallel
 	is there a world where we go full SOA and just have a big array of edge positions, normals etc?
 	
@@ -219,7 +295,7 @@ Float3Array ed::StrataManifold::getWireframeEdgeVertexPositionArray(Status& s) {
 	return result;
 }
 
-Status& ed::StrataManifold::getWireframeEdgeVertexPositionArray(Status& s, Float3* outArr, int startIndex) {
+Status& strata::StrataManifold::getWireframeEdgeVertexPositionArray(Status& s, Float3* outArr, int startIndex) {
 	std::vector<int> indexStartMap(eDataMap.size() + 1);
 	indexStartMap[0] = 0;
 	int edgeStartIndex = 0;
@@ -269,7 +345,7 @@ Status& ed::StrataManifold::getWireframeEdgeVertexPositionArray(Status& s, Float
 }
 
 
-IndexList ed::StrataManifold::getWireframeEdgeVertexIndexList(Status& s) {
+IndexList strata::StrataManifold::getWireframeEdgeVertexIndexList(Status& s) {
 	/* assume we emit each edge as a continuous line
 	* 
 	* seems line indices need to be dense - 
@@ -291,7 +367,7 @@ IndexList ed::StrataManifold::getWireframeEdgeVertexIndexList(Status& s) {
 	return result;
 }
 
-IndexList ed::StrataManifold::getWireframeEdgeVertexIndexList(Status& s, SEdgeData& eData) {
+IndexList strata::StrataManifold::getWireframeEdgeVertexIndexList(Status& s, SEdgeData& eData) {
 	/*separate buffer for each edge - 
 	* seems super wasteful
 	*/
@@ -302,7 +378,7 @@ IndexList ed::StrataManifold::getWireframeEdgeVertexIndexList(Status& s, SEdgeDa
 	return result;
 }
 
-IndexList ed::StrataManifold::getWireframeEdgeVertexIndexListPATCH(Status& s) {
+IndexList strata::StrataManifold::getWireframeEdgeVertexIndexListPATCH(Status& s) {
 	/* assume we emit each edge as a continuous line
 	*
 	* seems line indices need to be dense -
@@ -341,7 +417,7 @@ IndexList ed::StrataManifold::getWireframeEdgeVertexIndexListPATCH(Status& s) {
 	return result;
 }
 
-Status& ed::StrataManifold::pointSpaceMatrix(Status& s, Affine3f& outMat, SPointData& data) {
+Status& strata::StrataManifold::pointSpaceMatrix(Status& s, Affine3f& outMat, SPointData& data) {
 	/* get space matrix for point space datas
 	if space data EXISTS, it means something
 
@@ -375,7 +451,7 @@ Status& ed::StrataManifold::pointSpaceMatrix(Status& s, Affine3f& outMat, SPoint
 	return s;
 }
 
-Status& ed::StrataManifold::computePointData(Status& s, SPointData& data//, bool doProjectToDrivers=false
+Status& strata::StrataManifold::computePointData(Status& s, SPointData& data//, bool doProjectToDrivers=false
 ) {
 	/* given all space data is built, find final matrix
 	*
@@ -401,7 +477,7 @@ Status& ed::StrataManifold::computePointData(Status& s, SPointData& data//, bool
 	return s;
 }
 
-Status& ed::StrataManifold::pointProjectToDrivers(Status& s, Affine3f& mat, SElement* el) {
+Status& strata::StrataManifold::pointProjectToDrivers(Status& s, Affine3f& mat, SElement* el) {
 	/* project/snap given matrix to driver of point
 	(there should of course be a maximum of 1 driver for a point)
 	*/
@@ -423,7 +499,7 @@ Status& ed::StrataManifold::pointProjectToDrivers(Status& s, Affine3f& mat, SEle
 
 }
 
-Status& ed::StrataManifold::edgeParentDataFromDrivers(Status& s, SEdgeData& eData, SEdgeSpaceData& pData)
+Status& strata::StrataManifold::edgeParentDataFromDrivers(Status& s, SEdgeData& eData, SEdgeSpaceData& pData)
 {
 	/*Assumes edge data already has final drivers set up
 	*
@@ -441,7 +517,7 @@ Status& ed::StrataManifold::edgeParentDataFromDrivers(Status& s, SEdgeData& eDat
 
 }
 
-Status& ed::StrataManifold::buildEdgeDrivers(Status& s, SEdgeData& eData) {
+Status& strata::StrataManifold::buildEdgeDrivers(Status& s, SEdgeData& eData) {
 	/* build driver matrices for this edge -
 	* sample driver elements, get worldspace matrices
 	* DO NOT sample into parent space, that will be done when curve is eval'd
@@ -485,7 +561,7 @@ Status& ed::StrataManifold::buildEdgeDrivers(Status& s, SEdgeData& eData) {
 	return s;
 }
 
-Status& ed::StrataManifold::buildEdgeData(Status& s, SEdgeData& eData) {
+Status& strata::StrataManifold::buildEdgeData(Status& s, SEdgeData& eData) {
 	/* construct final dense array for data, assuming all parents and driver indices are set in data
 
 	build base curve matrices in worldspace,
@@ -505,16 +581,16 @@ Status& ed::StrataManifold::buildEdgeData(Status& s, SEdgeData& eData) {
 }
 
 
-Status& ed::StrataManifold::buildFaceDrivers(Status& s, SFaceData& fData) {
+Status& strata::StrataManifold::buildFaceDrivers(Status& s, SFaceData& fData) {
 	return s;
 }
 
-Status& ed::StrataManifold::buildFaceData(Status& s, SFaceData& fData) {
+Status& strata::StrataManifold::buildFaceData(Status& s, SFaceData& fData) {
 	return s;
 }
 
 
-//std::vector<int> ed::StrataManifold::expValuesToElements(std::vector<ExpValue>& values, Status& s) {
+//std::vector<int> strata::StrataManifold::expValuesToElements(std::vector<ExpValue>& values, Status& s) {
 //	/* resolve all possible values to elements */
 //
 //	std::vector<int> result;

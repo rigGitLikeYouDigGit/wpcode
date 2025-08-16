@@ -7,8 +7,8 @@
 
 
 
-using namespace ed;
-using namespace ed::expns;
+using namespace strata;
+using namespace strata::expns;
 
 
 const std::string test::tag("hello");
@@ -213,17 +213,6 @@ Status CallAtom::parse(
 	LOG("callAtom parse");
 	DirtyNode* newNode = nullptr;
 	DirtyNode* leftNode = graph.getNode(leftIndex);
-	//if (leftNode->name == resultCallName) {
-	//	DEBUGS("found call result node in graph, using for top-level return");
-	//	newNode = graph.getResultNode();
-	//}
-	//else {
-	//	newNode = graph.addNode<CallAtom>();
-	//	outNodeIndex = newNode->index;
-
-	//	// add name of function to call inputs
-	//	newNode->inputs.push_back(leftIndex);
-	//}
 	
 	newNode = graph.addNode<CallAtom>();
 	outNodeIndex = newNode->index;

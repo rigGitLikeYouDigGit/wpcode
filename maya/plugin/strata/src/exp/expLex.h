@@ -41,7 +41,7 @@
 
 //#include "span.h"
 
-namespace ed {
+namespace strata {
 
     namespace expns {
 
@@ -59,6 +59,7 @@ namespace ed {
                 RightCurly,
                 LessThan,
                 GreaterThan,
+                GreaterThanPipe, // projection/closest point operator
                 Equal,
                 Plus,
                 Minus,

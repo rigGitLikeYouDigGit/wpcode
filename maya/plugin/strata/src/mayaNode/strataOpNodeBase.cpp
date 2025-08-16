@@ -7,7 +7,7 @@
 #include "../lib.h"
 
 
-using namespace ed;
+using namespace strata;
 
 
 // use this to check that we've defined the attribute MObjects once -

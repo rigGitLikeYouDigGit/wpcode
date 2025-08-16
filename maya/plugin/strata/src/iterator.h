@@ -18,7 +18,7 @@ for now pass in functions you want to use to generate next(),
 just like in python
 */
 
-namespace ed {
+namespace strata {
 
 	/* kept getting templating errors from this ._.
 	going with the caveman option again

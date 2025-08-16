@@ -39,7 +39,7 @@
 //	// single opgraph for this object
 //	// statewise, each individual op node should first check that
 //	// unique pointer apparently models ownership - hopefully safer than raw pointers everywhere
-//	std::shared_ptr<ed::StrataOpGraph> opGraph;
+//	std::shared_ptr<strata::StrataOpGraph> opGraph;
 //
 //	// map of opIndex -> maya node
 //	std::unordered_map<int, MObjectHandle> indexMObjHandleMap;
@@ -105,7 +105,7 @@
 //	// convenience method for other nodes to get the connected graph node
 //	static MStatus getConnectedStrataOpGraph(
 //		MObject& thisNodeObj, MObject& graphIncomingConnectionAttr,
-//		std::weak_ptr<ed::StrataOpGraph>& opGraphPtr
+//		std::weak_ptr<strata::StrataOpGraph>& opGraphPtr
 //	);
 //};
 //

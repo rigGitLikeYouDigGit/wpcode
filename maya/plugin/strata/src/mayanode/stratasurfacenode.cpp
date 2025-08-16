@@ -32,7 +32,7 @@
 #include "../lib.h"
 
 
-using namespace ed;
+using namespace strata;
 
 
 MTypeId StrataSurface::kNODE_ID(0x00122C2A);

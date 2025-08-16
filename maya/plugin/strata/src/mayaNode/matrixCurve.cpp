@@ -27,7 +27,7 @@ was not distributed with this file, visit freeelectron.org.* /
 
 #include "matrixCurve.h"
 #include "../libnurbs.h"
-using namespace ed;
+using namespace strata;
 
 MTypeId MatrixCurveNode::kNODE_ID(0x00122CA4);
 MString MatrixCurveNode::kNODE_NAME("matrixCurve");

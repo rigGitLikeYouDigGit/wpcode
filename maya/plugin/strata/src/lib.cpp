@@ -6,7 +6,7 @@
 
 #include "lib.h"
 
-namespace ed {
+namespace strata {
 	/* FUNCTIONS TAKE QUATERNIONS OF FORM X-Y-Z-W
 
 	*/
@@ -164,7 +164,7 @@ namespace ed {
 		return q;
 	}
 
-	//static MDoubleArray ed::uniformKnotsForCVs(int nCVs, int degree) {
+	//static MDoubleArray strata::uniformKnotsForCVs(int nCVs, int degree) {
 	//	// for degree = 1, k=2
 	//	// degree = 2, k=3 etc
 	//	// degree = 3, k=4
@@ -263,7 +263,7 @@ namespace ed {
 		return out;
 	}
 
-	//MDoubleArray ed::uniformKnotsForCVs(int nCVs, int degree)
+	//MDoubleArray strata::uniformKnotsForCVs(int nCVs, int degree)
 	//{
 	//		// for degree = 1, k=2
 	//// degree = 2, k=3 etc

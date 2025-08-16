@@ -7,7 +7,7 @@
 //#include "../api.h"
 
 //
-//using namespace ed;
+//using namespace strata;
 //MObject StrataGraphNode::aStGraph;
 //MObject StrataGraphNode::aStGraphName;
 //
@@ -51,7 +51,7 @@
 //void StrataGraphNode::postConstructor() {
 //	/* initialise new strata op graph with this node's name*/
 //	//opGraph.reset(&StrataOpGraph());
-//	opGraph.reset(new ed::StrataOpGraph);
+//	opGraph.reset(new strata::StrataOpGraph);
 //}
 //
 //MStatus StrataGraphNode::compute(const MPlug& plug, MDataBlock& data) {
@@ -297,14 +297,14 @@
 //
 //MStatus StrataGraphNode::getConnectedStrataOpGraph(
 //	MObject& thisNodeObj, MObject& graphIncomingConnectionAttr,
-//	std::weak_ptr<ed::StrataOpGraph>& graphPtr
+//	std::weak_ptr<strata::StrataOpGraph>& graphPtr
 //) {
 //	/* find the plug for an incoming graph connection, assume that a StrataGraphNode
 //	is connected, try to get its contained graph.
 //	If impossible, reset weak pointer
 //	ABSOLUTELY CHECK MSTATUS here, or face crashes
 //	*/
-//	using namespace ed;
+//	using namespace strata;
 //	MStatus s(MS::kSuccess);
 //	MFnDependencyNode thisDepFn(thisNodeObj);
 //	MPlug incomingConnectionPlug = thisDepFn.findPlug(graphIncomingConnectionAttr, true);

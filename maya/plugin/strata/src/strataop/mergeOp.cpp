@@ -5,8 +5,8 @@
 #include "../libEigen.h"
 #include "../logger.h"
 
-using namespace ed;
-using namespace ed::expns;
+using namespace strata;
+using namespace strata::expns;
 
 Status StrataMergeOp::makeParams() {
 	Status s;

@@ -47,7 +47,7 @@ public:
 	// examples do this so I guess it's legal? Hold pointer to shape node on its draw override
 	StrataShapeNode* shapeNodePtr = nullptr;
 	MObjectHandle shapeNodeObjHdl;
-	ed::StrataManifold manifold;
+	strata::StrataManifold manifold;
 
 	bool selectablePoints = false;
 	bool selectableEdges = false;
@@ -78,8 +78,8 @@ public:
 		/* eval manifold if its final out node is dirty*/
 		LOG("SYNC MANIFOLD");
 		Status s;
-		ed::StrataOpGraph* graphP = shapeNodePtr->opGraphPtr.get();
-		l("geo o got graphP, nNodes: " + ed::str(graphP->nodes.size()));
+		strata::StrataOpGraph* graphP = shapeNodePtr->opGraphPtr.get();
+		l("geo o got graphP, nNodes: " + strata::str(graphP->nodes.size()));
 		if (graphP == nullptr) {
 			STAT_ERROR(s, "graphPtr is null, returning");
 		}
@@ -91,13 +91,13 @@ public:
 				return s;
 		}
 		
-		ed::StrataMergeOp* opPtr = shapeNodePtr->getStrataOp<StrataShapeNode>(shapeNodePtr->thisMObject());
+		strata::StrataMergeOp* opPtr = shapeNodePtr->getStrataOp<StrataShapeNode>(shapeNodePtr->thisMObject());
 		if (opPtr == nullptr) {
 			STAT_ERROR(s, "geo o opPtr is null, returning");
 		}
 
 
-		l("geo o opPtr index: " + ed::str(opPtr->index) + "dirty: " + ed::str(opPtr->anyDirty())); 
+		l("geo o opPtr index: " + strata::str(opPtr->index) + "dirty: " + strata::str(opPtr->anyDirty())); 
 		//return s; //doesn't hang
 		graphP = shapeNodePtr->opGraphPtr.get();
 		int outIndex = graphP->getOutputIndex();
@@ -117,8 +117,8 @@ public:
 
 		l("before get other manifold");
 		l("geo o outindex after eval:" + std::to_string(graphP->_outputIndex));
-		ed::StrataManifold& otherManifold = graphP->results[graphP->getOutputIndex()];
-		l("got manifold after eval: " + ed::str(otherManifold.elements.size()) + " " + ed::str(otherManifold.pDataMap.size()));
+		strata::StrataManifold& otherManifold = graphP->results[graphP->getOutputIndex()];
+		l("got manifold after eval: " + strata::str(otherManifold.elements.size()) + " " + strata::str(otherManifold.pDataMap.size()));
 		manifold = otherManifold;
 		/*manifold.clear();
 		l("geo o outindex after eval:" + std::to_string(graphP->_outputIndex));
@@ -141,20 +141,20 @@ public:
 		why doesn't this work with data handles?*/
 		/*l("before get input plug ints");
 		volatile int inInt = depFn.findPlug(StrataShapeNode::aStInput, true).elementByPhysicalIndex(0).asInt();
-		l("input val:" + ed::str(inInt));*/
+		l("input val:" + strata::str(inInt));*/
 		l("before get output plug int");
 		//volatile int outInt = depFn.findPlug(StrataShapeNode::aStOutput, false).asInt();
 		volatile int outInt = depFn.findPlug(StrataShapeNode::aStOutput, true).asInt();
 
 
-		l("got outInt:" + ed::str(outInt));
+		l("got outInt:" + strata::str(outInt));
 		Status s = syncManifold();
 		l("synced manifold");
 		if (s) {
 			CWMSG(s, "error syncing manifold");
 			return;
 		}
-		l("shape node manifold after sync: " + ed::str(manifold.elements.size()));
+		l("shape node manifold after sync: " + strata::str(manifold.elements.size()));
 		//CWMSG(s, "Error on syncManifold in updateDG() for strataShape");
 		return;
 	}
@@ -218,7 +218,7 @@ public:
 			return MIndexBufferDescriptor(MIndexBufferDescriptor::kEdgeLine, // may also be kHullEdgeLine
 				"stEdgeIBD",
 				MGeometry::kLineStrip,
-				ed::StrataManifold::CURVE_SHAPE_RES
+				strata::StrataManifold::CURVE_SHAPE_RES
 			);
 	}
 
@@ -290,9 +290,9 @@ public:
 		auto val = "param:" + param + "\n";
 		val += MString("type:") + MString(paramTypeName(ins->parameterType(param)).c_str()) + "\n";
 		val += MString("semantic:") + MString(ins->parameterSemantic(param, s)) + "\n";
-		//val += MString("default:") + MString(ed::str(ins->parameterDefaultValue(param, s)).c_str()) + "\n";
-		val += MString("array:") + MString(ed::str(ins->isArrayParameter(param)).c_str()) + "\n";
-		val += MString("varying:") + MString(ed::str(ins->isVaryingParameter(param)).c_str()) + "\n";
+		//val += MString("default:") + MString(strata::str(ins->parameterDefaultValue(param, s)).c_str()) + "\n";
+		val += MString("array:") + MString(strata::str(ins->isArrayParameter(param)).c_str()) + "\n";
+		val += MString("varying:") + MString(strata::str(ins->isVaryingParameter(param)).c_str()) + "\n";
 
 		return val;
 	}
@@ -432,8 +432,8 @@ huh.
 		LOG("create edge render item")
 
 		const std::size_t strideInBytes =
-				sizeof(ed::IndexList::value_type) * ed::ST_EDGE_DENSE_NPOINTS;
-				//sizeof(ed::IndexList::value_type) * 1;
+				sizeof(strata::IndexList::value_type) * strata::ST_EDGE_DENSE_NPOINTS;
+				//sizeof(strata::IndexList::value_type) * 1;
 		//MRenderItem* renderItem = MHWRender::MRenderItem::Create(sStEdgeRenderItemName,
 		MRenderItem* renderItem = MHWRender::MRenderItem::Create(name,
 			MHWRender::MRenderItem::DecorationItem,
@@ -504,7 +504,7 @@ huh.
 		* in this method, since all the values will be combined.
 		* 
 		*/
-		//LOG("UPDATE RENDER ITEMS: " + std::string(path.fullPathName().asChar()) + " " + ed::str(renderItems.length()));
+		//LOG("UPDATE RENDER ITEMS: " + std::string(path.fullPathName().asChar()) + " " + strata::str(renderItems.length()));
 		if (!path.isValid()) {
 			//l("returning invalid dag path");
 			return;
@@ -527,7 +527,7 @@ huh.
 
 		float wireCol[4] = {0, 0, 0, 1};
 
-		ed::defaultWireColourForDisplay(displayStatus, wireCol);
+		strata::defaultWireColourForDisplay(displayStatus, wireCol);
 		// Update the wireframe render item used when the object will be selected
 		bool isWireFrameRenderItemEnabled = displayStatus == MHWRender::kLead || displayStatus == MHWRender::kActive;
 
@@ -595,14 +595,14 @@ huh.
 	}
 
 	void syncEdgeRenderItem(const MHWRender::MRenderItem* item,
-		ed::SEdgeData& eData, MHWRender::MGeometry& data) {
+		strata::SEdgeData& eData, MHWRender::MGeometry& data) {
 		Status s;
 		MHWRender::MIndexBuffer* indexBuffer = data.createIndexBuffer(MHWRender::MGeometry::kUnsignedInt32);
 		if (indexBuffer == nullptr) {
 			//l("invalid semantic used to create index buffer, aborting");
 			return;
 		}
-		ed::IndexList indices = manifold.getWireframeEdgeVertexIndexList(s, eData);
+		strata::IndexList indices = manifold.getWireframeEdgeVertexIndexList(s, eData);
 		if (s) {
 			//l("ERROR getting wireframe point index array, aborting");
 			return;
@@ -618,7 +618,7 @@ huh.
 		}
 
 		const std::size_t bufferSizeInByte =
-			sizeof(ed::IndexList::value_type) * indices.size();
+			sizeof(strata::IndexList::value_type) * indices.size();
 		//l("before mcpy");
 		memcpy(buffer, indices.data(), bufferSizeInByte);
 		//l("before commit");
@@ -631,7 +631,7 @@ huh.
 	}
 
 	void syncFaceRenderItem(const MHWRender::MRenderItem* item,
-		ed::SFaceData& fData, MHWRender::MGeometry& data) {
+		strata::SFaceData& fData, MHWRender::MGeometry& data) {
 
 	}
 
@@ -641,7 +641,7 @@ huh.
 		const MHWRender::MGeometryRequirements& requirements, const MHWRender::MRenderItemList& renderItems, MHWRender::MGeometry& data)
 	{
 		/* we deviate a bit from the example here:
-		all edges are curves, sampled at ed::CURVE_SHAPE_RES intervals
+		all edges are curves, sampled at strata::CURVE_SHAPE_RES intervals
 
 		edge is line strip
 		point is 3 lines
@@ -666,19 +666,19 @@ huh.
 		LOG("POPULATE_GEOMETRY on render items:");
 		for (int i = 0; i < renderItems.length(); i++) {
 			const MRenderItem* item = renderItems.itemAt(i);
-			l(ed::str(item->name().asChar()) + " ");
+			l(strata::str(item->name().asChar()) + " ");
 
 		}
 		//return;
 		Status s;
 		MS ms(MS::kSuccess);
 
-		ed::Float3Array debugPositions;
+		strata::Float3Array debugPositions;
 
 		const MVertexBufferDescriptorList& vertexBufferDescriptorList = requirements.vertexRequirements();
 		for (int i = 0; i < vertexBufferDescriptorList.length(); i++)
 		{
-			l("vertexBuffer index: " + ed::str(i));
+			l("vertexBuffer index: " + strata::str(i));
 			MVertexBufferDescriptor desc{};
 			if (!vertexBufferDescriptorList.getDescriptor(i, desc)) {
 				l("descriptor not found, continuing");
@@ -715,7 +715,7 @@ huh.
 					return;
 				}
 				//void* buffer = positionBuffer->acquire(static_cast<unsigned int>(nPositions), true /*writeOnly */);
-				ed::Float3* buffer = static_cast<ed::Float3*>(positionBuffer->acquire(static_cast<unsigned int>(nPositions), true /*writeOnly */));
+				strata::Float3* buffer = static_cast<strata::Float3*>(positionBuffer->acquire(static_cast<unsigned int>(nPositions), true /*writeOnly */));
 				// here we just trust the process that this will give us a buffer of Float3 * nPositions
 				// normally returns a void pointer
 				if (!buffer)
@@ -728,7 +728,7 @@ huh.
 				s = manifold.getWireframePointGnomonVertexPositionArray(s, buffer, 0);
 				s = manifold.getWireframeEdgeVertexPositionArray(s, buffer, edgeStart);
 
-				debugPositions = ed::Float3Array(buffer, buffer + nPositions);
+				debugPositions = strata::Float3Array(buffer, buffer + nPositions);
 				// Transfer from CPU to GPU memory.
 				positionBuffer->commit(buffer);
 				//l("committed position buffer");
@@ -831,24 +831,24 @@ huh.
 					l("descriptor not found, continuing");
 					continue;
 				}
-				l("descriptor: " + ed::str(desc.semanticName().asChar()));
+				l("descriptor: " + strata::str(desc.semanticName().asChar()));
 				MHWRender::MVertexBuffer* colourBuffer = data.createVertexBuffer(desc);
 				if (!colourBuffer) {
 					l("could not create colourBuffer for vertex data");
 					return;
 				}
-				ed::Float4Array colours(manifold.pDataMap.size() * 4);
+				strata::Float4Array colours(manifold.pDataMap.size() * 4);
 				float selectedFloat = 0.5f;
 				for (int n = 0; n < static_cast<int>(manifold.pDataMap.size()); n++) {
-					colours[n * 4] = ed::Float4(0.0f, 0.0f, 0.0f, 1.0f); // centre point black when not selected
-					colours[n * 4 + 1] = ed::Float4(1.0f, 0.0f, 0.0f, selectedFloat);
-					colours[n * 4 + 2] = ed::Float4(0.0f, 1.0f, 0.0f, selectedFloat);
-					colours[n * 4 + 3] = ed::Float4(0.0f, 0.0f, 1.0f, selectedFloat);
+					colours[n * 4] = strata::Float4(0.0f, 0.0f, 0.0f, 1.0f); // centre point black when not selected
+					colours[n * 4 + 1] = strata::Float4(1.0f, 0.0f, 0.0f, selectedFloat);
+					colours[n * 4 + 2] = strata::Float4(0.0f, 1.0f, 0.0f, selectedFloat);
+					colours[n * 4 + 3] = strata::Float4(0.0f, 0.0f, 1.0f, selectedFloat);
 				}
 				void* buffer = colourBuffer->acquire(static_cast<unsigned int>(colours.size()), true /*writeOnly */);
 				if (buffer)
 				{
-					const std::size_t bufferSizeInByte = sizeof(ed::Float4Array::value_type) * colours.size();
+					const std::size_t bufferSizeInByte = sizeof(strata::Float4Array::value_type) * colours.size();
 					memcpy(buffer, colours.data(), bufferSizeInByte);
 					// Transfer from CPU to GPU memory.
 					colourBuffer->commit(buffer);
@@ -881,12 +881,12 @@ huh.
 		* no idea if that's required
 		*/
 		const int numItems = renderItems.length();
-		l("update indexing all render items: " + ed::str(numItems));
+		l("update indexing all render items: " + strata::str(numItems));
 		for (int i = 0; i < numItems; i++)
 		{
 			const MHWRender::MRenderItem* item = renderItems.itemAt(i);
 			if (!item) {
-				l("item: " + ed::str(i) + "not found, skipping");
+				l("item: " + strata::str(i) + "not found, skipping");
 				continue;
 
 			}
@@ -902,7 +902,7 @@ huh.
 					l("invalid semantic used to create index buffer, aborting");
 					continue;
 				}
-				ed::IndexList indices = manifold.getWireframePointIndexArray(s);
+				strata::IndexList indices = manifold.getWireframePointIndexArray(s);
 				if (s) {
 					l("ERROR getting wireframe point index array, aborting");
 					continue;
@@ -920,7 +920,7 @@ huh.
 				}
 
 				const std::size_t bufferSizeInByte =
-					sizeof(ed::IndexList::value_type) * indices.size();
+					sizeof(strata::IndexList::value_type) * indices.size();
 				l("before mcpy");
 				memcpy(buffer, indices.data(), bufferSizeInByte);
 				l("before commit");

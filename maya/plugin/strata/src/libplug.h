@@ -12,7 +12,7 @@
 #include "macro.h"
 
 
-namespace ed {
+namespace strata {
 
 	inline MMatrix accessMMatrixDH(MDataHandle& dh) {
 		// get MMatrix out of a plug, without running the risk of crashing

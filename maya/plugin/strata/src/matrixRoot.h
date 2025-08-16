@@ -36,7 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /*
 for now ignore the templating in the original
 */
-namespace ed {
+namespace strata {
 
 
 	// NOTE fraction: 23 bits for single and 52 for double

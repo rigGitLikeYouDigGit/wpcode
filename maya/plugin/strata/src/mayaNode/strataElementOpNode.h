@@ -193,12 +193,12 @@ it looks like we need to redeclare all the strata overridden methods
 in the final classes - 
 that's fine*/
 
-//class StrataElementOpNode : public StrataOpNodeTemplate<ed::StrataElementOp>, public MPxNode {
+//class StrataElementOpNode : public StrataOpNodeTemplate<strata::StrataElementOp>, public MPxNode {
 //class StrataElementOpNode;
-class StrataElementOpNode : public MPxNode, public StrataOpNodeTemplate<ed::StrataElementOp> {
+class StrataElementOpNode : public MPxNode, public StrataOpNodeTemplate<strata::StrataElementOp> {
 public:
-	using thisStrataOpT = ed::StrataElementOp;
-	using superT = StrataOpNodeTemplate<ed::StrataElementOp>;
+	using thisStrataOpT = strata::StrataElementOp;
+	using superT = StrataOpNodeTemplate<strata::StrataElementOp>;
 	using thisT = StrataElementOpNode;
 	StrataElementOpNode() {}
 	virtual ~StrataElementOpNode() {}
@@ -229,9 +229,9 @@ public:
 
 	static MStatus initialize();
 
-	MStatus StrataElementOpNode::edgeDataFromRawCurve(MStatus& ms, MObject& nodeObj, MDataBlock& data, MDataHandle& elDH, ed::SEdgeData& eData);
+	MStatus StrataElementOpNode::edgeDataFromRawCurve(MStatus& ms, MObject& nodeObj, MDataBlock& data, MDataHandle& elDH, strata::SEdgeData& eData);
 
-	virtual MStatus syncStrataParams(MObject& nodeObj, MDataBlock& data, ed::StrataOp* opPtr, ed::StrataOpGraph* graphPtr);
+	virtual MStatus syncStrataParams(MObject& nodeObj, MDataBlock& data, strata::StrataOp* opPtr, strata::StrataOpGraph* graphPtr);
 
 	virtual MStatus compute(const MPlug& plug, MDataBlock& data);
 

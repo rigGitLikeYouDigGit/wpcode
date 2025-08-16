@@ -16,7 +16,7 @@ class MyRealClonable : CloneMixin<MyRealClonable> {
 
 */
 
-namespace ed {
+namespace strata {
 
 	template <typename T>
 	struct MixinBase {

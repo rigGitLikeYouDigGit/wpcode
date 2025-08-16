@@ -37,7 +37,7 @@ abundant use of std::vector makes me wilt
 */
 
 
-namespace ed {
+namespace strata {
 
 
     template <typename T> class array2

@@ -3,8 +3,8 @@
 #include "../stringLib.h"
 #include "../logger.h"
 
-using namespace ed;
-using namespace ed::expns;
+using namespace strata;
+using namespace strata::expns;
 
 Status StrataElementOp::makeParams() {
 	Status s;
@@ -34,6 +34,15 @@ Status& pointCreateNew(
 	CWRSTAT(s, "error reading driver exp");
 	std::vector<int> drivers = expAuxData.expValuesToElements(*resultVals, s);
 	CWRSTAT(s, "error converting driver exp to elements");
+
+	// add topo connections to drivers
+	for (int d : drivers) {
+		SElement* driverEl = value.getEl(d);
+		outPtr->drivers.insert(outPtr->drivers.end(), driverEl->drivers.begin(), driverEl->drivers.end());
+		driverEl->points.push_back(outPtr->globalIndex);
+	}
+	std::sort(outPtr->drivers.begin(), outPtr->drivers.end());
+
 
 	// check for spaces
 	resultVals = &emptyResult;
@@ -284,6 +293,14 @@ Status& edgeCreateNew(
 		STAT_ERROR(s, "no drivers specified for edge " + op.name + ", returning");
 	}
 
+	for (int d : drivers) {
+		SElement* driverEl = value.getEl(d);
+		outPtr->drivers.insert(outPtr->drivers.end(), driverEl->drivers.begin(), driverEl->drivers.end());
+		driverEl->points.push_back(outPtr->globalIndex);
+	}
+	std::sort(outPtr->drivers.begin(), outPtr->drivers.end());
+
+
 	eData.driverDatas.resize(drivers.size());
 	for (int i = 0; i < static_cast<int>(drivers.size()); i++) {
 		SElement* driverEl = value.getEl(drivers[i]);
@@ -343,7 +360,7 @@ Status& edgeEvalParam(
 //Status& edgeEvalDriverExpression(
 //	Status& s, StrataElementOp& op, SElement*& outPtr, StrataManifold& value, ExpAuxData& expAuxData,
 //	std::vector<ExpValue>* resultVals,
-//	const std::string& paramName, ed::expns::Expression& exp) {
+//	const std::string& paramName, strata::expns::Expression& exp) {
 //
 //	s = exp.result(resultVals, &expAuxData);
 //	CWRSTAT(s, "error getting exp result, halting");
@@ -425,7 +442,7 @@ Status& edgeEvalParam(
 //Status& faceEvalDriverExpression(
 //	Status& s, SElement*& outPtr, StrataManifold& value, ExpAuxData& expAuxData,
 //	std::vector<ExpValue>* resultVals,
-//	const std::string& paramName, ed::expns::Expression& exp) 
+//	const std::string& paramName, strata::expns::Expression& exp) 
 //{
 //	//ExpAuxData expAuxData;
 //	//std::vector<ExpValue>* resultVals = nullptr;

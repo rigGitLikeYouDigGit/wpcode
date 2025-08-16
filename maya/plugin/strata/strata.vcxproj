@@ -322,9 +322,15 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="src\bezier\math\misc.cpp" />
     <ClCompile Include="src\bezier\math\tridiagonal.cpp" />
     <ClCompile Include="src\eigtest.cpp" />
+    <ClCompile Include="src\exp\expElCompare.cpp" />
     <ClCompile Include="src\logger.cpp" />
     <ClCompile Include="src\mayaNode\frameCurve.cpp" />
     <ClCompile Include="src\mayaNode\strataShapeGeometryOverride.cpp" />
+    <ClCompile Include="src\stratacore\edgeData.cpp" />
+    <ClCompile Include="src\stratacore\element.cpp" />
+    <ClCompile Include="src\stratacore\faceData.cpp" />
+    <ClCompile Include="src\stratacore\libManifold.cpp" />
+    <ClCompile Include="src\stratacore\pointData.cpp" />
     <ClCompile Include="src\strataop\expOp.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\MInclude.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\api.h" />
@@ -399,9 +405,15 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stringLib.h" />
     <ClInclude Include="src\bezier\math\misc.h" />
     <ClInclude Include="src\bezier\math\tridiagonal.h" />
+    <ClInclude Include="src\exp\expElCompare.h" />
     <ClInclude Include="src\logger.h" />
     <ClInclude Include="src\mayaNode\frameCurve.h" />
     <ClInclude Include="src\mayaNode\strataShapeGeometryOverride.h" />
+    <ClInclude Include="src\stratacore\edgeData.h" />
+    <ClInclude Include="src\stratacore\element.h" />
+    <ClInclude Include="src\stratacore\faceData.h" />
+    <ClInclude Include="src\stratacore\libManifold.h" />
+    <ClInclude Include="src\stratacore\pointData.h" />
     <ClInclude Include="src\strataop\expOp.h" />
   </ItemGroup>
   <ItemGroup>

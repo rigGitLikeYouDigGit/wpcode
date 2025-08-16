@@ -15,7 +15,7 @@
 just get a point wired into the AddPointsOp
 */
 
-using namespace ed;
+using namespace strata;
 
 
 
