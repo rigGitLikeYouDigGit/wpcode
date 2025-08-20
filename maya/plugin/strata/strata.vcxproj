@@ -412,8 +412,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="src\stratacore\edgeData.h" />
     <ClInclude Include="src\stratacore\element.h" />
     <ClInclude Include="src\stratacore\faceData.h" />
+    <ClInclude Include="src\stratacore\group.h" />
     <ClInclude Include="src\stratacore\libManifold.h" />
     <ClInclude Include="src\stratacore\pointData.h" />
+    <ClInclude Include="src\stratacore\subsample.h" />
     <ClInclude Include="src\strataop\expOp.h" />
   </ItemGroup>
   <ItemGroup>

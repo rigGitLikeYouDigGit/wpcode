@@ -32,6 +32,8 @@
 #include "element.h"
 #include "pointData.h"
 #include "edgeData.h"
+#include "faceData.h"
+#include "group.h"
 
 #include "../logger.h"
 /*
@@ -88,6 +90,63 @@ namespace strata {
 
 
 
+	struct Intersection {
+		static constexpr int POINT = 0;
+		static constexpr int EDGE = 1;
+		int type = POINT;
+		
+		//virtual Intersection* cast(Intersection* ptr) {
+		//	return ptr;
+		//}
+	};
+
+	struct IntersectionPoint : Intersection {
+		/* single point of intersection connecting multiple elements?
+		* point + point (technically)
+		* curve + point
+		* curve + curve
+		* curve + surface (not subspace)
+		*/
+		
+		std::vector<int> elements;
+		std::vector<Vector3f> uvns; // n will always be zero but just for consistency
+		Vector3f pos;
+
+		//virtual IntersectionPoint* cast(Intersection* ptr) {
+		//	return static_cast<IntersectionPoint*>(ptr);
+		//}
+	};
+
+	struct IntersectionCurve : Intersection {
+		/* curve region
+		* curve + subcurve
+		* surface + surface
+		* 
+		* man I wish I knew a better way to structure this
+		*/
+		std::vector<int> elements;
+		std::vector<std::vector<Vector3f>> uvns;
+		bez::CubicBezierPath curve;
+
+		//virtual IntersectionCurve* cast(Intersection* ptr) {
+		//	return static_cast<IntersectionCurve*>(ptr);
+		//}
+	};
+
+
+	struct IntersectionRecord {
+		std::vector<IntersectionPoint> points;
+		std::vector<IntersectionCurve> curves;
+
+		/* map of 
+		{ element A index:
+			{ element B index : 
+				[ vector of all <point or curve> intersections between those elements ]
+			}
+		}*/
+		std::unordered_map<int, std::unordered_map<int, 
+			std::vector<std::pair<IntersectionPoint*, IntersectionCurve*>>>> iMap;
+	};
 
 
 	
@@ -162,6 +221,8 @@ namespace strata {
 		std::unordered_map<std::string, SPointData> pDataMap = {};
 		std::unordered_map<std::string, SEdgeData> eDataMap = {};
 		std::unordered_map<std::string, SFaceData> fDataMap = {};
+
+		std::unordered_map<StrataName, SGroup> groupMap = {};
 
 		// world matrix transform of this manifold
 		Affine3f worldMat = Affine3f::Identity();

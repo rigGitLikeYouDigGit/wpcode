@@ -226,10 +226,10 @@ def reloadPluginTest():
 	#crossEl.stDriverExp_ = "pCrossA, pCrossB" # works
 	crossEl.stDriverExp_ = "pCrossA, eArmCrv, pCrossB"
 
-	# CRY HAVOC
-	faceEl = elOp.stElement_.getFreeEl()
-	faceEl.stName_ = "fFace"
-	faceEl.stDriverExp_ = "eArmCrv, (eCross > eArmCrv)" # only use eCross on higher side of eArmCrv
+	# # CRY HAVOC
+	# faceEl = elOp.stElement_.getFreeEl()
+	# faceEl.stName_ = "fFace"
+	# faceEl.stDriverExp_ = "eArmCrv, (eCross > eArmCrv)" # only use eCross on higher side of eArmCrv
 
 
 	return

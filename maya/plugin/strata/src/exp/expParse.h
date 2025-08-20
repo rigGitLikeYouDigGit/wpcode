@@ -272,6 +272,9 @@ namespace strata {
 			* to parallelise exp execution */
 
 			std::vector<int> expValuesToElements(std::vector<ExpValue>& values, Status& s);
+			Status& expValuesToElements(Status& s, std::vector<ExpValue>& values, std::vector<int>& result);
+			Status& expValuesToElements(Status& s, ExpValue& value, std::vector<int>& result);
+
 		};
 
 

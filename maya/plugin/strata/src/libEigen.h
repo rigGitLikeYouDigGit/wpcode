@@ -285,6 +285,14 @@ need to be careful nothing modifies _dir if cached
 		float* inContinuities = nullptr
 	); 
 
+	template<typename T>
+	inline Eigen::MatrixX3<T> resampleVectorArray(
+		const Eigen::MatrixX3<T>& inVs,
+		float start, float end,
+		int nSamples,
+		bool normalise=true
+	);
+
 
 
 	//inline double closestParamOnSpline(const Eigen::Spline3d& sp, const Eigen::Vector3f pt,
@@ -477,20 +485,11 @@ need to be careful nothing modifies _dir if cached
 
 
 
-	inline Eigen::ArrayXf arcLengthToParamMapping(const Eigen::Spline3f& sp, const int npoints = 20) {
-		// return an array of equally-spaced points giving the 0-1 arc length to each point
-		Eigen::ArrayXf result = Eigen::ArrayXf::Constant(npoints, 0.0f);
-		//Eigen::ArrayXXd data = Eigen::ArrayXXd::Constant(nRow, nCol, 1.0);
-		Eigen::Vector3f prevpt = sp(0.0f);
-		Eigen::Vector3f thispt;
-		for (int i = 1; i < npoints; i++) {
-			float u = 1.0f / float(npoints - 1) * i;
-			thispt = sp(u);
-			result[i] = result[i-1] + (thispt - prevpt).norm();
-			prevpt = thispt;
-		}
-		return result;
-	}
+	Eigen::ArrayXf arcLengthToParamMapping(const Eigen::Spline3f& sp, const int npoints = 20);
+
+	Eigen::ArrayXf arcLengthToParamMapping(const bez::CubicBezierSpline& sp, const int npoints = 20);
+
+	Eigen::ArrayXf arcLengthToParamMapping(const bez::CubicBezierPath& sp, const int npoints = 20);
 
 	Status& splineUVN(
 		Status& s,
@@ -588,6 +587,31 @@ need to be careful nothing modifies _dir if cached
 		int b;
 		a = floor(arr.size() * t);
 		b = a + 1;
+		return lerp<T, T>(arr[a], arr[b], t - (arr.size() * t));
+	}
+
+
+	template <typename T>
+	inline T lerpSampleScalarArr(Eigen::VectorX<T> arr, T t, int& lowI, int& highI) {
+		// sample array at a certain interval
+		//float& a;
+
+		if (t >= 1.0) {
+			lowI = arr.size() - 1;
+			highI = arr.size() - 1;
+			return arr.tail<1>()[0];
+		}
+		if (t <= 0.0) {
+			lowI = 0;
+			highI = 0;
+			return arr[0];
+		}
+		int a;
+		int b;
+		a = floor(arr.size() * t);
+		b = a + 1;
+		lowI = a;
+		highI = b;
 		return lerp<T, T>(arr[a], arr[b], t - (arr.size() * t));
 	}
 

@@ -136,3 +136,18 @@ if __name__ == '__main__':
 		pass
 
 	print(b)
+
+	separateInstance = UserDecorator("argA", "argB")
+
+	@separateInstance
+	def c():
+		pass
+
+	print(c)
+
+	"""TODO: this SHOULD create a copied instance of the decorator
+	around the function, with the original acting as a prototype,
+	but for now it looks like we assume a 1:1
+	"""
+
+

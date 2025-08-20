@@ -462,13 +462,7 @@ class WN( # short for WePresentNode
 		assert not node.isNull(), f"invalid MObject passed to WN constructor for {type(self)}"
 
 		self.MObjectHandle = om.MObjectHandle(node)
-		# assert self.object()Handle.isAlive()
-		# assert self.object()Handle.isValid()
-		# assert not self.object()Handle.object().isNull()
 		self._mobj = node
-
-		# maybe it's ok to cache MFn?
-		#self._MFn = None
 
 		# slot to hold live data tree object
 		# only used for optimisation, don't rely on it
@@ -585,6 +579,13 @@ class WN( # short for WePresentNode
 		# assert not self._MFn.object().isNull()
 		# return self._MFn
 
+	def output(self)->(None, Plug):
+		"""return a plug if this node can be used in atomic operations -
+		for example, ".output" from addDoubleLinear.
+		For more complex nodes, for now leave null and force explicit retrieval
+		"""
+		return None
+
 	# geometry node creation - basically ONLY for curve and mesh nodes
 	""" something silly happens if you create these from scratch with MDagModifier - 
 	the data objects never get created properly, so MFnNurbsCurve( myNewCurveShapeNode )
@@ -678,35 +679,12 @@ class WN( # short for WePresentNode
 		opMod.doIt()
 
 		#hdl = cls._validateCreatedMObject(newObj)
-		wrapper = nodeCls(newObj)
-		cls._validateCreatedWrapper(newObj, wrapper)
+		wrapper = nodeCls(newObj, **kwargs)
+		cls._validateCreatedWrapper(newObj, wrapper) # basically sometimes an object can be valid, while its handle isn't?
 		wrapper.setName(name)
 		return wrapper
 
 
-
-		# assert not newObj.isNull() # this NEVER errors
-		# hdl = om.MObjectHandle(newObj)
-		# if hdl.object().isNull():
-		# 	log("HDL OBJECT IS NULL")
-		# 	raise RuntimeError
-		#wrapper = nodeCls(newObj)
-		del opMod
-		#assert not hdl.object().isNull()
-
-		wrapper.object()
-
-		#assert not wrapper.object().isNull()
-		while wrapper.object().isNull():
-			log("found null object in wrapper, setting new handle")
-			wrapper.MObjectHandle = om.MObjectHandle(newObj)
-			time.sleep(1)
-		assert not wrapper.object().isNull()
-		assert wrapper.object() == newObj
-		assert wrapper.object(checkValid=True)
-		wrapper.setName(name)
-
-		return wrapper
 
 
 	@classmethod
@@ -741,27 +719,7 @@ class WN( # short for WePresentNode
 		if parent_ is not None:
 			parent_ = filterToMObject(parent_)
 		return wrapperCls.create(name, opMod, parent_, **kwargs)
-		#
-		#
-		# wrapper = WN(newObj)
-		# if(dgMod_ is None):
-		# 	print("DO IT")
-		# 	opMod.doIt()
-		#
-		# if not newObj.hasFn(om.MFn.kDagNode):
-		# 	return wrapper
-		#
-		# if(dgMod_ is not None):
-		# 	return wrapper
-		#
-		# # check if new shape was created under the world
-		# if(parent_ is None and wrapper._shapeObjects() ):
-		# 	nameRoot, digits = wpstring.trailingDigits(wrapper.name())
-		# 	shape = wrapper.shape()
-		# 	print("shape", shape, shape.exists())
-		# 	wrapper.shape().MFn.setName(name + "Shape" + digits)
-		# 	wrapper = wrapper.shape()
-		# return wrapper
+
 
 
 	def setInitAttrs(self, ):

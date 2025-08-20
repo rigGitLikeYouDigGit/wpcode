@@ -93,43 +93,49 @@ inline Status& strata::splineUVN(
 	return s;
 }
 
-//
-//Status& strata::splineUVN(
-//	Status& s,
-//	//Eigen::Matrix4f& outMat,
-//	Eigen::Affine3f& outMat,
-//	const Eigen::Spline3d& posSpline,
-//	const Eigen::Spline3d& normalSpline,
-//	double uvw[3]
-//) {
-//	/* polar-like coords around spline
-//	u is parametre
-//	v is rotation
-//	w is distance
-//	*/
-//	uvw[0] = std::min(std::max(uvw[0], 0.0), 1.0);
-//
-//	Eigen::Vector3f pos = posSpline(uvw[0]).matrix(); // we assume that normal is actually normal, no need to redo double cross here
-//	//auto derivatives = posSpline.derivatives<1>(uvw[0], 1);
-//	Eigen::Vector3f tan = posSpline.derivatives(uvw[0], 1).col(1).matrix();
-//	//Eigen::Array3d n = posSpline(uvw[1]);
-//	Eigen::Vector3f n = normalSpline(uvw[1]).matrix();
-//
-//
-//	s = makeFrame(s,
-//		outMat.matrix(), pos, tan, n);
-//	if (!EQ(uvw[1], 0.0)) {
-//		/* rotate n times clockwise about tangent*/
-//		Eigen::AngleAxisd orient(uvw[1], tan);
-//		outMat *= orient;
-//	}
-//	if (!EQ(uvw[2], 0.0)) {
-//		/* rotate n times clockwise about tangent*/
-//		outMat.translate(Eigen::Vector3f{ 0.0, 0.0, uvw[2] });
-//	}
-//
-//	return s;
-//}
+Eigen::ArrayXf strata::arcLengthToParamMapping(const Eigen::Spline3f& sp, const int npoints = 20) {
+	// return an array of equally-spaced points giving the 0-1 arc length to each point
+	Eigen::ArrayXf result = Eigen::ArrayXf::Constant(npoints, 0.0f);
+	Eigen::Vector3f prevpt = sp(0.0f);
+	Eigen::Vector3f thispt;
+	for (int i = 1; i < npoints; i++) {
+		float u = 1.0f / float(npoints - 1) * i;
+		thispt = sp(u);
+		result[i] = result[i - 1] + (thispt - prevpt).norm();
+		prevpt = thispt;
+	}
+	return result;
+}
+
+Eigen::ArrayXf strata::arcLengthToParamMapping(const bez::CubicBezierSpline& sp, const int npoints) {
+	// return an array of equally-spaced points giving the 0-1 arc length to each point
+	Eigen::ArrayXf result = Eigen::ArrayXf::Constant(npoints, 0.0f);
+	Eigen::Vector3f prevpt = sp.eval(0.0f);
+	Eigen::Vector3f thispt;
+	for (int i = 1; i < npoints; i++) {
+		float u = 1.0f / float(npoints - 1) * i;
+		thispt = sp.eval(u);
+		result[i] = result[i - 1] + (thispt - prevpt).norm();
+		prevpt = thispt;
+	}
+	return result;
+}
+
+Eigen::ArrayXf strata::arcLengthToParamMapping(const bez::CubicBezierPath& sp, const int npoints) {
+	// return an array of equally-spaced points giving the 0-1 arc length to each point
+	Eigen::ArrayXf result = Eigen::ArrayXf::Constant(npoints, 0.0f);
+	Eigen::Vector3f prevpt = sp.eval(0.0f);
+	Eigen::Vector3f thispt;
+	for (int i = 1; i < npoints; i++) {
+		float u = 1.0f / float(npoints - 1) * i;
+		thispt = sp.eval(u);
+		result[i] = result[i - 1] + (thispt - prevpt).norm();
+		prevpt = thispt;
+	}
+	return result;
+}
+
+
 
 
 #define FE_MSQ_METHOD 0
@@ -916,6 +922,29 @@ template Eigen::MatrixX3<double> strata::cubicTangentPointsForBezPoints<double>(
 	const bool closed,
 	float* inContinuities
 );
+
+template<typename T>
+inline Eigen::MatrixX3<T> resampleVectorArray(
+	const Eigen::MatrixX3<T>& inVs,
+	float start, float end,
+	int nSamples,
+	bool normalise = true
+) {
+	Eigen::MatrixX3<T> result(nSamples, 3);
+	float range = end - start;
+	float step = range / float(nSamples - 1);
+	for (int i = 0; i < nSamples; i++) {
+		float newU = step * i;
+		int lowIndex;
+		int highIndex;
+		int sampleT = getArrayIndicesTForU(inVs.rows(), newU, lowIndex, highIndex);
+		result.row(i) = lerp(inVs.row(lowIndex), inVs.row(highIndex), sampleT);
+		if (normalise) {
+			result.row(i) = result.row(i).normalized();
+		}
+	}
+	return result;
+}
 
 Eigen::MatrixX3f strata::makeRMFNormals(
 	Eigen::MatrixX3f& positions,

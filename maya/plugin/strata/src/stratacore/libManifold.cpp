@@ -9,6 +9,19 @@ we add a new way to manipulate it*/
 using namespace strata;
 using namespace strata::expns;
 
+Status& getIntersections(Status& s, IntersectionRecord& result,
+	int elA, int elB) 
+{
+	/* write out logic for most complicated 
+	* case you can think of, then do it again for another one
+	*/
+
+	// curve/curve, including potential history and surface driver interaction
+	
+	return s;
+}
+
+
 Status& elementGreaterThan(
 	Status& s,
 	StrataManifold& manifold,

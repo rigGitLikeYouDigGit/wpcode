@@ -91,7 +91,10 @@ namespace strata {
 	struct SEdgeData : SElData//, StaticClonable<SEdgeData> 
 	{
 		/* need dense final result to pick up large changes in
-		parent space
+		parent space.
+
+		Try "eA.bestP()" or "eA.p" in expressions to say "best-fitting point", leave it to operatioms to determine that point
+
 		*/
 		using thisT = SEdgeData;
 		using T = SEdgeData;
@@ -201,6 +204,8 @@ namespace strata {
 			upper = driverDatas[spanIndex + 1];
 		}
 		Status& buildFinalBuffers(Status& s);
+
+		Status& getSubData(Status& s, SEdgeData& target, float lowU, float highU);
 
 	};
 

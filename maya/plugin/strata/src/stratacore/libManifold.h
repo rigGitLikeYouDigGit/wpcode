@@ -5,6 +5,9 @@
 
 namespace strata {
 
+	Status& getIntersections(Status& s, std::vector<IntersectionPoint> result,
+		int elA, int elB);
+
 	static std::vector<SElement*> elsFromExpValue(
 		StrataManifold& manifold,
 		expns::ExpValue& expV

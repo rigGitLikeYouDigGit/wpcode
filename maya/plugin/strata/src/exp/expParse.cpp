@@ -414,12 +414,47 @@ ExpOpNode* ExpGraph::getResultNode() {
 }
 
 
+Status& ExpAuxData::expValuesToElements(Status& s, ExpValue& value, std::vector<int>& result) {
+	for (auto& f : value.numberVals) { // check for integer indices
+		int id = fToInt(f);
+		SElement* ptr = manifold->getEl(id);
+		if (ptr == nullptr) { // index not found in manifold
+			continue;
+		}
+		if (!seqContains(result, id)) { // add unique value found
+			result.push_back(id);
+		}
+	}
+	for (auto& s : value.stringVals) { // check for string names
+		// patterns will already have been expanded by top level
+		SElement* ptr = manifold->getEl(s);
+		if (ptr == nullptr) {
+			continue;
+		}
+		if (!seqContains(result, ptr->globalIndex)) { // add unique value found
+			result.push_back(ptr->globalIndex);
+		}
+	}
+	return s;
+
+}
+
+Status& ExpAuxData::expValuesToElements(Status& s, std::vector<ExpValue>& values, std::vector<int>& result) {
+	if (!values.size()) {
+		return s; }
+	for (size_t vi = 0; vi < values.size(); vi++) {
+		ExpValue& v = values[vi];
+		s = expValuesToElements(s, v, result);
+	}
+	return s;
+}
+
 std::vector<int> ExpAuxData::expValuesToElements(std::vector<ExpValue>& values, Status& s) {
 	/* resolve all possible values to elements */
 	
 	std::vector<int> result;
 	if (!values.size()) { return result; }
-	LOG("expValuesToElements: " + str(values.size()));
+	///LOG("expValuesToElements: " + str(values.size()));
 	for (size_t vi = 0; vi < values.size(); vi++) {
 		//for (auto& v : values) {
 		ExpValue& v = values[vi];
