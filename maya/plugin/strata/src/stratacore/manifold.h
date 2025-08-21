@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <queue>
+#include <deque>
 //#include <cstdint>
 
 #include <Eigen/Dense>
@@ -75,13 +77,22 @@ for interaction through maya, consider setting up attributes in a map, and enter
 
 namespace strata {
 
-	/*
-	for full separation, we might break things up further?
+	/* TODO: move this higher - 
+	jank utils for working with float values as map keys,
+	for looking up intersections by UVN coords*/
+	constexpr float E = 0.00001;
+	// returns massive int keys - maybe fine
+	inline int toKey(float k) {
+		//return trunc(k / E);
+		return trunc(k * 100000.0f);
+	}
+	inline int toKey(double k) {
+		return trunc(k * 100000.0f);
+	}
 
-
-	an edge is driven by SEdgeDriverData -
-	outputs of an edge are EdgeSampleData? - 
-	*/
+	inline Vector3i toKey(Vector3f k) {
+		return Vector3i(toKey(k.x()), toKey(k.y()), toKey(k.z()));
+	}
 
 	struct SSampleData { //?
 		int index = -1;
@@ -133,21 +144,48 @@ namespace strata {
 		//}
 	};
 
-
+	/* maybe these intersection references should be stored on
+	dense elements - 
+	might make sense to update/cache them as needed
+	*/
 	struct IntersectionRecord {
 		std::vector<IntersectionPoint> points;
 		std::vector<IntersectionCurve> curves;
 
 		/* map of 
-		{ element A index:
-			{ element B index : 
-				[ vector of all <point or curve> intersections between those elements ]
+		{ (element A index, toKey(elementA uvn) ):
+			{ (element B index, toKey(elementB uvn) ) : 
+				<point or curve> intersections occurring at those uvns, for those elements
 			}
 		}*/
-		std::unordered_map<int, std::unordered_map<int, 
-			std::vector<std::pair<IntersectionPoint*, IntersectionCurve*>>>> iMap;
+		std::map < std::pair<int, Vector3i> , 
+			std::map< std::pair<int, Vector3i>,
+				std::pair<IntersectionPoint*, IntersectionCurve*>
+			>
+		> iMap;
 	};
 
+	struct ElementPath {
+		/* index-wise path to get from one element to another. 
+		
+		stores global indices*/
+		int src;
+		int dst;
+		std::vector<int> backwards; /* vector of elements to go BACKWARDS in src DRIVERS */
+		std::vector<int> forwards; /* vector to go FORWARDS from COMMON ROOT*/
+
+		/* if we have a single backwards entry, DST is a direct driver
+		if we have a single forwards entry SRC is a direct driver
+		*/
+
+		//inline int commonRoot() const {
+		//	// if we have any backwards paths
+		//	if (backwards.size()) {
+		//		return backwards.back();
+		//	}
+		//	return src;
+		//}
+	};
 
 	
 	/// ATTRIBUTES
@@ -324,12 +362,28 @@ namespace strata {
 			initAttrs();
 		}
 
+		//inline const SElement& getEl(const int& globalId) const {
+		//	return elements.at(globalId);
+		//}
+
+		//inline const SElement& getEl(const int& globalId) const {
+		//	return elements.at(globalId);
+		//}
+
+		inline const SElement* getElC(const int& globalId) const {
+			if (globalId >= elements.size()) {
+				return nullptr;
+			}
+			//return &elements.at(globalId);
+			return elements.data() + globalId;
+		}
 
 		inline SElement* getEl(const int& globalId) {
 			if (globalId >= elements.size()) {
 				return nullptr;
 			}
-			return &elements[globalId];
+			//return &elements.at(globalId);
+			return elements.data() + globalId;
 		}
 
 		inline SElement* getEl(const std::string name) {
@@ -337,6 +391,15 @@ namespace strata {
 				return nullptr;
 			}
 			return &elements[nameGlobalIndexMap[name]];
+		}
+
+		inline const SElement* getElC(const std::string name) const {
+			if (!nameGlobalIndexMap.count(name)) {
+				return nullptr;
+			}
+			//return &elements[nameGlobalIndexMap[name]];
+			return &elements.at(nameGlobalIndexMap.at(name));
+			//return &elements[nameGlobalIndexMap[name]];
 		}
 
 
