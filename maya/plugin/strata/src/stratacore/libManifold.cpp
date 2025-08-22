@@ -46,31 +46,162 @@ Status& elDriverIntersections(
 	SElement* el,
 	IntersectionRecord& record
 ) {
-	if (record.iMap.find(el->globalIndex) == record.iMap.end()) {
-		record.iMap[el->globalIndex];
-	}
-	auto& driverIntersectMap = record.iMap.at(el->globalIndex);
+	//if (record.pointMap.find(el->globalIndex) == record.pointMap.end()) {
+	//	record.pointMap[el->globalIndex];
+	//}
+	//auto& driverIntersectMap = record.iMap.at(el->globalIndex);
 
-	for (auto driveIdx : el->drivers) {
-		SElement* driverEl = manifold.getEl(driveIdx);
 
-		
-		switch (el->elType) {
-		case SElType::point:{
+	switch (el->elType) {
+	case SElType::point: {
+		IntersectionPoint* ptr = nullptr; // point can only ever intersect AT a point
+		SPointData& pData = manifold.pDataMap[el->name];
+		SPointDriverData& driverData = pData.driverData; // only single driver for points
+
+		auto lookup = record.posPointMap.find(
+			toKey(pData.finalMatrix.translation())
+		);
+		if (lookup == record.posPointMap.end()) { // make new point for this element
+			record.points.emplace_back();
+			ptr = &record.points.back();
+			ptr->pos = pData.finalMatrix.translation();
+			ptr->elements.push_back(el->globalIndex);
+			ptr->uvns.push_back(Vector3f(0, 0, 0));
+			record.pointMap[el->globalIndex][Vector3i(0, 0, 0)] = ptr; //uvns on a point are zero
+			record.posPointMap[toKey(pData.finalMatrix.translation())] = ptr;
+
+		}
+		else {
+			ptr = lookup->second;
+			record.pointMap[el->globalIndex][Vector3i(0, 0, 0)] = ptr;
+		}
+
+		for (auto driveIdx : el->drivers) { // loop not necessary for points, keeping for consistency
+			SElement* driverEl = manifold.getEl(driveIdx);
+
 			switch (driverEl->elType) {
 			case SElType::point: { // point-point intersection, just a single point
-				record.points.emplace_back();
-				IntersectionPoint& pt = record.points.back();
-				pt.type = pt.POINT;
-				pt.elements = { el->globalIndex, driverEl->globalIndex };
-				pt.uvns = { Vector3f(0, 0, 0), Vector3f(0, 0, 0) };
-				record.iMap[el->globalIndex][driverEl->globalIndex].push_back(
-					std::make_pair(&pt, nullptr)
-				);
+				/* look up existing intersection by position, as the canonical way to share them?
+				seems SUPER dodgy but makes logic easier for now
+				*/
+				SPointData& dPData = manifold.pDataMap[driverEl->name];
+
+				ptr->elements.push_back(driverEl->globalIndex);
+				ptr->uvns.push_back(Vector3f(0, 0, 0));
+				record.pointMap[driverEl->globalIndex][Vector3i(0, 0, 0)] = ptr;
+
+				record.elMap[el->globalIndex][driverEl->globalIndex].push_back({ ptr, nullptr });
+				record.elMap[driverEl->globalIndex][el->globalIndex].push_back({ ptr, nullptr });
+
+				/* recurse??? */
+				s = elDriverIntersections(s, manifold, driverEl,
+					record);
+				break;
+			}
+			case SElType::edge: {
+				/* point-curve intersection - DO NOT RECURSE here?
+				or do - this curve might be driven by a point at this exact same position, etc
+				*/
+				SEdgeData& dEData = manifold.eDataMap[driverEl->name];
+				ptr->elements.push_back(driverEl->globalIndex);
+				ptr->uvns.push_back(driverData.uvn);
+				record.pointMap[driverEl->globalIndex][toKey(driverData.uvn)] = ptr;
+
+				record.elMap[el->globalIndex][driverEl->globalIndex].push_back({ ptr, nullptr });
+				record.elMap[driverEl->globalIndex][el->globalIndex].push_back({ ptr, nullptr });
+
+				s = elDriverIntersections(
+					s,
+					manifold,
+					driverEl,
+					record);
+				break; // break driver switch
 			}
 			}
-			}
+			break; // break loop
 		}
+		break; // break eltype point switch
+	}
+	case SElType::edge: {
+		
+		SEdgeData& eData = manifold.eDataMap[el->name];
+		for (int i = 0; i < el->drivers.size(); i++) { // loop not necessary for points, keeping for consistency
+			int driveIdx = el->drivers[i];
+			SElement* driverEl = manifold.getEl(driveIdx);
+			SEdgeDriverData& driverData = eData.driverDatas[i];
+			switch (driverEl->elType) {
+			case SElType::point: {
+				//SPointData& dPData = manifold.pDataMap[driverEl->name];
+				IntersectionPoint* ptr = nullptr;
+				auto found = record.posPointMap.find(toKey(
+					driverData.pos()));
+				if (found == record.posPointMap.end()) { /* add point driver to record */
+					record.points.emplace_back();
+					ptr = &record.points.back();
+					record.posPointMap[toKey(driverData.pos())] = ptr;
+				}
+				else {
+					ptr = found->second;
+				}
+				// add driver
+				ptr->elements.push_back(driverEl->globalIndex);
+				ptr->pos = driverData.pos();
+				ptr->uvns.push_back(driverData.uvn);
+
+				/* add edge point at UVN*/
+				ptr->elements.push_back(el->globalIndex);
+				ptr->uvns.push_back(Vector3f(driverData.uOnEdge, 0, 0)	);
+
+				// bidirectional lookups between elements
+				record.elMap[el->globalIndex][driverEl->globalIndex].push_back({ ptr, nullptr });
+				record.elMap[driverEl->globalIndex][el->globalIndex].push_back({ ptr, nullptr });
+				
+				// recurse
+				s = elDriverIntersections(
+					s,
+					manifold,
+					driverEl,
+					record);
+				continue;
+			}
+			case SElType::edge: {
+				SEdgeData& dEData = manifold.eDataMap[driverEl->name];
+				IntersectionPoint* ptr = nullptr;
+				auto found = record.posPointMap.find(toKey(
+					driverData.pos()));
+				if (found == record.posPointMap.end()) { /* add point driver to record */
+					record.points.emplace_back();
+					ptr = &record.points.back();
+					record.posPointMap[toKey(driverData.pos())] = ptr;
+				}
+				else {
+					ptr = found->second;
+				}
+				// add driver
+				ptr->elements.push_back(driverEl->globalIndex);
+				ptr->pos = driverData.pos();
+				ptr->uvns.push_back(driverData.uvn);
+
+				// add edge
+
+				/* add edge point at UVN*/
+				ptr->elements.push_back(el->globalIndex);
+				ptr->uvns.push_back(Vector3f(driverData.uOnEdge, 0, 0));
+
+				// bidirectional lookups between elements
+				record.elMap[el->globalIndex][driverEl->globalIndex].push_back({ ptr, nullptr });
+				record.elMap[driverEl->globalIndex][el->globalIndex].push_back({ ptr, nullptr });
+
+				// recurse
+				s = elDriverIntersections(
+					s,
+					manifold,
+					driverEl,
+					record);
+				continue;
+			}
+			}
+	}
 	}
 
 	return s;

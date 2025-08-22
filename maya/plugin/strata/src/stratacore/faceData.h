@@ -44,6 +44,9 @@ namespace strata {
 		good question
 		*/
 		std::vector<Vector3f> midEdgeTangents;
+
+		aabb::AABB getAABB();
+
 	};
 
 }

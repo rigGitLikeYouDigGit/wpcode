@@ -7,6 +7,8 @@
 #include "../mixin.h"
 #include "CubicSplineHelpers.h"
 
+#include "../AABB.h"
+
 /* todo:
 bounds / centroid
 
@@ -180,6 +182,55 @@ namespace bez
             result.transform(mat);
             return result;
         }
+
+        inline std::pair<Eigen::Vector3f, Eigen::Vector3f> minMaxBounds() {
+            return std::make_pair(
+                Eigen::Vector3f(
+                    std::min({
+                        control_points_[0].x,
+                        control_points_[1].x,
+                        control_points_[2].x,
+                        control_points_[3].x
+                        }),
+                    std::min({
+                        control_points_[0].y,
+                        control_points_[1].y,
+                        control_points_[2].y,
+                        control_points_[3].y
+                        }),
+                    std::min({
+                        control_points_[0].z,
+                        control_points_[1].z,
+                        control_points_[2].z,
+                        control_points_[3].z
+                        })
+                ),
+                Eigen::Vector3f(
+                    std::max({
+                        control_points_[0].x,
+                        control_points_[1].x,
+                        control_points_[2].x,
+                        control_points_[3].x
+                        }),
+                    std::max({
+                        control_points_[0].y,
+                        control_points_[1].y,
+                        control_points_[2].y,
+                        control_points_[3].y
+                        }),
+                    std::max({
+                        control_points_[0].z,
+                        control_points_[1].z,
+                        control_points_[2].z,
+                        control_points_[3].z
+                        })
+                )
+            );
+        }
+        inline aabb::AABB getAABB() {
+            auto p = minMaxBounds();
+            return aabb::AABB(p.first, p.second);
+        }
     };
 
 
@@ -319,6 +370,14 @@ namespace bez
                 //i.get()->transform(mat);
                 i.transform(mat);
             }
+        }
+
+        inline aabb::AABB getAABB() {
+            aabb::AABB base = splines_[0].getAABB();
+            for (int i = 1; i < splines_.size(); i++) {
+                base.merge(base, splines_[i].getAABB());
+            }
+            return base;
         }
 
     };

@@ -158,11 +158,23 @@ namespace strata {
 				<point or curve> intersections occurring at those uvns, for those elements
 			}
 		}*/
-		std::map < std::pair<int, Vector3i> , 
-			std::map< std::pair<int, Vector3i>,
-				std::pair<IntersectionPoint*, IntersectionCurve*>
+
+		std::map < int, 
+			std::map<Vector3i, 
+				IntersectionPoint*
 			>
-		> iMap;
+		> pointMap;
+
+		/* want some way to say 'show me all elements possibly intersecting this one'
+		*/
+		std::map< int, // from el index
+			std::map< int, // to el index
+				std::vector< //separate intersections between these two elements
+					std::pair<IntersectionPoint*, IntersectionCurve*> // either point or curve
+		>>> elMap;
+
+		std::map< Vector3i, IntersectionPoint* > posPointMap;
+
 	};
 
 	struct ElementPath {

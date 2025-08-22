@@ -2,6 +2,7 @@
 
 #include "element.h"
 #include "pointData.h"
+#include "../AABB.h"
 
 namespace strata {
 
@@ -35,12 +36,15 @@ namespace strata {
 		float twist = 0.0; // how much extra twist to add to point, on top of default curve frame
 		Eigen::Affine3f finalMatrix = Eigen::Affine3f::Identity();
 
+		float uOnEdge = 0.0; // u-value of this driver along output edge -
+		/* can't always be inferred if one of the drivers is a surface*/
+
 		inline Eigen::Vector3f pos() { return finalMatrix.translation(); }
 
-		inline Status& syncMatrix() {
-			/* update final matrix from local driver tangents, offsets etc
-			*/
-		}
+		//inline Status& syncMatrix() {
+		//	/* update final matrix from local driver tangents, offsets etc
+		//	*/
+		//}
 	};
 
 	// DRIVER datas are in space of the DRIVER
@@ -207,6 +211,8 @@ namespace strata {
 
 		Status& getSubData(Status& s, SEdgeData& target, float lowU, float highU);
 
+
+		aabb::AABB getAABB();
 	};
 
 

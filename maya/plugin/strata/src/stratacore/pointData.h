@@ -14,6 +14,7 @@ namespace strata {
 	struct SPointDriverData {
 		/* may not be entirely irrelevant*/
 		int index = -1;
+		Vector3f uvn; // coord on driver for point position
 	};
 
 	// parent datas always relative in parent space - when applied, recover the original shape of element

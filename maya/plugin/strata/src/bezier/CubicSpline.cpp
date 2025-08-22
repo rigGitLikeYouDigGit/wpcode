@@ -739,7 +739,7 @@ namespace bez
     Eigen::Vector3f CubicBezierSpline::eval(
         const float t) const
     {
-        // The polynomial for is faster at evaluating than the parametric.
+        // The polynomial form is faster at evaluating than the parametric.
         return toEig( t * (polynomial_form_[2] + t * (polynomial_form_[1] + t * polynomial_form_[0])) + polynomial_form_[3] );
     }
 

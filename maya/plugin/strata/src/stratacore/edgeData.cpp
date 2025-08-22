@@ -41,3 +41,6 @@ Status& SEdgeData::getSubData(Status& s, SEdgeData& target, float lowU, float hi
 	return s;
 }
 
+aabb::AABB SEdgeData::getAABB() {
+	return finalCurve.getAABB();
+}

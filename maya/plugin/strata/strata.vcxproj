@@ -318,6 +318,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\AABB.cpp" />
     <ClCompile Include="src\api.cpp" />
     <ClCompile Include="src\bezier\math\misc.cpp" />
     <ClCompile Include="src\bezier\math\tridiagonal.cpp" />
@@ -403,6 +404,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\strataop\mergeOp.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\strataop\strataTypes.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stringLib.h" />
+    <ClInclude Include="src\AABB.h" />
     <ClInclude Include="src\bezier\math\misc.h" />
     <ClInclude Include="src\bezier\math\tridiagonal.h" />
     <ClInclude Include="src\exp\expElCompare.h" />

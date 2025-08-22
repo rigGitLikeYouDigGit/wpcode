@@ -96,6 +96,7 @@
     <ClCompile Include="src\stratacore\pointData.cpp" />
     <ClCompile Include="src\stratacore\edgeData.cpp" />
     <ClCompile Include="src\stratacore\faceData.cpp" />
+    <ClCompile Include="src\AABB.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\MInclude.h">
@@ -242,6 +243,9 @@
     <ClInclude Include="src\stratacore\pointData.h" />
     <ClInclude Include="src\stratacore\edgeData.h" />
     <ClInclude Include="src\stratacore\faceData.h" />
+    <ClInclude Include="src\stratacore\group.h" />
+    <ClInclude Include="src\stratacore\subsample.h" />
+    <ClInclude Include="src\AABB.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="F:\wp\code\maya\plugin\strata\CMakeLists.txt" />
