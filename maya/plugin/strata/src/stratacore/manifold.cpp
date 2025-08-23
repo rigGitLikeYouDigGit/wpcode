@@ -8,6 +8,74 @@
 
 using namespace strata;
 
+
+IntersectionPoint* IntersectionRecord::getPointByVectorPosition(Vector3f worldPos, bool create) {
+	create = false;	// create explicitly outside this function
+	Vector3i vecKey = toKey(worldPos);
+	auto found = posPointMap.find(vecKey);
+	if (found != posPointMap.end()) {
+		return &points[found->second];
+	}
+	if (create) {
+		points.emplace_back();
+		posPointMap[vecKey] = points.size() - 1;
+		auto ptr = &points.back();
+		ptr->pos = worldPos;
+		return ptr;
+	}
+	return nullptr;
+}
+IntersectionPoint* IntersectionRecord::getPointByElUVN(int gId, Vector3f uvn, bool create) {
+	create = false; // don't have enough information to create passed into this function
+	Vector3i vecKey = toKey(uvn);
+	auto found = elUVNPointMap.find(gId);
+	if (found != elUVNPointMap.end()) {
+		auto foundPt = found->second.find(vecKey);
+		if (foundPt != found->second.end()) {
+			return &points[foundPt->second];
+		}
+	}
+	if (create) {
+		int newIdx = static_cast<int>(points.size());
+		points.emplace_back();
+		elUVNPointMap[gId][vecKey] = newIdx;
+		return &points[newIdx];
+	}
+	return nullptr;
+}
+std::vector<
+	std::pair<IntersectionPoint*, IntersectionCurve*>
+> IntersectionRecord::getIntersectionsBetweenEls(int gIdA, int gIdB) {
+	std::vector < std::pair<IntersectionPoint*, IntersectionCurve*>> result;
+	auto foundA = elMap.find(gIdA);
+	if (foundA == elMap.end()) {
+		return result;
+	}
+	auto foundB = foundA->second.find(gIdB);
+	if (foundB == foundA->second.end()) {
+		return result;
+	}
+
+	result.resize(foundB->second.size());
+	/* for each found int pair, replace with valid pointer or nullptr*/
+	int i = 0;
+	for (auto& p : foundB->second) {
+		switch (p.second) {
+		case Intersection::POINT: {
+			result[i] = std::make_pair(&points[p.first], nullptr);
+			break;
+		}
+		case Intersection::EDGE: {
+			result[i] = std::make_pair(nullptr, &curves[p.first]);
+			break;
+		}
+		}
+		i += 1;
+	}
+	return result;
+}
+
+
 std::string strata::SPointSpaceData::strInfo() {
 	return "<PSData " + name + " w:" + str(weight) + " uvn:" + str(uvn) + " offset:" + str(offset) + ">";
 }

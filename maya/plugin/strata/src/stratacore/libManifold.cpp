@@ -40,170 +40,362 @@ elA intersection list:
 
 */
 
-Status& elDriverIntersections(
+//Status& elDriverIntersections(
+//	Status& s,
+//	StrataManifold& manifold,
+//	SElement* el,
+//	IntersectionRecord& record
+//) {
+//
+//	switch (el->elType) {
+//	case SElType::point: {
+//		IntersectionPoint* ptr = nullptr; // point can only ever intersect AT a point
+//		SPointData& pData = manifold.pDataMap[el->name];
+//		SPointDriverData& driverData = pData.driverData; // only single driver for points
+//
+//		auto lookup = record.posPointMap.find(
+//			toKey(pData.finalMatrix.translation())
+//		);
+//		if (lookup == record.posPointMap.end()) { // make new point for this element
+//			record.points.emplace_back();
+//			ptr = &record.points.back();
+//			ptr->pos = pData.finalMatrix.translation();
+//			ptr->elements.push_back(el->globalIndex);
+//			ptr->uvns.push_back(Vector3f(0, 0, 0));
+//			record.elUVNPointMap[el->globalIndex][Vector3i(0, 0, 0)] = ptr; //uvns on a point are zero
+//			record.posPointMap[toKey(pData.finalMatrix.translation())] = ptr;
+//
+//		}
+//		else {
+//			ptr = lookup->second;
+//			record.elUVNPointMap[el->globalIndex][Vector3i(0, 0, 0)] = ptr;
+//		}
+//
+//		for (auto driveIdx : el->drivers) { // loop not necessary for points, keeping for consistency
+//			SElement* driverEl = manifold.getEl(driveIdx);
+//
+//			switch (driverEl->elType) {
+//			case SElType::point: { // point-point intersection, just a single point
+//				/* look up existing intersection by position, as the canonical way to share them?
+//				seems SUPER dodgy but makes logic easier for now
+//				*/
+//				SPointData& dPData = manifold.pDataMap[driverEl->name];
+//
+//				ptr->elements.push_back(driverEl->globalIndex);
+//				ptr->uvns.push_back(Vector3f(0, 0, 0));
+//				record.elUVNPointMap[driverEl->globalIndex][Vector3i(0, 0, 0)] = ptr;
+//
+//				record.elMap[el->globalIndex][driverEl->globalIndex].push_back({ ptr, nullptr });
+//				record.elMap[driverEl->globalIndex][el->globalIndex].push_back({ ptr, nullptr });
+//
+//				/* recurse??? */
+//				s = elDriverIntersections(s, manifold, driverEl,
+//					record);
+//				break;
+//			}
+//			case SElType::edge: {
+//				/* point-curve intersection - DO NOT RECURSE here?
+//				or do - this curve might be driven by a point at this exact same position, etc
+//				*/
+//				SEdgeData& dEData = manifold.eDataMap[driverEl->name];
+//				ptr->elements.push_back(driverEl->globalIndex);
+//				ptr->uvns.push_back(driverData.uvn);
+//				record.elUVNPointMap[driverEl->globalIndex][toKey(driverData.uvn)] = ptr;
+//
+//				record.elMap[el->globalIndex][driverEl->globalIndex].push_back({ ptr, nullptr });
+//				record.elMap[driverEl->globalIndex][el->globalIndex].push_back({ ptr, nullptr });
+//
+//				s = elDriverIntersections(
+//					s,
+//					manifold,
+//					driverEl,
+//					record);
+//				break; // break driver switch
+//			}
+//			}
+//			break; // break loop
+//		}
+//		break; // break eltype point switch
+//	}
+//	case SElType::edge: {
+//
+//		SEdgeData& eData = manifold.eDataMap[el->name];
+//		for (int i = 0; i < el->drivers.size(); i++) { // loop not necessary for points, keeping for consistency
+//			int driveIdx = el->drivers[i];
+//			SElement* driverEl = manifold.getEl(driveIdx);
+//			SEdgeDriverData& driverData = eData.driverDatas[i];
+//			switch (driverEl->elType) {
+//			case SElType::point: {
+//				//SPointData& dPData = manifold.pDataMap[driverEl->name];
+//				IntersectionPoint* ptr = nullptr;
+//				auto found = record.posPointMap.find(toKey(
+//					driverData.pos()));
+//				if (found == record.posPointMap.end()) { /* add point driver to record */
+//					record.points.emplace_back();
+//					ptr = &record.points.back();
+//					record.posPointMap[toKey(driverData.pos())] = ptr;
+//				}
+//				else {
+//					ptr = found->second;
+//				}
+//				// add driver
+//				ptr->elements.push_back(driverEl->globalIndex);
+//				ptr->pos = driverData.pos();
+//				ptr->uvns.push_back(driverData.uvn);
+//
+//				/* add edge point at UVN*/
+//				ptr->elements.push_back(el->globalIndex);
+//				ptr->uvns.push_back(Vector3f(driverData.uOnEdge, 0, 0));
+//
+//				// bidirectional lookups between elements
+//				record.elMap[el->globalIndex][driverEl->globalIndex].push_back({ ptr, nullptr });
+//				record.elMap[driverEl->globalIndex][el->globalIndex].push_back({ ptr, nullptr });
+//
+//				// recurse
+//				s = elDriverIntersections(
+//					s,
+//					manifold,
+//					driverEl,
+//					record);
+//				continue;
+//			}
+//			case SElType::edge: {
+//				SEdgeData& dEData = manifold.eDataMap[driverEl->name];
+//				IntersectionPoint* ptr = nullptr;
+//				auto found = record.posPointMap.find(toKey(
+//					driverData.pos()));
+//				if (found == record.posPointMap.end()) { /* add point driver to record */
+//					record.points.emplace_back();
+//					ptr = &record.points.back();
+//					record.posPointMap[toKey(driverData.pos())] = ptr;
+//				}
+//				else {
+//					ptr = found->second;
+//				}
+//				// add driver
+//				ptr->elements.push_back(driverEl->globalIndex);
+//				ptr->pos = driverData.pos();
+//				ptr->uvns.push_back(driverData.uvn);
+//
+//				// add edge
+//
+//				/* add edge point at UVN*/
+//				ptr->elements.push_back(el->globalIndex);
+//				ptr->uvns.push_back(Vector3f(driverData.uOnEdge, 0, 0));
+//
+//				// bidirectional lookups between elements
+//				record.elMap[el->globalIndex][driverEl->globalIndex].push_back({ ptr, nullptr });
+//				record.elMap[driverEl->globalIndex][el->globalIndex].push_back({ ptr, nullptr });
+//
+//				// recurse
+//				s = elDriverIntersections(
+//					s,
+//					manifold,
+//					driverEl,
+//					record);
+//				continue;
+//			}
+//			}
+//		}
+//	}
+//	}
+//	return s;
+//
+//}
+
+/* to UPDATE intersections without remapping everything every time
+
+on element created, query by POSITIONS covered by new element - 
+only update intersections that match them
+
+from an element's DIRECT DRIVERS, we can get spatial data to query?
+plus AABB checks for surfaces, curves + surfaces
+*/
+
+Status& _updatePointDriverIntersections(
+	Status& s,
+	StrataManifold& manifold,
+	SElement* el,
+	IntersectionRecord& record//,
+	//IntersectionPoint* ip
+) {
+	/* only called when we know for sure point has a driver */
+	SPointData& pData = manifold.pDataMap[el->name];
+	IntersectionPoint* ptr = record.getPointByVectorPosition(pData.finalMatrix.translation()); 
+	// point can only ever intersect AT a point
+	
+	//SPointDriverData& driverData = pData.driverData; // only single driver for points
+
+	if(ptr == nullptr){
+		ptr = record.newPoint();
+		ptr->pos = pData.finalMatrix.translation();
+		ptr->elements.push_back(el->globalIndex);
+		ptr->uvns.push_back(Vector3f(0, 0, 0));
+		record.posPointMap[toKey(pData.finalMatrix.translation())] = ptr->index;
+
+	}
+	record.elUVNPointMap[el->globalIndex][Vector3i(0, 0, 0)] = ptr->index; //uvns on a point are zero
+
+	if (!el->drivers.size()) {
+		return s;
+	}
+	SElement* driverEl = manifold.getEl(el->drivers[0]);
+	SPointDriverData& driverData = pData.driverData; // only single driver for points
+
+	switch (driverEl->elType) {
+	case SElType::point: { // point-point intersection, just a single point
+		/*
+		*/
+
+		ptr->elements.push_back(driverEl->globalIndex);
+		ptr->uvns.push_back(Vector3f(0, 0, 0));
+		record.elUVNPointMap[driverEl->globalIndex][Vector3i(0, 0, 0)] = ptr->index;
+
+		record.elMap[el->globalIndex][driverEl->globalIndex].push_back({ ptr->index, Intersection::POINT });
+		record.elMap[driverEl->globalIndex][el->globalIndex].push_back({ ptr->index, Intersection::POINT });
+
+		return s;
+	}
+	case SElType::edge: {
+		/* point-curve
+		*/
+		SEdgeData& dEData = manifold.eDataMap[driverEl->name];
+		auto found = std::find(ptr->uvns.begin(), ptr->uvns.end(), driverData.uvn);
+		/* check for exact coord on driver object*/
+		if (found == ptr->uvns.end()) {
+			/* I THINK this should be robust to degenerate cases like edges crossing over themselves
+			* at exactly this point
+			*/
+			ptr->elements.push_back(driverEl->globalIndex);
+			ptr->uvns.push_back(driverData.uvn);
+		}
+		record.elUVNPointMap[driverEl->globalIndex][toKey(driverData.uvn)] = ptr->index;
+
+		record.elMap[el->globalIndex][driverEl->globalIndex].push_back({ ptr->index, Intersection::POINT });
+		record.elMap[driverEl->globalIndex][el->globalIndex].push_back({ ptr->index, Intersection::POINT });
+
+		return s;
+	}
+	}
+	return s;
+	}
+
+
+Status& _updateEdgeDriverIntersections(
 	Status& s,
 	StrataManifold& manifold,
 	SElement* el,
 	IntersectionRecord& record
-) {
-	//if (record.pointMap.find(el->globalIndex) == record.pointMap.end()) {
-	//	record.pointMap[el->globalIndex];
-	//}
-	//auto& driverIntersectMap = record.iMap.at(el->globalIndex);
+	) {
+	SEdgeData& eData = manifold.eDataMap[el->name];
 
+	for (int i = 0; i < el->drivers.size(); i++) { // 
+		int driveIdx = el->drivers[i];
+		SElement* driverEl = manifold.getEl(driveIdx);
+		SEdgeDriverData& driverData = eData.driverDatas[i];
+		switch (driverEl->elType) { 
+		case SElType::point: {// point driver of curve - intersection is point
+			/* I think this should be guaranteed to be found already 
+			as an IntersectionPoint, no?
+			*/
+			//IntersectionPoint* ptr = nullptr;
+			IntersectionPoint* ptr = record.getPointByVectorPosition(driverData.pos());
+			//auto found = record.posPointMap.find(toKey(
+			//	driverData.pos()));
+			//if (found == record.posPointMap.end()) { /* add point driver to record */
+			if(ptr == nullptr){
+				ptr = record.newPoint();
+				record.posPointMap[toKey(driverData.pos())] = ptr->index;
+				// add driver
+				ptr->elements.push_back(driverEl->globalIndex);
+				ptr->pos = driverData.pos();
+				ptr->uvns.push_back(driverData.uvn);
+			}
 
-	switch (el->elType) {
-	case SElType::point: {
-		IntersectionPoint* ptr = nullptr; // point can only ever intersect AT a point
-		SPointData& pData = manifold.pDataMap[el->name];
-		SPointDriverData& driverData = pData.driverData; // only single driver for points
-
-		auto lookup = record.posPointMap.find(
-			toKey(pData.finalMatrix.translation())
-		);
-		if (lookup == record.posPointMap.end()) { // make new point for this element
-			record.points.emplace_back();
-			ptr = &record.points.back();
-			ptr->pos = pData.finalMatrix.translation();
+			/* add edge point at UVN*/
 			ptr->elements.push_back(el->globalIndex);
-			ptr->uvns.push_back(Vector3f(0, 0, 0));
-			record.pointMap[el->globalIndex][Vector3i(0, 0, 0)] = ptr; //uvns on a point are zero
-			record.posPointMap[toKey(pData.finalMatrix.translation())] = ptr;
+			ptr->uvns.push_back(Vector3f(driverData.uOnEdge, 0, 0));
 
+			/* the reason the IntersectionPoint / IntersectionCurve feels less fluid here
+			than the StrataElement / SPointData / SEdgeData system, is that here
+			we don't separate the type-dependent and independent attributes into separate 
+			types.
+			Maybe we should unify it? It'll make the buffers more complicated though
+			*/
+
+			// bidirectional lookups between elements
+			record.elMap[el->globalIndex][driverEl->globalIndex].push_back({ ptr->index, Intersection::POINT });
+			record.elMap[driverEl->globalIndex][el->globalIndex].push_back({ ptr->index, Intersection::POINT });
+			continue;
 		}
-		else {
-			ptr = lookup->second;
-			record.pointMap[el->globalIndex][Vector3i(0, 0, 0)] = ptr;
-		}
-
-		for (auto driveIdx : el->drivers) { // loop not necessary for points, keeping for consistency
-			SElement* driverEl = manifold.getEl(driveIdx);
-
-			switch (driverEl->elType) {
-			case SElType::point: { // point-point intersection, just a single point
-				/* look up existing intersection by position, as the canonical way to share them?
-				seems SUPER dodgy but makes logic easier for now
-				*/
-				SPointData& dPData = manifold.pDataMap[driverEl->name];
-
+		case SElType::edge: {
+			SEdgeData& dEData = manifold.eDataMap[driverEl->name];
+			IntersectionPoint* ptr = record.getPointByVectorPosition(driverData.pos());
+			if(ptr == nullptr){
+				ptr = record.newPoint();
+				record.posPointMap[toKey(driverData.pos())] = ptr->index;
+				// add driver
 				ptr->elements.push_back(driverEl->globalIndex);
-				ptr->uvns.push_back(Vector3f(0, 0, 0));
-				record.pointMap[driverEl->globalIndex][Vector3i(0, 0, 0)] = ptr;
-
-				record.elMap[el->globalIndex][driverEl->globalIndex].push_back({ ptr, nullptr });
-				record.elMap[driverEl->globalIndex][el->globalIndex].push_back({ ptr, nullptr });
-
-				/* recurse??? */
-				s = elDriverIntersections(s, manifold, driverEl,
-					record);
-				break;
-			}
-			case SElType::edge: {
-				/* point-curve intersection - DO NOT RECURSE here?
-				or do - this curve might be driven by a point at this exact same position, etc
-				*/
-				SEdgeData& dEData = manifold.eDataMap[driverEl->name];
-				ptr->elements.push_back(driverEl->globalIndex);
+				ptr->pos = driverData.pos();
 				ptr->uvns.push_back(driverData.uvn);
-				record.pointMap[driverEl->globalIndex][toKey(driverData.uvn)] = ptr;
-
-				record.elMap[el->globalIndex][driverEl->globalIndex].push_back({ ptr, nullptr });
-				record.elMap[driverEl->globalIndex][el->globalIndex].push_back({ ptr, nullptr });
-
-				s = elDriverIntersections(
-					s,
-					manifold,
-					driverEl,
-					record);
-				break; // break driver switch
 			}
-			}
-			break; // break loop
+
+
+			/* add edge point at UVN*/
+			ptr->elements.push_back(el->globalIndex);
+			ptr->uvns.push_back(Vector3f(driverData.uOnEdge, 0, 0));
+
+			// bidirectional lookups between elements
+			record.elMap[el->globalIndex][driverEl->globalIndex].push_back({ ptr->index, Intersection::POINT });
+			record.elMap[driverEl->globalIndex][el->globalIndex].push_back({ ptr->index, Intersection::POINT });
+			continue;
 		}
-		break; // break eltype point switch
+		}
 	}
-	case SElType::edge: {
+	return s;
+}
+
+	Status& updateElementIntersections(
+		Status & s,
+		StrataManifold & manifold,
+		SElement * el,
+		IntersectionRecord & record
+	) {
+		/* call this on each element as it's added - 
+		WAY easier than trying to do it on demand
 		
-		SEdgeData& eData = manifold.eDataMap[el->name];
-		for (int i = 0; i < el->drivers.size(); i++) { // loop not necessary for points, keeping for consistency
-			int driveIdx = el->drivers[i];
-			SElement* driverEl = manifold.getEl(driveIdx);
-			SEdgeDriverData& driverData = eData.driverDatas[i];
-			switch (driverEl->elType) {
+		TODO: faces and AABB queries	
+		*/
+		switch (el->elType) {
 			case SElType::point: {
-				//SPointData& dPData = manifold.pDataMap[driverEl->name];
-				IntersectionPoint* ptr = nullptr;
-				auto found = record.posPointMap.find(toKey(
-					driverData.pos()));
-				if (found == record.posPointMap.end()) { /* add point driver to record */
-					record.points.emplace_back();
-					ptr = &record.points.back();
-					record.posPointMap[toKey(driverData.pos())] = ptr;
-				}
-				else {
-					ptr = found->second;
-				}
-				// add driver
-				ptr->elements.push_back(driverEl->globalIndex);
-				ptr->pos = driverData.pos();
-				ptr->uvns.push_back(driverData.uvn);
-
-				/* add edge point at UVN*/
-				ptr->elements.push_back(el->globalIndex);
-				ptr->uvns.push_back(Vector3f(driverData.uOnEdge, 0, 0)	);
-
-				// bidirectional lookups between elements
-				record.elMap[el->globalIndex][driverEl->globalIndex].push_back({ ptr, nullptr });
-				record.elMap[driverEl->globalIndex][el->globalIndex].push_back({ ptr, nullptr });
+				_updatePointDriverIntersections(
+					s,
+					manifold,
+					el,
+					record
+					//ptr
+				);
 				
-				// recurse
-				s = elDriverIntersections(
-					s,
-					manifold,
-					driverEl,
-					record);
-				continue;
-			}
-			case SElType::edge: {
-				SEdgeData& dEData = manifold.eDataMap[driverEl->name];
-				IntersectionPoint* ptr = nullptr;
-				auto found = record.posPointMap.find(toKey(
-					driverData.pos()));
-				if (found == record.posPointMap.end()) { /* add point driver to record */
-					record.points.emplace_back();
-					ptr = &record.points.back();
-					record.posPointMap[toKey(driverData.pos())] = ptr;
+
+				/* check for DIRECT DRIVERS*/
+				if (el->drivers.size()) {
+
 				}
-				else {
-					ptr = found->second;
-				}
-				// add driver
-				ptr->elements.push_back(driverEl->globalIndex);
-				ptr->pos = driverData.pos();
-				ptr->uvns.push_back(driverData.uvn);
 
-				// add edge
 
-				/* add edge point at UVN*/
-				ptr->elements.push_back(el->globalIndex);
-				ptr->uvns.push_back(Vector3f(driverData.uOnEdge, 0, 0));
-
-				// bidirectional lookups between elements
-				record.elMap[el->globalIndex][driverEl->globalIndex].push_back({ ptr, nullptr });
-				record.elMap[driverEl->globalIndex][el->globalIndex].push_back({ ptr, nullptr });
-
-				// recurse
-				s = elDriverIntersections(
-					s,
-					manifold,
-					driverEl,
-					record);
-				continue;
+				break; // break eltype point switch
 			}
+		case SElType::edge: {
+			_updateEdgeDriverIntersections(
+				s,
+				manifold,
+				el,
+				record
+			);
+			break;
 			}
-	}
-	}
-
+		}
+	
 	return s;
 
 }
@@ -246,76 +438,68 @@ Status& getIntersectionMap(
 	return s;
 }
 
+//
+//Status& getIntersections(Status& s, 
+//	StrataManifold& manifold,
+//	IntersectionRecord& record,
+//	int idxA, int idxB) 
+//{
+//	/* write out logic for most complicated 
+//	* case you can think of, then do it again for another one
+//	* 
+//	* could probably have separate function to get history intersection, but
+//	* the validity of that depends on what kinds of elements it routes through
+//	* 
+//	* whichever has the higher index MUST be the later element?
+//	* trace back from later element ->
+//	*	hit a point?
+//	*		fan forwards, check for exact matches
+//	*	hit a face?
+//	*		fan forwards in one step, check for elements directly driven
+//	*/
+//
+//	return record.getIntersectionsBetweenEls(idxA, idxB);
+//}
 
-Status& getIntersections(Status& s, 
+
+
+
+/* for composite operations we're gonna be real stupid with it,
+every step creates an intermediate element*/
+Status& elementGreaterThan(
+	Status& s,
 	StrataManifold& manifold,
-	IntersectionRecord& result,
-	int idxA, int idxB) 
-{
-	/* write out logic for most complicated 
-	* case you can think of, then do it again for another one
-	* 
-	* could probably have separate function to get history intersection, but
-	* the validity of that depends on what kinds of elements it routes through
-	* 
-	* whichever has the higher index MUST be the later element?
-	* trace back from later element ->
-	*	hit a point?
-	*		fan forwards, check for exact matches
-	*	hit a face?
-	*		fan forwards in one step, check for elements directly driven
-	*/
-
-	// curve/curve, including potential history and surface driver interaction
-	SElement* elA = manifold.getEl(idxA);
-	SElement* elB = manifold.getEl(idxB);
-
-	std::unordered_set<int> foundSet;
-
-	int later = ((idxA > idxB) ? idxA : idxB);
-	int target = ((idxA > idxB) ? idxB : idxA);
-
-	while (true) {
-
-		break;
-	}
-
-	/* for each, if EITHER is a point, look backwards til we find an element that's not?
-	*/
-	SElement* thisElA = elA;
-	SElement* thisElB = elB;
-	int thisIdA = idxA;
-	int thisIdB = idxB;
-
-	/*std::unordered_set<int> toCheckA = { idxA };
-	std::unordered_set<int> toCheckB = { idxB };*/
-	std::queue<int> toCheckA;
-	toCheckA.push(idxA);
-	std::queue<int> toCheckB;
-	toCheckB.push(idxB);
-
-	while (toCheckA.size() && toCheckB.size()) {
-		thisIdA = toCheckA.back();
-		toCheckA.pop();
-		thisIdB = 
-	}
-
-	for (auto& idx : elA->drivers) {
-		if(foundSet.find())
-	}
-
-
+	int idA,
+	int idB,
+	std::vector<int>& elsOut
+	/* 
+	* return a new element in the subspace of elA, starting at intersection with elB
 	
+	invalid if elA is a point, you can't have a point subspace
+	*/
+) {
+
+	SElement* elA = manifold.getEl(idA);
+	if (elA->elType == SElType::point) {
+		STAT_ERROR(s, "Cannot pass point as first argument of comparison - can't have a point subspace");
+	}
+	auto vP = manifold.iMap.getIntersectionsBetweenEls(
+		idA, idB
+	);
+	if (!vP.size()) { // no intersections at all, just return the original element unchanged
+		elsOut.push_back(idA);
+		return s;
+	}
+	SElement* elA = manifold.getEl(idA);
 	return s;
 }
-
 
 Status& elementGreaterThan(
 	Status& s,
 	StrataManifold& manifold,
-	ExpValue& expA,
-	ExpValue& expB,
-	ExpValue& expOut
+	std::vector<int>& elsA,
+	std::vector<int>& elsB,
+	std::vector<int>& elsOut
 	/* do we guarantee this will always output a single element?
 	or should it also be an expValue? since could be 
 	multiple sub-elements that satisfy greater-than?
@@ -330,7 +514,7 @@ Status& elementGreaterThan(
 	should we just overload this function for every permutation you
 	can get out of the expression system?
 	*/
-
+	
 	
 
 	return s;

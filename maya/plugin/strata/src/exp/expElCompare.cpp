@@ -6,6 +6,7 @@
 #include "expElCompare.h"
 
 #include "../stratacore/manifold.h" // fine to tightly couple here, this expression language is never meant to be standalone
+#include "../stratacore/libManifold.h"
 
 #include "../logger.h"
 

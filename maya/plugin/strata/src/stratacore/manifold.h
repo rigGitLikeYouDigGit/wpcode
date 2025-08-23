@@ -105,6 +105,7 @@ namespace strata {
 		static constexpr int POINT = 0;
 		static constexpr int EDGE = 1;
 		int type = POINT;
+		int index = -1;
 		
 		//virtual Intersection* cast(Intersection* ptr) {
 		//	return ptr;
@@ -118,7 +119,7 @@ namespace strata {
 		* curve + curve
 		* curve + surface (not subspace)
 		*/
-		
+		// should this be a map? some kind of bidirectional map?
 		std::vector<int> elements;
 		std::vector<Vector3f> uvns; // n will always be zero but just for consistency
 		Vector3f pos;
@@ -134,6 +135,7 @@ namespace strata {
 		* surface + surface
 		* 
 		* man I wish I knew a better way to structure this
+		* 
 		*/
 		std::vector<int> elements;
 		std::vector<std::vector<Vector3f>> uvns;
@@ -149,6 +151,12 @@ namespace strata {
 	might make sense to update/cache them as needed
 	*/
 	struct IntersectionRecord {
+		/*
+		* making progress - setting all maps to use indices so intersectionRecord can be copied more easily
+		* although merging manifolds is still going to be a massive hassle
+		* 
+		* we duplicate a lot of data here, once everything's working, see if we can unify with the driver structs
+		*/
 		std::vector<IntersectionPoint> points;
 		std::vector<IntersectionCurve> curves;
 
@@ -159,21 +167,46 @@ namespace strata {
 			}
 		}*/
 
+		// map of {element index :  
 		std::map < int, 
 			std::map<Vector3i, 
-				IntersectionPoint*
+				//IntersectionPoint*
+				int
 			>
-		> pointMap;
+		> elUVNPointMap;
 
 		/* want some way to say 'show me all elements possibly intersecting this one'
 		*/
 		std::map< int, // from el index
 			std::map< int, // to el index
 				std::vector< //separate intersections between these two elements
-					std::pair<IntersectionPoint*, IntersectionCurve*> // either point or curve
+					//std::pair<IntersectionPoint*, IntersectionCurve*> // either point or curve
+					std::pair<int, int> // dense index, type of index
 		>>> elMap;
 
-		std::map< Vector3i, IntersectionPoint* > posPointMap;
+		//std::map< Vector3i, IntersectionPoint* > posPointMap;
+		std::map< Vector3i, int > posPointMap;
+
+		IntersectionPoint* newPoint() {
+			int newIdx = static_cast<int>(points.size());
+			points.emplace_back();
+			points[newIdx].index = newIdx;
+			return &points[newIdx];
+		}
+
+		IntersectionCurve* newCurve() {
+			int newIdx = static_cast<int>(curves.size());
+			curves.emplace_back();
+			curves[newIdx].index = newIdx;
+			curves[newIdx].type = Intersection::EDGE;
+			return &curves[newIdx];
+		}
+
+		IntersectionPoint* getPointByVectorPosition(Vector3f worldPos, bool create = false);
+		IntersectionPoint* getPointByElUVN(int gId, Vector3f uvn, bool create = false);
+		std::vector<
+			std::pair<IntersectionPoint*, IntersectionCurve*>
+			> getIntersectionsBetweenEls(int gIdA, int gIdB);
 
 	};
 
@@ -199,6 +232,18 @@ namespace strata {
 		//}
 	};
 
+	struct SubspaceSpec {
+		/* getting real weird with it - 
+		hold/build up UVN boundaries for a subspace on a target element.
+		For now only curves.
+		This should be an intermediate object, and resolves into a full Strata element
+		once boundaries are set up
+
+		TODO:
+		this is too complicated to pack into the expression system for now, but come back to it later
+		*/
+		std::array<Vector3f, 2> dimARange;
+	};
 	
 	/// ATTRIBUTES
 	// surely there's a different, correct way to do this?
@@ -273,6 +318,11 @@ namespace strata {
 		std::unordered_map<std::string, SFaceData> fDataMap = {};
 
 		std::unordered_map<StrataName, SGroup> groupMap = {};
+
+		// map of intersecting elements
+		IntersectionRecord iMap;
+		/*TODO: integrate with raw elements?
+		*/
 
 		// world matrix transform of this manifold
 		Affine3f worldMat = Affine3f::Identity();
