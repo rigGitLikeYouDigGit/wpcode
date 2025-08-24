@@ -232,17 +232,19 @@ namespace strata {
 		//}
 	};
 
-	struct SubspaceSpec {
-		/* getting real weird with it - 
-		hold/build up UVN boundaries for a subspace on a target element.
-		For now only curves.
-		This should be an intermediate object, and resolves into a full Strata element
-		once boundaries are set up
-
-		TODO:
-		this is too complicated to pack into the expression system for now, but come back to it later
+	struct SEdgeSubspaceData {
+		/* test subspace as actual element type?
+		* should we put in inheritance to base class
+		* do we store new dense points and final curves here?
+		* 
+		* is there a way to integrate this with all the existing driver
+		* setup without adding in NEW cases for subspaces? these should each behave like edges
 		*/
-		std::array<Vector3f, 2> dimARange;
+		int source = -1;
+
+		// full UVNs are obviously irrelevant here?
+		/*std::array<Vector3f, 2> range = { Vector3f{0, 0, 0}, Vector3f{1, 1, 1} };*/
+		std::array<float, 2> range = { 0.0, 1.0 };
 	};
 	
 	/// ATTRIBUTES

@@ -1,6 +1,13 @@
 # wpm :
 maya package
 
+## Goal
+- Ultimately fluid and expressive way to create scene graphs in Maya
+- ```myTf = WN.create(n="tfA")``` Create new transform with given name
+- `myCurve = WN("mySceneCurve").shape` Retrieve existing node from scene - adaptively gets the best-fitting WN subclass (here NurbsCurve)
+- `myCurve.tf.translate_ = myTf.worldMatrix_ * myTf.translate_` Trailing underscores retrieve plugs, each plug adaptively typed to allow (and reuse) direct maths operators this way 
+- **Type hinting every attribute of every node in Maya**
+
 
 ## core
 - deep integration with api, plug and node systems
