@@ -4,6 +4,8 @@
 #ifndef API_MACROS
 #define API_MACROS 1
 
+#include <vector>
+
 #include <maya/MStreamUtils.h>
 #include <maya/MString.h>
 #include <maya/MGlobal.h>
@@ -12,11 +14,59 @@
 #define COUT MStreamUtils::stdOutStream()
 #define CERR MStreamUtils::stdErrorStream()
 
+//namespace std {
+//	/* apparently overloading an STL function like this is
+//	some kind of capital crime */
+//	string to_string(MString& s) {
+//		return string(s.asChar());
+//	}
+//	string to_string(const char* s) {
+//		return string(s);
+//	}
+//	string to_string(std::string s) {
+//		return string(s);
+//	}
+//}
+
+/* yeah for future reference this really didn't work out*/
+
+namespace strata {
+	template<typename T>
+	std::string str(T any) {
+		return std::to_string(any);
+	}
+
+	//template<> std::string str<MString>(MString& s){
+	//	return std::string(s.asChar());
+	//}
+	template<> std::string str<MString>(MString s){
+		return std::string(s.asChar());
+	}
+	template<> std::string str<const char*>(const char* s) {
+		return std::string(s);
+	}
+
+	template<> std::string str<std::string>(std::string any) {
+		return any;
+	}
+
+
+	template<typename T>
+	std::string str(std::vector<T> any) {
+		std::string result = "{";
+		for (T& s : any) {
+			result += str(s);
+		}
+		result += "len:" + str(any.size()) + "}";
+		return result;
+	}
+}
+
  // as in "debugString"
 #define MCHECK(stat,msg)             \
         if ( MS::kSuccess != stat ) {   \
                 cerr << __LINE__ << msg;            \
-				MGlobal::displayError(MString(msg)); \
+				MGlobal::displayError(MString(strata::str(msg).c_str())); \
                 return MS::kFailure;    \
         }
 

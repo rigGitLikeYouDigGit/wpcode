@@ -69,10 +69,8 @@ namespace strata {
 
 		int elIndex = -1; // index within this element's type - the 3rd point, the 3rd face etc
 		int globalIndex = -1; // unique global index across all elements
-		//std::vector<int> drivers; // topological drivers, not parent spaces
-		//std::vector<int> parents; // weighted parent influences
+		//int subSourceIndex = -1; // if this element is a subspace of another?
 
-		//std::vector<StrataName> drivers; // topological drivers, not parent spaces
 		std::vector<int> drivers; // topological drivers, not parent spaces
 		/* unsure if this should be names or int ids, not sure it's so important
 		*/
@@ -94,7 +92,7 @@ namespace strata {
 		bool isInvalid = false; // does this element have an error in its history?
 		std::string errorMsg;
 
-		// face attributes for winding and orientation - 
+		// face attributes for winding and orientation -  
 		// structural to result manifold, so put it here instead of in data
 		std::vector<bool> edgeOrients; // SURELY vector<bool> is cringe
 		// true for forwards, false for backwards

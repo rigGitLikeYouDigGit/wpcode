@@ -66,39 +66,20 @@ Status GreaterThanAtom::eval(
 
 	std::vector<int> leftVals;
 	std::vector<int> rightVals;
+	std::vector<int> outVals;
 	s = auxData->expValuesToElements(s, left, leftVals);
 	s = auxData->expValuesToElements(s, right, rightVals);
 
-	for (int i = 0; i < leftVals.size(); i++) {
-		SElement* lV = auxData->manifold->getEl(leftVals[i]); // should be guaranteed
-		for (int n = 0; n < rightVals.size(); n++) {
-			SElement* rV = auxData->manifold->getEl(rightVals[i]);
+	s = elementGreaterThan(s, *auxData->manifold,
+		leftVals, rightVals, outVals);
+	ExpValue resultVal;
 
-			/* intersection / greater-than logic*/
-			switch (lV->elType) {
-			case SElType::point: { continue; } // no intersection for points yet
-			case SElType::edge: {
-				/* check logic for edges*/
-				
-				SEdgeData& lData = auxData->manifold->eDataMap[lV->name];
-
-				switch (rV->elType) {
-				case SElType::point: { continue; }
-				case SElType::edge: {
-					// find intersection points between 2 edges
-				}
-				default: {
-					continue;
-				}
-				}
-
-
-			}
-			}
-			
-		}
+	/* should exp ops prefer returning name lists or numbers? or both?*/
+	std::vector<std::string> nameList(outVals.size());
+	for (int i = 0; i < static_cast<int>(outVals.size()); i++) {
+		nameList[i] = auxData->manifold->getEl(i)->name;
 	}
-
-	
+	resultVal.stringVals = nameList;
+	result.push_back(resultVal);
 	return s;
 }

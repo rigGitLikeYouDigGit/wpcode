@@ -93,7 +93,7 @@ inline Status& strata::splineUVN(
 	return s;
 }
 
-Eigen::ArrayXf strata::arcLengthToParamMapping(const Eigen::Spline3f& sp, const int npoints = 20) {
+Eigen::ArrayXf strata::arcLengthToParamMapping(const Eigen::Spline3f& sp, const int npoints) {
 	// return an array of equally-spaced points giving the 0-1 arc length to each point
 	Eigen::ArrayXf result = Eigen::ArrayXf::Constant(npoints, 0.0f);
 	Eigen::Vector3f prevpt = sp(0.0f);

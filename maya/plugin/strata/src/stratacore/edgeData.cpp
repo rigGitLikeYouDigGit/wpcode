@@ -33,9 +33,25 @@ Status& strata::SEdgeData::buildFinalBuffers(Status& s) {
 
 Status& SEdgeData::getSubData(Status& s, SEdgeData& target, float lowU, float highU) {
 	/* copy edge data but curtail final curve to given params
-	TODO: inherit normals/upvectors
+	
+	we ASSUME that a curve will be cut at a certain driver
 	*/
-
+	/* update drivers */
+	target.driverDatas.clear();
+	for (int i = 0; i < driverDatas.size(); i++) {
+		SEdgeDriverData& driverData = driverDatas[i];
+		if( driverData.uOnEdge < lowU - EPS_F ){ // driver data not included in new range
+			continue;
+		}
+		if (driverData.uOnEdge - EPS_F > highU) { // driver data not included in new range
+			continue;
+		}
+		target.driverDatas.emplace_back(driverData);
+		SEdgeDriverData& newData = target.driverDatas.back();
+		float newU = remap(driverData.uOnEdge, lowU, highU, 0.0f, 1.0f, true);
+		newData.uOnEdge = newU;
+	}
+	target.subspaceDriver = index;
 	target.finalCurve = splitBezPath(finalCurve, lowU, highU);
 	target.finalNormals = resampleVectorArray(target.finalNormals, lowU, highU, target.densePointCount());
 	return s;

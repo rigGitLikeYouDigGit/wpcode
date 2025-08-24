@@ -40,7 +40,7 @@ const char* kREQUIRED_API_VERSION = "Any";
         NODE::creator, \
         NODE::initialize \
     ); \
-    MCHECK(s, "cannot register node " << NODE::kNODE_NAME); \
+    MCHECK(s, "cannot register node " + NODE::kNODE_NAME); \
     /*CHECK_MSTATUS_AND_RETURN_IT(s); \*/
     //pluginObjects.insert(NODE);\
 
@@ -52,13 +52,13 @@ const char* kREQUIRED_API_VERSION = "Any";
         NODE::initialize, \
         MPxNode::Type::kDeformerNode \
     ); \
-    MCHECK(s, "cannot register deformer " << NODE::kNODE_NAME); \
+    MCHECK(s, "cannot register deformer " + NODE::kNODE_NAME); \
 
 
 #define DEREGISTER_NODE(NODE) \
     s = fnPlugin.deregisterNode( \
         NODE::kNODE_ID ); \
-    MCHECK(s, "failed to deregister " << NODE::kNODE_NAME); \
+    MCHECK(s, "failed to deregister " + NODE::kNODE_NAME); \
 
 #define REGISTER_NODE_TYPE(NODE, NODE_TYPE) \
     s = fnPlugin.registerNode( \

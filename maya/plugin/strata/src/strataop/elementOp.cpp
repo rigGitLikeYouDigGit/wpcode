@@ -613,7 +613,8 @@ Status& StrataElementOp::pointProcessTargets(Status& s, StrataManifold& finalMan
 			//finalManifold.getUVN(s, target.uvn, driverEl, targetMat.translation()); /* ?????*/
 			///* this is IMMEDIATELY susceptible to nearest-point jumping within a driver element - do we care? */
 
-			deltaGrp.targetMap[el->drivers[i]].push_back(target);
+			deltaGrp.targetMap[ driverEl->name
+				].push_back(target);
 		}
 	}
 

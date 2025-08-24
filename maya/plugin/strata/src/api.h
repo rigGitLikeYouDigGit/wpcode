@@ -10,11 +10,14 @@
 #include <Eigen/Dense>
 
 #include "wpshared/enum.h"
+
+
 namespace strata {
 	using namespace Eigen;
 
 	// registering IDs of plugin nodes
 	const unsigned int pluginPrefix = 101997;
+
 
 
 	// common functions
@@ -213,7 +216,9 @@ namespace strata {
 		else {
 			queryPlug.connectedTo(result, getSources, getSinks, &s);
 		}
-		MCHECK(s, "could not get connected plugs in getAllConnectedPlugs()");
+		if (MS::kSuccess != s) {
+			cerr << 220 << "could not get connected plugs in getAllConnectedPlugs()"; MGlobal::displayError(MString(strata::str("could not get connected plugs in getAllConnectedPlugs()").c_str())); return MS::kFailure;
+		};
 
 		return s;
 	}

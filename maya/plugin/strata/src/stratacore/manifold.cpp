@@ -18,7 +18,7 @@ IntersectionPoint* IntersectionRecord::getPointByVectorPosition(Vector3f worldPo
 	}
 	if (create) {
 		points.emplace_back();
-		posPointMap[vecKey] = points.size() - 1;
+		posPointMap[vecKey] = static_cast<int>(points.size() - 1);
 		auto ptr = &points.back();
 		ptr->pos = worldPos;
 		return ptr;
@@ -75,6 +75,22 @@ std::vector<
 	return result;
 }
 
+std::vector<
+	std::pair<IntersectionPoint*, IntersectionCurve*>
+> IntersectionRecord::getIntersectionsBetweenEls(int gIdA, std::vector<int> gIdsB) {
+	/* return composite list of all intersections between gIdA and 
+	all other ids given*/
+	std::vector < std::pair<IntersectionPoint*, IntersectionCurve*>> result;
+	for (auto gIdB : gIdsB) {
+		/* for now, we don't allow self-intersections here, logic is too complicated for me*/
+		if (gIdA == gIdB) {
+			continue;
+		}
+		auto elResult = getIntersectionsBetweenEls(gIdA, gIdB);
+		result.insert(result.end(), elResult.begin(), elResult.end());
+	}
+	return result;
+}
 
 std::string strata::SPointSpaceData::strInfo() {
 	return "<PSData " + name + " w:" + str(weight) + " uvn:" + str(uvn) + " offset:" + str(offset) + ">";

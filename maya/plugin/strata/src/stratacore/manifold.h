@@ -77,22 +77,6 @@ for interaction through maya, consider setting up attributes in a map, and enter
 
 namespace strata {
 
-	/* TODO: move this higher - 
-	jank utils for working with float values as map keys,
-	for looking up intersections by UVN coords*/
-	constexpr float E = 0.00001;
-	// returns massive int keys - maybe fine
-	inline int toKey(float k) {
-		//return trunc(k / E);
-		return trunc(k * 100000.0f);
-	}
-	inline int toKey(double k) {
-		return trunc(k * 100000.0f);
-	}
-
-	inline Vector3i toKey(Vector3f k) {
-		return Vector3i(toKey(k.x()), toKey(k.y()), toKey(k.z()));
-	}
 
 	struct SSampleData { //?
 		int index = -1;
@@ -122,6 +106,7 @@ namespace strata {
 		// should this be a map? some kind of bidirectional map?
 		std::vector<int> elements;
 		std::vector<Vector3f> uvns; // n will always be zero but just for consistency
+		//std::map<int, Vector3f> elUVNMap;
 		Vector3f pos;
 
 		//virtual IntersectionPoint* cast(Intersection* ptr) {
@@ -169,10 +154,11 @@ namespace strata {
 
 		// map of {element index :  
 		std::map < int, 
-			std::map<Vector3i, 
-				//IntersectionPoint*
-				int
-			>
+			//std::map<Vector3i, 
+			//	//IntersectionPoint*
+			//	int
+			//>
+			Vector3iMap<int>
 		> elUVNPointMap;
 
 		/* want some way to say 'show me all elements possibly intersecting this one'
@@ -185,7 +171,8 @@ namespace strata {
 		>>> elMap;
 
 		//std::map< Vector3i, IntersectionPoint* > posPointMap;
-		std::map< Vector3i, int > posPointMap;
+		//std::map< Vector3i, int > posPointMap;
+		Vector3iMap<int> posPointMap;
 
 		IntersectionPoint* newPoint() {
 			int newIdx = static_cast<int>(points.size());
@@ -204,10 +191,14 @@ namespace strata {
 
 		IntersectionPoint* getPointByVectorPosition(Vector3f worldPos, bool create = false);
 		IntersectionPoint* getPointByElUVN(int gId, Vector3f uvn, bool create = false);
+
 		std::vector<
 			std::pair<IntersectionPoint*, IntersectionCurve*>
 			> getIntersectionsBetweenEls(int gIdA, int gIdB);
 
+		std::vector<
+			std::pair<IntersectionPoint*, IntersectionCurve*>
+		> getIntersectionsBetweenEls(int gIdA, std::vector<int> gIdsB);
 	};
 
 	struct ElementPath {
@@ -577,6 +568,30 @@ namespace strata {
 			SElement*& outPtr
 		) {
 			return addElement(SElement(name, elT), outPtr);
+		}
+
+		void renameElement(
+			SElement* el, std::string newName
+		) {
+			/* USE WITH EXTREME CAUTION - ideally only for assigning a name to a constructed element
+			* won't try and rename name references in dependents - use this only on a new element
+			*/
+			switch (el->elType) {
+			case SElType::point: {
+				pDataMap[newName] = pDataMap[el->name];
+				pDataMap.erase(el->name);
+				break;
+			}
+			case SElType::edge: {
+				eDataMap[newName] = eDataMap[el->name];
+				eDataMap.erase(el->name);
+			}
+			case SElType::face:{
+				fDataMap[newName] = fDataMap[el->name];
+				fDataMap.erase(el->name);
+			}
+			}
+			el->name = newName;
 		}
 
 		Status& intersectingElements(

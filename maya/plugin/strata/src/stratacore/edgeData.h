@@ -105,19 +105,13 @@ namespace strata {
 		std::vector<SEdgeDriverData> driverDatas; // drivers of this edge
 		std::vector<SEdgeSpaceData> spaceDatas; // curves in space of each driver
 
-		//int denseCount = 10; // number of dense sub-spans in each segment
-		/* TODO: adaptive by arc length? adaptive by screen size?
-		*/
+
 
 		bool closed = false;
 		/* don't keep live splines, output from parent system etc -
 		all temporary during construction
 		posSpline is FINAL spline of all points on this edge
 		*/
-
-		/* for splitting edges and components, results will be
-		clipped components with one master driver*/
-		bool isClipped = false;
 
 		Eigen::ArrayX3d uvnOffsets = {}; // final dense offsets should only be in space of final built curve?
 		// maybe???? 
@@ -132,6 +126,8 @@ namespace strata {
 		Eigen::MatrixX3f finalNormals = {}; // worldspace normals 
 
 		Eigen::MatrixX3f finalPoints = {}; // densely sampled final points in worldspace - use for querying
+
+		int subspaceDriver = -1;
 
 		int _bufferStartIndex = -1;
 

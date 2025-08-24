@@ -3,11 +3,14 @@
 #include <vector>
 #include <math.h>
 #include <set>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <map>
-#include "api.h"
 #include "macro.h"
+#include "api.h"
+
+
 //#include "bezier/bezier.h"
 
 
@@ -19,31 +22,9 @@
 #pragma warning( disable : 4244)
 namespace strata {
 
-	template<typename T>
-	inline std::string str(T any) {
-		return std::to_string(any);
-	}
 
-	//inline std::string str(enum any) {
-	//	return static_cast<int>(any);
-	//}
 
-	inline std::string str(std::string any) {
-		return any;
-	}
-	inline std::string str(const char* any) {
-		return std::string(any);
-	}
 
-	template<typename T>
-	inline std::string str(std::vector<T> any) {
-		std::string result = "{";
-		for (T& s : any) {
-			result += str(s);
-		}
-		result += "len:" + str(any.size()) + "}";
-		return result;
-	}
 	//inline std::string str(const char** any) {
 	//	return std::string(any);
 	//}
@@ -281,7 +262,7 @@ namespace strata {
 
 
 	template <typename T>
-	static inline T clamp(T low, T high, T x) {
+	static inline T clamp(T x, T low, T high) {
 		return std::min(high, std::max(low, x));
 	}
 	template <typename T>
@@ -295,7 +276,7 @@ namespace strata {
 	}
 
 	template<typename T>
-	inline T mapTo01(T in, T inMin, T inMax, bool clamp=true) {
+	inline T mapTo01(T in, T inMin, T inMax, bool doClamp) {
 		return clamp((in - inMin) / (inMax - inMin), inMin, inMax);
 	}
 
@@ -305,8 +286,14 @@ namespace strata {
 	}
 
 	template<typename T>
-	inline T remap(T in, T inMin, T inMax, T outMin, T outMax, bool clamp=true) {
-		return clamp( lerp( mapTo01(in, inMax, inMin), outMin, outMax ) );
+	inline T remap(T in, T inMin, T inMax, T outMin, T outMax, bool doClamp) {
+		return clamp(
+			lerp( 
+				mapTo01(in, inMax, inMin, true), 
+				outMin, 
+				outMax ), 
+			outMin, 
+			outMax);
 	}
 
 	/* what's the best way to compose things like this? if I wanted a remap function with a quadratic 

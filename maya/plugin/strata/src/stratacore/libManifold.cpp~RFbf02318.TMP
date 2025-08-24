@@ -4,7 +4,6 @@ we shouldn't have to recompile the core data structure every time
 we add a new way to manipulate it*/
 #include "manifold.h"
 
-#include "libManifold.h"
 #include "../exp/expParse.h"
 
 using namespace strata;
@@ -20,6 +19,16 @@ intersections should be indexed by driver and UVN, at least for points -
 a common intersectionPoint should hold uvns of all contributing drivers
 */
 
+Status& examineIntersections(Status& s,
+	StrataManifold& manifold,
+	IntersectionRecord& result,
+	int idxA, int idxB
+)
+{	/* once we know 2 elements could intersect,
+	this function updates all the actual intersection events
+	*/
+	return s;
+}
 
 /*
 WANT:
@@ -31,6 +40,168 @@ elA intersection list:
 
 */
 
+//Status& elDriverIntersections(
+//	Status& s,
+//	StrataManifold& manifold,
+//	SElement* el,
+//	IntersectionRecord& record
+//) {
+//
+//	switch (el->elType) {
+//	case SElType::point: {
+//		IntersectionPoint* ptr = nullptr; // point can only ever intersect AT a point
+//		SPointData& pData = manifold.pDataMap[el->name];
+//		SPointDriverData& driverData = pData.driverData; // only single driver for points
+//
+//		auto lookup = record.posPointMap.find(
+//			toKey(pData.finalMatrix.translation())
+//		);
+//		if (lookup == record.posPointMap.end()) { // make new point for this element
+//			record.points.emplace_back();
+//			ptr = &record.points.back();
+//			ptr->pos = pData.finalMatrix.translation();
+//			ptr->elements.push_back(el->globalIndex);
+//			ptr->uvns.push_back(Vector3f(0, 0, 0));
+//			record.elUVNPointMap[el->globalIndex][Vector3i(0, 0, 0)] = ptr; //uvns on a point are zero
+//			record.posPointMap[toKey(pData.finalMatrix.translation())] = ptr;
+//
+//		}
+//		else {
+//			ptr = lookup->second;
+//			record.elUVNPointMap[el->globalIndex][Vector3i(0, 0, 0)] = ptr;
+//		}
+//
+//		for (auto driveIdx : el->drivers) { // loop not necessary for points, keeping for consistency
+//			SElement* driverEl = manifold.getEl(driveIdx);
+//
+//			switch (driverEl->elType) {
+//			case SElType::point: { // point-point intersection, just a single point
+//				/* look up existing intersection by position, as the canonical way to share them?
+//				seems SUPER dodgy but makes logic easier for now
+//				*/
+//				SPointData& dPData = manifold.pDataMap[driverEl->name];
+//
+//				ptr->elements.push_back(driverEl->globalIndex);
+//				ptr->uvns.push_back(Vector3f(0, 0, 0));
+//				record.elUVNPointMap[driverEl->globalIndex][Vector3i(0, 0, 0)] = ptr;
+//
+//				record.elMap[el->globalIndex][driverEl->globalIndex].push_back({ ptr, nullptr });
+//				record.elMap[driverEl->globalIndex][el->globalIndex].push_back({ ptr, nullptr });
+//
+//				/* recurse??? */
+//				s = elDriverIntersections(s, manifold, driverEl,
+//					record);
+//				break;
+//			}
+//			case SElType::edge: {
+//				/* point-curve intersection - DO NOT RECURSE here?
+//				or do - this curve might be driven by a point at this exact same position, etc
+//				*/
+//				SEdgeData& dEData = manifold.eDataMap[driverEl->name];
+//				ptr->elements.push_back(driverEl->globalIndex);
+//				ptr->uvns.push_back(driverData.uvn);
+//				record.elUVNPointMap[driverEl->globalIndex][toKey(driverData.uvn)] = ptr;
+//
+//				record.elMap[el->globalIndex][driverEl->globalIndex].push_back({ ptr, nullptr });
+//				record.elMap[driverEl->globalIndex][el->globalIndex].push_back({ ptr, nullptr });
+//
+//				s = elDriverIntersections(
+//					s,
+//					manifold,
+//					driverEl,
+//					record);
+//				break; // break driver switch
+//			}
+//			}
+//			break; // break loop
+//		}
+//		break; // break eltype point switch
+//	}
+//	case SElType::edge: {
+//
+//		SEdgeData& eData = manifold.eDataMap[el->name];
+//		for (int i = 0; i < el->drivers.size(); i++) { // loop not necessary for points, keeping for consistency
+//			int driveIdx = el->drivers[i];
+//			SElement* driverEl = manifold.getEl(driveIdx);
+//			SEdgeDriverData& driverData = eData.driverDatas[i];
+//			switch (driverEl->elType) {
+//			case SElType::point: {
+//				//SPointData& dPData = manifold.pDataMap[driverEl->name];
+//				IntersectionPoint* ptr = nullptr;
+//				auto found = record.posPointMap.find(toKey(
+//					driverData.pos()));
+//				if (found == record.posPointMap.end()) { /* add point driver to record */
+//					record.points.emplace_back();
+//					ptr = &record.points.back();
+//					record.posPointMap[toKey(driverData.pos())] = ptr;
+//				}
+//				else {
+//					ptr = found->second;
+//				}
+//				// add driver
+//				ptr->elements.push_back(driverEl->globalIndex);
+//				ptr->pos = driverData.pos();
+//				ptr->uvns.push_back(driverData.uvn);
+//
+//				/* add edge point at UVN*/
+//				ptr->elements.push_back(el->globalIndex);
+//				ptr->uvns.push_back(Vector3f(driverData.uOnEdge, 0, 0));
+//
+//				// bidirectional lookups between elements
+//				record.elMap[el->globalIndex][driverEl->globalIndex].push_back({ ptr, nullptr });
+//				record.elMap[driverEl->globalIndex][el->globalIndex].push_back({ ptr, nullptr });
+//
+//				// recurse
+//				s = elDriverIntersections(
+//					s,
+//					manifold,
+//					driverEl,
+//					record);
+//				continue;
+//			}
+//			case SElType::edge: {
+//				SEdgeData& dEData = manifold.eDataMap[driverEl->name];
+//				IntersectionPoint* ptr = nullptr;
+//				auto found = record.posPointMap.find(toKey(
+//					driverData.pos()));
+//				if (found == record.posPointMap.end()) { /* add point driver to record */
+//					record.points.emplace_back();
+//					ptr = &record.points.back();
+//					record.posPointMap[toKey(driverData.pos())] = ptr;
+//				}
+//				else {
+//					ptr = found->second;
+//				}
+//				// add driver
+//				ptr->elements.push_back(driverEl->globalIndex);
+//				ptr->pos = driverData.pos();
+//				ptr->uvns.push_back(driverData.uvn);
+//
+//				// add edge
+//
+//				/* add edge point at UVN*/
+//				ptr->elements.push_back(el->globalIndex);
+//				ptr->uvns.push_back(Vector3f(driverData.uOnEdge, 0, 0));
+//
+//				// bidirectional lookups between elements
+//				record.elMap[el->globalIndex][driverEl->globalIndex].push_back({ ptr, nullptr });
+//				record.elMap[driverEl->globalIndex][el->globalIndex].push_back({ ptr, nullptr });
+//
+//				// recurse
+//				s = elDriverIntersections(
+//					s,
+//					manifold,
+//					driverEl,
+//					record);
+//				continue;
+//			}
+//			}
+//		}
+//	}
+//	}
+//	return s;
+//
+//}
 
 /* to UPDATE intersections without remapping everything every time
 
@@ -186,7 +357,7 @@ Status& _updateEdgeDriverIntersections(
 	return s;
 }
 
-	Status& strata::updateElementIntersections(
+	Status& updateElementIntersections(
 		Status & s,
 		StrataManifold & manifold,
 		SElement * el,
@@ -206,6 +377,14 @@ Status& _updateEdgeDriverIntersections(
 					record
 					//ptr
 				);
+				
+
+				/* check for DIRECT DRIVERS*/
+				if (el->drivers.size()) {
+
+				}
+
+
 				break; // break eltype point switch
 			}
 		case SElType::edge: {
@@ -252,7 +431,7 @@ Status& _updateEdgeDriverIntersections(
 
 /* for composite operations we're gonna be real stupid with it,
 every step creates an intermediate element*/
-static Status& strata::elementGreaterThan(
+	Status& elementGreaterThan(
 		Status& s,
 		StrataManifold& manifold,
 		int idA,
@@ -272,12 +451,7 @@ static Status& strata::elementGreaterThan(
 	SElement* elA = manifold.getEl(idA);
 	switch (elA->elType) {
 	case SElType::point: {
-		//STAT_ERROR(s, "Cannot pass point as first argument of comparison - can't have a point subspace");
-
-		/* we try and take the APEX approach of not freaking out about data we don't understand, 
-		so here just return this id*/
-		elsOut.push_back(idA);
-		return s;
+		STAT_ERROR(s, "Cannot pass point as first argument of comparison - can't have a point subspace");
 	}
 	case SElType::edge: {
 		auto vP = manifold.iMap.getIntersectionsBetweenEls(
@@ -320,38 +494,22 @@ static Status& strata::elementGreaterThan(
 			elsOut.push_back(idA);
 			return s;
 		}
-
-		SEdgeData& baseData = manifold.eDataMap[elA->name];
 		/* create new edge starting at maxU */
 		SElement* newEl;
-		std::string newName = elA->name + ">(";
+		StrataName newName = elA->name + ">";
 		for (auto idB : idsB) {
-			//newName += std::to_string(idB) + "_";
-			SElement* driverEl = manifold.getEl(idB);
-			if (driverEl == nullptr) {
-				continue;
-			}
-			newName += driverEl->name + "_";
+			newName += std::to_string(idB) + "_";
 		}
-
-		/* if we have an existing element with that name, great, we're already done*/
-		newEl = manifold.getEl(newName);
-		if (newEl != nullptr) {
-			elsOut.push_back(newEl->globalIndex);
-			return s;
-		}
-
-		manifold.addElement(newName, SElType::edge, newEl);
-		SEdgeData& newEdgeData = manifold.eDataMap[newName];
-		s = baseData.getSubData(s, newEdgeData, maxU, 1.0);
-		elsOut.push_back(newEl->globalIndex);
+		manifold.addElement()
 	}
 	}
+
+
 	
 	return s;
 }
 
-static Status& strata::elementGreaterThan(
+Status& elementGreaterThan(
 	Status& s,
 	StrataManifold& manifold,
 	std::vector<int>& elsA,
@@ -371,11 +529,9 @@ static Status& strata::elementGreaterThan(
 	should we just overload this function for every permutation you
 	can get out of the expression system?
 	*/
+	
+	
 
-	for (auto& index : elsA) {
-		s = elementGreaterThan(s, manifold,
-			index, elsB, elsOut);
-	}
 	return s;
 }
 

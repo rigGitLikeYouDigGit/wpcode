@@ -3,6 +3,8 @@
 #include <vector>
 #include <utility>
 #include <tuple>
+#include <map>
+#include <unordered_map>
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include "MInclude.h"
@@ -33,6 +35,52 @@ namespace strata {
 	*/
 
 	using namespace Eigen;
+
+	/* 
+jank utils for working with float values as map keys,
+for looking up intersections by UVN coords*/
+	constexpr float E = 0.00001f;
+	// returns massive int keys - maybe fine
+	inline int toKey(float k) {
+		//return trunc(k / E);
+		return static_cast<int>(trunc(k * 100000.0f));
+	}
+	inline int toKey(double k) {
+		return static_cast<int>(trunc(k * 100000.0f));
+	}
+
+	inline Vector3i toKey(Vector3f k) {
+		return Vector3i(toKey(k.x()), toKey(k.y()), toKey(k.z()));
+	}
+
+	struct Vector3iCompare
+	{ /* to use int vectors as janky map keys */
+		bool operator() (const Vector3i& lhs, const Vector3i& rhs) const
+		{
+			return (lhs.x() < rhs.x()) || (lhs.y() < rhs.y()) || (lhs.z() < rhs.z());
+		}
+		bool operator() (const Vector3f& lhs, const Vector3i& rhs) const
+		{
+			Vector3i iLhs = toKey(lhs);
+			return (iLhs.x() < rhs.x()) || (iLhs.y() < rhs.y()) || (iLhs.z() < rhs.z());
+		}
+		bool operator() (const Vector3i& lhs, const Vector3f& rhs) const
+		{
+			Vector3i iRhs = toKey(rhs);
+			return (lhs.x() < iRhs.x()) || (lhs.y() < iRhs.y()) || (lhs.z() < iRhs.z());
+		}
+		bool operator() (const Vector3f& lhs, const Vector3f& rhs) const
+		{
+			Vector3i iLhs = toKey(lhs);
+			Vector3i iRhs = toKey(rhs);
+			return (iLhs.x() < iRhs.x()) || (iLhs.y() < iRhs.y()) || (iLhs.z() < iRhs.z());
+		}
+	};
+	
+	template <typename V>
+	using Vector3iMap = std::map<Vector3i, V, Vector3iCompare>;
+	template <typename V>
+	using Vector3iUMap = std::unordered_map<Vector3i, V, Vector3iCompare>;
 
 	/* eigen to string functions - a little spaghett*/
 	inline std::string str(Vector3f& any) {
