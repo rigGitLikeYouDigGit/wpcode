@@ -252,7 +252,7 @@ Status& _updateEdgeDriverIntersections(
 
 /* for composite operations we're gonna be real stupid with it,
 every step creates an intermediate element*/
-static Status& strata::elementGreaterThan(
+Status& strata::elementGreaterThan(
 		Status& s,
 		StrataManifold& manifold,
 		int idA,
@@ -351,7 +351,7 @@ static Status& strata::elementGreaterThan(
 	return s;
 }
 
-static Status& strata::elementGreaterThan(
+Status& strata::elementGreaterThan(
 	Status& s,
 	StrataManifold& manifold,
 	std::vector<int>& elsA,

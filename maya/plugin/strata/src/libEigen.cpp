@@ -923,28 +923,15 @@ template Eigen::MatrixX3<double> strata::cubicTangentPointsForBezPoints<double>(
 	float* inContinuities
 );
 
-template<typename T>
-inline Eigen::MatrixX3<T> resampleVectorArray(
-	const Eigen::MatrixX3<T>& inVs,
-	float start, float end,
-	int nSamples,
-	bool normalise = true
-) {
-	Eigen::MatrixX3<T> result(nSamples, 3);
-	float range = end - start;
-	float step = range / float(nSamples - 1);
-	for (int i = 0; i < nSamples; i++) {
-		float newU = step * i;
-		int lowIndex;
-		int highIndex;
-		int sampleT = getArrayIndicesTForU(inVs.rows(), newU, lowIndex, highIndex);
-		result.row(i) = lerp(inVs.row(lowIndex), inVs.row(highIndex), sampleT);
-		if (normalise) {
-			result.row(i) = result.row(i).normalized();
-		}
-	}
-	return result;
-}
+//template<typename T>
+//inline Eigen::MatrixX3<T> resampleVectorArray(
+//	const Eigen::MatrixX3<T>& inVs,
+//	float start, float end,
+//	int nSamples,
+//	bool normalise = true
+//) {
+//
+//}
 
 Eigen::MatrixX3f strata::makeRMFNormals(
 	Eigen::MatrixX3f& positions,

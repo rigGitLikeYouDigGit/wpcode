@@ -338,10 +338,23 @@ need to be careful nothing modifies _dir if cached
 		const Eigen::MatrixX3<T>& inVs,
 		float start, float end,
 		int nSamples,
-		bool normalise=true
-	);
-
-
+		bool normalise = true
+	) {
+		Eigen::MatrixX3<T> result(nSamples, 3);
+		float range = end - start;
+		float step = range / float(nSamples - 1);
+		for (int i = 0; i < nSamples; i++) {
+			float newU = step * i;
+			int lowIndex;
+			int highIndex;
+			float sampleT = getArrayIndicesTForU(static_cast<int>(inVs.rows()), newU, lowIndex, highIndex);
+			result.row(i) = lerp(Vector3f(inVs.row(lowIndex)), Vector3f(inVs.row(highIndex)), sampleT);
+			if (normalise) {
+				result.row(i) = result.row(i).normalized();
+			}
+		}
+		return result;
+	}
 
 	//inline double closestParamOnSpline(const Eigen::Spline3d& sp, const Eigen::Vector3f pt,
 	//	int nSamples =10,

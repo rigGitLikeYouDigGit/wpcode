@@ -5,7 +5,7 @@
 
 namespace strata {
 
-	static Status& updateElementIntersections(
+	Status& updateElementIntersections(
 		Status& s,
 		StrataManifold& manifold,
 		SElement* el,
@@ -53,7 +53,7 @@ namespace strata {
 
 	/* for composite operations we're gonna be real stupid with it,
 	every step creates an intermediate element*/
-	static Status& elementGreaterThan(
+	Status& elementGreaterThan(
 		Status& s,
 		StrataManifold& manifold,
 		int idA,
@@ -67,7 +67,7 @@ namespace strata {
 		*/
 	);
 
-	static Status& elementGreaterThan(
+	Status& elementGreaterThan(
 		Status& s,
 		StrataManifold& manifold,
 		std::vector<int>& elsA,

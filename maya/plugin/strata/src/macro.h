@@ -32,7 +32,7 @@
 
 namespace strata {
 	template<typename T>
-	std::string str(T any) {
+	static std::string str(T any) {
 		return std::to_string(any);
 	}
 
