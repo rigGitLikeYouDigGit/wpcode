@@ -2,6 +2,7 @@
 #include "elementOp.h"
 #include "../stringLib.h"
 #include "../logger.h"
+#include "../stratacore/libManifold.h"
 
 using namespace strata;
 using namespace strata::expns;
@@ -86,6 +87,14 @@ Status& pointCreateNew(
 
 		l("built pdata:");
 		l(pData.strInfo());
+
+		s = updateElementIntersections(
+			s,
+			value,
+			outPtr,
+			value.iMap
+		);
+
 		return s;
 	}
 
@@ -133,6 +142,13 @@ Status& pointCreateNew(
 	VectorXf weights(spaceBlendMats.size());
 	weights.fill(1.0);
 	pData.finalMatrix = blendTransforms(spaceBlendMats, weights);
+
+	s = updateElementIntersections(
+		s,
+		value,
+		outPtr,
+		value.iMap
+	);
 	return s;
 }
 
@@ -319,6 +335,7 @@ Status& edgeCreateNew(
 		}
 	}
 	s = value.buildEdgeData(s, eData);
+	
 	return s;
 
 }
@@ -351,8 +368,7 @@ Status& edgeEvalParam(
 	return s;
 	SEdgeData& eData = value.eDataMap[param.name];
 	s = value.buildEdgeData(s, eData);
-	CWRSTAT(s, "error building edge data")
-
+	CWRSTAT(s, "error building edge data");
 	return s;
 }
 

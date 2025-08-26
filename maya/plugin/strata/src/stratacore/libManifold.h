@@ -67,7 +67,31 @@ namespace strata {
 		*/
 	);
 
+
 	Status& elementGreaterThan(
+		Status& s,
+		StrataManifold& manifold,
+		std::vector<int>& elsA,
+		std::vector<int>& elsB,
+		std::vector<int>& elsOut
+		/* do we guarantee this will always output a single element?
+		or should it also be an expValue? since could be
+		multiple sub-elements that satisfy greater-than?
+		*/
+	);
+
+
+	Status& elementLessThan(
+		Status& s,
+		StrataManifold& manifold,
+		int idA,
+		//int idB,
+		std::vector<int> idsB,
+		std::vector<int>& elsOut
+	);
+
+
+	Status& elementLessThan(
 		Status& s,
 		StrataManifold& manifold,
 		std::vector<int>& elsA,

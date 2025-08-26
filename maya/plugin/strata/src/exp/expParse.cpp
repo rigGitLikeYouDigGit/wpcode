@@ -1,9 +1,19 @@
 
 #include "expParse.h"
+#include "expValue.h"
 
 #include "../stratacore/manifold.h" // fine to tightly couple here, this expression language is never meant to be standalone
 
 #include "../logger.h"
+
+#include "expElCompare.h"
+
+#include "assignAtom.h"
+#include "callAtom.h"
+#include "constantAtom.h"
+#include "groupAtom.h"
+#include "nameAtom.h"
+#include "resultAtom.h"
 
 
 
@@ -19,52 +29,7 @@ modified to produce an evalGraph after parsing
 */
 
 
-Status ExpOpNode::eval(std::vector<ExpValue>& value, EvalAuxData* auxData, Status& s) {
-	/* pull in ExpValues from input nodes, join all arguments together - 
-	MAYBE there's a case for naming blocks of arguments but that gets insane - 
-	python kwargs seem a bit excessive for now
 
-	pass into atom as arguments*/
-	std::vector<ExpValue> arguments;
-	ExpAuxData* expAuxData = static_cast<ExpAuxData*>(auxData);
-	
-	if (graphPtr == nullptr) {
-		STAT_ERROR(s, "UNABLE TO CAST NODE GRAPHPTR TYPE TO EXPGRAPH*");
-	}
-	//ExpGraph* testGraphPtr = static_cast<ExpGraph*>((node->graphPtr));
-	//ExpGraph* testGraphPtr = reinterpret_cast<ExpGraph*>((node->graphPtr));
-	/*if (testGraphPtr == nullptr) {
-		STAT_ERROR(s, "UNABLE TO CAST NODE GRAPHPTR TYPE TO EXPGRAPH*");
-	}*/
-
-	ExpGraph* graphPtr = getGraphPtr();
-	for (int index : inputs) {
-		arguments.insert(arguments.end(), 
-			graphPtr->results[index].begin(),
-			graphPtr->results[index].end());
-	}
-
-	Status result = expAtomPtr->eval(
-		arguments,
-		//auxData,
-		expAuxData,
-		value,
-		s);
-	return s;
-}
-
-
-Status GroupAtom::eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, std::vector<ExpValue>& result, Status& s)
-{
-	/* merge incoming values into one - 
-	* result will already have entry from input 0
-	*/
-	for (auto i = 1; i < argList.size(); i++) {
-		result.push_back(argList[i]);
-	}
-	return s;
-
-}
 
 Status validateAndParseStrings(std::string srcStr, std::vector<Token>& parsedTokens) {
 	/* check for syntax errors I guess? I won't lie, I have no memory of this entire file
@@ -164,167 +129,8 @@ Status validateAndParseStrings(std::string srcStr, std::vector<Token>& parsedTok
 }
 
 
-// function to insert this op in graph
-Status ExpAtom::parse(
-	ExpGraph& graph,
-	ExpParser& parser,
-	Token token,
-	int& outNodeIndex,
-	Status& s
-) {
-	LOG("ExpAtom parse");
-	return s;
-}
-
-// function to insert this op in graph
-Status PrefixParselet::parse(
-	ExpGraph& graph,
-	ExpParser& parser,
-	Token token,
-	int& outNodeIndex,
-	Status& s
-) {
-	LOG("PrefixParselet parse");
-	return s;
-}
-
-Status InfixParselet::parse(
-	ExpGraph& graph,
-	ExpParser& parser,
-	Token token,
-	int leftIndex,
-	int& outNodeIndex,
-	Status& s
-) {
-	LOG("InfixParselet parse: "+ str(token) + " " + str(srcString) + " " + str(leftIndex) + str(outNodeIndex));
-	return s;
-}
-
-Status CallAtom::parse(
-	ExpGraph& graph,
-	ExpParser& parser,
-	Token token,
-	int leftIndex,
-	int& outNodeIndex,
-	Status& s
-) {
-	// check if name of function is the graph's result node - 
-	// add each separate argument as expression results
-	LOG("callAtom parse");
-	DirtyNode* newNode = nullptr;
-	DirtyNode* leftNode = graph.getNode(leftIndex);
-	
-	newNode = graph.addNode<CallAtom>();
-	outNodeIndex = newNode->index;
-
-	// add name of function to call inputs
-	newNode->inputs.push_back(leftIndex);
-
-	// parse arg lists and add to input list
-	if (!parser.match(Token::Kind::RightParen)) {
-		do {
-			int argIndex = -1;
-			s = parser.parseExpression(graph, argIndex);
-			CWRSTAT(s, "error parsing arg from CallAtom, halting");
-			newNode->inputs.push_back(argIndex);
-		} while (parser.match(Token::Kind::Comma));
-		parser.consume(Token::Kind::RightParen, s);
-		CWRSTAT(s, "error finding rightParen for callAtom");
-	}
-	return s;
-}
 
 
-Status AssignAtom::parse(
-	ExpGraph& graph,
-	ExpParser& parser,
-	Token token,
-	int leftIndex,
-	int& outNodeIndex,
-	Status& s
-) {
-	int right;
-	s = parser.parseExpression(graph, right, Precedence::ASSGIGNMENT - 1);
-	CWRSTAT(s, "error parsing right side of assignment: " + token.lexeme());
-	DirtyNode* newNode = graph.addNode<AssignAtom>();
-
-	// left index should be a name, and right index should be the value
-	ExpOpNode* leftNode = static_cast<ExpOpNode*>(graph.getNode(leftIndex));
-	NameAtom* leftOp = dynamic_cast<NameAtom*>(leftNode->expAtomPtr.get());
-	if (!leftOp) {
-		STAT_ERROR(s, "error reinterpreting left op in assignment, could not recover NameAtom from input node");
-	}
-	newNode->inputs.push_back(leftIndex);
-	newNode->inputs.push_back(right);
-
-	// set the index of this variable in the parse state, as this node is most recent
-	// to modify it
-	/* feels a bit weird to reach this far back up to get the exp object
-	*/
-	graph.exp->parseStatus.varIndexMap[leftOp->strName] = newNode->index;
-	outNodeIndex = newNode->index;
-
-	return s;
-}
-
-
-Status NameAtom::parse(
-	ExpGraph& graph,
-	ExpParser& parser,
-	Token token,
-	int& outNodeIndex,
-	Status& s
-) {
-	/* lookup first to reuse nodes if possible */
-	//LOG("NAME parse: " + str(token) + " " + str(outNodeIndex));
-	ExpOpNode* newNode = graph.getNode<ExpOpNode>("NAME_" + token.lexeme());
-	if (newNode == nullptr) {
-		newNode = graph.addNode<NameAtom>("NAME_" + token.lexeme());
-
-		NameAtom* op = static_cast<NameAtom*>(newNode->expAtomPtr.get());
-		op->strName = token.lexeme();
-	}
-	outNodeIndex = newNode->index;
-
-	return s;
-}
-
-Status GroupAtom::parse(
-	ExpGraph& graph,
-	ExpParser& parser,
-	Token token,
-	//int leftIndex,
-	int& outNodeIndex,
-	Status& s
-) {
-	/* copying logic from CallAtom parse - 
-	* a Group atom just adds single value to graph, unless multiple specified - 
-	* emulate tuple in Python
-	*/
-
-	LOG("groupAtom parse");
-
-	DirtyNode* newNode = graph.addNode<GroupAtom>();
-	outNodeIndex = newNode->index;
-
-
-	// parse arg lists and add to input list
-	if (!parser.match(Token::Kind::RightParen)) {
-		do {
-			int argIndex = -1;
-			s = parser.parseExpression(graph, argIndex, 0);
-			CWRSTAT(s, "error parsing arg from CallAtom, halting");
-			newNode->inputs.push_back(argIndex);
-		} while (parser.match(Token::Kind::Comma) || parser.match(Token::Kind::Space));
-		parser.consume(Token::Kind::RightParen, s);
-		CWRSTAT(s, "error finding rightParen for callAtom");
-	}
-	return s;
-
-	//s = parser.parseExpression(graph, outNodeIndex, 0);
-	//parser.consume(Token::Kind::RightParen, s);
-	//return s;
-} 
 
 
 ExpParser::ExpParser() {
@@ -332,6 +138,8 @@ ExpParser::ExpParser() {
 	registerParselet(Token::Kind::String, std::make_unique<ConstantAtom>());
 	registerParselet(Token::Kind::Number, std::make_unique<ConstantAtom>());
 	registerParselet(Token::Kind::LeftParen, std::make_unique<GroupAtom>());
+	registerParselet(Token::Kind::LessThan, std::make_unique<LessThanAtom>());
+	registerParselet(Token::Kind::GreaterThan, std::make_unique<GreaterThanAtom>());
 
 }
 

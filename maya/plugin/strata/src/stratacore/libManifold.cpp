@@ -322,7 +322,13 @@ Status& strata::elementGreaterThan(
 		}
 
 		SEdgeData& baseData = manifold.eDataMap[elA->name];
-		/* create new edge starting at maxU */
+		/* create new edge starting at maxU 
+		
+		TODO: don't include names on new edge that don't touch it - 
+		so if a wide-reaching expression includes it and some neighbours, 
+		don't name new edge with half the mesh.
+		much more reusable that way
+		*/
 		SElement* newEl;
 		std::string newName = elA->name + ">(";
 		for (auto idB : idsB) {
@@ -344,6 +350,13 @@ Status& strata::elementGreaterThan(
 		manifold.addElement(newName, SElType::edge, newEl);
 		SEdgeData& newEdgeData = manifold.eDataMap[newName];
 		s = baseData.getSubData(s, newEdgeData, maxU, 1.0);
+		/* update intersections of newly created element in map*/
+		s = updateElementIntersections(
+			s,
+			manifold,
+			newEl,
+			manifold.iMap
+		);
 		elsOut.push_back(newEl->globalIndex);
 	}
 	}
@@ -378,4 +391,121 @@ Status& strata::elementGreaterThan(
 	}
 	return s;
 }
+
+
+/* same as above but less
+factor this later when everything works*/
+Status& strata::elementLessThan(
+	Status& s,
+	StrataManifold& manifold,
+	int idA,
+	//int idB,
+	std::vector<int> idsB,
+	std::vector<int>& elsOut
+	/*
+	*/
+) {
+
+	SElement* elA = manifold.getEl(idA);
+	switch (elA->elType) {
+	case SElType::point: {
+		elsOut.push_back(idA);
+		return s;
+	}
+	case SElType::edge: {
+		auto vP = manifold.iMap.getIntersectionsBetweenEls(
+			idA, idsB
+		);
+		if (!vP.size()) { // no intersections at all, just return the original element unchanged
+			elsOut.push_back(idA);
+			return s;
+		}
+		/* we have at least 1 intersection, find the lowest crossing U coord*/
+		float minU = 0.0;
+
+		for (int i = 0; i < static_cast<int>(vP.size()); i++) {
+			/* */
+			IntersectionPoint* ptr = vP[i].first;
+			if (ptr == nullptr) { /* intersection is not a point*/
+				continue;
+			}
+
+			/* loop over elements connected to this point -
+			cumbersome to do it this way, might be better somehow with maps,
+			or a map to vectors of coordinates
+			*/
+			for (int n = 0; n < ptr->elements.size(); n++) {
+				if (std::find(idsB.begin(), idsB.end(), ptr->elements[n]) != idsB.end()) {
+					minU = std::min(minU, ptr->uvns[n].x());
+				}
+			}
+		}
+		if (EQ(minU, 0.0)) { /* no span of edge higher than 1.0 -
+			what do we do?
+			return -1 as sign that operation has failed? no valid result?
+			*/
+			elsOut.push_back(-1);
+			return s;
+		}
+
+		if (EQ(minU, 1.0)) { /* entire edge is valid, just return it
+			*/
+			elsOut.push_back(idA);
+			return s;
+		}
+
+		SEdgeData& baseData = manifold.eDataMap[elA->name];
+		/* create new edge starting at maxU */
+		SElement* newEl;
+		std::string newName = elA->name + "<(";
+		for (auto idB : idsB) {
+			//newName += std::to_string(idB) + "_";
+			SElement* driverEl = manifold.getEl(idB);
+			if (driverEl == nullptr) {
+				continue;
+			}
+			newName += driverEl->name + "_";
+		}
+
+		/* if we have an existing element with that name, great, we're already done*/
+		newEl = manifold.getEl(newName);
+		if (newEl != nullptr) {
+			elsOut.push_back(newEl->globalIndex);
+			return s;
+		}
+
+		manifold.addElement(newName, SElType::edge, newEl);
+		SEdgeData& newEdgeData = manifold.eDataMap[newName];
+		s = baseData.getSubData(s, newEdgeData, 0.0, minU);
+		/* update intersections of newly created element in map*/
+		s = updateElementIntersections(
+			s,
+			manifold,
+			newEl,
+			manifold.iMap
+		);
+		elsOut.push_back(newEl->globalIndex);
+	}
+	}
+
+	return s;
+}
+
+Status& strata::elementLessThan(
+	Status& s,
+	StrataManifold& manifold,
+	std::vector<int>& elsA,
+	std::vector<int>& elsB,
+	std::vector<int>& elsOut
+
+) {
+
+	for (auto& index : elsA) {
+		s = elementLessThan(s, manifold,
+			index, elsB, elsOut);
+	}
+	return s;
+}
+
+
 

@@ -103,6 +103,7 @@ namespace strata {
                 case Kind::RightCurly: return "rightCurly";
                 case Kind::LessThan: return "lessThan";
                 case Kind::GreaterThan:return "greaterThan";
+                case Kind::GreaterThanPipe:return "greaterThanPipe";
                 case Kind::Equal: return "equal";
                 case Kind::Plus: return "Plus";
                 case Kind::Minus: return "minus";
