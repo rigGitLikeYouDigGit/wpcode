@@ -1,5 +1,5 @@
 #pragma once
-
+#include <set>
 #include "element.h"
 #include "pointData.h"
 #include "edgeData.h"
@@ -21,8 +21,14 @@ namespace strata {
 		*/
 		//int globalIndex = -1; /* groups don't share the same indexing as real elements */
 		SElType elT = SElType::point;
-		StrataName name;
-		std::vector<int> globalIndices;
+		std::string name;
+		//std::vector<int> globalIndices;
+		//std::vector<std::string> elNames;
+		std::set<std::string> elNames;
+
+		/* type-specific data? */
+		std::vector<std::string> uLines; /* edge sequence to use for U param in face groups */
+		std::vector<std::string> vLines; /* edge sequence to use for V param in face groups */
 	};
 }
 

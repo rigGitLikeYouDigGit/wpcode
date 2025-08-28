@@ -340,6 +340,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="src\stratacore\edgeData.cpp" />
     <ClCompile Include="src\stratacore\element.cpp" />
     <ClCompile Include="src\stratacore\faceData.cpp" />
+    <ClCompile Include="src\stratacore\libFace.cpp" />
     <ClCompile Include="src\stratacore\libManifold.cpp" />
     <ClCompile Include="src\stratacore\pointData.cpp" />
     <ClCompile Include="src\strataop\expOp.cpp" />
@@ -435,6 +436,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="src\stratacore\element.h" />
     <ClInclude Include="src\stratacore\faceData.h" />
     <ClInclude Include="src\stratacore\group.h" />
+    <ClInclude Include="src\stratacore\libFace.h" />
     <ClInclude Include="src\stratacore\libManifold.h" />
     <ClInclude Include="src\stratacore\pointData.h" />
     <ClInclude Include="src\stratacore\subsample.h" />

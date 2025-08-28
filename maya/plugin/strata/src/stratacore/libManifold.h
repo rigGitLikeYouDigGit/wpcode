@@ -1,9 +1,74 @@
 #pragma once
+
+#include <vector>
+#include <tuple>
 #include "manifold.h"
 
 #include "../exp/expParse.h"
 
 namespace strata {
+
+	std::tuple< std::vector<SElement*>, std::vector<SElement*>, std::vector<SElement*> >
+		filterElementsByType(StrataManifold& manifold, std::vector<int> inIds);
+
+	std::tuple< std::vector<SElement*>, std::vector<SElement*>, std::vector<SElement*> >
+		filterElementsByType(const StrataManifold& manifold, std::vector<SElement*> inIds);
+
+	template<class iterator_type>
+	std::tuple< std::vector<SElement*>, std::vector<SElement*>, std::vector<SElement*> >
+		filterElementsByType(const StrataManifold& manifold, iterator_type it, iterator_type end)
+	{
+		std::tuple< std::vector<SElement*>, std::vector<SElement*>, std::vector<SElement*> > result;
+		while (it != end) {
+			SElement* ptr = manifold.getElC(*it)
+			it++;
+			switch (ptr->elType) {
+			case SElType::point: std::get<0>(result).push_back(ptr); continue;
+			case SElType::edge: std::get<1>(result).push_back(ptr); continue;
+			case SElType::face: std::get<2>(result).push_back(ptr); continue;
+			}
+			
+		}
+		//while (it != end) {
+		//	result.push_back(getElC(*it));
+		//	it++;
+		//}
+		return result;
+	}
+
+	template<class iterator_type>
+	std::tuple< std::set<SElement*>, std::set<SElement*>, std::set<SElement*> >
+		filterElementsByTypeSet(StrataManifold& manifold, iterator_type it, iterator_type end)
+	{
+		std::tuple< std::set<SElement*>, std::set<SElement*>, std::set<SElement*> > result;
+		while (it != end) {
+			SElement* ptr = manifold.getEl(*it);
+			it++;
+			switch (ptr->elType) {
+			case SElType::point: std::get<0>(result).insert(ptr); continue;
+			case SElType::edge: std::get<1>(result).insert(ptr); continue;
+			case SElType::face: std::get<2>(result).insert(ptr); continue;
+			}
+
+		}
+		//while (it != end) {
+		//	result.push_back(getElC(*it));
+		//	it++;
+		//}
+		return result;
+	}
+
+	/* could we pass in the desired return type for elements as a template param?
+	template<elT>
+	vector<elT> processEls(it, it){
+		vector<elT> result;
+		result.push_back(getEl<elT>)
+		return result
+		}
+		?
+	
+	
+	*/
 
 	Status& updateElementIntersections(
 		Status& s,

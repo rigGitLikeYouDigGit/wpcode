@@ -78,8 +78,8 @@ namespace strata {
 
 		std::vector<std::string> opHistory;
 
-		/* i think we need name vectors for these instead
-		*/
+		//std::vector<std::string> groups; // should we make something like Unreal's Name type for string keys here?
+		std::set<std::string> groups;
 
 		std::vector<int> edges; // edges that draw from this element
 		std::vector<int> points; // points that draw from this element

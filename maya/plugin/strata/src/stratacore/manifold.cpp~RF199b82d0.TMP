@@ -91,12 +91,6 @@ std::vector<
 	}
 	return result;
 }
-void IntersectionRecord::_sortElMap() {
-	/* sort el intersection map, at least for curves
-	sort second layer of each based on their U coord on first layer edge
-	
-	*/
-}
 
 std::string strata::SPointSpaceData::strInfo() {
 	return "<PSData " + name + " w:" + str(weight) + " uvn:" + str(uvn) + " offset:" + str(offset) + ">";
@@ -142,85 +136,24 @@ Status& StrataManifold::mergeOther(StrataManifold& other, int mergeMode, Status&
 	return s;
 }
 
-/* groups */
-SGroup* StrataManifold::addGroup(std::string& groupName, SElType elType=SElType::point) {
-	SGroup* result = &groupMap[groupName];
-	result->elT = elType;
-	return result;
-}
-
-SGroup* StrataManifold::getGroup(std::string& groupName) {
-	auto found = groupMap.find(groupName);
-	if (found == groupMap.end()) {
-		return nullptr;
-	}
-	return &groupMap[groupName];
-}
-
-/* should groups hold a set of strings? */
-void StrataManifold::addToGroup(SGroup* grp, SElement* el) {
-	grp->elNames.insert(el->name);
-	el->groups.insert(grp->name);
-}
-void StrataManifold::removeFromGroup(SGroup* grp, SElement* el) {
-	grp->elNames.erase(el->name);
-	el->groups.erase(grp->name);
-}
-
-
-Status& StrataManifold::deleteGroup(Status& s, std::string& groupName) {
-	auto found = groupMap.find(groupName);
-	if (found == groupMap.end()) {
-		return s;
-	}
-	for (auto& elName : found->second.elNames) {
-		SElement* el = getEl(elName);
-		//el->groups.erase(std::find(el->groups.begin(), el->groups.end(), groupName));
-		el->groups.erase(groupName);
-	}
-	groupMap.erase(groupName);
-	return s;
-}
-
-
 Status& StrataManifold::renameGroup(Status& s, std::string& startName, std::string& newName, int mergeMode=MERGE_UNION) {
-	/* look for group name in map - 
-	if mode is union, elements are merged into original group */
+	/* look for group name in map - */
 	auto found = groupMap.find(startName);
 	if (found == groupMap.end()) {
-		STAT_ERROR(s, "no base group found with name " + startName);
+		STAT_ERROR(s, "no group found with ame " + startName);
 	}
 	auto foundNew = groupMap.find(newName);
 	if (foundNew != groupMap.end()) {
 		switch (mergeMode) {
-		case MERGE_LEAVE: { /* don't overwrite anything, delete group we're trying to rename?*/
-			s = deleteGroup(s, startName);
+		case MERGE_LEAVE: { /* don't overwrite anything*/
 			return s;
 		}
 		case MERGE_OVERWRITE: { /* remove original group*/
-			s = deleteGroup(s, newName );
-			break;
-		}
-		case MERGE_UNION: { /* merge elements with original group */
-			for (auto& elName : found->second.elNames) {
-				SElement* el = getEl(elName);
-				//*(std::find(el->groups.begin(), el->groups.end(), startName)) = newName;
-				el->groups.erase(startName);
-				el->groups.insert(newName);
-			}
-			groupMap.erase(startName);
-			return s;
+
 		}
 		}
 	}
-	for (auto& elName : found->second.elNames) {
-		SElement* el = getEl(elName);
-		//*(std::find(el->groups.begin(), el->groups.end(), startName)) = newName;
-		el->groups.insert(newName);
-	}
-	found->second.name = newName;
-	groupMap.insert({ newName, found->second });
-	groupMap.erase(startName);
+
 	return s;
 }
 

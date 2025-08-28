@@ -21,6 +21,35 @@ a common intersectionPoint should hold uvns of all contributing drivers
 */
 
 
+std::tuple< std::vector<SElement*>, std::vector<SElement*>, std::vector<SElement*> >
+strata::filterElementsByType(const StrataManifold& manifold, std::vector<SElement*> els)
+{
+	/* from input indices, return vectors for points, edges and faces
+	TODO: how should we work with groups?
+	how should we store and track groups in the manifold?
+	*/
+	std::tuple< std::vector<SElement*>, std::vector<SElement*>, std::vector<SElement*> > result;
+	for (auto ptr : els) {
+		switch (ptr->elType) {
+		case SElType::point: std::get<0>(result).push_back(ptr); continue;
+		case SElType::edge: std::get<1>(result).push_back(ptr); continue;
+		case SElType::face: std::get<2>(result).push_back(ptr); continue;
+		}
+	}
+	return result;
+}
+
+std::tuple< std::vector<SElement*>, std::vector<SElement*>, std::vector<SElement*> >
+strata::filterElementsByType(StrataManifold& manifold, std::vector<int> inIds)
+{
+	/* from input indices, return vectors for points, edges and faces
+	TODO: how should we work with groups?
+	how should we store and track groups in the manifold?
+	*/
+	return filterElementsByType(manifold, manifold.getEls(inIds));
+}
+
+
 /*
 WANT:
 

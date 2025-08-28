@@ -170,6 +170,8 @@ namespace strata {
 					std::pair<int, int> // dense index, type of index
 		>>> elMap;
 
+		/* TODO: can we sort elMap by uvn somehow */
+
 		//std::map< Vector3i, IntersectionPoint* > posPointMap;
 		//std::map< Vector3i, int > posPointMap;
 		Vector3iMap<int> posPointMap;
@@ -199,6 +201,8 @@ namespace strata {
 		std::vector<
 			std::pair<IntersectionPoint*, IntersectionCurve*>
 		> getIntersectionsBetweenEls(int gIdA, std::vector<int> gIdsB);
+
+		void _sortElMap();
 	};
 
 	struct ElementPath {
@@ -425,6 +429,10 @@ namespace strata {
 		//	return elements.at(globalId);
 		//}
 
+		inline const SElement* getElC(const SElement* el) const {
+			return el;
+		}
+
 		inline const SElement* getElC(const int& globalId) const {
 			if (globalId >= elements.size()) {
 				return nullptr;
@@ -432,7 +440,9 @@ namespace strata {
 			//return &elements.at(globalId);
 			return elements.data() + globalId;
 		}
-
+		inline SElement* getEl(SElement* el) {
+			return el;
+		}
 		inline SElement* getEl(const int& globalId) {
 			if (globalId >= elements.size()) {
 				return nullptr;
@@ -441,7 +451,7 @@ namespace strata {
 			return elements.data() + globalId;
 		}
 
-		inline SElement* getEl(const std::string name) {
+		inline SElement* getEl(const std::string& name) {
 			if (!nameGlobalIndexMap.count(name)) {
 				return nullptr;
 			}
@@ -472,6 +482,18 @@ namespace strata {
 			result.reserve(globalIds.size());
 			for (int gId : globalIds) {
 				result.push_back(getEl(gId));
+			}
+			return result;
+		}
+
+		template<class iterator_type>
+		std::vector<SElement*> getEls(iterator_type it, iterator_type end) const {
+			std::vector<SElement*> result;
+			//result.reserve(globalIds.size());
+			//for (std::string& gId : globalIds) {
+			while(it != end){
+				result.push_back(getElC(*it));
+				it++;
 			}
 			return result;
 		}
@@ -744,41 +766,21 @@ namespace strata {
 		merging
 		*/
 
+		/* is there a benefit ever to using enums over simple integers like this?*/
 		static constexpr int MERGE_OVERWRITE = 0;
 		static constexpr int MERGE_LEAVE = 1;
+		static constexpr int MERGE_UNION = 2;
 
-		Status mergeOther(StrataManifold& other, int mergeMode, Status& s) {
-			/*given another manifold, merge it into this one
-			* if names are found, update according to merge mode - 
-			*	MERGE_OVERWRITE - overwrite this graph's data with matching names in other
-			*	MERGE_LEAVE - leave matching names as they are
-			* 
-			*
-			*/
-			
-			// add any elements not already known by name
-			LOG("graph MERGE OTHER");
-			l("this graph: " + printInfo());
-			l("other graph: " + other.printInfo());
-			for (auto& otherEl : other.elements) {
-				SElement* newEl;
-				// if element not found, add it and copy over its data directly
-				if (nameGlobalIndexMap.find(otherEl.name) == nameGlobalIndexMap.end()) {
-					addElement(otherEl, newEl);
-					setElData(newEl, other.elData(otherEl));
-					continue;
-				}
-				// element found already - do we overwrite?
-				newEl = getEl(otherEl.name);
-				if (mergeMode == MERGE_OVERWRITE) {
-					setElData(newEl, other.elData(otherEl));
-				}
-			}
-			l("after merge, this graph: " + printInfo());
-			return s;
-		}
+		Status& mergeOther(StrataManifold& other, int mergeMode, Status& s);
 
+		/* groups */
+		SGroup* addGroup(std::string& groupName, SElType elType);
+		SGroup* getGroup(std::string& groupName);
+		void addToGroup(SGroup* grp, SElement* el);
+		void removeFromGroup(SGroup* grp, SElement* el);
+		Status& deleteGroup(Status& s, std::string& groupName);
 
+		Status& renameGroup(Status& s, std::string& startName, std::string& newName, int mergeMode);
 
 		/*
 		spatial functions
@@ -985,53 +987,10 @@ namespace strata {
 			return s;
 		}
 
-		Status& pointGetUVN(Status& s, Eigen::Vector3f& outUVN, SPointData& d, const Eigen::Vector3f worldPos) {
-			/* return UVN displacement from point matrix
-			*/
-			//SPointData& d = pointDatas[elIndex];
-			//outUVN = (d.finalMatrix.inverse() * worldMat).translation();
-			LOG("pointGetUVN");
-			outUVN = (d.finalMatrix.inverse() * worldPos);
-			return s;
-		}
+		Status& pointGetUVN(Status& s, Eigen::Vector3f& outUVN, SPointData& d, const Eigen::Vector3f worldPos);
 
 		
-		Status& edgeGetUVN(Status& s, Eigen::Vector3f& uvn, SElement* el, const Eigen::Vector3f& worldVec) {
-			/* NEED POLAR / CYLINDRICAL conversion for UVN 
-			* 
-			* for blending, we should probably blend along shortest paths positive or negative, 
-			or everything will move in spirals
-			but let's save that for when we actually do blending
-			*/
-
-			// first get closest matrix on curve
-			Eigen::Affine3f curveMat;
-			s = edgeClosestMatrix(s, curveMat, el, worldVec);
-
-			//SEdgeData& d = edgeDatas[elIndex];
-			SEdgeData& d = eDataMap[el->name];
-
-			float u;
-			Eigen::Vector3f tan;
-			Eigen::Vector3f pos = d.finalCurve.ClosestPointToPath(
-				bez::WorldSpace(worldVec.data()),
-				d.finalCurve.getSolver(), u,
-				tan)
-				;
-			uvn(0) = u;
-			
-			Eigen::Vector3f normal = lerpSampleMatrix<float, 3>(d.finalNormals, u);
-
-			s = makeFrame<float>(s, curveMat, pos, tan, normal);
-
-			uvn(1) = getAngleAroundAxis(
-				curveMat * Eigen::Vector3f(0, 0, 1),
-				curveMat * Eigen::Vector3f(0, 1, 0),
-				(worldVec - curveMat.translation()).normalized()
-			);
-			uvn(2) = (worldVec - curveMat.translation()).norm();
-			return s;
-		}
+		Status& edgeGetUVN(Status& s, Eigen::Vector3f& uvn, SElement* el, const Eigen::Vector3f& worldVec);
 
 
 		Status& getUVN(Status& s, Eigen::Vector3f& uvn, SElement* el, const Eigen::Vector3f closePos) {
@@ -1085,14 +1044,6 @@ namespace strata {
 			return s;
 		}
 
-
-		Status getIntersection(const SElement& elA, const SElement& elB, MMatrix& matOut, bool& crossFound) {
-			/* return a single point where elements intersect.
-			- What if there are multiple intersections? some kind of iterator over intersections? no idea
-			- should there be some kind of richer Coordinate struct - with element index and UVN to get to point?
-			*/
-
-		}
 
 
 		///////////////////

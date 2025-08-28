@@ -27,8 +27,7 @@ namespace strata {
 	Status& makeFaceGroup(
 		Status& s,
 		StrataManifold& manifold,
-		SFaceData&,
-		SElement* el,
+		SGroup* grp,
 		std::vector<std::string>& edgeNames
 	);
 
