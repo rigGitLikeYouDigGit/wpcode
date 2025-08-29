@@ -96,6 +96,7 @@ void IntersectionRecord::_sortElMap() {
 	sort second layer of each based on their U coord on first layer edge
 	
 	*/
+
 }
 
 std::string strata::SPointSpaceData::strInfo() {

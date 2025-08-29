@@ -17,6 +17,19 @@ struct EdgeSpan {
 	std::array<float, 2> params;
 };
 
+struct Vertex {
+	/* are we actually doing houdini things in here?
+	unique corner on a face - 
+	I think this can also link to a unique subpatch
+
+	order of edges matches winding order of face
+	*/
+	std::array<int, 2> edgeIds;
+	std::array<float, 2> edgeUs;
+	std::array<bool, 2> edgeFlips; /* does the direction of each edge match the face winding order*/
+
+};
+
 struct SingleFaceBuildData {
 	std::vector<EdgeSpan> edges; /* ordered edges to use to create this face -
 	not guaranteed to connect?*/
@@ -24,11 +37,7 @@ struct SingleFaceBuildData {
 	/* 2 crossing edges could connect to 4 separate faces - */
 };
 
-Status& _makeFaceGroupFromEdgeIslands(
-	std::vector<std::set<SElement*>>& edgeIslands
-) {
 
-}
 
 struct ItIntersectingElements {
 	/* iterator to run over all connected and intersecting elements -
@@ -41,11 +50,16 @@ struct ItIntersectingElements {
 	
 	int elId;
 	std::unordered_set<int> found;
+	std::unordered_set<int>* whitelist = nullptr;
 
 	ItIntersectingElements(
 		IntersectionRecord& rec_
 	) : rec(rec_) {
 		elId = rec.elMap.begin()->first;
+	}
+
+	void _next() {
+		
 	}
 
 	ItIntersectingElements& operator++(int n) {
@@ -55,8 +69,107 @@ struct ItIntersectingElements {
 
 
 
-
 };
+
+
+int getNextEl(
+	IntersectionRecord& record,
+	std::unordered_set<int>& found,
+	int start
+) {
+	/* this gets exponentially slower 
+	as we loop through more elements already found -
+	honestly never felt like more of a fraud*/
+	for (auto& p : record.elMap[start]) {
+		/* if already found connected element, skip it*/
+		if (found.find(p.first) != found.end()) {
+			continue;
+		}
+		/* new element found - flag as visited, then return it*/
+		found.insert(p.first);
+		return p.first;
+	}
+	return -1; 
+}
+
+void connectedEls(
+	IntersectionRecord& record,
+	std::unordered_set<int>& checked,
+	std::unordered_set<int>* letList,
+	std::deque<int>& toCheck,
+	std::vector<int>& allConnected
+) {
+	/* index islands by their min el index, since each element can only appear in one
+	*/
+	int start = toCheck.front();
+	toCheck.pop_front();
+	checked.insert(start);
+	for (auto& p : record.elMap[start]) {
+		/* has el already been visited*/
+		if (checked.find(p.first) != checked.end()) { 
+			continue;
+		}
+		checked.insert(p.first);
+
+		/* is el part of the let list*/
+		if (letList != nullptr) {
+			if (letList->find(p.first) == letList->end()) {
+				continue;
+			}
+		}
+		allConnected.push_back(p.first);
+		toCheck.push_front(p.first);
+	}
+}
+
+std::vector<int> connectedElIsland(
+	IntersectionRecord& record,
+	std::unordered_set<int>& checked,
+	std::unordered_set<int>* letList,
+	int startIndex
+) {
+	std::deque<int> toCheck = { startIndex };
+	std::vector<int> island = { startIndex };
+	checked.insert(startIndex);
+	while (toCheck.size()) {
+		connectedEls(
+			record,
+			checked,
+			letList,
+			toCheck,
+			island);
+	}
+	std::sort(island.begin(), island.end());
+	return island;
+}
+
+void connectedElIsland(
+	IntersectionRecord& record,
+	std::unordered_set<int>& checked,
+	std::unordered_set<int>* letList,
+	int startIndex,
+	std::vector<int>& island
+) {
+	std::deque<int> toCheck = { startIndex };
+	island.push_back(startIndex);
+	checked.insert(startIndex);
+	while (toCheck.size()) {
+		connectedEls(
+			record,
+			checked,
+			letList,
+			toCheck,
+			island);
+	}
+	std::sort(island.begin(), island.end());
+	//return island;
+}
+
+Status& findClosedEdgePaths(
+	IntersectionRecord& record,
+	std::vector<int> edgeIsland,
+	
+)
 
 Status& strata::makeFaceGroup(
 	Status& s,
@@ -75,51 +188,36 @@ Status& strata::makeFaceGroup(
 	* 
 	*/
 	auto filtered = filterElementsByTypeSet(manifold, elNames.begin(), elNames.end());
+	auto& edgeSet = std::get<1>(filtered);
+
+	/* get allowed edge indices */
+	std::unordered_set<int> edgeIndexSet;
+	for (auto& i : edgeSet) {
+		edgeIndexSet.insert(manifold.getElIndex(i));
+	}
+	std::unordered_set<int> checked;
+	std::vector<std::vector<int>> edgeIslands;
+	
+	for (auto& index : edgeIndexSet) {
+		if (checked.find(index) != checked.end()) {
+			continue;
+		}
+		edgeIslands.emplace_back();
+		connectedElIsland(
+			manifold.iMap,
+			checked,
+			&edgeIndexSet,
+			index,
+			edgeIslands.back()
+		);
+	}
+
 
 	/* only consider edges */
 	std::vector<std::set<SElement*>> edgeIslands;
 
 	/* map edge-edge corners to single faces this way*/
 	std::map<SElement*, std::map<SElement*, SingleFaceBuildData>> edgeEdgeToFaceMap;
-
-
-	/* find all edges intersecting each edge,
-	check if they're included in face group setup
-
-	group to connected islands, then process the islands
-	somehow
-
-
-	elA - elB - elC
-
-	if iteration finds elA and elC before elB, it won't realise they are connected - 
-	
-
-	*/
-	auto& edgeSet = std::get<1>(filtered);
-	for (SElement* edgeEl : edgeSet) {
-
-		float uVals[2] = { 0.0, 1.0 };
-		auto& connectedIndexMap = manifold.iMap.elMap[edgeEl->globalIndex];
-		for (auto& p : connectedIndexMap) {
-			/* get connected element*/
-			SElement* connectEl = manifold.getEl(p.first);
-			/* check if part of the face group expression*/
-			if (edgeSet.find(connectEl) == edgeSet.end()) {
-				// if not, skip
-				continue;
-			}
-			// we've found an included edge that intersects this edge, find intersection's uValue on this edge
-			/* edge KEY in face is its LOCAL INTERSECTION with that face?
-			so it's enough to say  (eA > eB) < eC to find the span?
-
-			*/
-			
-			
-		}
-
-	}
-
 
 	return s;
 }

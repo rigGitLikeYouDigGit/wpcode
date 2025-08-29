@@ -6,6 +6,12 @@
 
 namespace strata {
 
+	/* TODO:
+	probably unite all settings constants in a constexpr map?
+	*/
+	constexpr const int ST_FACE_CORNER_SQUARE = 0; /* close faces with rounded boundary curves*/
+	constexpr const int ST_FACE_CORNER_ROUND = 1; /* close faces by adding a new point, maintaining a square corner*/
+
 	struct SFaceDriverData {
 		int index = -1; // index of driver component
 		std::array<Vector3f, 2> uvns = { // full uvn vectors likely unnecessary
@@ -24,6 +30,15 @@ namespace strata {
 		*/
 		int subIndex = -1;
 		int faceIndex = -1;
+	};
+
+	struct SFaceCreationParams {
+		/* save options used to create a face/ face group
+		*/
+		std::string faceName;
+		std::string creationStr;
+		
+		int cornerMode = ST_FACE_CORNER_ROUND;
 	};
 
 	struct SFaceData : SElData {

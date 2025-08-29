@@ -49,12 +49,7 @@ namespace strata {
 			case SElType::edge: std::get<1>(result).insert(ptr); continue;
 			case SElType::face: std::get<2>(result).insert(ptr); continue;
 			}
-
 		}
-		//while (it != end) {
-		//	result.push_back(getElC(*it));
-		//	it++;
-		//}
 		return result;
 	}
 

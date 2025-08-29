@@ -498,6 +498,24 @@ namespace strata {
 			return result;
 		}
 
+		template<typename T>
+		int getElIndex(T el) {
+			return getEl(el)->globalIndex;
+		}
+
+		//template<class in_iterator_type, class out_iterator_type>
+		//void getElIndices(in_iterator_type it, in_iterator_type end,
+		//	) const {
+		//	std::vector<SElement*> result;
+		//	//result.reserve(globalIds.size());
+		//	//for (std::string& gId : globalIds) {
+		//	while (it != end) {
+		//		result.push_back(getElC(*it));
+		//		it++;
+		//	}
+		//	return result;
+		//}
+
 		
 		SElData* setElData(SElement* el, SElData* data) {
 			/* absolutely no idea on how best to do these uniform interfaces for #
