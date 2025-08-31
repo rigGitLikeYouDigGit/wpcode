@@ -17,6 +17,8 @@ struct EdgeSpan {
 	std::array<float, 2> params;
 };
 
+/* need sorted i points along each edge*/
+
 struct Vertex {
 	/* are we actually doing houdini things in here?
 	unique corner on a face - 
@@ -37,6 +39,50 @@ struct SingleFaceBuildData {
 	/* 2 crossing edges could connect to 4 separate faces - */
 };
 
+
+
+
+
+void getEdgeCircuitPaths(
+	Status& s,
+	StrataManifold& manifold,
+	std::vector<int> edgeIsland,
+	std::vector<std::vector<Vertex>>& vertexPaths
+) {
+	/* for each circuit contained in edges, 
+	return a list of vertices to use to build faces
+
+	closed edges make this quite annoying
+	*/
+	IntersectionPoint startPt;
+	bool found = false;
+	std::unordered_set<int> islandSet(edgeIsland.begin(), edgeIsland.end());
+
+	std::vector<Vertex> vertexPath;
+
+	for (auto& p : manifold.iMap.elMap[edgeIsland[0]]) {
+		if (islandSet.find(p.first) == islandSet.end()) { /* only consider intersecting elements in island*/
+			continue; 
+		}
+		/* p is an edge in the island connected to the first*/
+		for (auto& ptrPair : p.second) { /* iterate over all possible intersections between these 2 edges*/
+			/* if intersection is not a point (somehow) skip */
+			if (ptrPair.second != Intersection::POINT) {
+				continue;
+			}
+			startPt = manifold.iMap.points[ptrPair.first];
+			vertexPath.emplace_back();
+			Vertex& v = vertexPath.back();
+			v.edgeIds[0] = edgeIsland[0]
+			found = true;
+			break;
+		}
+		break;
+	}
+	if (!found) {
+		/* RETURN ERROR, can't continue*/
+	}
+}
 
 
 struct ItIntersectingElements {
@@ -66,9 +112,6 @@ struct ItIntersectingElements {
 
 		return *this;
 	}
-
-
-
 };
 
 
@@ -165,11 +208,11 @@ void connectedElIsland(
 	//return island;
 }
 
-Status& findClosedEdgePaths(
-	IntersectionRecord& record,
-	std::vector<int> edgeIsland,
-	
-)
+//Status& findClosedEdgePaths(
+//	IntersectionRecord& record,
+//	std::vector<int> edgeIsland,
+//	
+//)
 
 Status& strata::makeFaceGroup(
 	Status& s,

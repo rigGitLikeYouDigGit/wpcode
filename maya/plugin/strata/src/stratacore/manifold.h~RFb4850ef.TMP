@@ -182,52 +182,23 @@ namespace strata {
 			std::vector<int> result;
 			return result;
 		}
-
-		/* optionally pass in whole node path up to this one - last in vector*/
-		std::vector<int> operator()(std::vector<int>& idPath) {
-			/* 
-			idPath: vector of nodes from source, including this one
-
-			return vector of new DIRECT destinations from this node - 
-			externally these will be added on to paths
-			*/
-			std::vector<int> result;
-			return result;
-		}
 	};
 
-	struct VisitPred {
-		/* do any actual operation on node - 
-		* UNSURE if this should just be the same object as NextIdsPred
+	struct HaltPred {
+		/* return true if iteration should halt
 		*/
-
-		void operator()(int id) {
-		}
-
-		/* optionally pass in whole node path up to this one - last in vector*/
-		void operator()(std::vector<int>& idPath) {
-			return operator()(idPath.back());
+		bool operator()(int id) {
+			return false;
 		}
 	};
-
-	//struct HaltPred {
-	//	/* return true if iteration should halt
-	//	*/
-	//	bool operator()(int id) {
-	//		return false;
-	//	}
-	//	bool operator()(std::vector<int> idPath) {
-	//		return false;
-	//	}
-	//};
 
 	struct VisitHistory {
 		std::deque<int> idPath;
 	};
 
 	template<
-		typename NextIdsPredT=NextIdsPred
-		//typename HaltPredT=HaltPred
+		typename NextIdsPredT=NextIdsPred,
+		typename HaltPredT=HaltPred
 	>
 	struct GraphVisitor {
 
@@ -235,79 +206,43 @@ namespace strata {
 		constexpr static int kBreadthFirst = 1;
 
 		template<
-			typename VisitPredFnT,
-			typename NextIdsPredFnT//=NextIdsPredT,
-			// HaltPredFnT=HaltPredT
-		>
+			typename NextIdsPredFnT=NextIdsPredT,
+			typename HaltPredFnT=HaltPredT>
 		void visit(
-			std::vector<std::vector<int>>& nodePaths,
+			std::deque<int>& nodesToVisit,
 			std::vector<std::unordered_set<int>>& generations,
-			VisitPredFnT& visitPred,
 			NextIdsPredFnT& nextIdsPred,
-			//HaltPredFnT& haltPred,
-			int mode = kDepthFirst
+			HaltPredFnT& haltPred,
+			int mode = kDepthFirst,
 			
 		) {
-			/* we expect nodePaths of the form
-			[ [start node id], [other start node id], ... ] etc
-			- array will be populated throughout function
-			*/
-			using namespace std;
-			
+
 			switch (mode) {
 			case kDepthFirst: {
 				/* DFS loop */
-				deque<vector<int>> pathsToVisit(nodePaths.begin(), nodePaths.end());
-				while (pathsToVisit.size()) { /* TODO: can probably handle this with indices too*/
-					vector<int>& currentPath = pathsToVisit.back();
-					visitPred(currentPath);
-					std::vector<int> nextNodes = nextIdsPred(currentPath);
-					pathsToVisit.pop_back();
-					for (int n = 0; n < static_cast<int>(nextNodes.size()); n++) {
-						pathsToVisit.push_back(currentPath);
-						pathsToVisit.back().push_back(nextNodes[n]);
-
-						nodePaths.push_back(pathsToVisit.back());
+				while (nodesToVisit.size()) {
+					int visitId = nodesToVisit.back();
+					nodesToVisit.pop_back();
+					if (haltPred(visitId)) { /* if this branch should halt, continue*/
+						continue;
 					}
+					std::vector<int> nextNodes = nextIdsPred(visitId);
+					nodesToVisit.insert(nodesToVisit.end(), nextNodes.begin(), nextNodes.end());
+
 				}
-				return;
 				break;
 			}
 			case kBreadthFirst: {
-				/* BFS loop 
-				trying something here with paths - 
-				instead of the normal stack of nodes to visit, just store
-				indices into the record of node paths?
-				*/
-				bool uniquePaths = true;
+				/* BFS loop */
+				while (nodesToVisit.size()) {
+					std::deque<int> newNodesToVisit; /* TEMP */
+					for (int i = 0; i < nodesToVisit.size(); i++) {
+						int visitId = nodesToVisit.back();
+						nodesToVisit.pop_back();
+						std::vector<int> nextNodes = nextIdsPred(visitId);
 
-				int genStartIndex = 0;
-				int genEndIndex = static_cast<int>(nodePaths.size());
-				while (genStartIndex > genEndIndex) {
-					generations.emplace_back(
-						nodePaths.begin() + genStartIndex, 
-						nodePaths.end());
-
-					std::unordered_set<int> newToVisit;
-					for (int i = 0; i < genEndIndex - genStartIndex; i++) {
-						vector<int>& nodePath = nodePaths[genStartIndex + i];
-						visitPred(nodePath);
-						vector<int> nextNodes = nextIdsPred(nodePaths[genStartIndex + i]);
-
-						/* don't do any checking or logic around discarding unique/non-unique 
-						node paths here - leave all that to the predicate
-						
-						copy the current path, but add new node destinations to it
-						*/
-						nodePaths.insert(nodePaths.end(), nodePath);
-						for (int n = 0; n < static_cast<int>(nextNodes.size()); n++) {
-							nodePaths[genEndIndex + n].push_back(nextNodes[n]);
-						}
 					}
-					genStartIndex = genEndIndex;
-					genEndIndex = static_cast<int>(nodePaths.size()); /* probably don't need to manage separate indices here*/
 				}
-				return;
 			}
 			}
 		}

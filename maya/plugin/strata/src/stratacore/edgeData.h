@@ -97,7 +97,7 @@ namespace strata {
 		/* need dense final result to pick up large changes in
 		parent space.
 
-		Try "eA.bestP()" or "eA.p" in expressions to say "best-fitting point", leave it to operatioms to determine that point
+		Try "eA.bestP()" or "eA.p" in expressions to say "best-fitting point", leave it to operations to determine that point
 
 		*/
 		using thisT = SEdgeData;
