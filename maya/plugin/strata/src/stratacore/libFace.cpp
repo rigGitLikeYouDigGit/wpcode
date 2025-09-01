@@ -40,8 +40,73 @@ struct SingleFaceBuildData {
 };
 
 
+struct EdgeCircuitExtraData {
+	/* passed in to graph iteration predicates for edge circuit paths
+	
+	- if a next target already appeared in path, that is a closed path
+	- multiple closed paths with same start/endpoint might appear
+	- index by start edge
+	
+	*/
+	StrataManifold& manifold;
+	std::unordered_set<int> visitedEdges; /* used during iteration to cull duplicate paths*/
+	std::map<int, std::vector<Vertex>> closedPaths; /* separate paths, indexed by start edge*/
+
+	EdgeCircuitExtraData(StrataManifold& manifold_) : manifold(manifold_) {};
+};
 
 
+void _processFoundClosedPath(
+	std::vector<int>& idPath,
+	EdgeCircuitExtraData& eData,
+	StrataManifold& manifold
+) {
+
+}
+
+struct EdgePathNextIdsPred : NextIdsPred {
+
+	/* optionally pass in whole node path up to this one - last in vector*/
+	template< typename ExtraT=EdgeCircuitExtraData* >
+	std::vector<int> operator()(
+		std::vector<int>& idPath,
+		GraphVisitor::VisitHistory& history,
+		ExtraT extraData = nullptr
+		) {
+		/*
+		idPath: vector of nodes from source, including this one
+
+		return vector of new DIRECT destinations from this node -
+		externally these will be added on to paths
+
+		look up all connected edges, remove all that have already been visited in this path?
+		*/
+		std::vector<int> result;
+		EdgeCircuitExtraData& eData = *extraData;
+		StrataManifold& manifold = eData.manifold;
+		IntersectionRecord& rec = manifold.iMap;
+
+		eData.visitedEdges.insert(idPath);
+
+		/*NEXT DESTINATIONS - get intersecting edges, filter against already visited*/
+		for (auto& p : rec.elMap[idPath.back()]) {
+			/* first check for a CLOSED PATH
+			has to be closed/match in direction as well.
+			kill me.
+			*/
+			auto foundInPath = std::find(idPath.begin(), idPath.end(), p.first);
+			if (foundInPath != idPath.end()) { /* check if there is already a path starting and ending at previous element*/
+				int startEdge = *foundInPath;
+				auto foundPath = eData.closedPaths.fi
+				if()
+
+
+			}
+		}
+
+		return result;
+	}
+};
 
 void getEdgeCircuitPaths(
 	Status& s,

@@ -173,42 +173,9 @@ namespace strata {
 		return -1;
 	}
 
+	//struct GraphVisitor;
+	//struct GraphVisitor::VisitHistory;
 
-	struct NextIdsPred {
-		/* return next ids for given graph element
-		*/
-
-		std::vector<int> operator()(int id) {
-			std::vector<int> result;
-			return result;
-		}
-
-		/* optionally pass in whole node path up to this one - last in vector*/
-		std::vector<int> operator()(std::vector<int>& idPath) {
-			/* 
-			idPath: vector of nodes from source, including this one
-
-			return vector of new DIRECT destinations from this node - 
-			externally these will be added on to paths
-			*/
-			std::vector<int> result;
-			return result;
-		}
-	};
-
-	struct VisitPred {
-		/* do any actual operation on node - 
-		* UNSURE if this should just be the same object as NextIdsPred
-		*/
-
-		void operator()(int id) {
-		}
-
-		/* optionally pass in whole node path up to this one - last in vector*/
-		void operator()(std::vector<int>& idPath) {
-			return operator()(idPath.back());
-		}
-	};
 
 	//struct HaltPred {
 	//	/* return true if iteration should halt
@@ -221,22 +188,34 @@ namespace strata {
 	//	}
 	//};
 
-	struct VisitHistory {
-		std::deque<int> idPath;
-	};
 
-	template<
-		typename NextIdsPredT=NextIdsPred
-		//typename HaltPredT=HaltPred
-	>
+
+	//template<
+	//	typename NextIdsPredT=NextIdsPred
+	//	//typename HaltPredT=HaltPred
+	//>
 	struct GraphVisitor {
 
 		constexpr static int kDepthFirst = 0;
 		constexpr static int kBreadthFirst = 1;
 
+		struct VisitHistory {
+			std::vector<std::vector<int>>& nodePaths;
+			std::vector<std::unordered_set<int>>& generations;
+
+			VisitHistory(std::vector<std::vector<int>>& nodePaths_,
+				std::vector<std::unordered_set<int>>& generations_
+			) :
+				nodePaths(nodePaths_), generations(generations_)
+			{
+			}
+		};
+
+
 		template<
 			typename VisitPredFnT,
-			typename NextIdsPredFnT//=NextIdsPredT,
+			typename NextIdsPredFnT,//=NextIdsPredT,
+			typename ExtraT
 			// HaltPredFnT=HaltPredT
 		>
 		void visit(
@@ -244,6 +223,7 @@ namespace strata {
 			std::vector<std::unordered_set<int>>& generations,
 			VisitPredFnT& visitPred,
 			NextIdsPredFnT& nextIdsPred,
+			ExtraT extraData = nullptr,
 			//HaltPredFnT& haltPred,
 			int mode = kDepthFirst
 			
@@ -259,9 +239,15 @@ namespace strata {
 				/* DFS loop */
 				deque<vector<int>> pathsToVisit(nodePaths.begin(), nodePaths.end());
 				while (pathsToVisit.size()) { /* TODO: can probably handle this with indices too*/
+					VisitHistory h(nodePaths, generations);
 					vector<int>& currentPath = pathsToVisit.back();
-					visitPred(currentPath);
-					std::vector<int> nextNodes = nextIdsPred(currentPath);
+					visitPred(currentPath, h, extraData);
+
+					std::vector<int> nextNodes = nextIdsPred(
+						currentPath,
+						h,
+						extraData
+						);
 					pathsToVisit.pop_back();
 					for (int n = 0; n < static_cast<int>(nextNodes.size()); n++) {
 						pathsToVisit.push_back(currentPath);
@@ -291,8 +277,19 @@ namespace strata {
 					std::unordered_set<int> newToVisit;
 					for (int i = 0; i < genEndIndex - genStartIndex; i++) {
 						vector<int>& nodePath = nodePaths[genStartIndex + i];
+						VisitHistory h(nodePaths, generations);
+						VisitHistory h(
+							nodePath,
+							h,
+							extraData
+						);
+
 						visitPred(nodePath);
-						vector<int> nextNodes = nextIdsPred(nodePaths[genStartIndex + i]);
+						vector<int> nextNodes = nextIdsPred(
+							nodePath,
+							h,
+							extraData
+						);
 
 						/* don't do any checking or logic around discarding unique/non-unique 
 						node paths here - leave all that to the predicate
@@ -312,6 +309,50 @@ namespace strata {
 			}
 		}
 	};
+
+
+	struct NextIdsPred {
+		/* return next ids for given graph element
+		*/
+
+
+		/* optionally pass in whole node path up to this one - last in vector*/
+		template< typename ExtraT >
+		std::vector<int> operator()(
+			std::vector<int>& idPath,
+			GraphVisitor::VisitHistory& history,
+			ExtraT = nullptr
+			) {
+			/*
+			idPath: vector of nodes from source, including this one
+
+			return vector of new DIRECT destinations from this node -
+			externally these will be added on to paths
+			*/
+			std::vector<int> result;
+			return result;
+		}
+	};
+
+	struct VisitPred {
+		/* do any actual operation on node -
+		* UNSURE if this should just be the same object as NextIdsPred
+		*/
+
+
+		/* optionally pass in whole node path up to this one - last in vector*/
+		template< typename ExtraT >
+		void operator()(
+			std::vector<int>& idPath,
+			GraphVisitor::VisitHistory& history,
+			ExtraT = nullptr
+			) {
+			return;
+		}
+	};
+
+
+
 
 	/* each node only visited once in each generation - 
 	but multiple paths may lead to it*/
@@ -477,6 +518,18 @@ namespace strata {
 		}
 	};
 
+	static inline int orientedEdgeIndex(int unorientedIndex, bool flip){
+		/* please pay attention as this is very complicated*/
+		return unorientedIndex * 2 + static_cast<int>(flip);
+	}
+	static inline std::pair<int, bool> unOrientedEdgeIndex(int orientedIndex, bool wantFlip) {
+		/* */
+		return std::make_pair(orientedIndex / 2, orientedIndex % 2);
+	}
+	static inline int unOrientedEdgeIndex(int orientedIndex) {
+		/* */
+		return orientedIndex / 2;
+	}
 	struct StrataManifold {
 		/*
 
