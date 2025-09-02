@@ -54,13 +54,22 @@ namespace strata {
 	}
 
 	template<typename T>
-	bool anyIntersectionVectorUSet(std::vector<T> a, std::unordered_set<T> b) {
+	bool anyIntersectionVectorUSet(std::vector<T>& a, std::unordered_set<T>& b) {
 		for (auto i : a) {
 			if (b.find(a) != b.end()) {
 				return true;
 			}
 		}
 		return false;
+	}
+
+	template<typename VT>
+	int vectorIndex(std::vector<VT>& vec, VT& v) {
+		auto found = std::find(vec.begin(), vec.end(), v);
+		if (found == vec.end()) {
+			return -1;
+		}
+		return static_cast<int>(std::distance(vec.begin(), found));
 	}
 
 	/**
@@ -234,6 +243,7 @@ namespace strata {
 	typedef std::vector<Float3>       Float3Array;
 	typedef std::vector<Float2>       Float2Array;
 	typedef std::vector<unsigned int> IndexList;
+
 
 
 	template<typename T>

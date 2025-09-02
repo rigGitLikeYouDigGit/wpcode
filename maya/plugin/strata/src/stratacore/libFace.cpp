@@ -26,6 +26,7 @@ struct Vertex {
 
 	order of edges matches winding order of face
 	*/
+	int index = -1;
 	std::array<int, 2> edgeIds;
 	std::array<float, 2> edgeUs;
 	std::array<bool, 2> edgeFlips; /* does the direction of each edge match the face winding order*/
@@ -49,10 +50,45 @@ struct EdgeCircuitExtraData {
 	
 	*/
 	StrataManifold& manifold;
-	std::unordered_set<int> visitedEdges; /* used during iteration to cull duplicate paths*/
-	std::map<int, std::vector<Vertex>> closedPaths; /* separate paths, indexed by start edge*/
+	std::vector<Vertex> vertices;
+	std::unordered_set<int> visitedEdges; /* probably not needed*/
+	std::unordered_set<int> visitedVertices; /* used during iteration to cull duplicate paths*/
+	std::unordered_set<int> validEdges; /* used during iteration to cull duplicate paths*/
+	std::map<int, std::vector<Vertex>> closedPaths; /* separate paths, indexed by start VERTEX 
+	one VERTEX maps to one CLOSED PATH -> one CLOSED FACE
+	
+	*/
+
+	std::unordered_map<
+		std::tuple<int, int, bool, bool>,  /* inEdge, outEdge, inEdgeFlip, outEdgeFlip */
+		Vertex*
+	> vertexMap; // is this insane
 
 	EdgeCircuitExtraData(StrataManifold& manifold_) : manifold(manifold_) {};
+
+	Vertex* getVertex(int eA, int eB, bool flipA, bool flipB) {
+		auto found = vertexMap.find({ eA, eB, flipA, flipB });
+		if (found == vertexMap.end()) {
+			return nullptr;
+		}
+		return found->second;
+	}
+
+	Vertex* createVertex(
+		int eA, int eB, float uA, float uB, bool flipA, bool flipB
+	) {
+		/* make new vertex, add entry in map
+should this be a double-layer map again?
+*/
+		int newIndex = vertices.size();
+		vertices.emplace_back();
+		vertices.back().index = newIndex;
+		vertices.back().edgeIds = { eA, eB };
+		vertices.back().edgeFlips = { flipA, flipB };
+		vertices.back().edgeUs = { uA, uB };
+		vertexMap.insert({ { eA, eB, flipA, flipB }, &vertices.back() });
+		return &vertices.back();
+	}
 };
 
 
@@ -69,7 +105,7 @@ struct EdgePathNextIdsPred : NextIdsPred {
 	/* optionally pass in whole node path up to this one - last in vector*/
 	template< typename ExtraT=EdgeCircuitExtraData* >
 	std::vector<int> operator()(
-		std::vector<int>& idPath,
+		std::vector<int>& idPath, // VERTEX index
 		GraphVisitor::VisitHistory& history,
 		ExtraT extraData = nullptr
 		) {
@@ -82,9 +118,75 @@ struct EdgePathNextIdsPred : NextIdsPred {
 		look up all connected edges, remove all that have already been visited in this path?
 		*/
 		std::vector<int> result;
-		EdgeCircuitExtraData& eData = *extraData;
-		StrataManifold& manifold = eData.manifold;
+		EdgeCircuitExtraData& exData = *extraData;
+		StrataManifold& manifold = exData.manifold;
 		IntersectionRecord& rec = manifold.iMap;
+		Vertex& vertex = exData.vertices[idPath.back()];
+		
+		/* get current edge we're travelling along*/
+		int outEdge = vertex.edgeIds[1]; 
+		/* check if we're travelling backwards*/
+		bool outEdgeFlip = vertex.edgeFlips[1];
+		/* u coord on current edge of origin vertex*/
+		float origU = vertex.edgeUs[1];
+
+		/* get possible intersection points on this edge */
+		for (auto& p : rec.elUVNPointMap.at(outEdge)) {
+			/* disregard points lower (if straight) or higher (if flip) */
+			bool shouldSkip = outEdgeFlip ? (p.first.x() < origU) : (p.first.x() > origU);
+			if (shouldSkip) {
+				continue;
+			}
+			/* here we find / consider every valid intersection point on this edge for vertices - 
+			trust to the history to discount them, or else to pull separate ring paths out of them
+
+			SHOULD WE put intersection points at the tips of all edges, to they're more visible to
+			processes like this?
+			*/
+			
+			IntersectionPoint& pt = p.second;
+			// I think this should be a map of some kind on intersection point
+			
+			int ptThisEdgeIndex = vectorIndex(pt.elements, outEdge);
+			for (int i = 0; i < static_cast<int>(pt.elements.size()); i++) {
+				SElement* otherEl = manifold.getEl(pt.elements[i]);
+				/* only care about other edges*/
+				if (otherEl->elType != SElType::edge) {
+					continue;
+				}
+				/* only care about other VALID edges */
+				if (exData.validEdges.find(otherEl->globalIndex) == exData.validEdges.end()) {
+					continue;
+				}
+
+				Vertex* lookupVertex;
+
+				for (bool nextFlip : {true, false}) {
+					lookupVertex = exData.getVertex(
+						outEdge, otherEl->globalIndex, outEdgeFlip, nextFlip
+					);
+					if (lookupVertex == nullptr) {
+						lookupVertex = exData.createVertex(
+							outEdge, otherEl->globalIndex,
+							pt.uvns[ptThisEdgeIndex].x(), pt.uvns[i].x(),
+							outEdgeFlip, nextFlip);
+						/* first time vertex created, auto-add it to valid next destinations*/
+						result.push_back(lookupVertex->index);
+					}
+					else {
+						/* if this vertex is already marked visited, skip?
+						this is mainly to prevent infinite crawling, not sure on logic of
+						when to add to this set*/
+						if (exData.visitedVertices.find(lookupVertex->index)) {
+							continue;
+						}
+					}
+				}
+				
+
+			}
+		
+		}
 
 		eData.visitedEdges.insert(idPath);
 
@@ -94,16 +196,17 @@ struct EdgePathNextIdsPred : NextIdsPred {
 			has to be closed/match in direction as well.
 			kill me.
 			*/
+
+			/* if next intersected edge is CLOSED, yield 2 VERTICES - 
+			one going off in each direction*/
+
 			auto foundInPath = std::find(idPath.begin(), idPath.end(), p.first);
 			if (foundInPath != idPath.end()) { /* check if there is already a path starting and ending at previous element*/
 				int startEdge = *foundInPath;
 				auto foundPath = eData.closedPaths.fi
 				if()
-
-
 			}
 		}
-
 		return result;
 	}
 };
