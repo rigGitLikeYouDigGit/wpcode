@@ -320,6 +320,7 @@ namespace strata {
 		template< typename ExtraT >
 		std::vector<int> operator()(
 			std::vector<int>& idPath,
+			GraphVisitor& visitor,
 			GraphVisitor::VisitHistory& history,
 			ExtraT = nullptr
 			) {
@@ -344,6 +345,7 @@ namespace strata {
 		template< typename ExtraT >
 		void operator()(
 			std::vector<int>& idPath,
+			GraphVisitor& visitor,
 			GraphVisitor::VisitHistory& history,
 			ExtraT = nullptr
 			) {

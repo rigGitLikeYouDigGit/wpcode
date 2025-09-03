@@ -54,7 +54,7 @@ struct EdgeCircuitExtraData {
 	std::unordered_set<int> visitedEdges; /* probably not needed*/
 	std::unordered_set<int> visitedVertices; /* used during iteration to cull duplicate paths*/
 	std::unordered_set<int> validEdges; /* used during iteration to cull duplicate paths*/
-	std::map<int, std::vector<Vertex>> closedPaths; /* separate paths, indexed by start VERTEX 
+	std::map<int, std::vector<int>> closedPaths; /* separate VERTEX INDEX paths, indexed by LOWEST VERTEX 
 	one VERTEX maps to one CLOSED PATH -> one CLOSED FACE
 	
 	*/
@@ -92,12 +92,38 @@ should this be a double-layer map again?
 };
 
 
-void _processFoundClosedPath(
-	std::vector<int>& idPath,
-	EdgeCircuitExtraData& eData,
-	StrataManifold& manifold
+/* TEMP TEMP TEMP*/
+int getAnyVertex(
+	StrataManifold& manifold,
+	int edgeId,
+	EdgeCircuitExtraData& exData,
+	std::unordered_set<int>& validEdges
 ) {
+	/* return any vertex lying on the edge
+	as a start point for graph iteration
 
+	vertices should be built at the same time we update intersections, I know this now
+	*/
+	auto foundPts = manifold.iMap.elUVNPointMap.find(edgeId);
+	if (foundPts == manifold.iMap.elUVNPointMap.end()) { // no intersections on this edge, trash
+		return -1;
+	}
+	for (auto& p : foundPts->second) {
+		IntersectionPoint& pt = p->second;
+		for (int i = 0; i > pt.elements.size(); i++) {
+			SElement* el = manifold.getEl(pt.elements[i]);
+			if (el->elType != SElType::edge) {
+				continue;
+			}
+			Vertex* v = exData.createVertex(
+				edgeId, el->globalIndex,
+				p.first.x(), pt.uvns[i].x(),
+				false, false
+			);
+			return v->index;
+		}	
+	}
+	return -1;
 }
 
 struct EdgePathNextIdsPred : NextIdsPred {
@@ -106,6 +132,7 @@ struct EdgePathNextIdsPred : NextIdsPred {
 	template< typename ExtraT=EdgeCircuitExtraData* >
 	std::vector<int> operator()(
 		std::vector<int>& idPath, // VERTEX index
+		GraphVisitor& visitor,
 		GraphVisitor::VisitHistory& history,
 		ExtraT extraData = nullptr
 		) {
@@ -165,53 +192,95 @@ struct EdgePathNextIdsPred : NextIdsPred {
 					lookupVertex = exData.getVertex(
 						outEdge, otherEl->globalIndex, outEdgeFlip, nextFlip
 					);
-					if (lookupVertex == nullptr) {
+					if (lookupVertex == nullptr) { // not found, create new vertex in register
 						lookupVertex = exData.createVertex(
 							outEdge, otherEl->globalIndex,
 							pt.uvns[ptThisEdgeIndex].x(), pt.uvns[i].x(),
 							outEdgeFlip, nextFlip);
 						/* first time vertex created, auto-add it to valid next destinations*/
 						result.push_back(lookupVertex->index);
+						continue; /* should be guaranteed not to form a closed path*/
 					}
-					else {
-						/* if this vertex is already marked visited, skip?
-						this is mainly to prevent infinite crawling, not sure on logic of
-						when to add to this set*/
-						if (exData.visitedVertices.find(lookupVertex->index)) {
-							continue;
-						}
+					
+					/* if vertex finds itself? shouldn't be possible, but let's be safe*/
+					if (lookupVertex->index == idPath.back()) {
+						continue;
 					}
-				}
-				
 
+					/* if this vertex is already marked visited, skip?
+					this set is only updated when a closed path is found*/
+					if (exData.visitedVertices.find(lookupVertex->index)) {
+						continue;
+					}
+
+					/* check backwards in the current path for that vertex - 
+					* - same edge in, out, same direction on each.
+					if found, it's a CLOSED PATH,
+					but we still need to check if it's the shortest path
+					*/
+					
+					// check if we find lookupVertex index in this path
+					auto foundInIdPath = std::find(idPath.begin(), idPath.end(), lookupVertex->index);
+					if (foundInIdPath == idPath.end()) { // nothing found, yield it for iteration
+						result.push_back(lookupVertex->index);
+						continue;
+					}
+
+					/* FOUND in prev path, check if it's the shortest path */
+					int minIndex = std::min(foundInIdPath, idPath.end());
+					auto foundClosedPath = exData.closedPaths.find(minIndex);
+					if (foundClosedPath == exData.closedPaths.end()) { // NEW PATH FOUND
+						/* add new closed path*/
+						exData.closedPaths.insert({ minIndex,
+							foundInIdPath, idPath.end() });
+						exData.visitedVertices.insert(foundInIdPath, idPath.end());
+						/* don't yield this index
+						SHOULD WE just return nothing for this iteration at all? as in we've found a single
+						closed path, this graph crawler is complete?
+						*/
+						//continue;
+						return std::vector<int>();
+					}
+
+					/* a path including these vertices already exists - check if this one is shorter
+					* (I don't think duplicate paths like this are possible, but still
+					* 
+					* should we only add vertices to the VISITED set when they're included in a closed path?
+					*/
+
+					int foundPathLength = static_cast<int>(foundClosedPath->second.size());
+					int thisPathLength = std::distance(foundInIdPath, idPath.end());
+					
+					/* do we treat with paths arriving at a vertex by different paths?
+					* first come first served?
+					* help?
+					*/
+					if (foundPathLength <= thisPathLength) { // only act if this path is better, not equal
+						continue;
+					}
+					/*  we return the other path indices to circulation somehow?*/
+					exData.visitedVertices.erase(foundClosedPath->second.begin(), foundClosedPath->second.end());
+					foundClosedPath->second.clear();
+					foundClosedPath->second.insert(
+						foundClosedPath->second.begin(),
+						foundInIdPath, idPath.end()
+					);
+
+					exData.visitedVertices.insert(
+						foundClosedPath->second.begin(),
+						foundClosedPath->second.end()
+					);
+						
+					return std::vector<int>();
+				}
 			}
 		
-		}
-
-		eData.visitedEdges.insert(idPath);
-
-		/*NEXT DESTINATIONS - get intersecting edges, filter against already visited*/
-		for (auto& p : rec.elMap[idPath.back()]) {
-			/* first check for a CLOSED PATH
-			has to be closed/match in direction as well.
-			kill me.
-			*/
-
-			/* if next intersected edge is CLOSED, yield 2 VERTICES - 
-			one going off in each direction*/
-
-			auto foundInPath = std::find(idPath.begin(), idPath.end(), p.first);
-			if (foundInPath != idPath.end()) { /* check if there is already a path starting and ending at previous element*/
-				int startEdge = *foundInPath;
-				auto foundPath = eData.closedPaths.fi
-				if()
-			}
 		}
 		return result;
 	}
 };
 
-void getEdgeCircuitPaths(
+Status& getEdgeCircuitPaths(
 	Status& s,
 	StrataManifold& manifold,
 	std::vector<int> edgeIsland,
@@ -221,35 +290,36 @@ void getEdgeCircuitPaths(
 	return a list of vertices to use to build faces
 
 	closed edges make this quite annoying
+
+	find a single vertex and start graph iteration - 
+	vertices should be part of manifold
 	*/
 	IntersectionPoint startPt;
 	bool found = false;
 	std::unordered_set<int> islandSet(edgeIsland.begin(), edgeIsland.end());
 
-	std::vector<Vertex> vertexPath;
+	EdgeCircuitExtraData exData(manifold);
+	int firstVertex = getAnyVertex(
+		manifold, edgeIsland[0],
+		exData,
+		islandSet
+	);
 
-	for (auto& p : manifold.iMap.elMap[edgeIsland[0]]) {
-		if (islandSet.find(p.first) == islandSet.end()) { /* only consider intersecting elements in island*/
-			continue; 
-		}
-		/* p is an edge in the island connected to the first*/
-		for (auto& ptrPair : p.second) { /* iterate over all possible intersections between these 2 edges*/
-			/* if intersection is not a point (somehow) skip */
-			if (ptrPair.second != Intersection::POINT) {
-				continue;
-			}
-			startPt = manifold.iMap.points[ptrPair.first];
-			vertexPath.emplace_back();
-			Vertex& v = vertexPath.back();
-			v.edgeIds[0] = edgeIsland[0]
-			found = true;
-			break;
-		}
-		break;
-	}
-	if (!found) {
-		/* RETURN ERROR, can't continue*/
-	}
+	GraphVisitor visitor;
+	EdgePathNextIdsPred nextIdsPred;
+	VisitPred visitPred;
+	std::vector<std::vector<int>> nodePaths;
+	std::vector<std::unordered_set<int>> generations;
+
+	visitor.visit(
+		nodePaths,
+		generations,
+		visitPred,
+		nextIdsPred,
+		exData,
+		GraphVisitor::kBreadthFirst
+	);
+	return s;
 }
 
 
