@@ -19,19 +19,6 @@ struct EdgeSpan {
 
 /* need sorted i points along each edge*/
 
-struct Vertex {
-	/* are we actually doing houdini things in here?
-	unique corner on a face - 
-	I think this can also link to a unique subpatch
-
-	order of edges matches winding order of face
-	*/
-	int index = -1;
-	std::array<int, 2> edgeIds;
-	std::array<float, 2> edgeUs;
-	std::array<bool, 2> edgeFlips; /* does the direction of each edge match the face winding order*/
-
-};
 
 struct SingleFaceBuildData {
 	std::vector<EdgeSpan> edges; /* ordered edges to use to create this face -
@@ -63,6 +50,8 @@ struct EdgeCircuitExtraData {
 		std::tuple<int, int, bool, bool>,  /* inEdge, outEdge, inEdgeFlip, outEdgeFlip */
 		Vertex*
 	> vertexMap; // is this insane
+	/* this also isn't enough to distinguish vertices on edges that cross multiple times
+	*/
 
 	EdgeCircuitExtraData(StrataManifold& manifold_) : manifold(manifold_) {};
 
@@ -295,7 +284,6 @@ Status& getEdgeCircuitPaths(
 	vertices should be part of manifold
 	*/
 	IntersectionPoint startPt;
-	bool found = false;
 	std::unordered_set<int> islandSet(edgeIsland.begin(), edgeIsland.end());
 
 	EdgeCircuitExtraData exData(manifold);
@@ -309,6 +297,7 @@ Status& getEdgeCircuitPaths(
 	EdgePathNextIdsPred nextIdsPred;
 	VisitPred visitPred;
 	std::vector<std::vector<int>> nodePaths;
+	nodePaths.push_back({ firstVertex });
 	std::vector<std::unordered_set<int>> generations;
 
 	visitor.visit(

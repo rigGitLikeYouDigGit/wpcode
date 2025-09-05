@@ -36,7 +36,7 @@ namespace strata {
 		/* save options used to create a face/ face group
 		*/
 		std::string faceName;
-		std::string creationStr;
+		std::string creationStr; // source expression
 		
 		int cornerMode = ST_FACE_CORNER_ROUND;
 	};
@@ -50,8 +50,11 @@ namespace strata {
 		Vector3f centreNormal;
 		/* normal at centre of face - all subpatch curves must end with this as their normal*/
 
-		/* connected islands of drivers? */
-		std::vector<std::vector<int>> connectedDrivers;
+		/* vector of corner vertex indices */
+		std::vector<std::vector<int>> vertices;
+		/* {index, startU, endU} of each edge defining face
+		*/
+		std::vector<std::tuple<int, float, float>> edgeSpans;
 
 		/* tangent vectors at midpoints of driver edges
 		multiply and average to find centrePos

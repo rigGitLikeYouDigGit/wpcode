@@ -35,6 +35,8 @@
 #include "pointData.h"
 #include "edgeData.h"
 #include "faceData.h"
+#include "vertexData.h"
+#include "intersection.h"
 #include "group.h"
 
 #include "../logger.h"
@@ -84,357 +86,6 @@ namespace strata {
 	};
 
 
-
-	struct Intersection {
-		static constexpr int POINT = 0;
-		static constexpr int EDGE = 1;
-		int type = POINT;
-		int index = -1;
-		
-		//virtual Intersection* cast(Intersection* ptr) {
-		//	return ptr;
-		//}
-	};
-
-	struct IntersectionPoint : Intersection {
-		/* single point of intersection connecting multiple elements?
-		* point + point (technically)
-		* curve + point
-		* curve + curve
-		* curve + surface (not subspace)
-		*/
-		// should this be a map? some kind of bidirectional map?
-		std::vector<int> elements;
-		std::vector<Vector3f> uvns; // n will always be zero but just for consistency
-		//std::map<int, Vector3f> elUVNMap;
-		Vector3f pos;
-
-		//virtual IntersectionPoint* cast(Intersection* ptr) {
-		//	return static_cast<IntersectionPoint*>(ptr);
-		//}
-	};
-
-	struct IntersectionCurve : Intersection {
-		/* curve region
-		* curve + subcurve
-		* surface + surface
-		* 
-		* man I wish I knew a better way to structure this
-		* 
-		*/
-		std::vector<int> elements;
-		std::vector<std::vector<Vector3f>> uvns;
-		bez::CubicBezierPath curve;
-
-		//virtual IntersectionCurve* cast(Intersection* ptr) {
-		//	return static_cast<IntersectionCurve*>(ptr);
-		//}
-	};
-
-	/* maybe these intersection references should be stored on
-	dense elements - 
-	might make sense to update/cache them as needed
-	not having python dicts order and associativity in the same object 
-	is doing my head in
-	*/
-	
-	/* predicate object to pass to std::sort, to bundle a 
-	sortable value in a tuple of attached values
-	*/
-	template <int kIndex=0>
-	struct TupleSorter {
-
-		template<typename tupleT>
-		bool operator()(const tupleT& left, const tupleT& right) {
-			return std::get<kIndex>(left) < std::get<kIndex>(right);
-			//return left.second < right.second;
-		}
-	};
-
-	template <typename containerT, int kIndex=0>
-	static void sortTupleContainer(containerT& cont) {
-		std::sort(cont.begin(), cont.end(), TupleSorter<kIndex>());
-	}
-
-	template <typename kIndex, typename kT, typename containerT>
-	static int indexForTupleValue(containerT& container, kT& key) {
-		/* for a container with tuple values, check for the given key
-		value - return the first index that matches, or -1
-
-		for small sequences this is fine
-		*/
-		int i = 0;
-		for (auto& item : container) {
-			if (std::get<kIndex>(item) == key) {
-				return i;
-			}
-			i++;
-		}
-		return -1;
-	}
-
-	//struct GraphVisitor;
-	//struct GraphVisitor::VisitHistory;
-
-
-	//struct HaltPred {
-	//	/* return true if iteration should halt
-	//	*/
-	//	bool operator()(int id) {
-	//		return false;
-	//	}
-	//	bool operator()(std::vector<int> idPath) {
-	//		return false;
-	//	}
-	//};
-
-
-
-	//template<
-	//	typename NextIdsPredT=NextIdsPred
-	//	//typename HaltPredT=HaltPred
-	//>
-	struct GraphVisitor {
-
-		constexpr static int kDepthFirst = 0;
-		constexpr static int kBreadthFirst = 1;
-
-		struct VisitHistory {
-			std::vector<std::vector<int>>& nodePaths;
-			std::vector<std::unordered_set<int>>& generations;
-
-			VisitHistory(std::vector<std::vector<int>>& nodePaths_,
-				std::vector<std::unordered_set<int>>& generations_
-			) :
-				nodePaths(nodePaths_), generations(generations_)
-			{
-			}
-		};
-
-
-		template<
-			typename VisitPredFnT,
-			typename NextIdsPredFnT,//=NextIdsPredT,
-			typename ExtraT
-			// HaltPredFnT=HaltPredT
-		>
-		void visit(
-			std::vector<std::vector<int>>& nodePaths,
-			std::vector<std::unordered_set<int>>& generations,
-			VisitPredFnT& visitPred,
-			NextIdsPredFnT& nextIdsPred,
-			ExtraT extraData = nullptr,
-			//HaltPredFnT& haltPred,
-			int mode = kDepthFirst
-			
-		) {
-			/* we expect nodePaths of the form
-			[ [start node id], [other start node id], ... ] etc
-			- array will be populated throughout function
-			*/
-			using namespace std;
-			
-			switch (mode) {
-			case kDepthFirst: {
-				/* DFS loop */
-				deque<vector<int>> pathsToVisit(nodePaths.begin(), nodePaths.end());
-				while (pathsToVisit.size()) { /* TODO: can probably handle this with indices too*/
-					VisitHistory h(nodePaths, generations);
-					vector<int>& currentPath = pathsToVisit.back();
-					visitPred(currentPath, h, extraData);
-
-					std::vector<int> nextNodes = nextIdsPred(
-						currentPath,
-						h,
-						extraData
-						);
-					pathsToVisit.pop_back();
-					for (int n = 0; n < static_cast<int>(nextNodes.size()); n++) {
-						pathsToVisit.push_back(currentPath);
-						pathsToVisit.back().push_back(nextNodes[n]);
-
-						nodePaths.push_back(pathsToVisit.back());
-					}
-				}
-				return;
-				break;
-			}
-			case kBreadthFirst: {
-				/* BFS loop 
-				trying something here with paths - 
-				instead of the normal stack of nodes to visit, just store
-				indices into the record of node paths?
-				*/
-				bool uniquePaths = true;
-
-				int genStartIndex = 0;
-				int genEndIndex = static_cast<int>(nodePaths.size());
-				while (genStartIndex > genEndIndex) {
-					generations.emplace_back(
-						nodePaths.begin() + genStartIndex, 
-						nodePaths.end());
-
-					std::unordered_set<int> newToVisit;
-					for (int i = 0; i < genEndIndex - genStartIndex; i++) {
-						vector<int>& nodePath = nodePaths[genStartIndex + i];
-						VisitHistory h(nodePaths, generations);
-						VisitHistory h(
-							nodePath,
-							h,
-							extraData
-						);
-
-						visitPred(nodePath);
-						vector<int> nextNodes = nextIdsPred(
-							nodePath,
-							h,
-							extraData
-						);
-
-						/* don't do any checking or logic around discarding unique/non-unique 
-						node paths here - leave all that to the predicate
-						
-						copy the current path, but add new node destinations to it
-						*/
-						nodePaths.insert(nodePaths.end(), nodePath);
-						for (int n = 0; n < static_cast<int>(nextNodes.size()); n++) {
-							nodePaths[genEndIndex + n].push_back(nextNodes[n]);
-						}
-					}
-					genStartIndex = genEndIndex;
-					genEndIndex = static_cast<int>(nodePaths.size()); /* probably don't need to manage separate indices here*/
-				}
-				return;
-			}
-			}
-		}
-	};
-
-
-	struct NextIdsPred {
-		/* return next ids for given graph element
-		*/
-
-
-		/* optionally pass in whole node path up to this one - last in vector*/
-		template< typename ExtraT >
-		std::vector<int> operator()(
-			std::vector<int>& idPath,
-			GraphVisitor& visitor,
-			GraphVisitor::VisitHistory& history,
-			ExtraT = nullptr
-			) {
-			/*
-			idPath: vector of nodes from source, including this one
-
-			return vector of new DIRECT destinations from this node -
-			externally these will be added on to paths
-			*/
-			std::vector<int> result;
-			return result;
-		}
-	};
-
-	struct VisitPred {
-		/* do any actual operation on node -
-		* UNSURE if this should just be the same object as NextIdsPred
-		*/
-
-
-		/* optionally pass in whole node path up to this one - last in vector*/
-		template< typename ExtraT >
-		void operator()(
-			std::vector<int>& idPath,
-			GraphVisitor& visitor,
-			GraphVisitor::VisitHistory& history,
-			ExtraT = nullptr
-			) {
-			return;
-		}
-	};
-
-
-
-
-	/* each node only visited once in each generation - 
-	but multiple paths may lead to it*/
-
-	/* ( u, other edge gId, intersectionPoint id )*/
-	using EdgeEdgePoint = std::tuple<float, int, int>;
-
-	struct EdgeIntersectionMap {
-		/* intersection map for a single edge - only points
-		*/
-		
-	};
-
-
-	struct IntersectionRecord {
-		/*
-		* making progress - setting all maps to use indices so intersectionRecord can be copied more easily
-		* although merging manifolds is still going to be a massive hassle
-		* 
-		* we duplicate a lot of data here, once everything's working, see if we can unify with the driver structs
-		*/
-		std::vector<IntersectionPoint> points;
-		std::vector<IntersectionCurve> curves;
-
-
-
-		std::vector<std::vector<EdgeEdgePoint>> edgeEdgePointVecs;
-
-		// map of {element index :  
-		std::map < int, 
-			//std::map<Vector3i, 
-			//	//IntersectionPoint*
-			//	int
-			//>
-			Vector3iMap<int>
-		> elUVNPointMap;
-
-		/* want some way to say 'show me all elements possibly intersecting this one'
-		*/
-		std::map< int, // from el index
-			std::map< int, // to el index
-				std::vector< //separate intersections between these two elements
-					//std::pair<IntersectionPoint*, IntersectionCurve*> // either point or curve
-					std::pair<int, int> // dense index, type of index
-		>>> elMap;
-
-		/* TODO: can we sort elMap by uvn somehow */
-
-		//std::map< Vector3i, IntersectionPoint* > posPointMap;
-		//std::map< Vector3i, int > posPointMap;
-		Vector3iMap<int> posPointMap;
-
-		IntersectionPoint* newPoint() {
-			int newIdx = static_cast<int>(points.size());
-			points.emplace_back();
-			points[newIdx].index = newIdx;
-			return &points[newIdx];
-		}
-
-		IntersectionCurve* newCurve() {
-			int newIdx = static_cast<int>(curves.size());
-			curves.emplace_back();
-			curves[newIdx].index = newIdx;
-			curves[newIdx].type = Intersection::EDGE;
-			return &curves[newIdx];
-		}
-
-		IntersectionPoint* getPointByVectorPosition(Vector3f worldPos, bool create = false);
-		IntersectionPoint* getPointByElUVN(int gId, Vector3f uvn, bool create = false);
-
-		std::vector<
-			std::pair<IntersectionPoint*, IntersectionCurve*>
-			> getIntersectionsBetweenEls(int gIdA, int gIdB);
-
-		std::vector<
-			std::pair<IntersectionPoint*, IntersectionCurve*>
-		> getIntersectionsBetweenEls(int gIdA, std::vector<int> gIdsB);
-
-		void _sortElMap();
-	};
 
 	struct ElementPath {
 		/* index-wise path to get from one element to another. 
@@ -556,6 +207,78 @@ namespace strata {
 		std::unordered_map<std::string, SPointData> pDataMap = {};
 		std::unordered_map<std::string, SEdgeData> eDataMap = {};
 		std::unordered_map<std::string, SFaceData> fDataMap = {};
+
+		std::vector<Vertex> vertices;
+		std::vector<HEdge> hedges;
+		std::unordered_map<int, // one edge 
+			////std::tuple<int, int, bool, bool, float, float>,  /* inEdge, outEdge, inEdgeFlip, outEdgeFlip */
+			//std::tuple<int, int>,  /* inHedge, outHedge */
+			//int
+			std::unordered_map<int, // other edge
+				std::vector<int>> // all vertices formed by their intersections
+		> vertexMap; // is this insane
+
+		/*
+		{
+			edgeA : {
+				edgeB : {
+					[ vertices ] ??? YES just do this. just do this and move on.
+					}
+				}
+		
+		edgeA : {
+			uvnA : {
+				edgeB : {
+					[ vertices ] ???
+					}
+				}
+			}
+
+
+		*/
+
+
+		Vertex* getVertex(int vtxId) {
+			return &vertices[vtxId];
+		}
+		
+		Vertex* getVertex(
+			int eA, float uA, bool dirA,
+			int eB, float uB, bool dirB,
+			int iPoint=-1
+		) {
+			auto foundA = vertexMap.find(eA);
+			if (foundA != vertexMap.end()) {
+				auto foundB = foundA->second.find(eB);
+				if (foundB != foundA->second.end()) {
+					for (int vtxId : foundB->second) {
+						Vertex& vtx = vertices[vtxId];
+						if (EQ(vtx.edgeUs[0], uA) && EQ(vtx.edgeUs[1], uB)
+							&& EQ(vtx.edgeFlips[0], dirA) && EQ(vtx.edgeFlips[1], dirB)
+							) 
+						{
+							return &vertices[vtxId];
+						}
+					}
+				}
+			}
+			/* not found, add a new vertex*/
+			int newIdx = static_cast<int>(vertices.size());
+			Vertex newVtx{
+				newIdx,
+				{eA, eB},
+				{uA, uB},
+				{dirA, dirB},
+				iPoint
+			};
+			vertices.push_back(newVtx);
+			vertexMap[eA][eB].push_back(newIdx);
+			return &vertices[newIdx];
+		}
+
+		HEdge* hedge(int hId) {
+			return &hedges[hId];
+		}
 
 		std::unordered_map<StrataName, SGroup> groupMap = {};
 

@@ -25,24 +25,25 @@ IntersectionPoint* IntersectionRecord::getPointByVectorPosition(Vector3f worldPo
 	}
 	return nullptr;
 }
-IntersectionPoint* IntersectionRecord::getPointByElUVN(int gId, Vector3f uvn, bool create) {
-	create = false; // don't have enough information to create passed into this function
-	Vector3i vecKey = toKey(uvn);
-	auto found = elUVNPointMap.find(gId);
-	if (found != elUVNPointMap.end()) {
-		auto foundPt = found->second.find(vecKey);
-		if (foundPt != found->second.end()) {
-			return &points[foundPt->second];
-		}
-	}
-	if (create) {
-		int newIdx = static_cast<int>(points.size());
-		points.emplace_back();
-		elUVNPointMap[gId][vecKey] = newIdx;
-		return &points[newIdx];
-	}
-	return nullptr;
-}
+//IntersectionPoint* IntersectionRecord::getPointByElUVN(int gId, Vector3f uvn, bool create) {
+//	create = false; // don't have enough information to create passed into this function
+//	Vector3i vecKey = toKey(uvn);
+//	auto found = elUVNPointMap.find(gId);
+//	if (found != elUVNPointMap.end()) {
+//		auto foundPt = found->second.find(vecKey);
+//		if (foundPt != found->second.end()) {
+//			return &points[foundPt->second];
+//		}
+//	}
+//	if (create) {
+//		int newIdx = static_cast<int>(points.size());
+//		points.emplace_back();
+//		elUVNPointMap[gId][vecKey] = newIdx;
+//		return &points[newIdx];
+//	}
+//	return nullptr;
+//}
+
 std::vector<
 	std::pair<IntersectionPoint*, IntersectionCurve*>
 > IntersectionRecord::getIntersectionsBetweenEls(int gIdA, int gIdB) {

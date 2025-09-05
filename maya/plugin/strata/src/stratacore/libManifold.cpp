@@ -77,6 +77,9 @@ Status& _updatePointDriverIntersections(
 	IntersectionRecord& record//,
 	//IntersectionPoint* ip
 ) {
+	/* called on new point (el)
+	* check if any elements cross through this position 
+	*/
 	/* only called when we know for sure point has a driver */
 	SPointData& pData = manifold.pDataMap[el->name];
 	IntersectionPoint* ptr = record.getPointByVectorPosition(pData.finalMatrix.translation()); 
@@ -85,12 +88,14 @@ Status& _updatePointDriverIntersections(
 	//SPointDriverData& driverData = pData.driverData; // only single driver for points
 
 	if(ptr == nullptr){
-		ptr = record.newPoint();
-		ptr->pos = pData.finalMatrix.translation();
+		ptr = record.newPoint(pData.finalMatrix.translation());
+		//ptr->pos = pData.finalMatrix.translation();
+		//record.posPointMap[toKey(pData.finalMatrix.translation())] = ptr->index;
+
 		//ptr->elUVNMap[el->globalIndex] = Vector3f(0, 0, 0);
-		ptr->elements.push_back(el->globalIndex);
-		ptr->uvns.push_back(Vector3f(0, 0, 0));
-		record.posPointMap[toKey(pData.finalMatrix.translation())] = ptr->index;
+		//ptr->elements.push_back(el->globalIndex);
+		//ptr->uvns.push_back(Vector3f(0, 0, 0));
+		ptr->elUVNMap[el->globalIndex].push_back(Vector3f(0, 0, 0)); /* this point's coord for this intersection is 0,0,0*/
 
 	}
 	record.elUVNPointMap[el->globalIndex][Vector3i(0, 0, 0)] = ptr->index; //uvns on a point are zero
@@ -103,12 +108,8 @@ Status& _updatePointDriverIntersections(
 
 	switch (driverEl->elType) {
 	case SElType::point: { // point-point intersection, just a single point
-		/*
-		*/
 
-		ptr->elements.push_back(driverEl->globalIndex);
-		ptr->uvns.push_back(Vector3f(0, 0, 0));
-		//ptr->elUVNMap[driverEl->globalIndex] = Vector3f(0, 0, 0);
+		ptr->elUVNMap[driverEl->globalIndex].push_back(Vector3f(0, 0, 0));
 		record.elUVNPointMap[driverEl->globalIndex][Vector3i(0, 0, 0)] = ptr->index;
 
 		record.elMap[el->globalIndex][driverEl->globalIndex].push_back({ ptr->index, Intersection::POINT });
@@ -117,18 +118,25 @@ Status& _updatePointDriverIntersections(
 		return s;
 	}
 	case SElType::edge: {
-		/* point-curve
+		/* edge driving point
 		*/
 		SEdgeData& dEData = manifold.eDataMap[driverEl->name];
-		auto found = std::find(ptr->uvns.begin(), ptr->uvns.end(), driverData.uvn);
-		/* check for exact coord on driver object*/
-		if (found == ptr->uvns.end()) {
-			/* I THINK this should be robust to degenerate cases like edges crossing over themselves
-			* at exactly this point
-			*/
-			ptr->elements.push_back(driverEl->globalIndex);
-			ptr->uvns.push_back(driverData.uvn);
+
+		auto found = ptr->elUVNMap.find(driverEl->globalIndex);
+		if (found == ptr->elUVNMap.end()) { /* edge not already included in point*/
+			ptr->elUVNMap.insert({ driverEl->globalIndex, {driverData.uvn} });
 		}
+		else {
+			/* check if edge already includes this point -
+			maybe edge loops back on itself multiple times
+			*/
+			
+			auto newFound = std::find(found->second.begin(), found->second.end(), driverData.uvn);
+			if (newFound == found->second.end()) {
+				found->second.push_back(driverData.uvn);
+			}
+		}
+
 		record.elUVNPointMap[driverEl->globalIndex][toKey(driverData.uvn)] = ptr->index;
 
 		record.elMap[el->globalIndex][driverEl->globalIndex].push_back({ ptr->index, Intersection::POINT });
@@ -164,17 +172,17 @@ Status& _updateEdgeDriverIntersections(
 			//	driverData.pos()));
 			//if (found == record.posPointMap.end()) { /* add point driver to record */
 			if(ptr == nullptr){
-				ptr = record.newPoint();
-				record.posPointMap[toKey(driverData.pos())] = ptr->index;
+				ptr = record.newPoint(driverData.pos());
+
 				// add driver
-				ptr->elements.push_back(driverEl->globalIndex);
-				ptr->pos = driverData.pos();
-				ptr->uvns.push_back(driverData.uvn);
+				ptr->elUVNMap[driverEl->globalIndex].push_back(driverData.uvn);
+				
 			}
 
 			/* add edge point at UVN*/
-			ptr->elements.push_back(el->globalIndex);
-			ptr->uvns.push_back(Vector3f(driverData.uOnEdge, 0, 0));
+			/*ptr->elements.push_back(el->globalIndex);
+			ptr->uvns.push_back(Vector3f(driverData.uOnEdge, 0, 0));*/
+			ptr->elUVNMap[el->globalIndex].push_back(Vector3f(driverData.uOnEdge, 0, 0));
 
 			/* the reason the IntersectionPoint / IntersectionCurve feels less fluid here
 			than the StrataElement / SPointData / SEdgeData system, is that here
@@ -192,7 +200,7 @@ Status& _updateEdgeDriverIntersections(
 			SEdgeData& dEData = manifold.eDataMap[driverEl->name];
 			IntersectionPoint* ptr = record.getPointByVectorPosition(driverData.pos());
 			if(ptr == nullptr){
-				ptr = record.newPoint();
+				ptr = record.newPoint(driverData.pos());
 				record.posPointMap[toKey(driverData.pos())] = ptr->index;
 				// add driver
 				ptr->elements.push_back(driverEl->globalIndex);

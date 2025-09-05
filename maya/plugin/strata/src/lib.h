@@ -72,6 +72,41 @@ namespace strata {
 		return static_cast<int>(std::distance(vec.begin(), found));
 	}
 
+	/* predicate object to pass to std::sort, to bundle a
+	sortable value in a tuple of attached values
+	*/
+	template <int kIndex = 0>
+	struct TupleSorter {
+
+		template<typename tupleT>
+		bool operator()(const tupleT& left, const tupleT& right) {
+			return std::get<kIndex>(left) < std::get<kIndex>(right);
+			//return left.second < right.second;
+		}
+	};
+
+	template <typename containerT, int kIndex = 0>
+	static void sortTupleContainer(containerT& cont) {
+		std::sort(cont.begin(), cont.end(), TupleSorter<kIndex>());
+	}
+
+	template <typename kT, typename containerT, int kIndex = 0>
+	static int indexForTupleValue(containerT& container, kT& key) {
+		/* for a container with tuple values, check for the given key
+		value - return the first index that matches, or -1
+
+		for small sequences this is fine
+		*/
+		int i = 0;
+		for (auto& item : container) {
+			if (std::get<kIndex>(item) == key) {
+				return i;
+			}
+			i++;
+		}
+		return -1;
+	}
+
 	/**
 	 * Argsort(currently support ascending sort)
 	 * @tparam T array element type

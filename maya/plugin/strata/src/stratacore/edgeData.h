@@ -127,6 +127,17 @@ namespace strata {
 
 		Eigen::MatrixX3f finalPoints = {}; // densely sampled final points in worldspace - use for querying
 
+		std::vector<int> vertices = {}; 
+		/* LEAVE IT LIKE THIS,
+		KEEP TRACK OF HOW IT'S USED IN TRAVERSAL.
+		RESTRUCTURE IF BENEFICIAL
+		*/
+		/* TEST 
+		should vertices be stored on edges by UVN? vertices mapping to output edges?
+		iMap already has proper intersection information
+		*/
+		//Vector3iUMap<int> vertices;
+
 		int subspaceDriver = -1;
 
 		int _bufferStartIndex = -1;

@@ -57,6 +57,8 @@ namespace strata {
 
 	//struct ExpValue;
 
+
+
 	struct SElement {
 		// whenever an element is added to manifold, during graph eval, 
 		// that element is IMMUTABLE from then on, within that version of the graph
@@ -102,6 +104,19 @@ namespace strata {
 			//name = elName;
 			//elType = t;
 		};
+
+		/*  T O D O :
+		intersection methods below aren't useful, we know now the complex vertex stuff 
+		needed to find proper rings, boundaries etc
+
+		this object can PROBABLY be reduced to 
+		- name
+		- type
+		- global index
+		- elIndex
+
+		- drivers
+		*/
 
 
 		// neighbours do not include child / driven elements

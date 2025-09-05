@@ -14,6 +14,7 @@ get all the STL stuff like this without unneeded header dependencies?
 #include "../status.h"
 #include "../macro.h"
 
+#include "../libEigen.h" // should we also put spatial functions in here?
 //#include "manifold.h"
 //#include "libManifold.h"
 
@@ -30,6 +31,8 @@ namespace strata {
 		SGroup* grp,
 		std::vector<std::string>& edgeNames
 	);
+
+	float evalBezPatch
 
 }
 
