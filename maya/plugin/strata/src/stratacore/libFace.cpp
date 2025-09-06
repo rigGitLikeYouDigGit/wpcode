@@ -73,7 +73,7 @@ should this be a double-layer map again?
 		vertices.emplace_back();
 		vertices.back().index = newIndex;
 		vertices.back().edgeIds = { eA, eB };
-		vertices.back().edgeFlips = { flipA, flipB };
+		vertices.back().edgeDirs = { flipA, flipB };
 		vertices.back().edgeUs = { uA, uB };
 		vertexMap.insert({ { eA, eB, flipA, flipB }, &vertices.back() });
 		return &vertices.back();
@@ -142,7 +142,7 @@ struct EdgePathNextIdsPred : NextIdsPred {
 		/* get current edge we're travelling along*/
 		int outEdge = vertex.edgeIds[1]; 
 		/* check if we're travelling backwards*/
-		bool outEdgeFlip = vertex.edgeFlips[1];
+		bool outEdgeFlip = vertex.edgeDirs[1];
 		/* u coord on current edge of origin vertex*/
 		float origU = vertex.edgeUs[1];
 

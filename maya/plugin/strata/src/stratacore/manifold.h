@@ -258,7 +258,7 @@ namespace strata {
 					for (int vtxId : foundB->second) {
 						Vertex& vtx = vertices[vtxId];
 						if (EQ(vtx.edgeUs[0], uA) && EQ(vtx.edgeUs[1], uB)
-							&& EQ(vtx.edgeFlips[0], dirA) && EQ(vtx.edgeFlips[1], dirB)
+							&& EQ(vtx.edgeDirs[0], dirA) && EQ(vtx.edgeDirs[1], dirB)
 							) 
 						{
 							return &vertices[vtxId];

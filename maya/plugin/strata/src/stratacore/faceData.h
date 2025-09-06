@@ -51,10 +51,17 @@ namespace strata {
 		/* normal at centre of face - all subpatch curves must end with this as their normal*/
 
 		/* vector of corner vertex indices */
-		std::vector<std::vector<int>> vertices;
+		//std::vector<std::vector<int>> vertices;
+		std::vector<int> vertices;
 		/* {index, startU, endU} of each edge defining face
 		*/
-		std::vector<std::tuple<int, float, float>> edgeSpans;
+		//std::vector<std::tuple<int, float, float>> edgeSpans;
+
+		/* how much data should faces store in themselves? copy subcurves in here directly?
+		otherwise we need to pass in a manifold object to look up edges from vertices - 
+		is that fine?
+		it's probably fine*/
+
 
 		/* tangent vectors at midpoints of driver edges
 		multiply and average to find centrePos
@@ -65,6 +72,10 @@ namespace strata {
 
 		aabb::AABB getAABB();
 
+		int nBorderEdges() {
+			return static_cast<int>(vertices.size());
+		}
+		std::tuple<int, float, float> edgeSpan(StrataManifold& manifold, int borderIndex);
 	};
 
 }

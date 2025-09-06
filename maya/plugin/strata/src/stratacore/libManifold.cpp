@@ -191,27 +191,66 @@ Status& _updateEdgeVertices(
 					* (B, A) -> (0, 1), (1, 0)
 					* 
 					* logic works - now filter if edge ends at this point, corner cases
+					* 
+					* don't have the brainpower to do it elegantly, explicitly handle each permutation
+					* I found a real-world usecase for fizzbuzz
 					*/
-					manifold.getVertex(
-						el->globalIndex, srcUVN.x(), false,
-						otherEl->globalIndex, dstUVN.x(), false,
-						p.index
-					);
-					manifold.getVertex(
-						el->globalIndex, srcUVN.x(), true,
-						otherEl->globalIndex, dstUVN.x(), true,
-						p.index
-					);
-					manifold.getVertex(
-						otherEl->globalIndex, dstUVN.x(), false,
-						el->globalIndex, srcUVN.x(), true,
-						p.index
-					);
-					manifold.getVertex(
-						otherEl->globalIndex, dstUVN.x(), true,
-						el->globalIndex, srcUVN.x(), false,
-						p.index
-					);
+
+					bool srcStart = (srcUVN.x() < 0.0001);
+					bool srcEnd = (srcUVN.x() > 0.9999);
+					bool dstStart = (dstUVN.x() < 0.0001);
+					bool dstEnd = (dstUVN.x() > 0.9999);
+
+					if ( srcStart && dstStart ) {
+						/* both only at start point*/
+						manifold.getVertex(
+							el->globalIndex, srcUVN.x(), true,
+							otherEl->globalIndex, dstUVN.x(), true,
+							p.index
+						);
+						continue;
+					}
+
+					if (srcEnd && dstEnd) {
+						/* both only at end point*/
+						manifold.getVertex(
+							el->globalIndex, srcUVN.x(), false,
+							otherEl->globalIndex, dstUVN.x(), false,
+							p.index
+						);
+						continue;
+					}
+					
+					if (!(srcEnd && dstEnd)) { // not both at end, add forwards for both
+						manifold.getVertex(
+							el->globalIndex, srcUVN.x(), true,
+							otherEl->globalIndex, dstUVN.x(), true,
+							p.index
+						);
+					}
+					if (!(srcStart && dstStart)) { // not both at start, add backwards for both
+						manifold.getVertex(
+							el->globalIndex, srcUVN.x(), false,
+							otherEl->globalIndex, dstUVN.x(), false,
+							p.index
+						);
+					}
+					if (!srcStart) { /* not source at start, add backwards for source*/
+						manifold.getVertex(
+							otherEl->globalIndex, dstUVN.x(), true,
+							el->globalIndex, srcUVN.x(), false,
+							p.index
+						);
+					}
+					
+					if (!dstStart) { /* not dst at start, add backwards for dst*/
+						manifold.getVertex(
+							otherEl->globalIndex, dstUVN.x(), false,
+							el->globalIndex, srcUVN.x(), true,
+							p.index
+						);
+					}
+
 				}
 			}
 
