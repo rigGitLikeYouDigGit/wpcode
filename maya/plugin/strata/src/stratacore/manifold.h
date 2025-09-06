@@ -247,6 +247,10 @@ namespace strata {
 			int eB, float uB, bool dirB,
 			int iPoint=-1
 		) {
+			/* for now, we only add the 'directed' vertex from
+			eA to eB when created here - 
+			no attempt to also add the same vertex from eB to eA
+			*/
 			auto foundA = vertexMap.find(eA);
 			if (foundA != vertexMap.end()) {
 				auto foundB = foundA->second.find(eB);

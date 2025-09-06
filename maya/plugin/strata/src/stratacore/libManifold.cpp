@@ -149,10 +149,83 @@ Status& _updatePointDriverIntersections(
 	}
 
 
-Status& _updateEdgeDriverIntersections(
+Status& _updateEdgeVertices(
 	Status& s,
 	StrataManifold& manifold,
 	SElement* el,
+	IntersectionRecord& record
+) {
+	/* add any vertices between this edge and any others 
+	* run after updating intersections to be safe
+	*/
+
+	for (auto& p : record.elMap[el->globalIndex]) {
+		/* all elements connected to this edge 
+		*/
+		SElement* otherEl = manifold.getEl(p.first);
+		/* skip if not an edge */
+		if (otherEl->elType != SElType::edge) {
+			continue;
+		}
+		for (auto& otherP : p.second) {
+			/* all intersections between this edge and that element
+			*/
+			/* check intersection type even though it should always be a point between curves*/
+			if (otherP.second != Intersection::POINT) {
+				continue;
+			}
+
+			IntersectionPoint& p = record.points[otherP.first];
+			/* TECHNICALLY if both edges loop back on themselves at this exact point, could have multiple
+			UVNs for each one.
+			At what point do we just say no and slap the user
+			*/
+
+			for (Vector3f& srcUVN : p.elUVNMap[el->globalIndex]) {
+				for (Vector3f& dstUVN : p.elUVNMap[otherEl->globalIndex]) {
+
+					/* update both entries in vertex map - might waste data but it's easier to check
+					* for directions, only important that each ordered pair of edge indices gets opposite sets of vertex orientations
+					* 
+					* (A, B) -> (0, 0), (1, 1)
+					* (B, A) -> (0, 1), (1, 0)
+					* 
+					* logic works - now filter if edge ends at this point, corner cases
+					*/
+					manifold.getVertex(
+						el->globalIndex, srcUVN.x(), false,
+						otherEl->globalIndex, dstUVN.x(), false,
+						p.index
+					);
+					manifold.getVertex(
+						el->globalIndex, srcUVN.x(), true,
+						otherEl->globalIndex, dstUVN.x(), true,
+						p.index
+					);
+					manifold.getVertex(
+						otherEl->globalIndex, dstUVN.x(), false,
+						el->globalIndex, srcUVN.x(), true,
+						p.index
+					);
+					manifold.getVertex(
+						otherEl->globalIndex, dstUVN.x(), true,
+						el->globalIndex, srcUVN.x(), false,
+						p.index
+					);
+				}
+			}
+
+
+		}
+	}
+
+	return s;
+}
+
+Status& _updateEdgeDriverIntersections(
+	Status& s,
+	StrataManifold& manifold,
+	SElement* el, // edge element
 	IntersectionRecord& record
 	) {
 	SEdgeData& eData = manifold.eDataMap[el->name];
@@ -166,30 +239,14 @@ Status& _updateEdgeDriverIntersections(
 			/* I think this should be guaranteed to be found already 
 			as an IntersectionPoint, no?
 			*/
-			//IntersectionPoint* ptr = nullptr;
 			IntersectionPoint* ptr = record.getPointByVectorPosition(driverData.pos());
-			//auto found = record.posPointMap.find(toKey(
-			//	driverData.pos()));
-			//if (found == record.posPointMap.end()) { /* add point driver to record */
 			if(ptr == nullptr){
 				ptr = record.newPoint(driverData.pos());
-
-				// add driver
-				ptr->elUVNMap[driverEl->globalIndex].push_back(driverData.uvn);
-				
 			}
 
-			/* add edge point at UVN*/
-			/*ptr->elements.push_back(el->globalIndex);
-			ptr->uvns.push_back(Vector3f(driverData.uOnEdge, 0, 0));*/
+			// add driver
+			ptr->elUVNMap[driverEl->globalIndex].push_back(driverData.uvn);
 			ptr->elUVNMap[el->globalIndex].push_back(Vector3f(driverData.uOnEdge, 0, 0));
-
-			/* the reason the IntersectionPoint / IntersectionCurve feels less fluid here
-			than the StrataElement / SPointData / SEdgeData system, is that here
-			we don't separate the type-dependent and independent attributes into separate 
-			types.
-			Maybe we should unify it? It'll make the buffers more complicated though
-			*/
 
 			// bidirectional lookups between elements
 			record.elMap[el->globalIndex][driverEl->globalIndex].push_back({ ptr->index, Intersection::POINT });
@@ -201,17 +258,11 @@ Status& _updateEdgeDriverIntersections(
 			IntersectionPoint* ptr = record.getPointByVectorPosition(driverData.pos());
 			if(ptr == nullptr){
 				ptr = record.newPoint(driverData.pos());
-				record.posPointMap[toKey(driverData.pos())] = ptr->index;
-				// add driver
-				ptr->elements.push_back(driverEl->globalIndex);
-				ptr->pos = driverData.pos();
-				ptr->uvns.push_back(driverData.uvn);
+
 			}
-
-
-			/* add edge point at UVN*/
-			ptr->elements.push_back(el->globalIndex);
-			ptr->uvns.push_back(Vector3f(driverData.uOnEdge, 0, 0));
+			// add driver
+			ptr->elUVNMap[driverEl->globalIndex].push_back(driverData.uvn);
+			ptr->elUVNMap[el->globalIndex].push_back({ driverData.uOnEdge, 0, 0 });
 
 			// bidirectional lookups between elements
 			record.elMap[el->globalIndex][driverEl->globalIndex].push_back({ ptr->index, Intersection::POINT });
@@ -220,6 +271,11 @@ Status& _updateEdgeDriverIntersections(
 		}
 		}
 	}
+	s = _updateEdgeVertices(s,
+		manifold,
+		el,
+		record
+	);
 	return s;
 }
 
