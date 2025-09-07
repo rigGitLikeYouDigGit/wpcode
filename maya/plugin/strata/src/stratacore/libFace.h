@@ -32,7 +32,7 @@ namespace strata {
 		std::vector<std::string>& edgeNames
 	);
 
-	float evalBezPatch
+	//float evalBezPatch
 
 }
 

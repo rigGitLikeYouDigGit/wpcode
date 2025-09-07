@@ -2,6 +2,8 @@
 
 #include "edgeData.h"
 #include "../libEigen.h"
+#include "vertexData.h"
+#include "manifold.h"
 
 using namespace strata;
 
@@ -55,6 +57,13 @@ Status& SEdgeData::getSubData(Status& s, SEdgeData& target, float lowU, float hi
 	target.finalCurve = splitBezPath(finalCurve, lowU, highU);
 	target.finalNormals = resampleVectorArray(target.finalNormals, lowU, highU, target.densePointCount());
 	return s;
+}
+
+void SEdgeData::sortVertices(StrataManifold& manifold) {
+	VertexAlongEdgeSorter sorter;
+	sorter.manifold = &manifold;
+	sorter.alongEdgeId = index;
+	std::sort(vertices.begin(), vertices.end(), sorter);
 }
 
 aabb::AABB SEdgeData::getAABB() {

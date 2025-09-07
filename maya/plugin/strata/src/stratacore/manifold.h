@@ -277,6 +277,11 @@ namespace strata {
 			};
 			vertices.push_back(newVtx);
 			vertexMap[eA][eB].push_back(newIdx);
+			SEdgeData& eDataA = eDataMap[getEl(eA)->name];
+			SEdgeData& eDataB = eDataMap[getEl(eB)->name];
+			eDataA.vertices.push_back(newIdx);
+			eDataB.vertices.push_back(newIdx);
+
 			return &vertices[newIdx];
 		}
 

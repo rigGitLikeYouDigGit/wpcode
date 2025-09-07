@@ -128,6 +128,7 @@ namespace strata {
 		Eigen::MatrixX3f finalPoints = {}; // densely sampled final points in worldspace - use for querying
 
 		std::vector<int> vertices = {}; 
+		bool _verticesSorted = false;
 		/* LEAVE IT LIKE THIS,
 		KEEP TRACK OF HOW IT'S USED IN TRAVERSAL.
 		RESTRUCTURE IF BENEFICIAL
@@ -218,6 +219,7 @@ namespace strata {
 
 		Status& getSubData(Status& s, SEdgeData& target, float lowU, float highU);
 
+		void sortVertices(StrataManifold& manifold);
 
 		aabb::AABB getAABB();
 	};

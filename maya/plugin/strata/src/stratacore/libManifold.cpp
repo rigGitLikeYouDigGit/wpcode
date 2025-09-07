@@ -158,6 +158,7 @@ Status& _updateEdgeVertices(
 	/* add any vertices between this edge and any others 
 	* run after updating intersections to be safe
 	*/
+	SEdgeData& eData = manifold.eDataMap[el->name];
 
 	for (auto& p : record.elMap[el->globalIndex]) {
 		/* all elements connected to this edge 
@@ -167,6 +168,7 @@ Status& _updateEdgeVertices(
 		if (otherEl->elType != SElType::edge) {
 			continue;
 		}
+		bool sortOther = false;
 		for (auto& otherP : p.second) {
 			/* all intersections between this edge and that element
 			*/
@@ -180,7 +182,8 @@ Status& _updateEdgeVertices(
 			UVNs for each one.
 			At what point do we just say no and slap the user
 			*/
-
+			SEdgeData& otherEData = manifold.eDataMap[otherEl->name];
+			otherEData._verticesSorted = false;
 			for (Vector3f& srcUVN : p.elUVNMap[el->globalIndex]) {
 				for (Vector3f& dstUVN : p.elUVNMap[otherEl->globalIndex]) {
 
@@ -196,14 +199,17 @@ Status& _updateEdgeVertices(
 					* I found a real-world usecase for fizzbuzz
 					*/
 
+					
+
 					bool srcStart = (srcUVN.x() < 0.0001);
 					bool srcEnd = (srcUVN.x() > 0.9999);
 					bool dstStart = (dstUVN.x() < 0.0001);
 					bool dstEnd = (dstUVN.x() > 0.9999);
 
+					Vertex* v = nullptr;
 					if ( srcStart && dstStart ) {
 						/* both only at start point*/
-						manifold.getVertex(
+						v = manifold.getVertex(
 							el->globalIndex, srcUVN.x(), true,
 							otherEl->globalIndex, dstUVN.x(), true,
 							p.index
@@ -213,7 +219,7 @@ Status& _updateEdgeVertices(
 
 					if (srcEnd && dstEnd) {
 						/* both only at end point*/
-						manifold.getVertex(
+						v = manifold.getVertex(
 							el->globalIndex, srcUVN.x(), false,
 							otherEl->globalIndex, dstUVN.x(), false,
 							p.index
@@ -222,21 +228,21 @@ Status& _updateEdgeVertices(
 					}
 					
 					if (!(srcEnd && dstEnd)) { // not both at end, add forwards for both
-						manifold.getVertex(
+						v = manifold.getVertex(
 							el->globalIndex, srcUVN.x(), true,
 							otherEl->globalIndex, dstUVN.x(), true,
 							p.index
 						);
 					}
 					if (!(srcStart && dstStart)) { // not both at start, add backwards for both
-						manifold.getVertex(
+						v = manifold.getVertex(
 							el->globalIndex, srcUVN.x(), false,
 							otherEl->globalIndex, dstUVN.x(), false,
 							p.index
 						);
 					}
 					if (!srcStart) { /* not source at start, add backwards for source*/
-						manifold.getVertex(
+						v = manifold.getVertex(
 							otherEl->globalIndex, dstUVN.x(), true,
 							el->globalIndex, srcUVN.x(), false,
 							p.index
@@ -244,20 +250,20 @@ Status& _updateEdgeVertices(
 					}
 					
 					if (!dstStart) { /* not dst at start, add backwards for dst*/
-						manifold.getVertex(
+						v = manifold.getVertex(
 							otherEl->globalIndex, dstUVN.x(), false,
 							el->globalIndex, srcUVN.x(), true,
 							p.index
 						);
 					}
-
 				}
 			}
 
 
 		}
 	}
-
+	/* mark as needing sorting at point of use for building faces*/
+	eData._verticesSorted = false;
 	return s;
 }
 
