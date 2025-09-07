@@ -86,29 +86,6 @@ namespace strata {
 	};
 
 
-
-	struct ElementPath {
-		/* index-wise path to get from one element to another. 
-		
-		stores global indices*/
-		int src;
-		int dst;
-		std::vector<int> backwards; /* vector of elements to go BACKWARDS in src DRIVERS */
-		std::vector<int> forwards; /* vector to go FORWARDS from COMMON ROOT*/
-
-		/* if we have a single backwards entry, DST is a direct driver
-		if we have a single forwards entry SRC is a direct driver
-		*/
-
-		//inline int commonRoot() const {
-		//	// if we have any backwards paths
-		//	if (backwards.size()) {
-		//		return backwards.back();
-		//	}
-		//	return src;
-		//}
-	};
-
 	struct SEdgeSubspaceData {
 		/* test subspace as actual element type?
 		* should we put in inheritance to base class

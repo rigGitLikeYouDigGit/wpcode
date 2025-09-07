@@ -42,6 +42,17 @@ namespace strata {
 	};
 
 	struct SFaceData : SElData {
+		/* NAMING:
+		
+		edge : first-class Strata element
+		border : section of edge contributing to face
+
+
+		currently don't have any kind of SubCurve object decided,
+		so sampling border sections of edges will be verbose
+		*/
+
+
 		//std::string name; // probably generated, but still needed for semantics?
 		std::vector<SEdgeDriverData> driverDatas; // drivers of this edge
 		std::vector<SEdgeSpaceData> spaceDatas; // curves in space of each driver
@@ -53,9 +64,6 @@ namespace strata {
 		/* vector of corner vertex indices */
 		//std::vector<std::vector<int>> vertices;
 		std::vector<int> vertices;
-		/* {index, startU, endU} of each edge defining face
-		*/
-		//std::vector<std::tuple<int, float, float>> edgeSpans;
 
 		/* how much data should faces store in themselves? copy subcurves in here directly?
 		otherwise we need to pass in a manifold object to look up edges from vertices - 
@@ -76,6 +84,13 @@ namespace strata {
 			return static_cast<int>(vertices.size());
 		}
 		std::tuple<int, float, float> edgeSpan(StrataManifold& manifold, int borderIndex);
+
+		std::pair<Vertex*, Vertex*> vtxPair(StrataManifold& man, int borderIndex);
+
+		SEdgeData& eDataForBorder(StrataManifold& man, int borderIndex);
+
+		float map01UCoordToEdge(StrataManifold& man, float u, int vtxA, int vtxB);
+		float map01UCoordToEdge(StrataManifold& man, float u, int borderIndex);
 	};
 
 }

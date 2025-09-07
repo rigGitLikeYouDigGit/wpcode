@@ -25,6 +25,7 @@
 #include "../containers.h"
 //#include "../api.h"
 #include "../lib.h"
+#include "types.h"
 //#include "../libEigen.h"
 
 namespace strata {
@@ -45,7 +46,6 @@ namespace strata {
 
 	enum SElType : short { point, edge, face };
 
-	struct StrataManifold;
 
 	int constexpr stMaxParents = 3;
 
