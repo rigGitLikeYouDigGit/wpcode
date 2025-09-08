@@ -258,6 +258,10 @@ namespace bez
         Eigen::ArrayXf uToLengthMap_;// = nullptr;
         ClosestPointSolver solver_;// = nullptr;
 
+        /* MIGHT BE VERY WRONG TO PUT THIS HERE */
+        Eigen::MatrixX3f finalNormals_ = {}; // worldspace normals 
+
+
         //using thisT::thisT;
         //DECLARE_DEFINE_CLONABLE_METHODS(thisT)
 
@@ -357,6 +361,10 @@ namespace bez
             return getUToLengthMap(N_SAMPLES)[getUToLengthMap(N_SAMPLES).size()];
         }
 
+        Eigen::Affine3f frame(float u);
+
+        float lengthBetween(float uA, float uB);
+
         inline ClosestPointSolver* getSolver() {
             return &solver_;
             //if (solver_ == nullptr) {
@@ -379,6 +387,29 @@ namespace bez
             }
             return base;
         }
+
+    };
+
+    struct BezierSubPath {
+        /* a view of the given subcurve,
+        remapping operations through start/end
+        
+        originally wasn't worth it, but makes code way more readable
+        */
+
+        float uBounds[2] = { 0.0, 1.0 };
+        bool reverse = false;
+        CubicBezierPath& _path;
+
+        BezierSubPath(CubicBezierPath& path_) : _path(path_) {}
+
+        float mapTo(float t);
+        float mapFrom(float t);
+
+        Eigen::Vector3f eval(float t) const;
+
+        Eigen::Affine3f frame(float u);
+
 
     };
 }

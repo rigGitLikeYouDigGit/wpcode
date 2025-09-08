@@ -651,6 +651,24 @@ need to be careful nothing modifies _dir if cached
 		return lerp<T, T>(arr[a], arr[b], t - (arr.size() * t));
 	}
 
+	template <typename T>
+	inline T lerpSampleScalarArr(Eigen::ArrayX<T> arr, T t) {
+		// sample array at a certain interval
+		//float& a;
+
+		if (t >= 1.0) {
+			return arr.tail<1>()[0];
+		}
+		if (t <= 0.0) {
+			return arr[0];
+		}
+		int a;
+		int b;
+		a = floor(arr.size() * t);
+		b = a + 1;
+		return lerp<T, T>(arr[a], arr[b], t - (arr.size() * t));
+	}
+	
 
 	template <typename T>
 	inline T lerpSampleScalarArr(Eigen::VectorX<T> arr, T t, int& lowI, int& highI) {
@@ -913,5 +931,52 @@ need to be careful nothing modifies _dir if cached
 	cov(m1, m2, m3);
 	cov(m1.leftCols<3>(), m2.leftCols<3>(), m3.topLeftCorner<3,3>());
 */
+
+	template<typename vT, typename weightArrT>
+	void weightedSum(std::vector<vT>& values, weightArrT& weights, int n, vT& result, float power = 1.0) {
+		float weightSum = 0.0;
+		for (int i = 0; i < n; i++) {
+			float weight = EQ(power, 1.0) ? weights[i] : pow(weights[i], power);
+			result += values[i] * weight;
+			weightSum += weight;
+		}
+		result /= weightSum;
+	}
+
+	template<typename arrT, typename weightArrT, typename vT>
+	void weightedSum(Eigen::MatrixXf& values, weightArrT& weights, int n, vT& result, float power = 1.0) {
+		float weightSum = 0.0;
+		for (int i = 0; i < n; i++) {
+			float weight = EQ(power, 1.0) ? weights[i] : pow(weights[i], power);
+			result += values.row(i) * weight;
+			weightSum += weight;
+		}
+		result /= weightSum;
+	}
+
+	std::vector<int> gridConnectivityTriIndexBuffer(
+		int columns,
+		int rows
+	) {
+		/* ASSUME THAT
+		vertices laid out linearly, rows first,
+		count goes back to start at each line
+
+		no locality, no optimisation for now
+		*/
+		int nTris = (columns - 1) * (rows - 1) * 2;
+		std::vector<int> result(nTris * 3);
+		int triIndex = 0;
+		for(int i = 0; i < nTris / 2; i++){
+			result[i * 3 * 2] = i;
+			result[i * 3 * 2 + 1] = i + 1;
+			result[i * 3 * 2 + 2] = i + columns;
+
+			result[i * 3 * 2 + 3] = i + 1;
+			result[i * 3 * 2 + 4] = i + columns + 1;
+			result[i * 3 * 2 + 5] = i + columns;
+		}
+		return result;
+	}
 
 }

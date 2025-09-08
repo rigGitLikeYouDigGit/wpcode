@@ -10,6 +10,8 @@
 #include <xmmintrin.h>
 #include <smmintrin.h>
 
+#include "../libEigen.h"
+
 using namespace Eigen;
 
 //#define USE_SIMD_OPTIMIZATION
@@ -729,6 +731,25 @@ namespace bez
         );
     }
 
+
+    Eigen::Affine3f CubicBezierPath::frame(float u) {
+        auto result = Eigen::Affine3f::Identity();
+        Vector3f normal(0, 1, 0);
+        if (finalNormals_.rows() > 0) {
+            /* normals have been built, interpolate here */
+            normal = strata::lerpSampleMatrix<float, 3>(finalNormals_, u);
+        }
+        result.translate(eval(u)).rotate(Eigen::Quaternionf::FromTwoVectors(
+            tangentAt(u), normal
+        ));
+        return result;
+    }
+
+    float CubicBezierPath::lengthBetween(float uA, float uB) {
+        return strata::lerpSampleScalarArr(getUToLengthMap(N_SAMPLES), uB) -
+            strata::lerpSampleScalarArr(getUToLengthMap(N_SAMPLES), uA);
+    }
+
     WorldSpace CubicBezierSpline::EvaluateAt(
         const float t) const
     {
@@ -761,6 +782,24 @@ namespace bez
             result(i) = result(i-1) + (eval(t) - eval(prevT)).norm();
         }
         return result;
+    }
+
+
+    float BezierSubPath::mapTo(float t) {
+        if (reverse) {
+            t = 1.0 - t;
+        }
+        return strata::remap(t, 0.0f, 1.0f, uBounds[0], uBounds[1]);
+    }
+    float BezierSubPath::mapFrom(float t) {
+        if (reverse) {
+            t = 1.0 - t;
+        }
+        return strata::remap(t, uBounds[0], uBounds[1], 0.0f, 1.0f);
+    }
+
+    Affine3f BezierSubPath::frame(float u) {
+        return _path.frame(mapTo(u));
     }
 
 }

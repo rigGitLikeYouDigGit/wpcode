@@ -38,13 +38,23 @@ namespace bez {
 		V = [ v^3, v^2, v, 1 ]
 		*/
 
-		//Eigen::Matrix<float, 16, 3> controlPoints;
-		Eigen::Matrix<float, 16, 4> controlPoints;
 		static const Eigen::Matrix4f Mb;
 
+
+		//Eigen::Matrix<float, 16, 3> controlPoints;
+		Eigen::Matrix4f controlPointsAxes[3];
+
+		CubicBezierPatch(std::vector<Eigen::Vector3f>& controlPoints);
+		CubicBezierPatch(Eigen::Matrix<float, 16, 3>& controlPoints);
+
+		void setControlPoint(int id, Eigen::Vector3f& v);
+		void setControlPoint(int row, int col, Eigen::Vector3f& v);
+
 		Eigen::Vector3f pos(float u, float v);
+		Eigen::Vector3f tanU(float u, float v);
+		Eigen::Vector3f tanV(float u, float v);
 		Eigen::Vector3f normal(float u, float v);
-		Eigen::Vector3f normal(float u, float v, Eigen::Vector3f prevPos);
+		//Eigen::Vector3f normal(float u, float v, Eigen::Vector3f prevPos);
 
 		void frame(float u, float v, Eigen::Affine3f& mat);
 

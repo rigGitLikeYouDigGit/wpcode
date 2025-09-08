@@ -54,22 +54,21 @@ namespace strata {
 
 
 		//std::string name; // probably generated, but still needed for semantics?
-		std::vector<SEdgeDriverData> driverDatas; // drivers of this edge
-		std::vector<SEdgeSpaceData> spaceDatas; // curves in space of each driver
+		std::vector<SFaceDriverData> driverDatas; // drivers of this edge
+		std::vector<SFaceSpaceData> spaceDatas; // curves in space of each driver
 
-		Vector3f centrePos; // central point of this surface
-		Vector3f centreNormal;
+		Affine3f centre;
 		/* normal at centre of face - all subpatch curves must end with this as their normal*/
 
 		/* vector of corner vertex indices */
 		//std::vector<std::vector<int>> vertices;
 		std::vector<int> vertices;
 
-		/* how much data should faces store in themselves? copy subcurves in here directly?
-		otherwise we need to pass in a manifold object to look up edges from vertices - 
-		is that fine?
-		it's probably fine*/
-
+		///* copying curves here so this struct is self contained
+		//with everything we need to draw face.
+		//might be excessive, change later if it helps
+		//*/
+		std::vector<bez::BezierSubPath> borderCurves = {};
 
 		/* tangent vectors at midpoints of driver edges
 		multiply and average to find centrePos
@@ -91,6 +90,20 @@ namespace strata {
 
 		float map01UCoordToEdge(StrataManifold& man, float u, int vtxA, int vtxB);
 		float map01UCoordToEdge(StrataManifold& man, float u, int borderIndex);
+	};
+
+	
+	/* consider how we might store displacement - 
+	* a regular grid for values would probably work, but could we just store "important"
+	* details as individual data points?
+	*/
+	template<typename T>
+	struct FacePrimVar {
+		std::string name;
+
+		Eigen::MatrixX2f coordPoints;
+
+		std::vector<T> pointVals;
 	};
 
 }

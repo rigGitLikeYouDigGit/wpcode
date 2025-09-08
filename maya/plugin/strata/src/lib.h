@@ -72,6 +72,14 @@ namespace strata {
 		return static_cast<int>(std::distance(vec.begin(), found));
 	}
 
+	inline int iNext(int orig, int n) {
+		return (orig + n + 1) % n;
+	}
+	
+	inline int iPrev(int orig, int n) {
+		return (orig + n - 1) % n;
+	}
+
 	/* predicate object to pass to std::sort, to bundle a
 	sortable value in a tuple of attached values
 	*/
@@ -634,6 +642,33 @@ namespace strata {
 	OR resample those values in a cubic spline built on the fly
 	so we still pay cubic cost anyway
 	*/
+
+	int factorial(const int n)
+	{
+		int f = 1;
+		for (int i = 1; i <= n; ++i)
+			f *= i;
+		return f;
+	}
+
+	float binomialCoefficient(int n, int v) {
+		/* 
+		in notation usually
+		(	n	)
+		(		)
+		(	k	)
+		*/
+		return float(factorial(n)) / 
+			float(factorial(v) * factorial(n - v));
+	}
+
+	float bernsteinBasis(int n, int v, float x) {
+		/*
+		see definition at https://en.wikipedia.org/wiki/Bernstein_polynomial
+
+		*/
+		return binomialCoefficient(n, v) * pow(x, v) * pow((1.0f - x), n - v);
+	}
 
 }
 

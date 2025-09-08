@@ -367,3 +367,5 @@ maya/plugin/strata/strata.vcxproj.filters
 maya/plugin/strata/ZERO_CHECK.vcxproj
 maya/plugin/strata/ZERO_CHECK.vcxproj.user
 maya/plugin/output/Maya2023/plug-ins/strata.mll
+maya/plugin/strata/src/lib.h~RF5a0f938.TMP
+*.TMP
