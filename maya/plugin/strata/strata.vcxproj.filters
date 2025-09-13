@@ -1,10 +1,19 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\AABB.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\api.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\bezier\CubicSpline.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\bezier\bezier_curve.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\bezier\bezier_patch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\bezier\composite_bezier_curve.cpp">
@@ -22,10 +31,46 @@
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\dirtyGraph.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\eigtest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\exp\assignAtom.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\exp\callAtom.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\exp\constantAtom.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\exp\expAtom.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\exp\expElCompare.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\exp\expGraph.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\exp\expLex.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\exp\expParse.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\exp\expValue.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\exp\groupAtom.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\exp\nameAtom.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\exp\plusAtom.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\exp\resultAtom.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\lib.cpp">
@@ -37,6 +82,12 @@
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\libramp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\logger.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\mayaNode\frameCurve.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\mayaNode\matrixCurve.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -44,6 +95,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataOpNodeBase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataShapeGeometryOverride.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataShapeNode.cpp">
@@ -67,6 +121,21 @@
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\plugin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratacore\edgeData.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratacore\element.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratacore\faceData.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratacore\intersection.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratacore\libManifold.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratacore\manifold.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -76,44 +145,26 @@
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratacore\opgraph.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratacore\pointData.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratacore\vertexData.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\strataop\elementOp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\strataop\expOp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\strataop\mergeOp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\bezier\math\misc.cpp" />
-    <ClCompile Include="src\bezier\math\tridiagonal.cpp" />
-    <ClCompile Include="src\mayaNode\strataShapeGeometryOverride.cpp" />
-    <ClCompile Include="src\logger.cpp" />
-    <ClCompile Include="src\mayaNode\frameCurve.cpp" />
-    <ClCompile Include="src\eigtest.cpp" />
-    <ClCompile Include="src\api.cpp" />
-    <ClCompile Include="src\strataop\expOp.cpp" />
-    <ClCompile Include="src\exp\expElCompare.cpp" />
-    <ClCompile Include="src\stratacore\libManifold.cpp" />
-    <ClCompile Include="src\stratacore\element.cpp" />
-    <ClCompile Include="src\stratacore\pointData.cpp" />
-    <ClCompile Include="src\stratacore\edgeData.cpp" />
-    <ClCompile Include="src\stratacore\faceData.cpp" />
-    <ClCompile Include="src\AABB.cpp" />
-    <ClCompile Include="src\exp\callAtom.cpp" />
-    <ClCompile Include="src\exp\assignAtom.cpp" />
-    <ClCompile Include="src\exp\expGraph.cpp" />
-    <ClCompile Include="src\exp\expAtom.cpp" />
-    <ClCompile Include="src\exp\expValue.cpp" />
-    <ClCompile Include="src\exp\constantAtom.cpp" />
-    <ClCompile Include="src\exp\resultAtom.cpp" />
-    <ClCompile Include="src\exp\nameAtom.cpp" />
-    <ClCompile Include="src\exp\groupAtom.cpp" />
-    <ClCompile Include="src\exp\plusAtom.cpp" />
-    <ClCompile Include="src\stratacore\face\topo.cpp" />
-    <ClCompile Include="src\stratacore\vertexData.cpp" />
-    <ClCompile Include="src\bezier\bezier_patch.cpp" />
-    <ClCompile Include="src\stratacore\intersection.cpp" />
-    <ClCompile Include="src\stratacore\face\shape.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\AABB.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\MInclude.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -130,6 +181,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\bezier_curve.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\bezier_patch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\composite_bezier_curve.h">
@@ -150,10 +204,43 @@
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\dirtyGraph.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\exp\assignAtom.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\exp\callAtom.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\exp\constantAtom.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\exp\expAtom.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\exp\expElCompare.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\exp\expGraph.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\exp\expLex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\exp\expParse.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\exp\expValue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\exp\groupAtom.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\exp\nameAtom.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\exp\plusAtom.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\exp\resultAtom.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\factory.h">
@@ -177,6 +264,9 @@
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\libplug.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\logger.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\macro.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -184,6 +274,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaConvert\manifoldMTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaNode\frameCurve.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaNode\matrixCurve.h">
@@ -199,6 +292,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataOpNodeBase.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataShapeGeometryOverride.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\mayaNode\strataShapeNode.h">
@@ -225,6 +321,24 @@
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\status.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\edgeData.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\element.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\faceData.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\group.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\intersection.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\libManifold.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\manifold.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -234,7 +348,22 @@
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\opgraph.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\pointData.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\subsample.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\vertexData.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\strataop\elementOp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\strataop\expOp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\strataop\mergeOp.h">
@@ -246,38 +375,9 @@
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stringLib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\bezier\math\misc.h" />
-    <ClInclude Include="src\bezier\math\tridiagonal.h" />
-    <ClInclude Include="src\mayaNode\strataShapeGeometryOverride.h" />
-    <ClInclude Include="src\logger.h" />
-    <ClInclude Include="src\mayaNode\frameCurve.h" />
-    <ClInclude Include="src\strataop\expOp.h" />
-    <ClInclude Include="src\exp\expElCompare.h" />
-    <ClInclude Include="src\stratacore\libManifold.h" />
-    <ClInclude Include="src\stratacore\element.h" />
-    <ClInclude Include="src\stratacore\pointData.h" />
-    <ClInclude Include="src\stratacore\edgeData.h" />
-    <ClInclude Include="src\stratacore\faceData.h" />
-    <ClInclude Include="src\stratacore\group.h" />
-    <ClInclude Include="src\stratacore\subsample.h" />
-    <ClInclude Include="src\AABB.h" />
-    <ClInclude Include="src\exp\callAtom.h" />
-    <ClInclude Include="src\exp\assignAtom.h" />
-    <ClInclude Include="src\exp\expGraph.h" />
-    <ClInclude Include="src\exp\expAtom.h" />
-    <ClInclude Include="src\exp\expValue.h" />
-    <ClInclude Include="src\exp\constantAtom.h" />
-    <ClInclude Include="src\exp\resultAtom.h" />
-    <ClInclude Include="src\exp\nameAtom.h" />
-    <ClInclude Include="src\exp\groupAtom.h" />
-    <ClInclude Include="src\exp\plusAtom.h" />
-    <ClInclude Include="src\stratacore\face\topo.h" />
-    <ClInclude Include="src\visitor.h" />
-    <ClInclude Include="src\stratacore\vertexData.h" />
-    <ClInclude Include="src\stratacore\intersection.h" />
-    <ClInclude Include="src\bezier\bezier_patch.h" />
-    <ClInclude Include="src\stratacore\face\shape.h" />
-    <ClInclude Include="src\stratacore\types.h" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\visitor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="F:\wp\code\maya\plugin\strata\CMakeLists.txt" />

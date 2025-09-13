@@ -16,13 +16,6 @@
 #include "status.h"
 #include "lib.h"
 
-//#include "bezier/bezier.h"
-/* would be nice to remove hard bezier dependency here, 
-but couldn't work out the namespacing
-*/
-
-//#include <bezier/bezier.h>
-
 
 namespace bez {
 	class CubicBezierSpline;
@@ -32,6 +25,10 @@ namespace bez {
 namespace strata {
 	/* copying various from Free Electron,
 	adapting to Eigen types
+
+	nomenclature:
+	U - GLOBAL coordinate
+	t - LOCAL coordinate, usually only between 2 discrete values for a lerp
 	*/
 
 	using namespace Eigen;
@@ -766,9 +763,39 @@ need to be careful nothing modifies _dir if cached
 	}
 
 	template <typename T>
+	inline T getArrayUValueNonNorm(const Eigen::VectorX<T>& arr, T searchVal, int& a, int& b, float& t) {
+		/* return the U value between 2 indices for sampling a mono-increasing array
+		at the given search val, interpolated linearly
+		
+		also populate lower and upper indices, so you can use this result to lerp a value
+		between data points*/
+		float u = 0.0f;
+
+		int i = 0;
+		for (i = 0; i < arr.size() - 1; i++) {
+			if (arr[i] > searchVal) {
+				break;
+			}
+			u += 1.0f;
+		}
+		if (i == 0) {
+			a = 0;
+			b = 0;
+			return T(0.0f);
+		}
+		a = i - 1;
+		b = i;
+		return mapTo01(searchVal - arr[a], arr[a], arr[b], true);
+	}
+
+	template <typename T>
 	inline T getArrayUValueNorm(const Eigen::VectorX<T>& arr, T searchVal) {
 		return (getArrayUValueNonNorm(arr, searchVal) / T(arr.size()));
 	}
+	//template<typename T>
+	//inline T getArrayIndicesTForUNonUniform(const Eigen::VectorX<T>& arr, T searchVal) {
+
+	//}
 
 	/* tFox on techartists.org discovered awesome way to blend multiple quats together evenly - 
 	take log of each, add them up, then take exponential
@@ -953,6 +980,54 @@ need to be careful nothing modifies _dir if cached
 			weightSum += weight;
 		}
 		result /= weightSum;
+		//return result;
+	}
+
+
+	//template<typename DataT, typename ResultT>
+	void interp1D(
+		Eigen::VectorXf& x,
+		Eigen::MatrixX3f& y,
+		Eigen::VectorXf& xI,
+		Eigen::MatrixX3f& yI
+	) {
+		/* given data points y at mono-increasing x-coords x,
+		* sample at coords xI and store in matrix yI
+		* 
+		* of course this won't be as fast as numpy, but it seemed easier than bringing in
+		* armadillo and converting between eigen and arma vectors, matrices etc
+		* 
+		* couldn't work out how to do the templating properly, so explicitly write function for each kind of value to use
+		*/
+		
+		for (int sampleI = 0; sampleI < xI.size(); sampleI++) {
+			int a, b;
+			float t;
+			float u = getArrayUValueNonNorm(
+				x, 
+				xI(sampleI), 
+				a, b, t
+			);
+			//yI.row(sampleI) = lerp(y.row(a), y.row(b), t);
+			//yI.row(sampleI) << lerp<Eigen::Vector3f, float>(y.row(a), y.row(b), t);
+			yI.row(sampleI) = lerp<Eigen::Vector3f, float>(y.row(a), y.row(b), t);
+		}
+	}
+
+	void interp1D(
+		Eigen::VectorXf& x,
+		Eigen::MatrixX3f& y,
+		float& xI,
+		Eigen::Vector3f& yI
+	) {
+			int a, b;
+			float t;
+			float u = getArrayUValueNonNorm(
+				x,
+				xI,
+				a, b, t
+			);
+			yI = lerp<Eigen::Vector3f, float>(y.row(a), y.row(b), t);
 	}
 
 	std::vector<int> gridConnectivityTriIndexBuffer(

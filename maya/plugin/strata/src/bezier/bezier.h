@@ -27,7 +27,7 @@ namespace bez {
 		ScopedPointer solver = new ClosestPointSolver();
 
 		for (a set of positions) {
-			WorldSpace solution = bezier_path->ClosestPointToPath(position, solver); // Do something. }
+			WorldSpace solution = bezier_path->getClosestPoint(position, solver); // Do something. }
 		}
 		*/
 	}

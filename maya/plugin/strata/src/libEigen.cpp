@@ -1112,7 +1112,7 @@ std::tuple<float, Vector3f, float, Vector3f> strata::closestBezPointToRay(bez::C
 	Vector3f minBezPos;
 	for (int i = 0; i < initRaySamples; i++) {
 		 rayU = 1.0f / (initRaySamples - 1) * i;
-		 bezPos = crv.ClosestPointToPath(rayO + raySpan * rayU, crv.getSolver(), bezU);
+		 bezPos = crv.getClosestPoint(rayO + raySpan * rayU, crv.getSolver(), bezU);
 		 checkD = (bezPos - (rayO + raySpan * rayU)).squaredNorm();
 		 if (checkD < d) {
 			 minBezU = bezU;
@@ -1125,7 +1125,7 @@ std::tuple<float, Vector3f, float, Vector3f> strata::closestBezPointToRay(bez::C
 
 	/* iterative mutual closest point from found positions*/
 	for (int i = 0; i < mutualIters; i++) {
-		minBezPos = crv.ClosestPointToPath(rayO + raySpan * minRayU, crv.getSolver(), minBezU);
+		minBezPos = crv.getClosestPoint(rayO + raySpan * minRayU, crv.getSolver(), minBezU);
 		minRayU = closestTAlongRay(raySpan, rayO, minBezPos) / raySpan.norm();
 		minRayU = clamp01(minRayU);
 	}

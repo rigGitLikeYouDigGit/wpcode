@@ -13,7 +13,7 @@
 #include "../libEigen.h"
 
 using namespace Eigen;
-
+//using namespace arma;
 //#define USE_SIMD_OPTIMIZATION
 
 namespace bez
@@ -103,7 +103,7 @@ namespace bez
         /* return point on line between control points*/
         int a, b;
         float u = strata::getArrayIndicesTForU(4, t, a, b);
-        return strata::lerp<Eigen::Vector3f>(
+        return strata::lerp<Eigen::Vector3f, float>(
             Eigen::Vector3f(control_points_[a]), 
             Eigen::Vector3f(control_points_[b]), 
             u);
@@ -124,6 +124,10 @@ namespace bez
         Eigen::Vector<float, 4>& newUParams,
         int paramMode
     ) {
+        
+
+        Eigen::MatrixX3f interpolatedNormals(4, 3);
+
         for (int i = 0; i < 4; i++) {
             float otherU;
             Eigen::Vector3f otherPos;
@@ -154,9 +158,36 @@ namespace bez
             there apparently isn't a fire-forget analogue to numpy's interpolations
             in eigen
             that's annoying
+
+            brought in arma - means splitting vector classes, but it also seems more
+            fully featured compared to numpy
+
+            TODO: as usual, once whole project is working through, go check how much we actually need of all this,
+                if it's only a few functions then probably best to port them straight to Eigen and
+                shed the dependency
             */
-            otherN = 
-                /* build matrix*/
+            //int interpA, interpB;
+            //float t;
+            //Eigen::MatrixX3f interpolatedSampleNormal(1, 3);
+            //Eigen::VectorXf interpSampleU(1);
+            //interpSampleU[0] = otherU;
+
+            //strata::interp1D(otherNormalUs, otherNormals, 
+            //    interpSampleU, interpolatedSampleNormal);
+            //otherN = interpolatedSampleNormal.row(0);
+            strata::interp1D(otherNormalUs, otherNormals,
+                otherU, otherN);
+
+            Eigen::Affine3f otherMat;
+            otherMat.fromPositionOrientationScale(
+                otherPos,
+                Eigen::Quaternionf::FromTwoVectors(
+                    otherTan, otherN
+                ),
+                Eigen::Vector3f(1.0f)
+                //Eigen::UniformScaling<float>(1.0f)
+            );
+            newControlPoints.row(i) = otherMat.inverse() * Eigen::Vector3f(control_points_[i]);
         }
         
     }
@@ -690,10 +721,10 @@ namespace bez
         )
     {
         //std::copy(control_points, control_points + 4, control_points_.begin());
-        control_points_[0] = WorldSpace(a);
-        control_points_[1] = WorldSpace(b);
-        control_points_[2] = WorldSpace(c);
-        control_points_[3] = WorldSpace(d);
+        control_points_[0] = (a);
+        control_points_[1] = (b);
+        control_points_[2] = (c);
+        control_points_[3] = (d);
 
         Initialize();
     }
@@ -703,26 +734,26 @@ namespace bez
         Eigen::Vector3f& c,
         Eigen::Vector3f& d) 
     {
-        control_points_[0] = WorldSpace(a);
-        control_points_[1] = WorldSpace(b);
-        control_points_[2] = WorldSpace(c);
-        control_points_[3] = WorldSpace(d);
+        control_points_[0] = (a);
+        control_points_[1] = (b);
+        control_points_[2] = (c);
+        control_points_[3] = (d);
 
         Initialize();
     }
 
     void CubicBezierSpline::Initialize()
     {
-        WorldSpace& p0 = control_points_[0];
-        WorldSpace& p1 = control_points_[1];
-        WorldSpace& p2 = control_points_[2];
-        WorldSpace& p3 = control_points_[3];
+        Eigen::Vector3f& p0 = control_points_[0];
+        Eigen::Vector3f& p1 = control_points_[1];
+        Eigen::Vector3f& p2 = control_points_[2];
+        Eigen::Vector3f& p3 = control_points_[3];
 
         // Expanding out the parametric cubic Bezier curver equation.
-        WorldSpace n = -1.f * p0 + 3.f * p1 + -3.f * p2 + p3;
-        WorldSpace r = 3.f * p0 + -6.f * p1 + 3.f * p2;
-        WorldSpace s = -3.f * p0 + 3.f * p1;
-        WorldSpace& v = p0;
+        Eigen::Vector3f n = -1.f * p0 + 3.f * p1 + -3.f * p2 + p3;
+        Eigen::Vector3f r = 3.f * p0 + -6.f * p1 + 3.f * p2;
+        Eigen::Vector3f s = -3.f * p0 + 3.f * p1;
+        Eigen::Vector3f& v = p0;
 
         polynomial_form_[0] = n;
         polynomial_form_[1] = r;
@@ -730,9 +761,9 @@ namespace bez
         polynomial_form_[3] = v; // p0
 
         // The derivative which is a quadratic equation.
-        WorldSpace j = 3.f * n;
-        WorldSpace k = 2.f * r;
-        WorldSpace& m = s;
+        Eigen::Vector3f j = 3.f * n;
+        Eigen::Vector3f k = 2.f * r;
+        Eigen::Vector3f& m = s;
 
         derivative_[0] = j;
         derivative_[1] = k;
@@ -845,7 +876,7 @@ namespace bez
         const float t) const
     {
         // The polynomial form is faster at evaluating than the parametric.
-        return toEig( t * (polynomial_form_[2] + t * (polynomial_form_[1] + t * polynomial_form_[0])) + polynomial_form_[3] );
+        return ( t * (polynomial_form_[2] + t * (polynomial_form_[1] + t * polynomial_form_[0])) + polynomial_form_[3] );
     }
 
     WorldSpace CubicBezierSpline::tangentAt(float t) {

@@ -23,6 +23,7 @@ namespace bez
     //using StaticClonable = strata::StaticClonable;
 
     class CubicBezierSpline;
+    struct CubicBezierPath;
     struct Polynomial5;
 
     constexpr int ArithmeticSum(int n) { return n * (1 + n) / 2; }
@@ -141,9 +142,9 @@ namespace bez
 
         typedef std::array<float, 6> ClosestPointEquation;
 
-        std::array<WorldSpace, 4> control_points_;
-        std::array<WorldSpace, 4> polynomial_form_; // Coefficents derived from the control points.
-        std::array<WorldSpace, 3> derivative_;
+        std::array<Eigen::Vector3f, 4> control_points_; /* maybe turn these into a matrix*/
+        std::array<Eigen::Vector3f, 4> polynomial_form_; // Coefficents derived from the control points.
+        std::array<Eigen::Vector3f, 3> derivative_;
         // The closest projected point equation for a given position p, is:
         // Dot(p, derivative_) - Dot(polynomial_form_, derivative) = 0
         // precomputed_coefficients_ stores -Dot(polynomial_form_, derivative) so that only
@@ -169,19 +170,19 @@ namespace bez
             TODO: work out how to return ref*/
             Eigen::Matrix<float, 4, 3> result;
             
-            result.row(0) = toEig(control_points_.at(0));
-            result.row(1) = toEig(control_points_.at(1));
-            result.row(2) = toEig(control_points_.at(2));
-            result.row(3) = toEig(control_points_.at(3));
+            result.row(0) =control_points_.at(0);
+            result.row(1) = (control_points_.at(1));
+            result.row(2) = (control_points_.at(2));
+            result.row(3) = (control_points_.at(3));
             return result;
         }
 
         void transform(Eigen::Affine3f& mat) {
             /* transform this spline in place*/
-            control_points_[0] = mat * toEig(control_points_[0]);
-            control_points_[1] = mat * toEig(control_points_[1]);
-            control_points_[2] = mat * toEig(control_points_[2]);
-            control_points_[3] = mat * toEig(control_points_[3]);
+            control_points_[0] = mat * (control_points_[0]);
+            control_points_[1] = mat * (control_points_[1]);
+            control_points_[2] = mat * (control_points_[2]);
+            control_points_[3] = mat * (control_points_[3]);
             Initialize();
         }
         CubicBezierSpline transformed(Eigen::Affine3f& mat) {
@@ -195,42 +196,42 @@ namespace bez
             return std::make_pair(
                 Eigen::Vector3f(
                     std::min({
-                        control_points_[0].x,
-                        control_points_[1].x,
-                        control_points_[2].x,
-                        control_points_[3].x
+                        control_points_[0].x(),
+                        control_points_[1].x(),
+                        control_points_[2].x(),
+                        control_points_[3].x()
                         }),
                     std::min({
-                        control_points_[0].y,
-                        control_points_[1].y,
-                        control_points_[2].y,
-                        control_points_[3].y
+                        control_points_[0].y(),
+                        control_points_[1].y(),
+                        control_points_[2].y(),
+                        control_points_[3].y()
                         }),
                     std::min({
-                        control_points_[0].z,
-                        control_points_[1].z,
-                        control_points_[2].z,
-                        control_points_[3].z
+                        control_points_[0].z(),
+                        control_points_[1].z(),
+                        control_points_[2].z(),
+                        control_points_[3].z()
                         })
                 ),
                 Eigen::Vector3f(
                     std::max({
-                        control_points_[0].x,
-                        control_points_[1].x,
-                        control_points_[2].x,
-                        control_points_[3].x
+                        control_points_[0].x(),
+                        control_points_[1].x(),
+                        control_points_[2].x(),
+                        control_points_[3].x()
                         }),
                     std::max({
-                        control_points_[0].y,
-                        control_points_[1].y,
-                        control_points_[2].y,
-                        control_points_[3].y
+                        control_points_[0].y(),
+                        control_points_[1].y(),
+                        control_points_[2].y(),
+                        control_points_[3].y()
                         }),
                     std::max({
-                        control_points_[0].z,
-                        control_points_[1].z,
-                        control_points_[2].z,
-                        control_points_[3].z
+                        control_points_[0].z(),
+                        control_points_[1].z(),
+                        control_points_[2].z(),
+                        control_points_[3].z()
                         })
                 )
             );

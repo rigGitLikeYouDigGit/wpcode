@@ -253,7 +253,7 @@ Status& StrataManifold::edgeGetUVN(Status& s, Eigen::Vector3f& uvn, SElement* el
 
 	float u;
 	Eigen::Vector3f tan;
-	Eigen::Vector3f pos = d.finalCurve.ClosestPointToPath(
+	Eigen::Vector3f pos = d.finalCurve.getClosestPoint(
 		bez::WorldSpace(worldVec.data()),
 		d.finalCurve.getSolver(), u,
 		tan)
