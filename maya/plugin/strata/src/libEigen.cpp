@@ -973,6 +973,7 @@ Eigen::MatrixX3f strata::makeRMFNormals(
 Eigen::MatrixX3f strata::makeRMFNormals(
 	bez::CubicBezierPath& crv,
 	const Eigen::MatrixX3f& targetNormals,
+	const Eigen::VectorXf& targetNormalsParams,
 	const int nSamples
 ) {/*
 	as above, but working on only positions and tangents

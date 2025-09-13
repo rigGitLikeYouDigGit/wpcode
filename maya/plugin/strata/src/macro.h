@@ -62,6 +62,17 @@ namespace strata {
 	}
 }
 
+#define FOR_WINDOW_VAR(i_var, i_limit) \
+	for( int i_var = 0; i_var < static_cast<int>(i_limit);i_var++){ \
+		int i_varNext = (i_var + 1) % static_cast<int>(i_limit); \
+		int i_varPrev = (i_var - 1) % static_cast<int>(i_limit);
+	
+
+#define FOR_WINDOW(i_limit) \
+	FOR_WINDOW_VAR(i, i_limit)
+
+
+
  // as in "debugString"
 #define MCHECK(stat,msg)             \
         if ( MS::kSuccess != stat ) {   \

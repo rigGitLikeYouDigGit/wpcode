@@ -27,6 +27,11 @@ namespace bez
 
     constexpr int ArithmeticSum(int n) { return n * (1 + n) / 2; }
 
+    /* for comparing points on curve*/
+    constexpr int K_U_PARAM = 0;
+    constexpr int K_CLOSEST_POINT = 1;
+    /* TODO - some kind of distance/sphere weighting, to avoid jumping in closest point ops?
+    */
 
     class QuinticSolver
     {
@@ -121,12 +126,15 @@ namespace bez
             Eigen::Vector3f& b,
             Eigen::Vector3f& c,
             Eigen::Vector3f& d);
-        float ClosestPointToSpline(const WorldSpace& position, const QuinticSolver* solver, WorldSpace& closest, float& u) const;
-        float ClosestPointToSpline(const WorldSpace& position, const QuinticSolver* solver, WorldSpace& closest) const;
+        float getClosestPoint(const WorldSpace& position, const QuinticSolver* solver, WorldSpace& closest, float& u) const;
+        float getClosestPoint(const WorldSpace& position, const QuinticSolver* solver, WorldSpace& closest) const;
         WorldSpace EvaluateAt(const float t) const;
         Eigen::Vector3f eval(const float t) const;
 
         WorldSpace tangentAt(float t);
+
+        Eigen::Vector3f evalHull(const float t) const;
+        Eigen::Vector3f tangentAtHull(const float t) const;
 
         //private:
         void Initialize();
@@ -231,6 +239,43 @@ namespace bez
             auto p = minMaxBounds();
             return aabb::AABB(p.first, p.second);
         }
+
+        /* get control point vectors to "skin" this curve
+        to another
+        */
+        template<typename CurveT = CubicBezierPath>
+        void pointsInOtherCurveSpace(
+            CurveT& otherCurve,
+            Eigen::MatrixX3f& otherNormals,
+            Eigen::VectorXf& otherNormalUs,
+            std::array<float, 2> startEndGlobalU,
+            Eigen::Matrix<float, 4, 3>& newControlPoints,
+            Eigen::Vector<float, 4>& newUParams,
+            int paramMode = K_U_PARAM
+        );
+
+        /* TEMP*/
+        void pointsInOtherCurveSpace(
+            CubicBezierPath& otherCurve,
+            Eigen::MatrixX3f& otherNormals,
+            Eigen::VectorXf& otherNormalUs,
+            std::array<float, 2> startEndGlobalU,
+            Eigen::Matrix<float, 4, 3>& newControlPoints,
+            Eigen::Vector<float, 4>& newUParams,
+            int paramMode = K_U_PARAM
+        );
+
+        /* sample given control points in this curve's space*/
+        //template<typename CurveT>
+        void pointsInThisSpace(
+            Eigen::MatrixX3f& normals,
+            Eigen::VectorXf& normalUs,
+            std::array<float, 2> startEndGlobalU,
+            Eigen::Vector<float, 4>& otherUParams,
+            Eigen::Matrix<float, 4, 3>& otherControlPoints
+        );
+
+
     };
 
 
@@ -283,13 +328,13 @@ namespace bez
         CubicBezierPath(std::vector < std::unique_ptr<CubicBezierSpline>> splines);
         CubicBezierPath(std::vector < CubicBezierSpline> splines);
         CubicBezierPath(std::vector < CubicBezierPath>& splines);
-        WorldSpace ClosestPointToPath(const WorldSpace& position, const ClosestPointSolver* solver, float& u) const;
-        Eigen::Vector3f ClosestPointToPath(const WorldSpace& position, const ClosestPointSolver* solver, float& u, Eigen::Vector3f& tan) const;
-        WorldSpace ClosestPointToPath(const WorldSpace& position, const ClosestPointSolver* solver) const;
-        Eigen::Vector3f ClosestPointToPath(const Eigen::Vector3f& position, const ClosestPointSolver* solver) const;
+        WorldSpace getClosestPoint(const WorldSpace& position, const ClosestPointSolver* solver, float& u) const;
+        Eigen::Vector3f getClosestPoint(const WorldSpace& position, const ClosestPointSolver* solver, float& u, Eigen::Vector3f& tan) const;
+        WorldSpace getClosestPoint(const WorldSpace& position, const ClosestPointSolver* solver) const;
+        Eigen::Vector3f getClosestPoint(const Eigen::Vector3f& position, const ClosestPointSolver* solver) const;
 
 
-        Eigen::Vector3f ClosestPointToPath(
+        Eigen::Vector3f getClosestPoint(
             const Eigen::Vector3f& position,
             const ClosestPointSolver* solver,
             float& u) const;
@@ -373,6 +418,10 @@ namespace bez
             //return solver_.get();
         }
 
+
+        Eigen::Vector3f evalHull(const float t) const;
+        Eigen::Vector3f tangentAtHull(const float t) const;
+
         void transform(Eigen::Affine3f& mat) {
             for (auto& i : splines_) {
                 //i.get()->transform(mat);
@@ -395,14 +444,19 @@ namespace bez
         remapping operations through start/end
         
         originally wasn't worth it, but makes code way more readable
+
+        CANNOT HAVE CHAINED VIEWS OF VIEWS.
+        initialising on subPath just links directly to that view's source
         */
 
-        float uBounds[2] = { 0.0, 1.0 };
+        std::array<float, 2> uBounds = { 0.0, 1.0 };
         bool reverse = false;
         CubicBezierPath& _path;
 
         BezierSubPath(CubicBezierPath& path_) : _path(path_) {}
-
+        BezierSubPath(BezierSubPath& path_) : uBounds(path_.uBounds), reverse(path_.reverse), _path(path_._path){
+        }
+        
         float mapTo(float t);
         float mapFrom(float t);
 
@@ -410,6 +464,12 @@ namespace bez
 
         Eigen::Affine3f frame(float u);
 
+        /* how many whole splines are included in this view*/
+        int nWholeSplines();
+        /* how many splines are included at all */
+        int nSplines();
+        int startSplineIndex();
+        int endSplineIndex();
 
     };
 }

@@ -4,6 +4,14 @@
 #include "../libEigen.h"
 
 using namespace strata;
+
+SElement* SubPatchData::fEl(StrataManifold& man) {
+	return man.getEl(faceIndex);
+}
+SFaceData& SubPatchData::fData(StrataManifold& man) {
+	return man.fDataMap[fEl(man)->name];
+}
+
 std::tuple<int, float, float> SFaceData::edgeSpan(StrataManifold& manifold, int borderIndex) {
 	Vertex& startV = manifold.vertices[borderIndex];
 	Vertex& endV = manifold.vertices[(borderIndex + 1) % nBorderEdges()];

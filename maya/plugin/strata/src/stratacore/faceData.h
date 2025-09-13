@@ -26,10 +26,43 @@ namespace strata {
 	};
 
 	struct SubPatchData {
-		/* save data for single subpatch -
+		/* save data for single subpatch - subpatches guaranteed to be
+		* 4-sided patch, with arbitrary paths as borders
 		*/
 		int subIndex = -1;
 		int faceIndex = -1;
+		int fBorderIndex = -1;
+
+		std::array<bez::BezierSubPath, 2> uPaths;
+		std::array<bez::BezierSubPath, 2> vPaths;
+
+		/* keep separate edge resolutions for later when we can upres
+		parts selectively? */
+		std::array<int, 2> uRes = { 8, 8 };
+		std::array<int, 2> vRes = { 8, 8 };
+
+		/* probably need some rules on where to place points on borders,
+		so they match up across patches
+		*/
+
+		SElement* fEl(StrataManifold& man);
+		SFaceData& fData(StrataManifold& man);
+		//SFaceData& fData(StrataManifold& man);
+		void syncConnections(StrataManifold& man);
+
+		/* functions working on smooth surface defined by curves
+		*/
+		Eigen::Vector3f evalUVSmooth(Eigen::Vector3f& uvn);
+		Eigen::Vector3f evalUVSmooth(float u, float v);
+
+		/* later need same support for dense result mesh - 
+		consider how we might handle different resolutions of that mesh too
+
+		surface construction done through layers of interpolated points in UV - 
+		basic level is borders, points having UV bounds and positions -
+		then maybe try and account for tangents of those points? 
+		*/
+
 	};
 
 	struct SFaceCreationParams {
@@ -70,12 +103,20 @@ namespace strata {
 		//*/
 		std::vector<bez::BezierSubPath> borderCurves = {};
 
+		/* mid curves of each edge, connecting at face centre*/
+		std::vector<bez::CubicBezierPath> borderMidCurves = {};
+
 		/* tangent vectors at midpoints of driver edges
 		multiply and average to find centrePos
 		multiply by how far?
 		good question
+
+		should rely separately on original frames along borders, 
+		scaling frames by edge/face crease value
 		*/
 		std::vector<Vector3f> midEdgeTangents;
+
+		std::vector<SubPatchData> subPatchdatas;
 
 		aabb::AABB getAABB();
 
@@ -90,6 +131,9 @@ namespace strata {
 
 		float map01UCoordToEdge(StrataManifold& man, float u, int vtxA, int vtxB);
 		float map01UCoordToEdge(StrataManifold& man, float u, int borderIndex);
+
+
+		void syncConnections(StrataManifold& man);
 	};
 
 	

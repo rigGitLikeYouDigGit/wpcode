@@ -21,9 +21,12 @@ Status& strata::SEdgeData::buildFinalBuffers(Status& s) {
 	/* I know but consider cases where we just have a literal curve with no drivers,
 	where we only have 1, etc
 	*/
+	VectorXf targetNormalParams(1);
+
 	finalNormals = makeRMFNormals(
 		finalCurve,
 		targetNormals,
+		targetNormalParams,
 		densePointCount()
 	);
 

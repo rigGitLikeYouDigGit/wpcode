@@ -914,6 +914,7 @@ need to be careful nothing modifies _dir if cached
 	Eigen::MatrixX3f makeRMFNormals(
 		bez::CubicBezierPath& crv,
 		const Eigen::MatrixX3f& targetNormals,
+		const Eigen::VectorXf& targetNormalParams,
 		const int nSamples
 	);
 

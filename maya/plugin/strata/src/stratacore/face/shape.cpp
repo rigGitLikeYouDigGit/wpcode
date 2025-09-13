@@ -17,6 +17,8 @@ Affine3f makeNewFaceCentre(
 		for each adjacent edge, get its midpoint frame in the space of the end of the original edge
 			transport that adjacent midpoint along border edge, to border midpoint
 	average all of those transforms, maybe weight them somehow idk
+
+	breaks on the tube example
 	*/
 
 	std::vector<Affine3f> transportMidpoints(fData.nBorderEdges() * 2);
@@ -39,6 +41,52 @@ Affine3f makeNewFaceCentre(
 		
 	}
 	return blendTransforms(transportMidpoints, transportWeights);
+
+}
+
+bez::CubicBezierPath makeBorderMidEdge(
+	StrataManifold& man,
+	SFaceData& fData,
+	SElement* el,
+	int borderIndex
+) {
+	/* build mid curve in worldspace for border edge -
+	need to be as high-res as highest-res adjacent edge
+	*/
+	int borderNext = (borderIndex + 1) % fData.nBorderEdges();
+	int borderPrev = (borderIndex - 1) % fData.nBorderEdges();
+	
+	bez::BezierSubPath& prevCrv = fData.borderCurves[borderPrev];
+	bez::BezierSubPath& nextCrv = fData.borderCurves[borderNext];
+	/* VERY SILLY for now, take average of sample on both curve hulls for position of control point.*/
+
+	int samplePoints = std::max(prevCrv.nSplines() * 3 + 1, nextCrv.nSplines() * 3 + 1) * 2; /* sample more densely*/
+	MatrixX3f midCtlPts(samplePoints, 3);
+	for (int i = 0; i < samplePoints; i++) {
+		float u = float(i) / float(samplePoints - 1);
+		midCtlPts.row(i) = (prevCrv.eval(u) + nextCrv.eval(u)) / 2.0;
+	}
+	return bez::CubicBezierPath(midCtlPts);
+}
+
+SubPatchData makeSubPatchData(
+	StrataManifold& man,
+	SFaceData& fData,
+	SElement* el,
+	int borderIndex/*
+	bez::BezierSubPath& uSubPath,
+	bez::BezierSubPath& vSubPath,
+	bez::CubicBezierPath& uMidPath,
+	bez::CubicBezierPath& vMidPath*/
+) {
+	/* build the lowest half of subPatch for each border - 
+	keep flags on whether we need to flip orientation
+	of face later*/
+	int nextBorder = (borderIndex + 1) % (fData.nBorderEdges());
+	bez::BezierSubPath& u1SubPath = fData.borderCurves[borderIndex];  // forwards
+	bez::CubicBezierPath& v1MidPath = fData.borderMidCurves[borderIndex]; // forwards
+	bez::CubicBezierPath& u2MidPath = fData.borderMidCurves[nextBorder]; // backwards
+	bez::BezierSubPath& v2SubPath = fData.borderCurves[nextBorder]; // backwards
 
 }
 
@@ -68,5 +116,16 @@ Status& strata::makeNewFaceData( /* */
 		fData,
 		el
 	);
+
+	for (int i = 0; i < fData.nBorderEdges(); i++) {
+		fData.borderMidCurves.push_back(
+			makeBorderMidEdge(
+				man,
+				fData,
+				el,
+				i
+			)
+		);
+	}
 
 }
