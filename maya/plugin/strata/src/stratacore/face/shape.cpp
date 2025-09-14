@@ -2,6 +2,7 @@
 #include "shape.h"
 #include "../manifold.h"
 #include "../libManifold.h"
+#include "../../libEigen.h"
 
 using namespace strata;
 
@@ -52,6 +53,10 @@ bez::CubicBezierPath makeBorderMidEdge(
 ) {
 	/* build mid curve in worldspace for border edge -
 	need to be as high-res as highest-res adjacent edge
+	
+	get control points of each border in space of simple bezier splines - 
+	half-interpolate each to here
+
 	*/
 	int borderNext = (borderIndex + 1) % fData.nBorderEdges();
 	int borderPrev = (borderIndex - 1) % fData.nBorderEdges();
@@ -108,6 +113,18 @@ Status& strata::makeNewFaceData( /* */
 		fData.borderCurves.back().uBounds[0] = vtxA->edgeUs[1];
 		fData.borderCurves.back().uBounds[1] = vtxB->edgeUs[0];
 		fData.borderCurves.back().reverse = !vtxA->edgeDirs[1];
+
+		/* split each border in half to localise control points to curves later
+		* 
+		*/
+		float midU = (vtxA->edgeUs[1] + vtxB->edgeUs[0]) / 2.0f;
+		Vector3f midPos = eData.finalCurve.eval(midU);
+		Vector3f midTan = eData.finalCurve.tangentAt(midU);
+		/* get simple bezier curve between border end points*/
+		fData.borderHalfPaths[i][0] = splitBezPath(
+			eData.finalCurve, vtxA->edgeUs[1], midU);
+		fData.borderHalfPaths[i][1] = splitBezPath(
+			eData.finalCurve,  midU, vtxB->edgeUs[0] );
 	}
 
 	/* get centre point for face*/

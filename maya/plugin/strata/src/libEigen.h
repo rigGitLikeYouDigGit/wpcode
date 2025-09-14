@@ -661,7 +661,7 @@ need to be careful nothing modifies _dir if cached
 		}
 		int a;
 		int b;
-		a = floor(arr.size() * t);
+		a = static_cast<int>(floor(arr.size() * t));
 		b = a + 1;
 		return lerp<T, T>(arr[a], arr[b], t - (arr.size() * t));
 	}

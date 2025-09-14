@@ -13,7 +13,7 @@
 bounds / centroid
 
 REFIT EVERYTHING WITH EIGEN
-WorldSpace vector type is doin ma head in
+Eigen::Vector3f vector type is doin ma head in
 */
 
 
@@ -115,8 +115,8 @@ namespace bez
         DECLARE_DEFINE_CLONABLE_METHODS(thisT)
 
 
-        //CubicBezierSpline(const WorldSpace* control_points);
-        thisT(const WorldSpace* control_points);
+        //CubicBezierSpline(const Eigen::Vector3f* control_points);
+        thisT(const Eigen::Vector3f* control_points);
         CubicBezierSpline(
             const Eigen::Vector3f& a,
             const Eigen::Vector3f& b,
@@ -127,12 +127,12 @@ namespace bez
             Eigen::Vector3f& b,
             Eigen::Vector3f& c,
             Eigen::Vector3f& d);
-        float getClosestPoint(const WorldSpace& position, const QuinticSolver* solver, WorldSpace& closest, float& u) const;
-        float getClosestPoint(const WorldSpace& position, const QuinticSolver* solver, WorldSpace& closest) const;
-        WorldSpace EvaluateAt(const float t) const;
+        float getClosestPoint(const Eigen::Vector3f& position, const QuinticSolver* solver, Eigen::Vector3f& closest, float& u) const;
+        float getClosestPoint(const Eigen::Vector3f& position, const QuinticSolver* solver, Eigen::Vector3f& closest) const;
+        Eigen::Vector3f EvaluateAt(const float t) const;
         Eigen::Vector3f eval(const float t) const;
 
-        WorldSpace tangentAt(float t);
+        Eigen::Vector3f tangentAt(float t);
 
         Eigen::Vector3f evalHull(const float t) const;
         Eigen::Vector3f tangentAtHull(const float t) const;
@@ -266,15 +266,25 @@ namespace bez
             int paramMode = K_U_PARAM
         );
 
+        static CubicBezierSpline fromPointsTangents(
+            Eigen::Vector3f& posA,
+            Eigen::Vector3f tanA,
+            Eigen::Vector3f& posB,
+            Eigen::Vector3f tanB
+        );
+
+
+        /* not really much point in this function, 
+        easier to control from higher scope*/
         /* sample given control points in this curve's space*/
         //template<typename CurveT>
-        void pointsInThisSpace(
-            Eigen::MatrixX3f& normals,
-            Eigen::VectorXf& normalUs,
-            std::array<float, 2> startEndGlobalU,
-            Eigen::Vector<float, 4>& otherUParams,
-            Eigen::Matrix<float, 4, 3>& otherControlPoints
-        );
+        //void pointsInThisSpace(
+        //    Eigen::MatrixX3f& normals,
+        //    Eigen::VectorXf& normalUs,
+        //    std::array<float, 2> startEndGlobalU,
+        //    Eigen::VectorXf& otherUParams,
+        //    Eigen::MatrixX3f& otherControlPoints
+        //);
 
 
     };
@@ -311,11 +321,11 @@ namespace bez
         //using thisT::thisT;
         //DECLARE_DEFINE_CLONABLE_METHODS(thisT)
 
-        //CubicBezierPath(const WorldSpace* control_points, const int num_points) {
+        //CubicBezierPath(const Eigen::Vector3f* control_points, const int num_points) {
         
         thisT() {}
 
-        thisT(const WorldSpace* control_points, const int num_points) {
+        thisT(const Eigen::Vector3f* control_points, const int num_points) {
             int num_splines = num_points / 3;
             for (int i = 0; i < num_splines; ++i)
             {
@@ -329,16 +339,16 @@ namespace bez
         CubicBezierPath(std::vector < std::unique_ptr<CubicBezierSpline>> splines);
         CubicBezierPath(std::vector < CubicBezierSpline> splines);
         CubicBezierPath(std::vector < CubicBezierPath>& splines);
-        WorldSpace getClosestPoint(const WorldSpace& position, const ClosestPointSolver* solver, float& u) const;
-        Eigen::Vector3f getClosestPoint(const WorldSpace& position, const ClosestPointSolver* solver, float& u, Eigen::Vector3f& tan) const;
-        WorldSpace getClosestPoint(const WorldSpace& position, const ClosestPointSolver* solver) const;
+        Eigen::Vector3f getClosestPoint(const Eigen::Vector3f& position, const ClosestPointSolver* solver, float& u) const;
+        Eigen::Vector3f getClosestPoint(const Eigen::Vector3f& position, const ClosestPointSolver* solver, float& u, Eigen::Vector3f& tan) const;
         Eigen::Vector3f getClosestPoint(const Eigen::Vector3f& position, const ClosestPointSolver* solver) const;
+        //Eigen::Vector3f getClosestPoint(const Eigen::Vector3f& position, const ClosestPointSolver* solver) const;
 
 
-        Eigen::Vector3f getClosestPoint(
-            const Eigen::Vector3f& position,
-            const ClosestPointSolver* solver,
-            float& u) const;
+        //Eigen::Vector3f getClosestPoint(
+        //    const Eigen::Vector3f& position,
+        //    const ClosestPointSolver* solver,
+        //    float& u) const;
 
         void Initialize() { // call after directly editing curves
             for (auto& sp : splines_) {
@@ -366,7 +376,7 @@ namespace bez
         Eigen::Vector3f eval(float t) const {
             auto idT = globalToLocalParam(t);
             //return toEig(splines_[idT.first].get()->EvaluateAt(idT.second));
-            return toEig(splines_[idT.first].EvaluateAt(idT.second)); 
+            return (splines_[idT.first].EvaluateAt(idT.second)); 
         }
 
         void _buildULengthMap(int nSamples) {
@@ -437,6 +447,17 @@ namespace bez
             }
             return base;
         }
+
+        template<typename CurveT = CubicBezierPath>
+        void pointsInOtherCurveSpace(
+            CurveT& otherCurve,
+            Eigen::MatrixX3f& otherNormals,
+            Eigen::VectorXf& otherNormalUs,
+            std::array<float, 2> startEndGlobalU,
+            Eigen::MatrixX3f& newControlPoints,
+            Eigen::VectorXf& newUParams,
+            int paramMode = K_U_PARAM
+        );
 
     };
 

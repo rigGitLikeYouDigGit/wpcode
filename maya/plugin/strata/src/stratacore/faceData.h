@@ -28,13 +28,28 @@ namespace strata {
 	struct SubPatchData {
 		/* save data for single subpatch - subpatches guaranteed to be
 		* 4-sided patch, with arbitrary paths as borders
+		* 
+		* single subpatch has 4 "simple" 4-point bezier splines for borders, with offsets to 
+		* the more complex full paths saved there?
+		* 
+		* need subpaths for each half of each original edge, probably held at fData level
 		*/
 		int subIndex = -1;
 		int faceIndex = -1;
 		int fBorderIndex = -1;
 
-		std::array<bez::BezierSubPath, 2> uPaths;
-		std::array<bez::BezierSubPath, 2> vPaths;
+		std::array<bez::CubicBezierSpline, 2> uSimpleEdges;
+		std::array<bez::CubicBezierSpline, 2> vSimpleEdges;
+
+		/* I know we don't need to store all these just thinking */
+		std::array<bez::CubicBezierPath, 2> uPathsInSplineSpace;
+		std::array<bez::CubicBezierPath, 2> vPathsInSplineSpace;
+
+		/* final worldspace borders
+		* 0 is u, 1 is v
+		*/
+		std::array<bez::CubicBezierPath, 2> worldMidPaths;
+		std::array<bez::BezierSubPath, 2> worldEdgePaths; //2 subpatch edges always taken from original edge curves
 
 		/* keep separate edge resolutions for later when we can upres
 		parts selectively? */
@@ -103,6 +118,16 @@ namespace strata {
 		//*/
 		std::vector<bez::BezierSubPath> borderCurves = {};
 
+		/* TEMP 
+		split paths for each half face to package control points more easily for skinning
+		*/
+		std::vector<std::array<bez::CubicBezierPath, 2>> borderHalfPaths = {};
+		/* control points in curve space, with their params along a simple cubic spline
+		*/
+		std::vector<std::array<Eigen::MatrixX3f, 2>> borderHalfLocalControlPoints = {};
+		std::vector<std::array<Eigen::VectorXf, 2>> borderHalfLocalControlPointParams = {};
+
+
 		/* mid curves of each edge, connecting at face centre*/
 		std::vector<bez::CubicBezierPath> borderMidCurves = {};
 
@@ -123,6 +148,12 @@ namespace strata {
 		int nBorderEdges() {
 			return static_cast<int>(vertices.size());
 		}
+
+		inline Vector3f centreNormal() {
+			/* return normal direction vector*/
+			return centre.rotation() * Vector3f(0, 1, 0);
+		}
+
 		std::tuple<int, float, float> edgeSpan(StrataManifold& manifold, int borderIndex);
 
 		std::pair<Vertex*, Vertex*> vtxPair(StrataManifold& man, int borderIndex);

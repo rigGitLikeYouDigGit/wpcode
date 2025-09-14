@@ -17,7 +17,7 @@ set(CMAKE_ARCJOVE)
 
 
 file(GLOB SOURCE_FILES "src/*.cpp" "src/*.h" "src/lib/*.cpp" "src/lib/*.h" 
-	"src/deformer/*.h" "src/deformer/*.cpp" "src/*/*.cpp" "src/*/*.h"
+	"src/deformer/*.h" "src/deformer/*.cpp" "src/*/*.cpp" "src/*/*.h" "src/*/*/*.cpp" "src/*/*/*.h"
 )
 
 #include_directories($ENV{WP_ROOT}/code/cpp/wpshared)

@@ -314,6 +314,8 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\AABB.cpp" />
+    <ClCompile Include="src\stratacore\face\shape.cpp" />
+    <ClCompile Include="src\stratacore\face\topo.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\AABB.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\MInclude.h" />
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\api.cpp" />
@@ -438,6 +440,8 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\strataop\strataTypes.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stringLib.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\visitor.h" />
+    <ClInclude Include="src\stratacore\face\shape.h" />
+    <ClInclude Include="src\stratacore\face\topo.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="F:\wp\code\maya\plugin\strata\ZERO_CHECK.vcxproj">
