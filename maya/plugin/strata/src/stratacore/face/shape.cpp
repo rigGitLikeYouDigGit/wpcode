@@ -55,7 +55,10 @@ bez::CubicBezierPath makeBorderMidEdge(
 	need to be as high-res as highest-res adjacent edge
 	
 	get control points of each border in space of simple bezier splines - 
-	half-interpolate each to here
+	half-interpolate each to here.
+
+	for each U coord, interp half along control point hulls of each edge,
+	then transform to space of simple bezier to centre
 
 	*/
 	int borderNext = (borderIndex + 1) % fData.nBorderEdges();
@@ -65,7 +68,9 @@ bez::CubicBezierPath makeBorderMidEdge(
 	bez::BezierSubPath& nextCrv = fData.borderCurves[borderNext];
 	/* VERY SILLY for now, take average of sample on both curve hulls for position of control point.*/
 
-	int samplePoints = std::max(prevCrv.nSplines() * 3 + 1, nextCrv.nSplines() * 3 + 1) * 2; /* sample more densely*/
+	int samplePoints = std::max(prevCrv.nSplines() * 3 + 1, nextCrv.nSplines() * 3 + 1) * 2; /* sample more densely?
+	*/
+	VectorXf sampleUs = VectorXf::LinSpaced(samplePoints, 0.0, 1.0);
 	MatrixX3f midCtlPts(samplePoints, 3);
 	for (int i = 0; i < samplePoints; i++) {
 		float u = float(i) / float(samplePoints - 1);
@@ -104,6 +109,13 @@ Status& strata::makeNewFaceData( /* */
 ) {
 	SFaceData& fData = man.fDataMap[el->name];
 	fData.vertices = vertexPath;
+	
+	/* reserve vectors to fit */
+	fData.borderHalfLocalControlPoints.resize(fData.nBorderEdges());
+	fData.borderHalfLocalControlPointParams.resize(fData.nBorderEdges());
+	fData.borderHalfSplines.resize(fData.nBorderEdges());
+	fData.midEdgeFrames.resize(fData.nBorderEdges());
+
 	/* copy all edge paths and normal vectors */
 	for (int i = 0; i < fData.nBorderEdges(); i++) {
 		SEdgeData& eData = fData.eDataForBorder(man, i);
@@ -114,17 +126,57 @@ Status& strata::makeNewFaceData( /* */
 		fData.borderCurves.back().uBounds[1] = vtxB->edgeUs[0];
 		fData.borderCurves.back().reverse = !vtxA->edgeDirs[1];
 
+		/* TODO: trim normal vectors at u values as well*/
+		VectorXf normalUs = VectorXf::LinSpaced(eData.finalNormals.rows(), 0.0, 1.0);
+
+
 		/* split each border in half to localise control points to curves later
 		* 
 		*/
 		float midU = (vtxA->edgeUs[1] + vtxB->edgeUs[0]) / 2.0f;
 		Vector3f midPos = eData.finalCurve.eval(midU);
 		Vector3f midTan = eData.finalCurve.tangentAt(midU);
+
 		/* get simple bezier curve between border end points*/
-		fData.borderHalfPaths[i][0] = splitBezPath(
-			eData.finalCurve, vtxA->edgeUs[1], midU);
-		fData.borderHalfPaths[i][1] = splitBezPath(
-			eData.finalCurve,  midU, vtxB->edgeUs[0] );
+		Vector3f startPos = eData.finalCurve.eval(vtxA->edgeUs[1]);
+		Vector3f startTan = eData.finalCurve.tangentAt(vtxA->edgeUs[1]);
+		Vector3f endTan = -eData.finalCurve.tangentAt(vtxB->edgeUs[0]);
+		Vector3f endPos = eData.finalCurve.eval(vtxB->edgeUs[0]);
+
+		if (!vtxA->edgeDirs[1]) {
+			Vector3f temp = startPos;
+			startPos = endPos;
+			endPos = temp;
+			startTan = -startTan;
+			endTan = -endTan;
+			midTan = -midTan;
+		}
+		/* first half of border edge */
+		fData.borderHalfSplines[i][0] = bez::CubicBezierSpline::fromPointsTangents(
+			startPos, startTan, midPos, -midTan);
+
+		/* get control points of full-res half-path, in space of that simple bezier
+		*/
+		splitBezPath(
+			eData.finalCurve, vtxA->edgeUs[1], midU
+		).pointsInOtherCurveSpace(
+				fData.borderHalfSplines[i][0], eData.finalNormals, normalUs,
+				fData.borderHalfLocalControlPoints[i][0],
+				fData.borderHalfLocalControlPointParams[i][0],
+				bez::K_U_PARAM
+			);
+
+		/* second half of border edge*/
+		fData.borderHalfSplines[i][1] = bez::CubicBezierSpline::fromPointsTangents(
+			midPos, midTan, endPos, -endTan);
+		splitBezPath(
+			eData.finalCurve, midU, vtxB->edgeUs[0]
+		).pointsInOtherCurveSpace(
+				fData.borderHalfSplines[i][1], eData.finalNormals, normalUs,
+				fData.borderHalfLocalControlPoints[i][1],
+				fData.borderHalfLocalControlPointParams[i][1],
+				bez::K_U_PARAM
+			);
 	}
 
 	/* get centre point for face*/

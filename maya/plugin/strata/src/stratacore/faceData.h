@@ -21,6 +21,13 @@ namespace strata {
 
 	};
 
+	
+	/* TODO: it would certainly be convenient here to hold pointers to other types -
+	obviously those break when we copy the manifold object.
+	is it worth having a "repair()" function to go and replace them all after copy?
+	*/
+
+
 	struct SFaceSpaceData {
 
 	};
@@ -105,8 +112,12 @@ namespace strata {
 		std::vector<SFaceDriverData> driverDatas; // drivers of this edge
 		std::vector<SFaceSpaceData> spaceDatas; // curves in space of each driver
 
-		Affine3f centre;
-		/* normal at centre of face - all subpatch curves must end with this as their normal*/
+		Affine3f centre; /* 
+		x axis U
+		y axis V
+		z axis N
+		(where applicable for quad faces)
+		*/
 
 		/* vector of corner vertex indices */
 		//std::vector<std::vector<int>> vertices;
@@ -118,10 +129,11 @@ namespace strata {
 		//*/
 		std::vector<bez::BezierSubPath> borderCurves = {};
 
-		/* TEMP 
-		split paths for each half face to package control points more easily for skinning
+		/* 
+		save simple bezier splines to each half of each border, so we interpolate between 
+		complex paths in curve space
 		*/
-		std::vector<std::array<bez::CubicBezierPath, 2>> borderHalfPaths = {};
+		std::vector<std::array<bez::CubicBezierSpline, 2>> borderHalfSplines = {};
 		/* control points in curve space, with their params along a simple cubic spline
 		*/
 		std::vector<std::array<Eigen::MatrixX3f, 2>> borderHalfLocalControlPoints = {};
@@ -139,7 +151,7 @@ namespace strata {
 		should rely separately on original frames along borders, 
 		scaling frames by edge/face crease value
 		*/
-		std::vector<Vector3f> midEdgeTangents;
+		std::vector<Affine3f> midEdgeFrames;
 
 		std::vector<SubPatchData> subPatchdatas;
 

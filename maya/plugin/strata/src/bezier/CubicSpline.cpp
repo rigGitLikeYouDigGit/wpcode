@@ -167,7 +167,27 @@ namespace bez
             );
             newControlPoints.row(i) = otherMat.inverse() * Eigen::Vector3f(control_points_[i]);
         }
-        
+    }
+
+    void CubicBezierSpline::frame(
+        float u,
+        Eigen::MatrixX3f& normals,
+        Eigen::VectorXf& normalUs,
+        std::array<float, 2> startEndGlobalU,
+        Affine3f& tfOut
+    ) {
+        float otherU = startEndGlobalU[0] + (
+            startEndGlobalU[1] - startEndGlobalU[0]
+            ) * u;
+        Vector3f normal;
+        strata::interp1D(normalUs, normals,
+            otherU, normal);
+        Affine3f tf;
+        tfOut.fromPositionOrientationScale(
+            eval(u),
+            Quaternionf::FromTwoVectors(tangentAt(u), normal),
+            Vector3f(1, 1, 1)
+        );
     }
 
     CubicBezierSpline CubicBezierSpline::fromPointsTangents(
@@ -887,14 +907,48 @@ namespace bez
         CurveT& otherCurve,
         Eigen::MatrixX3f& otherNormals,
         Eigen::VectorXf& otherNormalUs,
-        std::array<float, 2> startEndGlobalU,
         Eigen::MatrixX3f& newControlPoints,
         Eigen::VectorXf& newUParams,
-        int paramMode = K_U_PARAM
+        int paramMode// = K_U_PARAM
     ) {
-        /* get control points of this path in space of another */
+        /* get control points of this path in space of another.
         
+        TODO: remove duplicate points somehow*/
 
+        for (int i = 0; i < splines_.size(); i++) {
+            float splineStartU = float(i) / (splines_.size());
+            float splineEndU = float(i + 1) / (splines_.size());
+            Eigen::Matrix<float, 4, 3> splinePts; 
+            Eigen::Vector4f splinePtParams;
+            splines_[i].pointsInOtherCurveSpace(
+                otherCurve, otherNormals, otherNormalUs,
+                { splineStartU, splineEndU },
+                splinePts,
+                splinePtParams,
+                paramMode
+            );
+            /* TODO: find out how to set full slices of Eigen matrices at once
+            */
+            for (int n = 0; n < 4; n++) {
+                newControlPoints.row(i + n) = splinePts.row(n);
+                newUParams(i + n) = splinePtParams(n);
+            }
+        }
+    }
+
+    void CubicBezierPath::frame(
+        float u,
+        Eigen::MatrixX3f& normals,
+        Eigen::VectorXf& normalUs,
+        Eigen::Affine3f& tfOut
+    ) {
+        float minU, maxU;
+        auto span = globalToLocalParam(u, minU, maxU);
+        return splines_[span.first].frame(
+            span.second,
+            normals, normalUs,
+            { minU, maxU },
+            tfOut);
     }
 
     float BezierSubPath::mapTo(float t) {

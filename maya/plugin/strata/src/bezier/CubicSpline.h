@@ -266,6 +266,14 @@ namespace bez
             int paramMode = K_U_PARAM
         );
 
+        void frame(
+            float u,
+            Eigen::MatrixX3f& normals,
+            Eigen::VectorXf& normalUs,
+            std::array<float, 2> startEndGlobalU,
+            Eigen::Affine3f& tfOut
+        );
+
         static CubicBezierSpline fromPointsTangents(
             Eigen::Vector3f& posA,
             Eigen::Vector3f tanA,
@@ -361,17 +369,33 @@ namespace bez
 
 
         std::pair<int, float> globalToLocalParam(float t) const {
-            int number_of_curves = static_cast<int>(splines_.size());
-            int curve_index;
-            if (t == 1) {
-                curve_index = number_of_curves - 1;
+            int nCurves = static_cast<int>(splines_.size());
+            int curveIndex;
+            if (t >= 1.0f) {
+                curveIndex = nCurves - 1;
             }
             else {
-                curve_index = static_cast<int>(std::floor(number_of_curves * t));
+                curveIndex = static_cast<int>(std::floor(nCurves * t));
             }
-            float curve_fraction = curve_index / (float)number_of_curves;
-            return std::make_pair(curve_index, (t - curve_fraction) * number_of_curves);
+            float curveFraction = curveIndex / (float)nCurves;
+            return std::make_pair(curveIndex, (t - curveFraction));
         }
+
+        std::pair<int, float> globalToLocalParam(float t, float& globalUMin, float& globalUMax) const {
+            int nCurves = static_cast<int>(splines_.size());
+            int curveIndex;
+            if (t >= 1.0f) {
+                curveIndex = nCurves - 1;
+            }
+            else {
+                curveIndex = static_cast<int>(std::floor(nCurves * t));
+            }
+            float curveFraction = curveIndex / (float)nCurves;
+            globalUMin = curveFraction;
+            globalUMax = ( (curveIndex + 1) / (float)nCurves);
+            return std::make_pair(curveIndex, (t - curveFraction));
+        }
+
 
         Eigen::Vector3f eval(float t) const {
             auto idT = globalToLocalParam(t);
@@ -453,10 +477,18 @@ namespace bez
             CurveT& otherCurve,
             Eigen::MatrixX3f& otherNormals,
             Eigen::VectorXf& otherNormalUs,
-            std::array<float, 2> startEndGlobalU,
+            //std::array<float, 2> startEndGlobalU,
+            //std::array<float, 2> startEndGlobalU,
             Eigen::MatrixX3f& newControlPoints,
             Eigen::VectorXf& newUParams,
             int paramMode = K_U_PARAM
+        );
+
+        void frame(
+            float u,
+            Eigen::MatrixX3f& normals,
+            Eigen::VectorXf& normalUs,
+            Eigen::Affine3f& tfOut
         );
 
     };
