@@ -281,6 +281,16 @@ namespace bez
             Eigen::Vector3f tanB
         );
 
+        /* TODO: maybe? see if we ever reuse this outside of building faces
+        */
+        //static CubicBezierSpline fromMatricesNormals(
+        //    Eigen::Affine3f& matA,
+        //    Eigen::Vector3f normalAxisA,
+        //    Eigen::Vector3f& matB,
+        //    Eigen::Vector3f normalAxisB
+        //);
+
+      
 
         /* not really much point in this function, 
         easier to control from higher scope*/

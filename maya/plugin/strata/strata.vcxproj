@@ -314,8 +314,6 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\AABB.cpp" />
-    <ClCompile Include="src\stratacore\face\shape.cpp" />
-    <ClCompile Include="src\stratacore\face\topo.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\AABB.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\MInclude.h" />
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\api.cpp" />
@@ -334,6 +332,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\curve.h" />
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\bezier\fit_composite_bezier_curve.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\fit_composite_bezier_curve.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\bezier\math\misc.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\math\misc.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\bezier\math\tridiagonal.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\math\tridiagonal.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\utilities.h" />
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\containers.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\containers.h" />
@@ -412,6 +414,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\edgeData.h" />
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratacore\element.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\element.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratacore\face\shape.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\face\shape.h" />
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratacore\face\topo.cpp" />
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\face\topo.h" />
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratacore\faceData.cpp" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\faceData.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\group.h" />
@@ -440,8 +446,6 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\strataop\strataTypes.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stringLib.h" />
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\visitor.h" />
-    <ClInclude Include="src\stratacore\face\shape.h" />
-    <ClInclude Include="src\stratacore\face\topo.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="F:\wp\code\maya\plugin\strata\ZERO_CHECK.vcxproj">

@@ -7,6 +7,21 @@
 namespace strata {
 
 	// data for discrete hard connections between elements
+
+	/* 
+	conventions:
+
+	X : TANGENT
+
+	Y : BINORMAL
+
+	Z : NORMAL
+	
+	why?
+	in surface setting, UVN still holds that Z is normal - 
+	this way it's (somewhat) consistent between surface and edges
+
+	*/
 	struct SEdgeDriverData {
 		/* struct for a single driver OF an edge - get tangent, normal and twist
 		vectors for curve frame

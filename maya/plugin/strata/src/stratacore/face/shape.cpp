@@ -63,17 +63,66 @@ bez::CubicBezierPath makeBorderMidEdge(
 	*/
 	int borderNext = (borderIndex + 1) % fData.nBorderEdges();
 	int borderPrev = (borderIndex - 1) % fData.nBorderEdges();
-	
-	bez::BezierSubPath& prevCrv = fData.borderCurves[borderPrev];
-	bez::BezierSubPath& nextCrv = fData.borderCurves[borderNext];
+
+	bez::CubicBezierSpline& prevSpline = fData.borderHalfSplines[borderPrev][1];
+	bez::CubicBezierSpline& nextSpline = fData.borderHalfSplines[borderNext][0];
+
+	Eigen::MatrixX3f& prevLocalCtlPts = fData.borderHalfLocalControlPoints[borderPrev][1]; // towards start of this border
+	Eigen::MatrixX3f& nextLocalCtlPts = fData.borderHalfLocalControlPoints[borderNext][0]; // away from end of this border
+
+	int nSamplePoints = std::max(prevLocalCtlPts.rows(), nextLocalCtlPts.rows()); 
+
+	/* build middle simple spline
+	TODO: see if we can avoid flipping here, if centre ever rotates past 180
+	or rather:
+		if normal vector of either end matrix points directly at other end, what should happen?
+	*/
+
+	/* here for simple splines we take the normals given by connections of previous and next edges - 
+	this might be fine? see if it gives wildly different behaviour than the 
+	baked-in frames of the full edge curves
+	*/
+	MatrixX3f borderNormals(2, 3);
+	VectorXf borderNormalUs(2);
+	borderNormalUs(0) = 0.0f;
+	borderNormalUs(1) = 1.0f;
+	borderNormals.row(0) = -prevSpline.tangentAt(1.0);
+	borderNormals.row(1) = nextSpline.tangentAt(0.0);
+
+	Affine3f startMat;
+	fData.borderHalfSplines[borderIndex][0].frame(
+		1.0,
+		borderNormals,
+		borderNormalUs,
+		{0.0, 1.0},
+		startMat
+		);
+
+	Vector3f directV = fData.centre.translation() - startMat.translation();
+
+
 	/* VERY SILLY for now, take average of sample on both curve hulls for position of control point.*/
 
-	int samplePoints = std::max(prevCrv.nSplines() * 3 + 1, nextCrv.nSplines() * 3 + 1) * 2; /* sample more densely?
-	*/
-	VectorXf sampleUs = VectorXf::LinSpaced(samplePoints, 0.0, 1.0);
-	MatrixX3f midCtlPts(samplePoints, 3);
-	for (int i = 0; i < samplePoints; i++) {
-		float u = float(i) / float(samplePoints - 1);
+	VectorXf sampleUs = VectorXf::LinSpaced(nSamplePoints, 0.0, 1.0);
+	Eigen::MatrixX3f blendedCtlPts(sampleUs, 3);
+
+	for (int i = 0; i < nSamplePoints; i++) {
+		float t = float(i) / float(nSamplePoints - 1);
+		int reverseI = nSamplePoints - i - 1;
+		float reverseT = float(reverseI) / float(nSamplePoints - 1);
+		
+		/* blend point from incoming previous control points, and outgoing next control points
+		TODO: Eigen recommends collating big expressions like this as much as possible
+		*/
+		Eigen::Vector3f localPos = (lerpSampleMatrix<float, 3>(
+			prevLocalCtlPts, reverseT
+		) +
+			lerpSampleMatrix<float, 3>(
+				nextLocalCtlPts, t
+			)) / 2.0f;
+			
+		blendedCtlPts.row(i) = 
+		
 		midCtlPts.row(i) = (prevCrv.eval(u) + nextCrv.eval(u)) / 2.0;
 	}
 	return bez::CubicBezierPath(midCtlPts);
@@ -151,6 +200,11 @@ Status& strata::makeNewFaceData( /* */
 			endTan = -endTan;
 			midTan = -midTan;
 		}
+
+		/* TEST having half-splines going TOWARDS midpoint of edge?
+		or leave it to later functions to reverse
+		*/
+
 		/* first half of border edge */
 		fData.borderHalfSplines[i][0] = bez::CubicBezierSpline::fromPointsTangents(
 			startPos, startTan, midPos, -midTan);

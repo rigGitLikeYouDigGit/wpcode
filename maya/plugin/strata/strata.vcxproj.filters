@@ -25,6 +25,12 @@
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\bezier\fit_composite_bezier_curve.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\bezier\math\misc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\bezier\math\tridiagonal.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\containers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -127,6 +133,12 @@
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratacore\element.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratacore\face\shape.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratacore\face\topo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\stratacore\faceData.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -160,8 +172,6 @@
     <ClCompile Include="F:\wp\code\maya\plugin\strata\src\strataop\mergeOp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\stratacore\face\shape.cpp" />
-    <ClCompile Include="src\stratacore\face\topo.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\AABB.h">
@@ -195,6 +205,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\fit_composite_bezier_curve.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\math\misc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\math\tridiagonal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\bezier\utilities.h">
@@ -329,6 +345,12 @@
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\element.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\face\shape.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\face\topo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\stratacore\faceData.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -380,8 +402,6 @@
     <ClInclude Include="F:\wp\code\maya\plugin\strata\src\visitor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\stratacore\face\shape.h" />
-    <ClInclude Include="src\stratacore\face\topo.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="F:\wp\code\maya\plugin\strata\CMakeLists.txt" />
