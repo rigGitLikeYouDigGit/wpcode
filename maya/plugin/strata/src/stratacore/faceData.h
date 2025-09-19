@@ -1,5 +1,6 @@
 #pragma once
 
+#include "types.h"
 #include "element.h"
 #include "pointData.h"
 #include "edgeData.h"
@@ -45,12 +46,9 @@ namespace strata {
 		int faceIndex = -1;
 		int fBorderIndex = -1;
 
-		std::array<bez::CubicBezierSpline, 2> uSimpleEdges;
-		std::array<bez::CubicBezierSpline, 2> vSimpleEdges;
 
-		/* I know we don't need to store all these just thinking */
-		std::array<bez::CubicBezierPath, 2> uPathsInSplineSpace;
-		std::array<bez::CubicBezierPath, 2> vPathsInSplineSpace;
+		//std::array<bez::CubicBezierPath*, 2> midPaths;
+		//std::array<bez::BezierSubPath*, 2> edgeSubPaths;
 
 		/* final worldspace borders
 		* 0 is u, 1 is v

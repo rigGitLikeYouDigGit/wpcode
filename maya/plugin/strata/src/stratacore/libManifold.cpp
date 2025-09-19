@@ -436,12 +436,13 @@ Status& strata::elementGreaterThan(
 			}
 
 			/* loop over elements connected to this point -
-			cumbersome to do it this way, might be better somehow with maps,
-			or a map to vectors of coordinates
 			*/
-			for (int n = 0; n < ptr->elements.size(); n++) {
-				if(std::find(idsB.begin(), idsB.end(), ptr->elements[n]) != idsB.end()) {
-					maxU = std::max(maxU, ptr->uvns[n].x());
+			for (auto& p : ptr->elUVNMap) {
+				if (p.first == idA) { // don't compare against itself?
+					continue;
+				}
+				for (auto& interUVN : p.second) {
+					maxU = std::max(maxU, interUVN.x());
 				}
 			}
 		}
@@ -569,12 +570,13 @@ Status& strata::elementLessThan(
 			}
 
 			/* loop over elements connected to this point -
-			cumbersome to do it this way, might be better somehow with maps,
-			or a map to vectors of coordinates
 			*/
-			for (int n = 0; n < ptr->elements.size(); n++) {
-				if (std::find(idsB.begin(), idsB.end(), ptr->elements[n]) != idsB.end()) {
-					minU = std::min(minU, ptr->uvns[n].x());
+			for (auto& p : ptr->elUVNMap) {
+				if (p.first == idA) { // don't compare against itself?
+					continue;
+				}
+				for (auto& interUVN : p.second) {
+					minU = std::min(minU, interUVN.x());
 				}
 			}
 		}

@@ -275,9 +275,9 @@ namespace bez
         );
 
         static CubicBezierSpline fromPointsTangents(
-            Eigen::Vector3f& posA,
+            Eigen::Vector3f posA,
             Eigen::Vector3f tanA,
-            Eigen::Vector3f& posB,
+            Eigen::Vector3f posB,
             Eigen::Vector3f tanB
         );
 
@@ -515,9 +515,10 @@ namespace bez
 
         std::array<float, 2> uBounds = { 0.0, 1.0 };
         bool reverse = false;
-        CubicBezierPath& _path;
+        CubicBezierPath* _path = nullptr;
 
-        BezierSubPath(CubicBezierPath& path_) : _path(path_) {}
+        BezierSubPath() {}
+        BezierSubPath(CubicBezierPath& path_) : _path(&path_) {}
         BezierSubPath(BezierSubPath& path_) : uBounds(path_.uBounds), reverse(path_.reverse), _path(path_._path){
         }
         

@@ -11,6 +11,7 @@ namespace strata {
 
 	struct SEdgeData;
 
+	struct Vertex;
 
 	struct SFaceData;
 	struct SFaceCreationParams;

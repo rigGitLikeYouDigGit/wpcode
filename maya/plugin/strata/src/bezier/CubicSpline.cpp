@@ -191,9 +191,9 @@ namespace bez
     }
 
     CubicBezierSpline CubicBezierSpline::fromPointsTangents(
-        Eigen::Vector3f& posA,
+        Eigen::Vector3f posA,
         Eigen::Vector3f tanA,
-        Eigen::Vector3f& posB,
+        Eigen::Vector3f posB,
         Eigen::Vector3f tanB
     ) {
         /* handle simple autoscaling tangents to create a new simple curve
@@ -965,18 +965,18 @@ namespace bez
     }
 
     Affine3f BezierSubPath::frame(float u) {
-        return _path.frame(mapTo(u));
+        return _path->frame(mapTo(u));
     }
 
     /* how many whole splines are included in this view*/
     int BezierSubPath::nWholeSplines() {
-        auto startPair = _path.globalToLocalParam(uBounds[0]);
+        auto startPair = _path->globalToLocalParam(uBounds[0]);
         int startIndex = startPair.first;
         if (startPair.second > 0.0001) {
             /* if coord starts above start of spline, don't include it*/
             startIndex += 1;
         }
-        auto endPair = _path.globalToLocalParam(uBounds[1]);
+        auto endPair = _path->globalToLocalParam(uBounds[1]);
         int endIndex = endPair.first;
         if (endPair.second < 0.9999) {
             endIndex -= 1;
@@ -985,15 +985,15 @@ namespace bez
     }
     /* how many splines are included at all */
     int BezierSubPath::nSplines() {
-        auto startPair = _path.globalToLocalParam(uBounds[0]);
-        auto endPair = _path.globalToLocalParam(uBounds[1]);
+        auto startPair = _path->globalToLocalParam(uBounds[0]);
+        auto endPair = _path->globalToLocalParam(uBounds[1]);
         return std::max(endPair.first - startPair.first, 1);
     }
     int BezierSubPath::startSplineIndex() {
-        return _path.globalToLocalParam(uBounds[0]).first;
+        return _path->globalToLocalParam(uBounds[0]).first;
     }
     int BezierSubPath::endSplineIndex() {
-        return _path.globalToLocalParam(uBounds[1]).first;
+        return _path->globalToLocalParam(uBounds[1]).first;
     }
 
 

@@ -70,7 +70,7 @@ bez::CubicBezierPath makeBorderMidEdge(
 	Eigen::MatrixX3f& prevLocalCtlPts = fData.borderHalfLocalControlPoints[borderPrev][1]; // towards start of this border
 	Eigen::MatrixX3f& nextLocalCtlPts = fData.borderHalfLocalControlPoints[borderNext][0]; // away from end of this border
 
-	int nSamplePoints = std::max(prevLocalCtlPts.rows(), nextLocalCtlPts.rows()); 
+	int nSamplePoints = static_cast<int>(std::max(prevLocalCtlPts.rows(), nextLocalCtlPts.rows())); 
 
 	/* build middle simple spline
 	TODO: see if we can avoid flipping here, if centre ever rotates past 180
@@ -98,13 +98,19 @@ bez::CubicBezierPath makeBorderMidEdge(
 		startMat
 		);
 
+	/* Z axis is normal vector out from face*/
 	Vector3f directV = fData.centre.translation() - startMat.translation();
+	Vector3f startT = (startMat.rotation() * Vector3f(0, 0, 1)).cross(directV).cross((startMat.rotation() * Vector3f(0, 0, 1)));
+	Vector3f endT = (fData.centre.rotation() * Vector3f(0, 0, 1)).cross(-directV).cross((fData.centre.rotation() * Vector3f(0, 0, 1)));
+	bez::CubicBezierSpline midSpline = bez::CubicBezierSpline::fromPointsTangents(
+		startMat.translation(), startT, fData.centre.translation(), endT
+	);
 
 
 	/* VERY SILLY for now, take average of sample on both curve hulls for position of control point.*/
 
 	VectorXf sampleUs = VectorXf::LinSpaced(nSamplePoints, 0.0, 1.0);
-	Eigen::MatrixX3f blendedCtlPts(sampleUs, 3);
+	Eigen::MatrixX3f blendedCtlPts(nSamplePoints, 3);
 
 	for (int i = 0; i < nSamplePoints; i++) {
 		float t = float(i) / float(nSamplePoints - 1);
@@ -120,12 +126,17 @@ bez::CubicBezierPath makeBorderMidEdge(
 			lerpSampleMatrix<float, 3>(
 				nextLocalCtlPts, t
 			)) / 2.0f;
-			
-		blendedCtlPts.row(i) = 
 		
-		midCtlPts.row(i) = (prevCrv.eval(u) + nextCrv.eval(u)) / 2.0;
+		Affine3f midMat;
+		midSpline.frame(
+			t,
+			borderNormals, borderNormalUs,
+			{ 0.0f, 1.0f },
+			midMat
+		);
+		blendedCtlPts.row(i) = midMat * localPos;
 	}
-	return bez::CubicBezierPath(midCtlPts);
+	return bez::CubicBezierPath(blendedCtlPts);
 }
 
 SubPatchData makeSubPatchData(
@@ -147,6 +158,12 @@ SubPatchData makeSubPatchData(
 	bez::CubicBezierPath& u2MidPath = fData.borderMidCurves[nextBorder]; // backwards
 	bez::BezierSubPath& v2SubPath = fData.borderCurves[nextBorder]; // backwards
 
+	SubPatchData sData;
+	sData.faceIndex = el->globalIndex;
+	sData.fBorderIndex = borderIndex;
+
+	return sData;
+
 }
 
 Status& strata::makeNewFaceData( /* */
@@ -164,6 +181,8 @@ Status& strata::makeNewFaceData( /* */
 	fData.borderHalfLocalControlPointParams.resize(fData.nBorderEdges());
 	fData.borderHalfSplines.resize(fData.nBorderEdges());
 	fData.midEdgeFrames.resize(fData.nBorderEdges());
+	fData.borderMidCurves.resize(fData.nBorderEdges());
+	fData.subPatchdatas.resize(fData.nBorderEdges());
 
 	/* copy all edge paths and normal vectors */
 	for (int i = 0; i < fData.nBorderEdges(); i++) {
@@ -241,7 +260,7 @@ Status& strata::makeNewFaceData( /* */
 	);
 
 	for (int i = 0; i < fData.nBorderEdges(); i++) {
-		fData.borderMidCurves.push_back(
+		fData.borderMidCurves[i] = (
 			makeBorderMidEdge(
 				man,
 				fData,
@@ -250,5 +269,15 @@ Status& strata::makeNewFaceData( /* */
 			)
 		);
 	}
-
+	for (int i = 0; i < fData.nBorderEdges(); i++) {
+		fData.subPatchdatas[i] = (
+			makeSubPatchData(
+				man,
+				fData,
+				el,
+				i
+			)
+		);
+	}
+	return s;
 }
