@@ -287,7 +287,77 @@ namespace strata {
 	typedef std::vector<Float2>       Float2Array;
 	typedef std::vector<unsigned int> IndexList;
 
+	template<typename VT>
+	struct Span {
+		VT* ptr = nullptr;
+		int l = 0;
+	};
 
+	template< typename VT >
+	struct OffsetBuffer {
+		/* keep array of index offsets into flat buffer, for storing short
+		* but irregular lists
+		* TODO: maybe try and keep multiple kinds of value buffer, accept another buffer for
+		* indices etc
+		*/
+		std::vector<int> offsets;
+		std::vector<VT> values;
+
+		inline int entryLength(int index) {
+			if (index == 0) {
+				return offsets[1];
+			}
+			return offsets[index] - offsets[index - 1];
+		}
+
+		/* NO SUPPORT FOR CHANGING LENGTHS AFTER SETTING, can't ripple-update the entire buffer*/
+		inline void set(int index, VT* values_, int length){
+			for (int i = 0; i < length; i++) {
+				values[i] = values_[i];
+			}
+			if (index) {
+				offsets[index] = length + offsets[index - 1];
+			}
+			else {
+				offsets[index] = length;
+			}
+		}
+
+		inline void reserve(int nEntries, int valueSize = 4) {
+			offsets.reserve(nEntries);
+			values.reserve(nEntries * valueSize);
+		}
+
+		inline void append(int index, VT* values_, int length) {
+			for (int i = 0; i < length; i++) {
+				values.push_back(values_[i]);
+			}
+			
+			if (index) {
+				offsets.push_back(length + offsets[index - 1]);
+			}
+			else {
+				offsets.push_back(length);
+			}
+		}
+		inline Span<VT> entry(int index) {
+			int offset = 0;
+			if (index) {
+				offset = offsets[index - 1];
+			}
+			return Span<VT>{
+				values.data() + (offset),
+					offset - offsets[index]
+			};
+		}
+
+	};
+	/* TODO: investigate if it's better to store separate vectors or spans within a vector for differently
+	sized entries? 
+	so group all len-3s together, then 4s etc.
+	but then your offsets still need to store start-end integers
+	pointless ignore me
+	*/
 
 	template<typename T>
 	inline T uss(T in) {

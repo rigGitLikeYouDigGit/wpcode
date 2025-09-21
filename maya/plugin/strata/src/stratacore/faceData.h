@@ -33,6 +33,27 @@ namespace strata {
 
 	};
 
+	struct SubdivLevel {
+		int level = 0;
+		int nPoints = 0;
+		/* topology for points, faces running clockwise - 
+		* it's a shame that we need this
+		*/
+		std::vector<std::array<int, 4>> topo;
+		std::vector<Vector2f> uvCoords; // SAMPLE COORDS. if level then relative from subdivision uv
+
+		/* offset from LINEAR SUBDIV POS to CURVED SURFACE POS.
+		applied BEFORE uvns, such that points of each subdivision follow initial curved surface,
+		absent any deltas
+		*/
+		std::vector<Vector3f> vecsFromPolyToSurface; 
+
+		/* offsets in subdiv matrix space, to match FINAL MESH SHAPE.
+		* for now we just add it to vec from poly to surface
+		*/
+		std::vector<Vector3f> finalOffsets;
+	};
+
 	struct SubPatchData {
 		/* save data for single subpatch - subpatches guaranteed to be
 		* 4-sided patch, with arbitrary paths as borders
@@ -46,10 +67,6 @@ namespace strata {
 		int faceIndex = -1;
 		int fBorderIndex = -1;
 
-
-		//std::array<bez::CubicBezierPath*, 2> midPaths;
-		//std::array<bez::BezierSubPath*, 2> edgeSubPaths;
-
 		/* final worldspace borders
 		* 0 is u, 1 is v
 		*/
@@ -61,6 +78,19 @@ namespace strata {
 		std::array<int, 2> uRes = { 8, 8 };
 		std::array<int, 2> vRes = { 8, 8 };
 
+		/* DENSE SAMPLING SETUP
+		ok absolutely no idea what we should do here, sing along, so we're
+		gonna do something dumb and work from there
+		
+		we have LEVELS of subdivision, denoted I, II, III etc as shorthand
+		I : intitial poly mesh points - here is where we resolve differences in edge resolution
+		II : first subdivision - normal loop division, guaranteed to be a quadrilateral mesh
+		III : so on
+
+		still indexed in vector as 0, 1, 2 etc
+		*/
+		std::vector<SubdivLevel> subdivs;
+
 		/* probably need some rules on where to place points on borders,
 		so they match up across patches
 		*/
@@ -69,6 +99,19 @@ namespace strata {
 		SFaceData& fData(StrataManifold& man);
 		//SFaceData& fData(StrataManifold& man);
 		void syncConnections(StrataManifold& man);
+
+		int subdivLevelForPoint(int ptIndex) {
+			int npts = 0;
+			int i = 0;
+			for (auto& s : subdivs) {
+				npts += s.nPoints;
+				if (npts <= ptIndex) {
+					return i;
+				}
+				i += 1;
+			}
+			return -1;
+		}
 
 		/* functions working on smooth surface defined by curves
 		*/
