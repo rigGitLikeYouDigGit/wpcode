@@ -1030,6 +1030,19 @@ need to be careful nothing modifies _dir if cached
 			yI = lerp<Eigen::Vector3f, float>(y.row(a), y.row(b), t);
 	}
 
+	template<typename arrVT, typename T>
+	int closestArrayEntry(std::vector<arrVT>& arr, T val) {
+		auto it = std::lower_bound(arr.begin(), arr.end(), static_cast<arrVT>(val));
+		if (it == arr.end()) {
+			return static_cast<int>(arr.size());
+		}
+		/* check if lower entry is closer than upper*/
+		if ((val - static_cast<T>(*it)) < (static_cast<T>(*(it + 1)) - val)) {
+			return static_cast<int>(std::distance(arr.begin(), it));
+		}
+		return static_cast<int>(std::distance(arr.begin(), it)) + 1;
+	}
+
 	std::vector<int> gridConnectivityTriIndexBuffer(
 		int columns,
 		int rows

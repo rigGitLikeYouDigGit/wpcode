@@ -8,6 +8,121 @@ using namespace strata;
 
 using namespace Eigen;
 
+
+Status& makeTessellatedPoints(
+	Status& s,
+	int startURes, int endURes,
+	int startVRes, int endVRes,
+	std::vector<Vector2f>& uvs,
+	std::vector<std::array<int, 4>>& faces
+) {
+	/* for uneven resolutions of start-end borders, find
+	* arrangement of points that increase resolution gracefully over span of face
+	
+	for each axis we have
+	- number of rows
+	- number of darts PER row
+	
+	if we move in alternating axes, since each step might reduce the number of subsequent
+	steps we have in the opposite axis?
+	
+	OR we somehow radiate out from u0v0?
+
+	do one entire axis first, using most sparse count (for now) for opposite axis
+
+	output uv coords on subpatch
+	output face connectivity - use -1 in last entry in case of triangle
+
+	thinking ahead to space trees, try global register for all of them used in a single application - 
+	indexed by frame/context, then by separate name?
+
+	AT HIGHER LEVEL, check if startU==endU and startV==endV - if so, face is simple quad topology
+
+	*/
+	int uMax = std::max(startURes, endURes);
+	int vMax = std::max(startVRes, endVRes);
+	uvs.reserve(uMax * vMax);
+	faces.reserve(uMax * vMax);
+	int uMin = std::min(startURes, endURes);
+	int vMin = std::min(startVRes, endVRes);
+
+	/* require at least 3 points (2 face loops) on each edge 
+	TODO: is it right to cart round this border exclusion through tessellation
+	logic? could probably take care of it separately at higher level, not sure if that's correct*/
+	if (uMin < 3) {
+		STAT_ERROR(s, "min U resolution less than 3, CANNOT TESSELLATE");
+	}
+	if( vMin < 3) {
+		STAT_ERROR(s, "min V resolution less than 3, CANNOT TESSELLATE");
+	}
+
+	/* u axis first */
+	int uDartsNeeded = abs(startURes - endURes);
+	int nUMaxDartsPerStep = ceil(float(uDartsNeeded) / float(vMin - 2)); /* max number of darts for each step - final row may be uneven? */
+	int vDartsNeeded = abs(startVRes - endVRes);
+	int nVMaxDartsPerStep = ceil(float(vDartsNeeded) / float(uMin - 2)); 
+	bool uMoreToLess = startURes > endURes;
+	bool vMoreToLess = startVRes > endVRes;
+
+	/* test instead using grid representing face strips -
+	start out with as dense a grid as possible
+	-1 denotes free-flowing edge, quad face
+	positive integer points to the point in the next row that this face strip should collapse to
+	-2 denotes dead/collapsed face strip
+	-3 denotes joining diagonal vertices for 2 strips joining directly as a 45deg quad
+	-4 denotes a face previous to this effect
+
+	trying the diagonal / outwards approach again, starting at uMax0vMax0
+	*/
+	MatrixXi uFaceGrid(uMax - 1, vMax - 1);
+	uFaceGrid.fill(-1);
+
+	int coordU = 0;
+	int coordV = 0;
+
+	int nUFaceRanks = uMax - 1;
+	int nVFaceRanks = vMax - 1;
+
+	/* ranks may decrease during iteration */
+	while ((coordU < nUFaceRanks) && (coordV < nVFaceRanks)) {
+		coordU += 1;
+		coordV += 1;
+	}
+
+
+	std::vector<int> uRankNPts(vMin); /* number of points per rank */
+	std::vector<std::vector<int>> uRankNextPointIndices(vMin); /* for each point of each rank, give the point in the next  rank that this point will connect to (we align this to the shrinking direction so each input only connects to one
+	*/
+
+
+	
+	/* all processing here is done in more to less direction - flip at the end if needed
+	*/
+
+	
+	for (int uStep = 0; uStep < vMin; uStep++) {
+		/* bookend rank numbers with consistent numbers of points */
+		if (uStep == 0) {
+			uRankNPts[0] = startURes;
+			continue;
+		}
+		if (uStep == (vMin - 1)) {
+			uRankNPts[uStep] = endURes;
+			continue;
+		}
+		/* with each rank, reduce the number of darts needed */
+		uRankNPts[uStep] = std::min(nMaxDartsPerStep, uDartsNeeded);
+
+		uDartsNeeded -= nMaxDartsPerStep;
+	}
+	
+	
+	/* make actual coordinates in U, using number of */
+	for (int uStep = 0; uStep < uRankNPts.size() - 1; uStep++) {
+	}
+
+}
+
 Affine3f makeNewFaceCentre(
 	StrataManifold& man,
 	SFaceData& fData,

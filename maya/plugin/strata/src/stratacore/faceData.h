@@ -78,6 +78,14 @@ namespace strata {
 		std::array<int, 2> uRes = { 8, 8 };
 		std::array<int, 2> vRes = { 8, 8 };
 
+		inline bool isQuadFace() { // if face uses simple quad topology, no triangles or changes in resolution
+			return ((uRes[0] == uRes[1]) && (vRes[0] == vRes[1]));
+		}
+		inline bool isSquareFace() {
+			/* if face resolutions totally match, simple regular squares*/
+			return (isQuadFace() && (uRes[0] == vRes[0]));
+		}
+
 		/* DENSE SAMPLING SETUP
 		ok absolutely no idea what we should do here, sing along, so we're
 		gonna do something dumb and work from there
