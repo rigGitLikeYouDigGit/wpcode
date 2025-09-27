@@ -63,6 +63,14 @@ Status& makeTessellatedPoints(
 	int nVMaxDartsPerStep = ceil(float(vDartsNeeded) / float(uMin - 2)); 
 	bool uMoreToLess = startURes > endURes;
 	bool vMoreToLess = startVRes > endVRes;
+	
+	/* do we have the capacity to leave outer ranks untouched?
+	if minimum resolution border has 1 or fewer midpoints, 
+	need to encroach on them
+	*/
+	bool uBordersClear = uMin >= 3;
+	bool vBordersClear = vMin >= 3;
+
 
 	/* test instead using grid representing face strips -
 	start out with as dense a grid as possible
@@ -74,7 +82,8 @@ Status& makeTessellatedPoints(
 
 	trying the diagonal / outwards approach again, starting at uMax0vMax0
 	*/
-	MatrixXi uFaceGrid(uMax - 1, vMax - 1);
+	std::vector<std::vector<Vector2f>> uvs;
+	MatrixXi uFaceGrid(uMax, vMax );
 	uFaceGrid.fill(-1);
 
 	int coordU = 0;
@@ -83,8 +92,64 @@ Status& makeTessellatedPoints(
 	int nUFaceRanks = uMax - 1;
 	int nVFaceRanks = vMax - 1;
 
-	/* ranks may decrease during iteration */
-	while ((coordU < nUFaceRanks) && (coordV < nVFaceRanks)) {
+	/* ranks may decrease during iteration ? */
+	//while ((coordU < nUFaceRanks) && (coordV < nVFaceRanks)) {
+	while ((coordU < nUFaceRanks)) {
+
+		/* how many darts to resolve this rank */
+		int uDartsThisRank = std::min(nUMaxDartsPerStep, uDartsNeeded);
+		/* which faces on this rank should be collapsed*/
+		std::vector<int> uDartTargetsOnThisRank(uDartsThisRank);
+		/* which points on the NEXT rank should those faces go to?
+		*/
+		std::vector<int> uDartTargetsOnNextRank(uDartsThisRank);
+		
+		/* get nearest positions in arrays?*/
+		for (int dartId = 0; dartId < uDartsThisRank; dartId++) {
+			float uDartStep = float(1.0f) / float(uDartsThisRank - 1) * dartId;
+			/* this is the best-fitting V coord on this U rank for this face which we're going to collapse*/
+			int uFaceToCollapse = divNearestInt(float(nUFaceRanks), uDartStep);
+			while (uFaceGrid(coordU, uFaceToCollapse) == -2) {
+				uFaceToCollapse += 1;
+			}
+			uDartTargetsOnThisRank[dartId] = uFaceToCollapse;
+
+			/* get best fitting point on NEXT rank to collapse to? for this found face
+			* next rank will be after we collapse all these darts
+			*/
+			int uFacesNextRank = uDartsNeeded - uDartsThisRank;
+			float uNextDartStep = 1.0f / float(std::min(nUMaxDartsPerStep, uFacesNextRank));
+			int uNextFaceCollapseTarget = divNearestInt(float(uFacesNextRank), uNextDartStep);
+			uDartTargetsOnNextRank[dartId] = uNextFaceCollapseTarget;
+			/* update matrix, fill subsequent entries with -2 */
+			/* check next face isn't already collapsed */
+			while (uFaceGrid(coordU + 1, uNextFaceCollapseTarget) == -2) {
+				uNextFaceCollapseTarget += 1;
+			}
+			uFaceGrid(coordU, uFaceToCollapse) = uNextFaceCollapseTarget;
+			for (int i = coordU + 1; i < nUFaceRanks; i++) {
+				uFaceGrid(i, uFaceToCollapse) = -2;
+			}
+		}
+
+		for (int vId = 0; vId < nVFaceRanks; vId++) {
+			/* leave first and last ranks alone?
+			only if we have more than 2 faces available - otherwise needs must
+			*/
+			if (vBordersClear) {
+				if (vId == 0) {
+					continue;
+				}
+				if (vId == (nVFaceRanks - 1)) {
+					continue;
+				}
+			}
+
+
+		}
+
+		uDartsNeeded -= uDartsThisRank;
+
 		coordU += 1;
 		coordV += 1;
 	}

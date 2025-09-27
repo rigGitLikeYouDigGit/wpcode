@@ -359,6 +359,24 @@ namespace strata {
 	pointless ignore me
 	*/
 
+	//template<typename T>
+	inline int divNearestInt(int val, int divisor) {
+		int c = (int)val / divisor;
+		int d = val % divisor;
+		if (d >= (divisor / 2)) {
+			return c + 1;
+		}
+		return c;
+	}
+	inline int divNearestInt(float val, float divisor) {
+		int c = (int)val / (int)divisor;
+		float d = val - c * divisor;
+		if (d > (0.5f * divisor)) {
+			return c + 1;
+		}
+		return c;
+	}
+
 	template<typename T>
 	inline T uss(T in) {
 		/* unsigned-to-signed conversion - 
