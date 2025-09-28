@@ -8,6 +8,51 @@ using namespace strata;
 
 using namespace Eigen;
 
+void getBalancedRowsToDart(
+	std::vector<int>& rowIndices,
+	int maxRows,
+	int endRows
+) {
+	/* 
+	find best fitting rows to preserve, mark as 0,
+	mark all the others as 1
+	start rows should be greater than endRows
+
+	returns vector of 1-0 for each POINT row, including borders (marked 0 always)
+	*/
+	rowIndices.resize(maxRows);
+	int nDarts = endRows - maxRows;
+	int nToKeep = endRows - 2;
+	//std::vector<float> otherUs(rowIndices.size());
+	for (int i = 0; i < static_cast<int>(rowIndices.size()); i++) {
+		rowIndices[i] = 1;
+		//otherUs[i] = 1.0 / float(rowIndices.size() - 1) * i;
+	}
+	rowIndices[0] = 0;
+	rowIndices.back() = 0;
+	for (int i = 0; i < nToKeep; i++) {
+		float remapped = float(i + 1) / float(nToKeep - 1) * (endRows - 2) ;
+		int nearestIndex = round(remapped);
+		rowIndices[nearestIndex] = 0;
+	}
+}
+
+//template < typename mapT, typename keyT>
+template < class mapT>
+int findOrIncrementMapIntValue(
+	mapT& m,
+	typename mapT::key_type k,
+	int& incrementCounter
+) {
+	auto found = m.find(k);
+	if (found == m.end()) {
+		incrementCounter += 1;
+		m[k] = incrementCounter;
+		return incrementCounter;
+	}
+	return found->second;
+}
+
 
 Status& makeTessellatedPoints(
 	Status& s,
@@ -80,11 +125,117 @@ Status& makeTessellatedPoints(
 	-3 denotes joining diagonal vertices for 2 strips joining directly as a 45deg quad
 	-4 denotes a face previous to this effect
 
-	trying the diagonal / outwards approach again, starting at uMax0vMax0
+	trying the diagonal / outwards approach again, starting at uMin0vMin0
 	*/
-	std::vector<std::vector<Vector2f>> uvs;
+	//std::vector<std::vector<Vector2f>> uvs;
+
+	/* check which edges need ending, combine them where they intersect,
+	dart where they don't - 
+	vectors are full resolution of point rows
+	*/
+	std::vector<int> uEdgesToEnd;
+	getBalancedRowsToDart(uEdgesToEnd, uMax, uMin);
+	std::vector<int> vEdgesToEnd;
+	getBalancedRowsToDart(vEdgesToEnd, vMax, vMin);
+
+	int uRank = 0;
+	int vRank = 0;
+
+	int vRanksRemaining = vMax;
+
+	/* can't use an unordered map with int pairs? whines about comparison being a deleted function inside the class template*/
+	std::map<std::pair<int, int>, int> denseUVRealIndexMap;
+	int realPointIndex = 0;
+
+	std::unordered_set<std::pair<int, int>> intersectionPoints;
+
+	/* create 'real' points at each intersection point between edges that should end -
+	and add them to an intersection set?*/
+	for (int& uShouldEnd : uEdgesToEnd) { // debatable
+		for (int& vShouldEnd : vEdgesToEnd) {
+			
+		}
+	}
+
+	
+	
+	for (uRank; uRank < uMax; uRank++) {
+		if (!uRank) { // skip first border point
+			continue;
+		}
+		/* if ALL WE NEEDED WAS A GRID, below would be enough */
+		//for (vRank; vRank < vMax; vRank++) {
+		//	if (!vRank) {
+		//		continue;
+		//	}
+		//	//// -- get quad vertices --
+		//	faces.push_back(quad vertices)
+		//}
+		/*  */
+
+
+		/* if we need to keep this u rank, iterate through V to find ranks we also need to keep
+		if this point is at least 1 in from both borders,
+		CREATE A QUAD FACE*/
+		if (!uEdgesToEnd[uRank]) {
+
+			//vRank = 0;
+			//while ( (vRank < vRanksRemaining)) {
+			for(int v = 0; v < vRanksRemaining; v++){
+				if (vRank == 0) { /* first border point, skip it*/
+					continue;
+				}
+				int realIndexA = findOrIncrementMapIntValue(
+					denseUVRealIndexMap,
+					{ uRank - 1, v - 1 },
+					realPointIndex
+				);
+				int realIndexB = findOrIncrementMapIntValue(
+					denseUVRealIndexMap,
+					{ uRank, v - 1 },
+					realPointIndex
+				);
+				int realIndexC = findOrIncrementMapIntValue(
+					denseUVRealIndexMap,
+					{ uRank, v },
+					realPointIndex
+				);
+				int realIndexD = findOrIncrementMapIntValue(
+					denseUVRealIndexMap,
+					{ uRank - 1, v },
+					realPointIndex
+				);
+				faces.push_back(
+					{ realIndexA, realIndexB, realIndexC, realIndexD }
+				);
+			}
+			continue;
+		}
+		/* this u rank DOES terminate */
+
+		/* find next available vRank*/
+		while ((!vEdgesToEnd[vRank]) && (vRank < vMax)) {
+			vRank++;
+		}
+		if (vRank == (vMax - 1)) { // no more vEdges to join
+			break;
+		}
+		/* (uRank, vRank) is point of intersection - join to NEXT point in dense grid */
+
+
+	}
+
+	std::map<std::pair<int, int>, std::pair<int, int>> edgeDarts;
 	MatrixXi uFaceGrid(uMax, vMax );
 	uFaceGrid.fill(-1);
+
+
+
+	/* keep track of which track indices need processing 
+	*/
+	std::vector<int> uEdgesToStop(uDartsNeeded);
+	std::vector<int> vEdgesToStop(uDartsNeeded);
+	
 
 	int coordU = 0;
 	int coordV = 0;
@@ -121,16 +272,25 @@ Status& makeTessellatedPoints(
 			float uNextDartStep = 1.0f / float(std::min(nUMaxDartsPerStep, uFacesNextRank));
 			int uNextFaceCollapseTarget = divNearestInt(float(uFacesNextRank), uNextDartStep);
 			uDartTargetsOnNextRank[dartId] = uNextFaceCollapseTarget;
-			/* update matrix, fill subsequent entries with -2 */
 			/* check next face isn't already collapsed */
 			while (uFaceGrid(coordU + 1, uNextFaceCollapseTarget) == -2) {
 				uNextFaceCollapseTarget += 1;
 			}
+			/* set actual positive value in matrix*/
 			uFaceGrid(coordU, uFaceToCollapse) = uNextFaceCollapseTarget;
+			/* update matrix, fill subsequent entries with -2 */
 			for (int i = coordU + 1; i < nUFaceRanks; i++) {
 				uFaceGrid(i, uFaceToCollapse) = -2;
 			}
 		}
+
+
+		/* 
+		
+		check rows know need closing
+		intersection point set to next diagonal in highest-res grid
+		leftovers divide equally between remaining space to close up
+		*/
 
 		for (int vId = 0; vId < nVFaceRanks; vId++) {
 			/* leave first and last ranks alone?
@@ -165,26 +325,26 @@ Status& makeTessellatedPoints(
 	*/
 
 	
-	for (int uStep = 0; uStep < vMin; uStep++) {
-		/* bookend rank numbers with consistent numbers of points */
-		if (uStep == 0) {
-			uRankNPts[0] = startURes;
-			continue;
-		}
-		if (uStep == (vMin - 1)) {
-			uRankNPts[uStep] = endURes;
-			continue;
-		}
-		/* with each rank, reduce the number of darts needed */
-		uRankNPts[uStep] = std::min(nMaxDartsPerStep, uDartsNeeded);
+	//for (int uStep = 0; uStep < vMin; uStep++) {
+	//	/* bookend rank numbers with consistent numbers of points */
+	//	if (uStep == 0) {
+	//		uRankNPts[0] = startURes;
+	//		continue;
+	//	}
+	//	if (uStep == (vMin - 1)) {
+	//		uRankNPts[uStep] = endURes;
+	//		continue;
+	//	}
+	//	/* with each rank, reduce the number of darts needed */
+	//	uRankNPts[uStep] = std::min(nMaxDartsPerStep, uDartsNeeded);
 
-		uDartsNeeded -= nMaxDartsPerStep;
-	}
-	
-	
-	/* make actual coordinates in U, using number of */
-	for (int uStep = 0; uStep < uRankNPts.size() - 1; uStep++) {
-	}
+	//	uDartsNeeded -= nMaxDartsPerStep;
+	//}
+	//
+	//
+	///* make actual coordinates in U, using number of */
+	//for (int uStep = 0; uStep < uRankNPts.size() - 1; uStep++) {
+	//}
 
 }
 

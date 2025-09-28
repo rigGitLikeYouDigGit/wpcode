@@ -758,6 +758,31 @@ namespace strata {
 		return binomialCoefficient(n, v) * pow(x, v) * pow((1.0f - x), n - v);
 	}
 
+	int flattenUV(int u, int v, int nU, int nV) {
+		return u * nV + v;
+	}
+	std::array<int, 2> expandUVIndex(int id, int nU, int nV) {
+		return { id / nV, id - (id / nV) * nV };
+	}
+
+	int flattenUVW(int u, int v, int w, int nU, int nV, int nW) {
+		/* assuming W is leaf/least significant coord -
+		U denotes full plane slice, so depth
+		V denotes line slice (would be U in 2D)
+		W denotes progression along line (would be V in 2D)*/
+		return (nV * nW) * u + nW * v + w;
+	}
+	std::array<int, 3> expandUVWIndex(int id, int nU, int nV, int nW) {
+		return { 
+			id / (nV * nW), 
+			(id % (nV * nW)) / nW,
+			(id % (nV * nW)) % nV
+		};
+	}
+
+
+
+
 }
 
 #pragma warning( pop )
