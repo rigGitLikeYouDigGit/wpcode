@@ -37,6 +37,9 @@ void getBalancedRowsToDart(
 	}
 }
 
+
+
+
 //template < typename mapT, typename keyT>
 template < class mapT>
 int findOrIncrementMapIntValue(
@@ -53,6 +56,23 @@ int findOrIncrementMapIntValue(
 	return found->second;
 }
 
+
+void resolveDanglingEdges(
+
+	int start
+) {
+	/* excess edges are always in U axis - flip outside this function if needed
+	FOR NOW don't try and resolve edge loops across edges to keep, toplogy won't be the
+	most relaxed but that's ok
+	
+	do we need to start up float coords for these face points? They'll be off the grid
+	oh dear
+	
+	triangles. for now triangles, I don't care, I want to be free*/
+	int startSparseU = 0;
+	int endSparseU = 1;
+
+}
 
 Status& makeTessellatedPoints(
 	Status& s,
@@ -138,6 +158,9 @@ Status& makeTessellatedPoints(
 	std::vector<int> vEdgesToEnd;
 	getBalancedRowsToDart(vEdgesToEnd, vMax, vMin);
 
+	bool uOrVIsGreater = uDartsNeeded > vDartsNeeded; // u default
+	int nDanglingEdges = abs(uDartsNeeded - vDartsNeeded); // edges left over after proper darts
+
 	int uRank = 0;
 	int vRank = 0;
 
@@ -145,20 +168,38 @@ Status& makeTessellatedPoints(
 
 	/* can't use an unordered map with int pairs? whines about comparison being a deleted function inside the class template*/
 	std::map<std::pair<int, int>, int> denseUVRealIndexMap;
+	// increment this with every real point required for final face
 	int realPointIndex = 0;
 
 	std::unordered_set<std::pair<int, int>> intersectionPoints;
 
+	std::vector<int> uRankNPts(uMax, uMax);
+	std::vector<int> vRankNPts(vMax, vMax);
+
 	/* create 'real' points at each intersection point between edges that should end -
 	and add them to an intersection set?*/
-	for (int& uShouldEnd : uEdgesToEnd) { // debatable
-		for (int& vShouldEnd : vEdgesToEnd) {
-			
+	for (int u = 0; u < uMax; u++) {
+		for (int v = 0; v < vMax; v++) {
+			if (uEdgesToEnd[u] && vEdgesToEnd[v]) {
+				intersectionPoints.insert({ u, v });
+				/* remove edges once taken care of*/
+				uEdgesToEnd[u] = 0;
+				vEdgesToEnd[v] = 0;
+			}
 		}
 	}
 
-	
-	
+	/* reset values back to vectors to use them later? this feels silly*/
+	for (auto& p : intersectionPoints) {
+		uEdgesToEnd[p.first] = 1;
+		vEdgesToEnd[p.second] = 1;
+	}
+	/* check size of set to see when we're done with intersection points*/
+
+	// increment every join we do - once done, we know we're on to dangling edges
+	int nJoinsNeeded = std::min(uDartsNeeded, vDartsNeeded);
+	int nJoinsDone = 0;
+
 	for (uRank; uRank < uMax; uRank++) {
 		if (!uRank) { // skip first border point
 			continue;
@@ -173,56 +214,84 @@ Status& makeTessellatedPoints(
 		//}
 		/*  */
 
+		int u = uRank; // need locally mutable u
+		bool skipU = false;
 
 		/* if we need to keep this u rank, iterate through V to find ranks we also need to keep
 		if this point is at least 1 in from both borders,
-		CREATE A QUAD FACE*/
-		if (!uEdgesToEnd[uRank]) {
+		CREATE A QUAD FACE
+		
+		iterate through possible faces, moving quad window
 
-			//vRank = 0;
-			//while ( (vRank < vRanksRemaining)) {
-			for(int v = 0; v < vRanksRemaining; v++){
-				if (vRank == 0) { /* first border point, skip it*/
-					continue;
-				}
-				int realIndexA = findOrIncrementMapIntValue(
+		check for intersection on TOP RIGHT - 
+		if found, expand one space to right and continue
+
+		check for intersection on BOTTOM LEFT - 
+		if found, expand one space down, end iteration on this row
+
+
+		(u-1, v-1) --- ( u, v-1 )
+		|					|
+		|					|
+		(u-1, v ) ----	( u, v )
+
+		
+		*/
+		
+		std::array<std::pair<int, int>, 4> faceCoords;
+		
+
+		//vRank = 0;
+		//while ( (vRank < vRanksRemaining)) {
+		for(int v = 0; v < vRanksRemaining; v++){
+				
+
+			if (vRank == 0) { /* first border point, skip it*/
+				continue;
+			}
+			faceCoords[0] = { u - 1, v - 1 };
+			faceCoords[1] = { u, v - 1 };
+			faceCoords[2] = { u, v };
+			faceCoords[3] = { u - 1, v };
+
+			/*check BOTTOM LEFT to see if it's a pole - if so END THIS ITERATION
+			I don't think there's any way the order matters here, should be guaranteed by checking previous rows first
+			or we just add up u, and check if we still need to keep going shifted a full column forwards
+			*/
+			if (intersectionPoints.find({ u-1, v }) != intersectionPoints.end()) {
+				intersectionPoints.erase({ u - 1, v });
+				faceCoords[2] = { u, v + 1 }; // NOTE +1, we look one vertical point ahead downwards
+				skipU = true;
+			}
+
+			// check TOP RIGHT point to see if we need to extend BOTTOM RIGHT corner of this face one point forwards
+			if (intersectionPoints.find({ u, v-1 }) != intersectionPoints.end()) {
+				faceCoords[2] = { u + 1, v }; // shift right
+			}
+			/* if both of these trigger on the same iteration it messes up - maybe there's a harmonious way
+			of checking different corners */
+
+
+			faces.push_back({ -1,-1,-1,-1 });
+			for (int vtxId = 0; vtxId < 4; vtxId++) {
+				faces.back()[vtxId] = findOrIncrementMapIntValue(
 					denseUVRealIndexMap,
-					{ uRank - 1, v - 1 },
+					faceCoords[vtxId],
 					realPointIndex
-				);
-				int realIndexB = findOrIncrementMapIntValue(
-					denseUVRealIndexMap,
-					{ uRank, v - 1 },
-					realPointIndex
-				);
-				int realIndexC = findOrIncrementMapIntValue(
-					denseUVRealIndexMap,
-					{ uRank, v },
-					realPointIndex
-				);
-				int realIndexD = findOrIncrementMapIntValue(
-					denseUVRealIndexMap,
-					{ uRank - 1, v },
-					realPointIndex
-				);
-				faces.push_back(
-					{ realIndexA, realIndexB, realIndexC, realIndexD }
 				);
 			}
+
+			if (skipU) {
+				break;
+			}
+
+		}
+
+		/* check if we need to break out of this u-rank*/
+		if (skipU) {
+			skipU = false;
 			continue;
 		}
-		/* this u rank DOES terminate */
-
-		/* find next available vRank*/
-		while ((!vEdgesToEnd[vRank]) && (vRank < vMax)) {
-			vRank++;
-		}
-		if (vRank == (vMax - 1)) { // no more vEdges to join
-			break;
-		}
-		/* (uRank, vRank) is point of intersection - join to NEXT point in dense grid */
-
-
 	}
 
 	std::map<std::pair<int, int>, std::pair<int, int>> edgeDarts;
