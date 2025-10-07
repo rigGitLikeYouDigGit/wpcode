@@ -189,11 +189,13 @@ Status& makeTessellatedPoints(
 		}
 	}
 
+	/* any remaining edgesToEnd are edges that must be darted at their end border*/
+
 	/* reset values back to vectors to use them later? this feels silly*/
-	for (auto& p : intersectionPoints) {
-		uEdgesToEnd[p.first] = 1;
-		vEdgesToEnd[p.second] = 1;
-	}
+	//for (auto& p : intersectionPoints) {
+	//	uEdgesToEnd[p.first] = 1;
+	//	vEdgesToEnd[p.second] = 1;
+	//}
 	/* check size of set to see when we're done with intersection points*/
 
 	// increment every join we do - once done, we know we're on to dangling edges
@@ -254,6 +256,8 @@ Status& makeTessellatedPoints(
 			faceCoords[2] = { u, v };
 			faceCoords[3] = { u - 1, v };
 
+			/* check if we're done with intersections and only care about dangling edges*/
+
 			/*check BOTTOM LEFT to see if it's a pole - if so END THIS ITERATION
 			I don't think there's any way the order matters here, should be guaranteed by checking previous rows first
 			or we just add up u, and check if we still need to keep going shifted a full column forwards
@@ -262,6 +266,7 @@ Status& makeTessellatedPoints(
 				intersectionPoints.erase({ u - 1, v });
 				faceCoords[2] = { u, v + 1 }; // NOTE +1, we look one vertical point ahead downwards
 				skipU = true;
+				nJoinsDone += 1;
 			}
 
 			// check TOP RIGHT point to see if we need to extend BOTTOM RIGHT corner of this face one point forwards
@@ -271,6 +276,50 @@ Status& makeTessellatedPoints(
 			/* if both of these trigger on the same iteration it messes up - maybe there's a harmonious way
 			of checking different corners */
 
+			/* check to solve darting*/
+			if (v == vMax - 1) {
+				/* check for last upper point being an edge to dart*/
+				int prevRealU = u - 1;
+				int limit = 0;
+				while (uEdgesToEnd[prevRealU] && limit < 100) {
+					prevRealU -= 1;
+					limit += 1;
+				}
+				if (limit == 100) {
+					STAT_ERROR(s, "hit limit to find prev real U coord");
+				}
+
+				faceCoords[3] = { prevRealU, v };
+				if (uEdgesToEnd[u]) {
+					faceCoords[2] = { prevRealU, v };;
+					faceCoords[3] = { -1,-1 };
+				}
+			}
+
+
+			if (uRank == uMax - 1) {
+				/* check for last upper point being an edge to dart*/
+				int prevRealV = v - 1;
+				int limit = 0;
+				while (vEdgesToEnd[prevRealV] && limit < 100) {
+					prevRealV -= 1;
+					limit += 1;
+				}
+				if (limit == 100) {
+					STAT_ERROR(s, "hit limit to find prev real V coord");
+				}
+				/* push connectivity back as a triangle*/
+				faceCoords[1] = { u, prevRealV };
+
+
+				/* if THIS edge is an edge to end, face is a triangle*/
+				if (vEdgesToEnd[v]) {
+					/* add triangle to dart this edge*/
+					faceCoords[1] = { u, prevRealV };
+					faceCoords[2] = { u - 1, v };
+					faceCoords[3] = { -1, -1 }; // final coord -1, denotes triangle
+				}
+			}
 
 			faces.push_back({ -1,-1,-1,-1 });
 			for (int vtxId = 0; vtxId < 4; vtxId++) {
@@ -280,6 +329,8 @@ Status& makeTessellatedPoints(
 					realPointIndex
 				);
 			}
+
+			/* check if final rank, and dangling edge needs darting?*/
 
 			if (skipU) {
 				break;
