@@ -254,5 +254,7 @@ class ClipScheduler(_BASE_):
 	apiTypeStr = "kClipScheduler"
 	typeIdInt = 1129530184
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["absolute", "absoluteRotations", "binMembership", "firstClip", "secondClip", "blendClips", "blendList_Hidden", "blendList_InmapFrom", "blendList_InmapTo", "blendList_Inmap", "blendList_OutmapFrom", "blendList_OutmapTo", "blendList_Outmap", "blendList_Raw", "blendList", "clip", "clipEvaluate", "clipFunction_Hidden", "clipFunction_InmapFrom", "clipFunction_InmapTo", "clipFunction_Inmap", "clipFunction_OutmapFrom", "clipFunction_OutmapTo", "clipFunction_Outmap", "clipFunction_Raw", "clipFunction", "clipStatePercentEval", "cycle", "enable", "hold", "numTracks", "postCycle", "preCycle", "scale", "sourceEnd", "sourceStart", "start", "startPercent", "track", "trackState", "weight", "weightStyle"]
+	nodeLeafPlugs = ["absolute", "absoluteRotations", "binMembership", "blendClips", "blendList", "clip", "clipEvaluate", "clipFunction", "clipStatePercentEval", "cycle", "enable", "hold", "numTracks", "postCycle", "preCycle", "scale", "sourceEnd", "sourceStart", "start", "startPercent", "track", "trackState", "weight", "weightStyle"]
 	pass
 

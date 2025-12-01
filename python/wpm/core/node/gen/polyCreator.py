@@ -30,5 +30,7 @@ class PolyCreator(PolyBase):
 
 	typeName = "polyCreator"
 	typeIdInt = 1346580014
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

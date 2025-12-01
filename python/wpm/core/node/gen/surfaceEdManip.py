@@ -33,5 +33,7 @@ class SurfaceEdManip(ManipContainer):
 	apiTypeStr = "kSurfaceEdManip"
 	typeIdInt = 1431130949
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

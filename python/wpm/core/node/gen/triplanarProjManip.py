@@ -30,5 +30,7 @@ class TriplanarProjManip(Manip3D):
 
 	typeName = "triplanarProjManip"
 	typeIdInt = 1431131218
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

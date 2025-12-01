@@ -154,5 +154,7 @@ class PolySplit(PolyModifier):
 	apiTypeStr = "kPolySplit"
 	typeIdInt = 1347637324
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["adjustEdgeFlow", "clean2Verts", "desc", "detachEdges", "edge", "insertWithEdgeFlow", "maya2015", "maya70", "projectedCurveTolerance", "smoothingAngle", "baryCoord1", "baryCoord2", "baryCoord3", "baryCoord", "face", "triangle", "splitPoint", "splitPoints", "subdivision", "vtxx", "vtxy", "vtxz", "vertices"]
+	nodeLeafPlugs = ["adjustEdgeFlow", "clean2Verts", "desc", "detachEdges", "edge", "insertWithEdgeFlow", "maya2015", "maya70", "projectedCurveTolerance", "smoothingAngle", "splitPoints", "subdivision", "vertices"]
 	pass
 

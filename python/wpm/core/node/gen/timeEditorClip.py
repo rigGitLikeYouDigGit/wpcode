@@ -232,5 +232,7 @@ class TimeEditorClip(TimeEditorClipBase):
 	apiTypeStr = "kTimeEditorClip"
 	typeIdInt = 1094929475
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["animSource", "audioFile", "blendShapeTarget", "clipSoloMuted", "clipTrackMuted", "clipWeight", "content", "ghost", "ghostColorB", "ghostColorG", "ghostColorR", "ghostColor", "ghostColorCustom", "ghostCountPost", "ghostCountPre", "ghostPostColorB", "ghostPostColorG", "ghostPostColorR", "ghostPostColor", "ghostPreColorB", "ghostPreColorG", "ghostPreColorR", "ghostPreColor", "ghostRootCustom", "ghostRootDefault", "ghostRootTargets", "ghostStepSize", "layerId", "layerIndex", "layerMode", "layerMuted", "layerName", "layerSolo", "layerWeight", "layer", "state", "track", "transitionTo"]
+	nodeLeafPlugs = ["animSource", "audioFile", "blendShapeTarget", "clipSoloMuted", "clipTrackMuted", "clipWeight", "content", "ghost", "ghostColor", "ghostColorCustom", "ghostCountPost", "ghostCountPre", "ghostPostColor", "ghostPreColor", "ghostRootCustom", "ghostRootDefault", "ghostRootTargets", "ghostStepSize", "layer", "state", "track", "transitionTo"]
 	pass
 

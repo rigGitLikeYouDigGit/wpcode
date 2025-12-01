@@ -48,5 +48,7 @@ class PolyTransfer(PolyModifier):
 	apiTypeStr = "kPolyTransfer"
 	typeIdInt = 1347700306
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["otherPoly", "uvSets", "vertexColor", "vertices"]
+	nodeLeafPlugs = ["otherPoly", "uvSets", "vertexColor", "vertices"]
 	pass
 

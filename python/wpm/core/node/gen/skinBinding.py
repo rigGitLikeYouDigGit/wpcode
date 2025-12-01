@@ -113,5 +113,7 @@ class SkinBinding(_BASE_):
 	apiTypeStr = "kSkinBinding"
 	typeIdInt = 1397441092
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "bindPreMatrix", "currentInfluence", "falloffCurve_FloatValue", "falloffCurve_Interp", "falloffCurve_Position", "falloffCurve", "geomMatrix", "inputGeometry", "leftCap", "leftRadius", "length", "localMatrix", "outWeights", "parentMatrix", "rightCap", "rightRadius", "updateWeights"]
+	nodeLeafPlugs = ["binMembership", "bindPreMatrix", "currentInfluence", "falloffCurve", "geomMatrix", "inputGeometry", "leftCap", "leftRadius", "length", "localMatrix", "outWeights", "parentMatrix", "rightCap", "rightRadius", "updateWeights"]
 	pass
 

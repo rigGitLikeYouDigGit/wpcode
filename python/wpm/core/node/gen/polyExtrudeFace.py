@@ -152,5 +152,7 @@ class PolyExtrudeFace(PolyMoveFace):
 
 	typeName = "polyExtrudeFace"
 	typeIdInt = 1346721862
+	nodeLeafClassAttrs = ["compBoundingBoxMaxX", "compBoundingBoxMaxY", "compBoundingBoxMaxZ", "compBoundingBoxMax", "compBoundingBoxMinX", "compBoundingBoxMinY", "compBoundingBoxMinZ", "compBoundingBoxMin", "divisions", "inputProfile", "keepFacesTogether", "maya2012", "maya2018", "maya2023", "newThickness", "reverseAllFaces", "smoothingAngle", "taper", "taperCurve_FloatValue", "taperCurve_Interp", "taperCurve_Position", "taperCurve", "thickness", "twist"]
+	nodeLeafPlugs = ["compBoundingBoxMax", "compBoundingBoxMin", "divisions", "inputProfile", "keepFacesTogether", "maya2012", "maya2018", "maya2023", "newThickness", "reverseAllFaces", "smoothingAngle", "taper", "taperCurve", "thickness", "twist"]
 	pass
 

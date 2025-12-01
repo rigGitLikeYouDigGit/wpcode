@@ -41,5 +41,7 @@ class ApplyAbsFloatOverride(ApplyAbsOverride):
 
 	typeName = "applyAbsFloatOverride"
 	typeIdInt = 1476395901
+	nodeLeafClassAttrs = ["original", "out", "value"]
+	nodeLeafPlugs = ["original", "out", "value"]
 	pass
 

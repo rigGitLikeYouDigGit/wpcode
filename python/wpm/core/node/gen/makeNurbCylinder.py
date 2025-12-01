@@ -30,5 +30,7 @@ class MakeNurbCylinder(RevolvedPrimitive):
 
 	typeName = "makeNurbCylinder"
 	typeIdInt = 1313036620
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

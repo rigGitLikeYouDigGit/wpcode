@@ -112,5 +112,7 @@ class AvgSurfacePoints(AbstractBaseCreate):
 	apiTypeStr = "kAvgSurfacePoints"
 	typeIdInt = 1312904016
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["inputSurfaces", "parameterU", "parameterV", "normalX", "normalY", "normalZ", "normal", "positionX", "positionY", "positionZ", "position", "result", "turnOnPercentage", "weight"]
+	nodeLeafPlugs = ["inputSurfaces", "parameterU", "parameterV", "result", "turnOnPercentage", "weight"]
 	pass
 

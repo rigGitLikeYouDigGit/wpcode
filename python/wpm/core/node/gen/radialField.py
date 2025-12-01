@@ -33,5 +33,7 @@ class RadialField(Field):
 
 	typeName = "radialField"
 	typeIdInt = 1498562884
+	nodeLeafClassAttrs = ["radialType"]
+	nodeLeafPlugs = ["radialType"]
 	pass
 

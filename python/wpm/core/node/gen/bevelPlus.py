@@ -169,5 +169,7 @@ class BevelPlus(AbstractBaseCreate):
 	apiTypeStr = "kBevelPlus"
 	typeIdInt = 1312969558
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["bevelInside", "capSides", "count", "depth", "endCapSurface", "extrudeDepth", "innerStyleCurve", "inputCurves", "joinSurfaces", "normalsOutwards", "numberOfSides", "orderedCurves", "outerStyleCurve", "outputPoly", "outputSurfaces", "polyOutChordHeight", "polyOutChordHeightRatio", "polyOutCount", "polyOutCurveSamples", "polyOutCurveType", "polyOutExtrusionSamples", "polyOutExtrusionType", "polyOutMethod", "polyOutUseChordHeight", "polyOutUseChordHeightRatio", "positionX", "positionY", "positionZ", "position", "startCapSurface", "tolerance", "width"]
+	nodeLeafPlugs = ["bevelInside", "capSides", "count", "depth", "endCapSurface", "extrudeDepth", "innerStyleCurve", "inputCurves", "joinSurfaces", "normalsOutwards", "numberOfSides", "orderedCurves", "outerStyleCurve", "outputPoly", "outputSurfaces", "polyOutChordHeight", "polyOutChordHeightRatio", "polyOutCount", "polyOutCurveSamples", "polyOutCurveType", "polyOutExtrusionSamples", "polyOutExtrusionType", "polyOutMethod", "polyOutUseChordHeight", "polyOutUseChordHeightRatio", "position", "startCapSurface", "tolerance", "width"]
 	pass
 

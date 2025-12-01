@@ -36,5 +36,7 @@ class PolyBevel2(PolyBevel):
 	apiTypeStr = "kPolyBevel2"
 	typeIdInt = 1346524722
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["useLegacyBevelAlgorithm"]
+	nodeLeafPlugs = ["useLegacyBevelAlgorithm"]
 	pass
 

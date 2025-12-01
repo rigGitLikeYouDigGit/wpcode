@@ -133,5 +133,7 @@ class EnvSphere(TextureEnv):
 	apiTypeStr = "kEnvSphere"
 	typeIdInt = 1380275024
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["flip", "imageB", "imageG", "imageR", "image", "infoBits", "pointCameraX", "pointCameraY", "pointCameraZ", "pointCamera", "refPointCameraX", "refPointCameraY", "refPointCameraZ", "refPointCamera", "shearU", "shearV", "shearUV"]
+	nodeLeafPlugs = ["flip", "image", "infoBits", "pointCamera", "refPointCamera", "shearUV"]
 	pass
 

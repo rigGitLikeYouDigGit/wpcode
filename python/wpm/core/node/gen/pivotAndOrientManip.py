@@ -30,5 +30,7 @@ class PivotAndOrientManip(ManipContainer):
 
 	typeName = "pivotAndOrientManip"
 	typeIdInt = 1346457421
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -48,5 +48,7 @@ class UnitConversion(_BASE_):
 	apiTypeStr = "kUnitConversion"
 	typeIdInt = 1146441300
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "conversionFactor", "input", "output"]
+	nodeLeafPlugs = ["binMembership", "conversionFactor", "input", "output"]
 	pass
 

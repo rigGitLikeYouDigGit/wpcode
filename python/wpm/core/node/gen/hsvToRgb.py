@@ -90,5 +90,7 @@ class HsvToRgb(_BASE_):
 	apiTypeStr = "kHsvToRgb"
 	typeIdInt = 1380463186
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "inHsvB", "inHsvG", "inHsvR", "inHsv", "outRgbB", "outRgbG", "outRgbR", "outRgb", "renderPassMode"]
+	nodeLeafPlugs = ["binMembership", "inHsv", "outRgb", "renderPassMode"]
 	pass
 

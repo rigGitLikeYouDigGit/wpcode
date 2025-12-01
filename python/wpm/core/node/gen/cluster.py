@@ -97,5 +97,7 @@ class Cluster(WeightGeometryFilter):
 	apiTypeStr = "kCluster"
 	typeIdInt = 1178815571
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["angleInterpolation", "bindPreMatrix", "bindState", "cacheSetup", "postMatrix", "preMatrix", "weightedMatrix", "clusterXforms", "geomMatrix", "matrix", "postCompensationMatrix", "preCompensationMatrix", "relative", "weightedCompensationMatrix"]
+	nodeLeafPlugs = ["angleInterpolation", "bindPreMatrix", "bindState", "cacheSetup", "clusterXforms", "geomMatrix", "matrix", "postCompensationMatrix", "preCompensationMatrix", "relative", "weightedCompensationMatrix"]
 	pass
 

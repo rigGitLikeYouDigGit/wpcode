@@ -89,5 +89,7 @@ class Sculpt(GeometryFilter):
 	apiTypeStr = "kSculpt"
 	typeIdInt = 1179861840
 	MFnCls = om.MFnGeometryFilter
+	nodeLeafClassAttrs = ["dropoffDistance", "dropoffType", "extendedEnd", "insideMode", "maximumDisplacement", "mode", "sculptObjectGeometry", "sculptObjectMatrix", "startPosX", "startPosY", "startPosZ", "startPosition"]
+	nodeLeafPlugs = ["dropoffDistance", "dropoffType", "extendedEnd", "insideMode", "maximumDisplacement", "mode", "sculptObjectGeometry", "sculptObjectMatrix", "startPosition"]
 	pass
 

@@ -88,5 +88,7 @@ class BlendDevice(Blend):
 	apiTypeStr = "kBlendDevice"
 	typeIdInt = 1112294486
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["blender", "data", "deviceBlender", "deviceValue", "inputAngle", "inputLinear", "minTime", "offset", "outputAngle", "outputLinear", "period", "stride", "time", "timeStamp"]
+	nodeLeafPlugs = ["blender", "data", "deviceBlender", "deviceValue", "inputAngle", "inputLinear", "minTime", "offset", "outputAngle", "outputLinear", "period", "stride", "time", "timeStamp"]
 	pass
 

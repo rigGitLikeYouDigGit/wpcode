@@ -102,5 +102,7 @@ class BoneLattice(GeometryFilter):
 
 	typeName = "boneLattice"
 	typeIdInt = 1178752332
+	nodeLeafClassAttrs = ["adjustedUpperBaseLatticeMatrix", "baseLatticeMatrix", "bendMagnitude", "bendVectorX", "bendVectorY", "bendVectorZ", "bendVector", "bicep", "deformedLatticeMatrix", "initialUpperMatrix", "lengthIn", "lengthOut", "tricep", "upperMatrix", "widthLeft", "widthRight"]
+	nodeLeafPlugs = ["adjustedUpperBaseLatticeMatrix", "baseLatticeMatrix", "bendMagnitude", "bendVector", "bicep", "deformedLatticeMatrix", "initialUpperMatrix", "lengthIn", "lengthOut", "tricep", "upperMatrix", "widthLeft", "widthRight"]
 	pass
 

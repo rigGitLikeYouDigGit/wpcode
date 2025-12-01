@@ -252,5 +252,7 @@ class Texture3d(ShadingDependNode):
 
 	typeName = "texture3d"
 	typeIdInt = 1381259315
+	nodeLeafClassAttrs = ["alphaGain", "alphaIsLuminance", "alphaOffset", "blend", "colorGainB", "colorGainG", "colorGainR", "colorGain", "colorOffsetB", "colorOffsetG", "colorOffsetR", "colorOffset", "defaultColorB", "defaultColorG", "defaultColorR", "defaultColor", "filter", "filterOffset", "filterSizeX", "filterSizeY", "filterSizeZ", "filterSize", "invert", "local", "matrixEyeToWorld", "outAlpha", "outColorB", "outColorG", "outColorR", "outColor", "placementMatrix", "pointCameraX", "pointCameraY", "pointCameraZ", "pointCamera", "pointObjX", "pointObjY", "pointObjZ", "pointObj", "wrap"]
+	nodeLeafPlugs = ["alphaGain", "alphaIsLuminance", "alphaOffset", "blend", "colorGain", "colorOffset", "defaultColor", "filter", "filterOffset", "filterSize", "invert", "local", "matrixEyeToWorld", "outAlpha", "outColor", "placementMatrix", "pointCamera", "pointObj", "wrap"]
 	pass
 

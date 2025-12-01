@@ -87,5 +87,7 @@ class Tension(WeightGeometryFilter):
 	apiTypeStr = "kTension"
 	typeIdInt = 1413828179
 	MFnCls = om.MFnGeometryFilter
+	nodeLeafClassAttrs = ["bendStrength", "cacheBindPositions", "cache", "cacheSetup", "inwardConstraint", "outwardConstraint", "pinBorderVertices", "relative", "shearStrength", "smoothingIterations", "smoothingStep", "squashConstraint", "stretchConstraint"]
+	nodeLeafPlugs = ["bendStrength", "cache", "cacheSetup", "inwardConstraint", "outwardConstraint", "pinBorderVertices", "relative", "shearStrength", "smoothingIterations", "smoothingStep", "squashConstraint", "stretchConstraint"]
 	pass
 

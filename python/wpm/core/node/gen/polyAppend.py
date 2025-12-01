@@ -73,5 +73,7 @@ class PolyAppend(PolyModifier):
 	apiTypeStr = "kPolyAppend"
 	typeIdInt = 1346457680
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["desc", "subdivision", "test2EdgeLoops", "texture", "vtxx", "vtxy", "vtxz", "vertices"]
+	nodeLeafPlugs = ["desc", "subdivision", "test2EdgeLoops", "texture", "vertices"]
 	pass
 

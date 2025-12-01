@@ -74,5 +74,7 @@ class FalloffEval(_BASE_):
 	apiTypeStr = "kFalloffEval"
 	typeIdInt = 1162235718
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "componentTagExpression", "currentGeometry", "originalGeometry", "perFunctionVertexWeights", "perFunctionWeights", "perVertexFalloffWeights", "perVertexWeights", "weightFunction"]
+	nodeLeafPlugs = ["binMembership", "componentTagExpression", "currentGeometry", "originalGeometry", "perFunctionWeights", "perVertexWeights", "weightFunction"]
 	pass
 

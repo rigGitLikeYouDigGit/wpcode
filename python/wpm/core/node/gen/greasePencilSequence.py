@@ -132,5 +132,7 @@ class GreasePencilSequence(_BASE_):
 	apiTypeStr = "kGreasePencilSequence"
 	typeIdInt = 1196446545
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["activeFrameIndex", "alphaMultiplier", "binMembership", "blendLen", "colorB", "colorG", "colorR", "color", "frameAlpha", "frameEnable", "frameImage", "frameLabel", "frameTime", "frame", "postFrames", "postGhost", "preFrames", "preGhost", "timeInput"]
+	nodeLeafPlugs = ["activeFrameIndex", "alphaMultiplier", "binMembership", "blendLen", "color", "frame", "postFrames", "postGhost", "preFrames", "preGhost", "timeInput"]
 	pass
 

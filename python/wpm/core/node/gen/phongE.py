@@ -62,5 +62,7 @@ class PhongE(Reflect):
 
 	typeName = "phongE"
 	typeIdInt = 1380993093
+	nodeLeafClassAttrs = ["highlightSize", "roughness", "whitenessB", "whitenessG", "whitenessR", "whiteness"]
+	nodeLeafPlugs = ["highlightSize", "roughness", "whiteness"]
 	pass
 

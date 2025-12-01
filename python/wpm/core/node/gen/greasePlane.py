@@ -198,5 +198,7 @@ class GreasePlane(ImagePlane):
 	apiTypeStr = "kGreasePlane"
 	typeIdInt = 1145524300
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["greaseSequence", "renderPlane", "renderPlaneRotateX", "renderPlaneRotateY", "renderPlaneRotateZ", "renderPlaneRotate", "renderPlaneScaleX", "renderPlaneScaleY", "renderPlaneScaleZ", "renderPlaneScale", "renderPlaneTranslateX", "renderPlaneTranslateY", "renderPlaneTranslateZ", "renderPlaneTranslate", "sourceDepth", "sourcePlane", "sourcePlaneRotateX", "sourcePlaneRotateY", "sourcePlaneRotateZ", "sourcePlaneRotate", "sourcePlaneScaleX", "sourcePlaneScaleY", "sourcePlaneScaleZ", "sourcePlaneScale", "sourcePlaneTranslateX", "sourcePlaneTranslateY", "sourcePlaneTranslateZ", "sourcePlaneTranslate"]
+	nodeLeafPlugs = ["greaseSequence", "renderPlane", "renderPlaneRotate", "renderPlaneScale", "renderPlaneTranslate", "sourceDepth", "sourcePlane", "sourcePlaneRotate", "sourcePlaneScale", "sourcePlaneTranslate"]
 	pass
 

@@ -33,5 +33,7 @@ class ShadingDependNode(_BASE_):
 
 	typeName = "shadingDependNode"
 	typeIdInt = 1397245006
+	nodeLeafClassAttrs = ["binMembership"]
+	nodeLeafPlugs = ["binMembership"]
 	pass
 

@@ -114,5 +114,7 @@ class Noise(Texture2d):
 	apiTypeStr = "kNoise"
 	typeIdInt = 1381256755
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["amplitude", "density", "depthMax", "falloff", "frequency", "frequencyRatio", "implode", "implodeCenterU", "implodeCenterV", "implodeCenter", "inflection", "noiseType", "numWaves", "randomness", "ratio", "sizeRand", "spottyness", "threshold", "time"]
+	nodeLeafPlugs = ["amplitude", "density", "depthMax", "falloff", "frequency", "frequencyRatio", "implode", "implodeCenter", "inflection", "noiseType", "numWaves", "randomness", "ratio", "sizeRand", "spottyness", "threshold", "time"]
 	pass
 

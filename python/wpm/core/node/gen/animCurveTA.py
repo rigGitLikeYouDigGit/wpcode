@@ -67,5 +67,7 @@ class AnimCurveTA(AnimCurve):
 
 	typeName = "animCurveTA"
 	typeIdInt = 1346589761
+	nodeLeafClassAttrs = ["input", "keyTime", "keyValue", "keyTimeValue", "keyValueSwitch", "output", "quaternionW", "rawValue"]
+	nodeLeafPlugs = ["input", "keyTimeValue", "keyValueSwitch", "output", "quaternionW", "rawValue"]
 	pass
 

@@ -120,5 +120,7 @@ class Sampler(_BASE_):
 
 	typeName = "sampler"
 	typeIdInt = 1179864400
+	nodeLeafClassAttrs = ["binMembership", "function_Default", "function_Hidden", "function_InmapFrom", "function_InmapTo", "function_Inmap", "function_OutmapFrom", "function_OutmapTo", "function_Outmap", "function_Raw", "function", "invert", "maximum", "minimum", "step", "value"]
+	nodeLeafPlugs = ["binMembership", "function", "invert", "maximum", "minimum", "step", "value"]
 	pass
 

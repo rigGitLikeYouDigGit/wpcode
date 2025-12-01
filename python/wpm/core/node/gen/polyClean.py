@@ -48,5 +48,7 @@ class PolyClean(PolyModifier):
 	apiTypeStr = "kPolyClean"
 	typeIdInt = 1347175244
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["cleanEdges", "cleanPartialUVMapping", "cleanUVs", "cleanVertices"]
+	nodeLeafPlugs = ["cleanEdges", "cleanPartialUVMapping", "cleanUVs", "cleanVertices"]
 	pass
 

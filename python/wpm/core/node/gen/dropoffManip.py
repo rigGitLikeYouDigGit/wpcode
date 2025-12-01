@@ -33,5 +33,7 @@ class DropoffManip(ManipContainer):
 	apiTypeStr = "kDropoffManip"
 	typeIdInt = 1431782477
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

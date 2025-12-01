@@ -22,19 +22,7 @@ if T.TYPE_CHECKING:
 class BinMembershipPlug(Plug):
 	node : MatrixCurve = None
 	pass
-class CachingPlug(Plug):
-	node : MatrixCurve = None
-	pass
 class CurveOutPlug(Plug):
-	node : MatrixCurve = None
-	pass
-class CurveRootResInPlug(Plug):
-	node : MatrixCurve = None
-	pass
-class FrozenPlug(Plug):
-	node : MatrixCurve = None
-	pass
-class IsHistoricallyInterestingPlug(Plug):
 	node : MatrixCurve = None
 	pass
 class MatrixEndInPlug(Plug):
@@ -49,16 +37,7 @@ class MatrixMidInPlug(Plug):
 	matrixMidInMatrix_ : MatrixMidInMatrixPlug = PlugDescriptor("matrixMidInMatrix")
 	node : MatrixCurve = None
 	pass
-class MatrixRootIterationsInPlug(Plug):
-	node : MatrixCurve = None
-	pass
 class MatrixStartInPlug(Plug):
-	node : MatrixCurve = None
-	pass
-class MessagePlug(Plug):
-	node : MatrixCurve = None
-	pass
-class NodeStatePlug(Plug):
 	node : MatrixCurve = None
 	pass
 class SampleInParamPlug(Plug):
@@ -85,18 +64,11 @@ class SampleOutPlug(Plug):
 # define node class
 class MatrixCurve(_BASE_):
 	binMembership_ : BinMembershipPlug = PlugDescriptor("binMembership")
-	caching_ : CachingPlug = PlugDescriptor("caching")
 	curveOut_ : CurveOutPlug = PlugDescriptor("curveOut")
-	curveRootResIn_ : CurveRootResInPlug = PlugDescriptor("curveRootResIn")
-	frozen_ : FrozenPlug = PlugDescriptor("frozen")
-	isHistoricallyInteresting_ : IsHistoricallyInterestingPlug = PlugDescriptor("isHistoricallyInteresting")
 	matrixEndIn_ : MatrixEndInPlug = PlugDescriptor("matrixEndIn")
 	matrixMidInMatrix_ : MatrixMidInMatrixPlug = PlugDescriptor("matrixMidInMatrix")
 	matrixMidIn_ : MatrixMidInPlug = PlugDescriptor("matrixMidIn")
-	matrixRootIterationsIn_ : MatrixRootIterationsInPlug = PlugDescriptor("matrixRootIterationsIn")
 	matrixStartIn_ : MatrixStartInPlug = PlugDescriptor("matrixStartIn")
-	message_ : MessagePlug = PlugDescriptor("message")
-	nodeState_ : NodeStatePlug = PlugDescriptor("nodeState")
 	sampleInParam_ : SampleInParamPlug = PlugDescriptor("sampleInParam")
 	sampleIn_ : SampleInPlug = PlugDescriptor("sampleIn")
 	sampleOutMatrix_ : SampleOutMatrixPlug = PlugDescriptor("sampleOutMatrix")
@@ -106,5 +78,7 @@ class MatrixCurve(_BASE_):
 
 	typeName = "matrixCurve"
 	typeIdInt = 1191076
+	nodeLeafClassAttrs = ["binMembership", "curveOut", "matrixEndIn", "matrixMidInMatrix", "matrixMidIn", "matrixStartIn", "sampleInParam", "sampleIn", "sampleOutMatrix", "sampleOut"]
+	nodeLeafPlugs = ["binMembership", "curveOut", "matrixEndIn", "matrixMidIn", "matrixStartIn", "sampleIn", "sampleOut"]
 	pass
 

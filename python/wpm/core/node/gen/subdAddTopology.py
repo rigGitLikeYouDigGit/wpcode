@@ -33,5 +33,7 @@ class SubdAddTopology(SubdModifier):
 	apiTypeStr = "kSubdAddTopology"
 	typeIdInt = 1396790361
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

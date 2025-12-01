@@ -160,5 +160,7 @@ class PolySphProj(PolyModifierWorld):
 	apiTypeStr = "kPolySphProj"
 	typeIdInt = 1347637328
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["compId", "imageCenterX", "imageCenterY", "imageCenter", "imageScaleU", "imageScaleV", "imageScale", "projectionCenterX", "projectionCenterY", "projectionCenterZ", "projectionCenter", "projectionHorizontalSweep", "projectionVerticalSweep", "projectionScale", "radius", "rotateX", "rotateY", "rotateZ", "rotate", "rotationAngle", "seamCorrect", "useOldPolyProjection", "uvSetName"]
+	nodeLeafPlugs = ["compId", "imageCenter", "imageScale", "projectionCenter", "projectionScale", "radius", "rotate", "rotationAngle", "seamCorrect", "useOldPolyProjection", "uvSetName"]
 	pass
 

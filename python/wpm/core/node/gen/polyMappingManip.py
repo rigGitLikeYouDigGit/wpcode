@@ -33,5 +33,7 @@ class PolyMappingManip(ManipContainer):
 	apiTypeStr = "kPolyMappingManip"
 	typeIdInt = 1431327309
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

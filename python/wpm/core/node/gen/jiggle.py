@@ -123,5 +123,7 @@ class Jiggle(WeightGeometryFilter):
 
 	typeName = "jiggle"
 	typeIdInt = 1246184518
+	nodeLeafClassAttrs = ["cacheSetup", "cachedInputPositionList", "cachedPositionList", "cachedTime", "cachedVelocityList", "isResting", "cachedData", "cachedDataList", "currentTime", "damping", "directionBias", "diskCache", "enable", "forceAlongNormal", "forceOnTangent", "ignoreTransform", "jiggleWeight", "motionMultiplier", "stiffness"]
+	nodeLeafPlugs = ["cacheSetup", "cachedDataList", "currentTime", "damping", "directionBias", "diskCache", "enable", "forceAlongNormal", "forceOnTangent", "ignoreTransform", "jiggleWeight", "motionMultiplier", "stiffness"]
 	pass
 

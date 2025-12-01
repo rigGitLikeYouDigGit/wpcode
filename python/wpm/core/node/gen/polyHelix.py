@@ -84,5 +84,7 @@ class PolyHelix(PolyPrimitive):
 	apiTypeStr = "kPolyHelix"
 	typeIdInt = 1212501065
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["coils", "createUVs", "direction", "height", "maya2022UVs", "radius", "roundCap", "subdivisionsAxis", "subdivisionsCaps", "subdivisionsCoil", "texture", "useOldInitBehaviour", "width"]
+	nodeLeafPlugs = ["coils", "createUVs", "direction", "height", "maya2022UVs", "radius", "roundCap", "subdivisionsAxis", "subdivisionsCaps", "subdivisionsCoil", "texture", "useOldInitBehaviour", "width"]
 	pass
 

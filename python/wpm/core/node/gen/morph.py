@@ -127,5 +127,7 @@ class Morph(WeightGeometryFilter):
 	apiTypeStr = "kMorph"
 	typeIdInt = 1297240136
 	MFnCls = om.MFnGeometryFilter
+	nodeLeafClassAttrs = ["cacheSetup", "componentLookup", "componentLookupList", "inwardConstraint", "mirrorDirection", "morphMode", "morphSpace", "morphTarget", "neighborBias", "neighborExponent", "neighborLevel", "normalScale", "originalMorphTarget", "outwardConstraint", "scaleEnvelope", "scaleLevel", "smoothNormals", "tangentPlaneScale", "tangentialDamping", "uniformScaleWeight", "useComponentLookup", "useOriginalMorphTarget", "useTangentialConstraints"]
+	nodeLeafPlugs = ["cacheSetup", "componentLookupList", "inwardConstraint", "mirrorDirection", "morphMode", "morphSpace", "morphTarget", "neighborBias", "neighborExponent", "neighborLevel", "normalScale", "originalMorphTarget", "outwardConstraint", "scaleEnvelope", "scaleLevel", "smoothNormals", "tangentPlaneScale", "tangentialDamping", "uniformScaleWeight", "useComponentLookup", "useOriginalMorphTarget", "useTangentialConstraints"]
 	pass
 

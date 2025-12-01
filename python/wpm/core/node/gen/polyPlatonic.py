@@ -61,5 +61,7 @@ class PolyPlatonic(_BASE_):
 
 	typeName = "polyPlatonic"
 	typeIdInt = 1195049
+	nodeLeafClassAttrs = ["binMembership", "heightBaseline", "output", "primitive", "radius", "sphericalInflation", "subdivisionMode", "subdivisions"]
+	nodeLeafPlugs = ["binMembership", "heightBaseline", "output", "primitive", "radius", "sphericalInflation", "subdivisionMode", "subdivisions"]
 	pass
 

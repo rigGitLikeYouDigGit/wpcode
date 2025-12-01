@@ -165,5 +165,7 @@ class SimpleVolumeShader(_BASE_):
 	apiTypeStr = "kSimpleVolumeShader"
 	typeIdInt = 1398166344
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "colorB", "colorG", "colorR", "color", "farPointWorldX", "farPointWorldY", "farPointWorldZ", "farPointWorld", "outColorB", "outColorG", "outColorR", "outColor", "outTransparencyB", "outTransparencyG", "outTransparencyR", "outTransparency", "parameter1", "pointWorldX", "pointWorldY", "pointWorldZ", "pointWorld"]
+	nodeLeafPlugs = ["binMembership", "color", "farPointWorld", "outColor", "outTransparency", "parameter1", "pointWorld"]
 	pass
 

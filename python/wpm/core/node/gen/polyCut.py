@@ -141,5 +141,7 @@ class PolyCut(PolyModifierWorld):
 	apiTypeStr = "kPolyCut"
 	typeIdInt = 1347437396
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["compId", "cutPlaneCenterX", "cutPlaneCenterY", "cutPlaneCenterZ", "cutPlaneCenter", "cutPlaneRotateX", "cutPlaneRotateY", "cutPlaneRotateZ", "cutPlaneRotate", "cutPlaneHeight", "cutPlaneWidth", "cutPlaneSize", "deleteFaces", "extractFaces", "extractOffsetX", "extractOffsetY", "extractOffsetZ", "extractOffset", "onObject"]
+	nodeLeafPlugs = ["compId", "cutPlaneCenter", "cutPlaneRotate", "cutPlaneSize", "deleteFaces", "extractFaces", "extractOffset", "onObject"]
 	pass
 

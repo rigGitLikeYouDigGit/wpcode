@@ -173,5 +173,7 @@ class PolyColorMod(PolyModifier):
 	apiTypeStr = "kPolyColorMod"
 	typeIdInt = 1346587983
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["alphaScale_FloatValue", "alphaScale_Interp", "alphaScale_Position", "alphaScale", "baseColorName", "blueScale_FloatValue", "blueScale_Interp", "blueScale_Position", "blueScale", "greenScale_FloatValue", "greenScale_Interp", "greenScale_Position", "greenScale", "huev", "intensityScale_FloatValue", "intensityScale_Interp", "intensityScale_Position", "intensityScale", "redScale_FloatValue", "redScale_Interp", "redScale_Position", "redScale", "satv", "value"]
+	nodeLeafPlugs = ["alphaScale", "baseColorName", "blueScale", "greenScale", "huev", "intensityScale", "redScale", "satv", "value"]
 	pass
 

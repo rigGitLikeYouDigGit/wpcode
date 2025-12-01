@@ -49,5 +49,7 @@ class MotionTrail(Snapshot):
 
 	typeName = "motionTrail"
 	typeIdInt = 1297044562
+	nodeLeafClassAttrs = ["anchorTransform", "extraKeyframeTimes", "hasAnchorTransform", "keyframeFlags", "keyframeTimes"]
+	nodeLeafPlugs = ["anchorTransform", "extraKeyframeTimes", "hasAnchorTransform", "keyframeFlags", "keyframeTimes"]
 	pass
 

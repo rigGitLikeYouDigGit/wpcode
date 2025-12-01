@@ -59,5 +59,7 @@ class ResultCurveTimeToLinear(ResultCurve):
 
 	typeName = "resultCurveTimeToLinear"
 	typeIdInt = 1380144204
+	nodeLeafClassAttrs = ["input", "inputResult", "keyTime", "keyValue", "keyTimeValue", "output"]
+	nodeLeafPlugs = ["input", "inputResult", "keyTimeValue", "output"]
 	pass
 

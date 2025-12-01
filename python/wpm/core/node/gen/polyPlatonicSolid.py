@@ -52,5 +52,7 @@ class PolyPlatonicSolid(PolyPrimitive):
 	apiTypeStr = "kPolyPlatonicSolid"
 	typeIdInt = 1397705801
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["createUVs", "radius", "sideLength", "solidType", "texture"]
+	nodeLeafPlugs = ["createUVs", "radius", "sideLength", "solidType", "texture"]
 	pass
 

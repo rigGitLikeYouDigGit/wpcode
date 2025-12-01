@@ -72,5 +72,7 @@ class HierarchyTestNode3(HierarchyTestNode2):
 
 	typeName = "hierarchyTestNode3"
 	typeIdInt = 1213484595
+	nodeLeafClassAttrs = ["n3level2M", "n3level2S", "n3level1C", "n3level1M", "n3level1S", "n3compound", "n3single"]
+	nodeLeafPlugs = ["n3compound", "n3single"]
 	pass
 

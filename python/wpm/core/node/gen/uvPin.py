@@ -124,5 +124,7 @@ class UvPin(_BASE_):
 
 	typeName = "uvPin"
 	typeIdInt = 1431720534
+	nodeLeafClassAttrs = ["binMembership", "cacheSetup", "coordinateU", "coordinateV", "coordinate", "deformedGeometry", "normalAxis", "normalOverride", "normalizedIsoParms", "originalGeometry", "outputMatrix", "outputTranslateX", "outputTranslateY", "outputTranslateZ", "outputTranslate", "railCurve", "relativeSpaceMatrix", "relativeSpaceMode", "tangentAxis", "uvSetName"]
+	nodeLeafPlugs = ["binMembership", "cacheSetup", "coordinate", "deformedGeometry", "normalAxis", "normalOverride", "normalizedIsoParms", "originalGeometry", "outputMatrix", "outputTranslate", "railCurve", "relativeSpaceMatrix", "relativeSpaceMode", "tangentAxis", "uvSetName"]
 	pass
 

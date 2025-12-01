@@ -33,5 +33,7 @@ class AxesActionManip(Manip3D):
 	apiTypeStr = "kAxesActionManip"
 	typeIdInt = 1430345793
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -58,5 +58,7 @@ class MaterialTemplate(_BASE_):
 	apiTypeStr = "kMaterialTemplate"
 	typeIdInt = 1297370177
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["componentTagExpression", "shadingEngine", "assign", "binMembership", "defaultShadingEngine"]
+	nodeLeafPlugs = ["assign", "binMembership", "defaultShadingEngine"]
 	pass
 

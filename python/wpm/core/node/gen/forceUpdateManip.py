@@ -33,5 +33,7 @@ class ForceUpdateManip(TextButtonManip):
 	apiTypeStr = "kForceUpdateManip"
 	typeIdInt = 1431127637
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

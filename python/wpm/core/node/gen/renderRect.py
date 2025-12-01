@@ -33,5 +33,7 @@ class RenderRect(GeometryShape):
 	apiTypeStr = "kRenderRect"
 	typeIdInt = 1381122900
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

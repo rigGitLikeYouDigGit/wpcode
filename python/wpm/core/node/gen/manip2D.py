@@ -30,5 +30,7 @@ class Manip2D(Manip3D):
 
 	typeName = "manip2D"
 	typeIdInt = 1431122500
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

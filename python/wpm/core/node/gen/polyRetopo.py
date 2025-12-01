@@ -73,5 +73,7 @@ class PolyRetopo(PolyModifier):
 
 	typeName = "polyRetopo"
 	typeIdInt = 1347569229
+	nodeLeafClassAttrs = ["anisotropy", "curveInfluenceDirection", "curveSingularitySeparation", "faceUniformity", "featureTags", "preprocessMesh", "preserveHardEdges", "targetEdgeDeviation", "targetFaceCount", "targetFaceCountTolerance", "topologyRegularity"]
+	nodeLeafPlugs = ["anisotropy", "curveInfluenceDirection", "curveSingularitySeparation", "faceUniformity", "featureTags", "preprocessMesh", "preserveHardEdges", "targetEdgeDeviation", "targetFaceCount", "targetFaceCountTolerance", "topologyRegularity"]
 	pass
 

@@ -44,5 +44,7 @@ class RenderedImageSource(ImageSource):
 	apiTypeStr = "kRenderedImageSource"
 	typeIdInt = 1380141395
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["camera", "imageSource", "renderLayer"]
+	nodeLeafPlugs = ["camera", "imageSource", "renderLayer"]
 	pass
 

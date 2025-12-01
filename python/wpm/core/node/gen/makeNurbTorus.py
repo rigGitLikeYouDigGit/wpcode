@@ -33,5 +33,7 @@ class MakeNurbTorus(RevolvedPrimitive):
 
 	typeName = "makeNurbTorus"
 	typeIdInt = 1314148178
+	nodeLeafClassAttrs = ["minorSweep"]
+	nodeLeafPlugs = ["minorSweep"]
 	pass
 

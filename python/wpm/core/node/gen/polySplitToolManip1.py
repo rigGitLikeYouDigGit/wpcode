@@ -30,5 +30,7 @@ class PolySplitToolManip1(FreePointTriadManip):
 
 	typeName = "polySplitToolManip1"
 	typeIdInt = 1431327537
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -40,5 +40,7 @@ class CurveFromSubdivEdge(CurveFromSubdiv):
 	apiTypeStr = "kCurveFromSubdivEdge"
 	typeIdInt = 1396921157
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["edgeIndexL", "edgeIndexR"]
+	nodeLeafPlugs = ["edgeIndexL", "edgeIndexR"]
 	pass
 

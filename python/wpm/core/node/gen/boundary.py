@@ -40,5 +40,7 @@ class Boundary(BoundaryBase):
 	apiTypeStr = "kBoundary"
 	typeIdInt = 1312968260
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["endPoint", "order"]
+	nodeLeafPlugs = ["endPoint", "order"]
 	pass
 

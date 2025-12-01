@@ -48,5 +48,7 @@ class PfxHair(PfxGeometry):
 	apiTypeStr = "kPfxHair"
 	typeIdInt = 1346783297
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["receiveShadows", "renderHairs", "visibleInReflections", "visibleInRefractions"]
+	nodeLeafPlugs = ["receiveShadows", "renderHairs", "visibleInReflections", "visibleInRefractions"]
 	pass
 

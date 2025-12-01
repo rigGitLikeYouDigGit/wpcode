@@ -72,5 +72,7 @@ class PolyCircularize(PolyModifierWorld):
 	apiTypeStr = "kPolyCircularize"
 	typeIdInt = 1346589251
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["alignment", "divisions", "evenlyDistribute", "normalOffset", "normalOrientation", "radialOffset", "relaxInterior", "smoothingAngle", "supportingEdges", "twist"]
+	nodeLeafPlugs = ["alignment", "divisions", "evenlyDistribute", "normalOffset", "normalOrientation", "radialOffset", "relaxInterior", "smoothingAngle", "supportingEdges", "twist"]
 	pass
 

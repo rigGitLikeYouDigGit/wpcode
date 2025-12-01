@@ -33,5 +33,7 @@ class Manip3D(Transform):
 
 	typeName = "manip3D"
 	typeIdInt = 1431131204
+	nodeLeafClassAttrs = ["connectedNodes"]
+	nodeLeafPlugs = ["connectedNodes"]
 	pass
 

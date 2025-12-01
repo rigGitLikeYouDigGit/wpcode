@@ -48,5 +48,7 @@ class PolyMergeEdge(PolyModifier):
 	apiTypeStr = "kPolyMergeEdge"
 	typeIdInt = 1347241285
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["firstEdge", "mergeMode", "mergeTexture", "secondEdge"]
+	nodeLeafPlugs = ["firstEdge", "mergeMode", "mergeTexture", "secondEdge"]
 	pass
 

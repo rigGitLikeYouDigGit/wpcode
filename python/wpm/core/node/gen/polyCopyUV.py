@@ -33,5 +33,7 @@ class PolyCopyUV(PolyModifierUV):
 
 	typeName = "polyCopyUV"
 	typeIdInt = 1346590038
+	nodeLeafClassAttrs = ["uvSetNameInput"]
+	nodeLeafPlugs = ["uvSetNameInput"]
 	pass
 

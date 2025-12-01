@@ -33,5 +33,7 @@ class DagContainer(Transform):
 	apiTypeStr = "kDagContainer"
 	typeIdInt = 1145128771
 	MFnCls = om.MFnContainerNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

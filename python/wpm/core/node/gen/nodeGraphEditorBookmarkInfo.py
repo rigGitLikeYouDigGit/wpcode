@@ -108,5 +108,7 @@ class NodeGraphEditorBookmarkInfo(_BASE_):
 	apiTypeStr = "kNodeGraphEditorBookmarkInfo"
 	typeIdInt = 1313161801
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "name", "dependNode", "nodeVisualState", "positionX", "positionY", "nodeInfo", "viewXH", "viewYH", "viewRectHigh", "viewXL", "viewYL", "viewRectLow"]
+	nodeLeafPlugs = ["binMembership", "name", "nodeInfo", "viewRectHigh", "viewRectLow"]
 	pass
 

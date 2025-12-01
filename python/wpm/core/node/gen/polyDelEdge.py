@@ -36,5 +36,7 @@ class PolyDelEdge(PolyModifier):
 	apiTypeStr = "kPolyDelEdge"
 	typeIdInt = 1346651461
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["cleanVertices"]
+	nodeLeafPlugs = ["cleanVertices"]
 	pass
 

@@ -33,5 +33,7 @@ class PolyCutManip(ProjectionManip):
 	apiTypeStr = "kPolyCutManip"
 	typeIdInt = 1346587985
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

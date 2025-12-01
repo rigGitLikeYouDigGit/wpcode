@@ -60,5 +60,7 @@ class TransferFalloff(_BASE_):
 	apiTypeStr = "kTransferFalloff"
 	typeIdInt = 1346785094
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "bindTagsFilter", "cacheSetup", "outputWeightFunction", "useBindTags", "weightFunction", "weightedGeometry"]
+	nodeLeafPlugs = ["binMembership", "bindTagsFilter", "cacheSetup", "outputWeightFunction", "useBindTags", "weightFunction", "weightedGeometry"]
 	pass
 

@@ -36,5 +36,7 @@ class CurveFromSurfaceCoS(CurveFromSurface):
 	apiTypeStr = "kCurveFromSurfaceCoS"
 	typeIdInt = 1313035075
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["curveOnSurface"]
+	nodeLeafPlugs = ["curveOnSurface"]
 	pass
 

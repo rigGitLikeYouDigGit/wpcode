@@ -60,5 +60,7 @@ class DeformSquash(DeformFunc):
 	apiTypeStr = "kDeformSquash"
 	typeIdInt = 1178882897
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["endSmoothness", "expand", "factor", "highBound", "lowBound", "maxExpandPos", "startSmoothness"]
+	nodeLeafPlugs = ["endSmoothness", "expand", "factor", "highBound", "lowBound", "maxExpandPos", "startSmoothness"]
 	pass
 

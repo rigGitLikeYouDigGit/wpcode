@@ -233,5 +233,7 @@ class Stroke(PfxGeometry):
 	apiTypeStr = "kStroke"
 	typeIdInt = 1398035019
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["collisionObject", "maxClip", "minClip", "minimalTwist", "normalX", "normalY", "normalZ", "normal", "outNormalX", "outNormalY", "outNormalZ", "outNormal", "outPointX", "outPointY", "outPointZ", "outPoint", "curve", "opposite", "samples", "pathCurve", "perspective", "pressure", "pressureMap1", "pressureMap2", "pressureMap3", "pressureMax1", "pressureMax2", "pressureMax3", "pressureMin1", "pressureMin2", "pressureMin3", "pressureScale_FloatValue", "pressureScale_Interp", "pressureScale_Position", "pressureScale", "sampleDensity", "smoothing", "useNormal", "uvSetName"]
+	nodeLeafPlugs = ["collisionObject", "maxClip", "minClip", "minimalTwist", "normal", "outNormal", "outPoint", "pathCurve", "perspective", "pressure", "pressureMap1", "pressureMap2", "pressureMap3", "pressureMax1", "pressureMax2", "pressureMax3", "pressureMin1", "pressureMin2", "pressureMin3", "pressureScale", "sampleDensity", "smoothing", "useNormal", "uvSetName"]
 	pass
 

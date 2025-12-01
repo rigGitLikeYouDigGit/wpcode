@@ -33,5 +33,7 @@ class IkRPManip(ManipContainer):
 	apiTypeStr = "kIkRPManip"
 	typeIdInt = 1430866770
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

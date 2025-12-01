@@ -106,5 +106,7 @@ class PointLight(NonExtendedLightShapeNode):
 	apiTypeStr = "kPointLight"
 	typeIdInt = 1347373396
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["farPointWorldX", "farPointWorldY", "farPointWorldZ", "farPointWorld", "fogGeometry", "fogIntensity", "fogRadius", "fogType", "lightGlow", "objectType", "pointWorldX", "pointWorldY", "pointWorldZ", "pointWorld"]
+	nodeLeafPlugs = ["farPointWorld", "fogGeometry", "fogIntensity", "fogRadius", "fogType", "lightGlow", "objectType", "pointWorld"]
 	pass
 

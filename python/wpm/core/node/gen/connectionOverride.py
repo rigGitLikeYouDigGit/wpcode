@@ -33,5 +33,7 @@ class ConnectionOverride(AbsOverride):
 
 	typeName = "connectionOverride"
 	typeIdInt = 1476395909
+	nodeLeafClassAttrs = ["connectionStr"]
+	nodeLeafPlugs = ["connectionStr"]
 	pass
 

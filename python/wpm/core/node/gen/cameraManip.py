@@ -33,5 +33,7 @@ class CameraManip(ManipContainer):
 	apiTypeStr = "kCameraManip"
 	typeIdInt = 1431126849
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

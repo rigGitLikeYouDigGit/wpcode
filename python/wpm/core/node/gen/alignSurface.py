@@ -120,5 +120,7 @@ class AlignSurface(AbstractBaseCreate):
 	apiTypeStr = "kAlignSurface"
 	typeIdInt = 1312902227
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["attach", "curvatureContinuity", "curvatureScale1", "curvatureScale2", "directionU", "inputSurface1", "inputSurface2", "joinParameter", "keepMultipleKnots", "outputSurface1", "outputSurface2", "positionalContinuity", "positionalContinuityType", "reverse1", "reverse2", "swap1", "swap2", "tangentContinuity", "tangentContinuityType", "tangentScale1", "tangentScale2", "twist"]
+	nodeLeafPlugs = ["attach", "curvatureContinuity", "curvatureScale1", "curvatureScale2", "directionU", "inputSurface1", "inputSurface2", "joinParameter", "keepMultipleKnots", "outputSurface1", "outputSurface2", "positionalContinuity", "positionalContinuityType", "reverse1", "reverse2", "swap1", "swap2", "tangentContinuity", "tangentContinuityType", "tangentScale1", "tangentScale2", "twist"]
 	pass
 

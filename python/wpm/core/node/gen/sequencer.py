@@ -52,5 +52,7 @@ class Sequencer(_BASE_):
 	apiTypeStr = "kSequencer"
 	typeIdInt = 1397837379
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["audio", "binMembership", "maxFrame", "minFrame", "shots"]
+	nodeLeafPlugs = ["audio", "binMembership", "maxFrame", "minFrame", "shots"]
 	pass
 

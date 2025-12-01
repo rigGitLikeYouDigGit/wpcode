@@ -41,5 +41,7 @@ class AnimBlendNodeTime(AnimBlendNodeBase):
 
 	typeName = "animBlendNodeTime"
 	typeIdInt = 1094865993
+	nodeLeafClassAttrs = ["inputA", "inputB", "output"]
+	nodeLeafPlugs = ["inputA", "inputB", "output"]
 	pass
 

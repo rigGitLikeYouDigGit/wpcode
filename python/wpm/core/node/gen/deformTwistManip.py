@@ -33,5 +33,7 @@ class DeformTwistManip(ManipContainer):
 	apiTypeStr = "kDeformTwistManip"
 	typeIdInt = 1431590729
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

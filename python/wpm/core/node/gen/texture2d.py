@@ -193,5 +193,7 @@ class Texture2d(ShadingDependNode):
 
 	typeName = "texture2d"
 	typeIdInt = 1381259314
+	nodeLeafClassAttrs = ["alphaGain", "alphaIsLuminance", "alphaOffset", "colorGainB", "colorGainG", "colorGainR", "colorGain", "colorOffsetB", "colorOffsetG", "colorOffsetR", "colorOffset", "defaultColorB", "defaultColorG", "defaultColorR", "defaultColor", "filter", "filterOffset", "invert", "outAlpha", "outColorB", "outColorG", "outColorR", "outColor", "uCoord", "vCoord", "uvCoord", "uvFilterSizeX", "uvFilterSizeY", "uvFilterSize"]
+	nodeLeafPlugs = ["alphaGain", "alphaIsLuminance", "alphaOffset", "colorGain", "colorOffset", "defaultColor", "filter", "filterOffset", "invert", "outAlpha", "outColor", "uvCoord", "uvFilterSize"]
 	pass
 

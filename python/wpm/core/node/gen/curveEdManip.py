@@ -33,5 +33,7 @@ class CurveEdManip(ManipContainer):
 	apiTypeStr = "kCurveEdManip"
 	typeIdInt = 1431126853
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

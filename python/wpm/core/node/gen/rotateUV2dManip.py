@@ -30,5 +30,7 @@ class RotateUV2dManip(Uv2dManip):
 
 	typeName = "rotateUV2dManip"
 	typeIdInt = 1429361231
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

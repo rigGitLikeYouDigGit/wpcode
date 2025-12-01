@@ -235,5 +235,7 @@ class OldTangentConstraint(Constraint):
 
 	typeName = "oldTangentConstraint"
 	typeIdInt = 1146375747
+	nodeLeafClassAttrs = ["aimVectorX", "aimVectorY", "aimVectorZ", "aimVector", "constraintParentInverseMatrix", "constraintRotateX", "constraintRotateY", "constraintRotateZ", "constraintRotate", "targetParentMatrix", "targetRotatePivotX", "targetRotatePivotY", "targetRotatePivotZ", "targetRotatePivot", "targetRotateTranslateX", "targetRotateTranslateY", "targetRotateTranslateZ", "targetRotateTranslate", "targetTranslateX", "targetTranslateY", "targetTranslateZ", "targetTranslate", "targetWeight", "target", "upVectorX", "upVectorY", "upVectorZ", "upVector", "worldUpVectorX", "worldUpVectorY", "worldUpVectorZ", "worldUpVector"]
+	nodeLeafPlugs = ["aimVector", "constraintParentInverseMatrix", "constraintRotate", "target", "upVector", "worldUpVector"]
 	pass
 

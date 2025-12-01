@@ -149,5 +149,7 @@ class ClipLibrary(_BASE_):
 	apiTypeStr = "kClipLibrary"
 	typeIdInt = 1129072976
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["activeClip", "binMembership", "characterMapping", "clipIndexMapping", "characterdata", "clip", "clipEval_Hidden", "clipEval_InmapFrom", "clipEval_InmapTo", "clipEval_Inmap", "clipEval_OutmapFrom", "clipEval_OutmapTo", "clipEval_Outmap", "clipEval_Raw", "clipEval", "clipEvalList", "clipFunction", "clipName", "duration", "sourceClip", "start"]
+	nodeLeafPlugs = ["activeClip", "binMembership", "characterdata", "clip", "clipEvalList", "clipFunction", "clipName", "duration", "sourceClip", "start"]
 	pass
 

@@ -108,5 +108,7 @@ class AngleDimension(DimensionShape):
 
 	typeName = "angleDimension"
 	typeIdInt = 1095189582
+	nodeLeafClassAttrs = ["angle", "endPointX", "endPointY", "endPointZ", "endPoint", "middlePointX", "middlePointY", "middlePointZ", "middlePoint", "startPointX", "startPointY", "startPointZ", "startPoint"]
+	nodeLeafPlugs = ["angle", "endPoint", "middlePoint", "startPoint"]
 	pass
 

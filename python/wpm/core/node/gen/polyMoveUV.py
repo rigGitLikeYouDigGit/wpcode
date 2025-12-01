@@ -124,5 +124,7 @@ class PolyMoveUV(PolyModifier):
 	apiTypeStr = "kPolyMoveUV"
 	typeIdInt = 1347245398
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["axisLenX", "axisLenY", "axisLen", "compId", "pivotU", "pivotV", "pivot", "random", "randomSeed", "rotationAngle", "scaleU", "scaleV", "scale", "translateU", "translateV", "translate", "uvSetName"]
+	nodeLeafPlugs = ["axisLen", "compId", "pivot", "random", "randomSeed", "rotationAngle", "scale", "translate", "uvSetName"]
 	pass
 

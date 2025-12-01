@@ -92,5 +92,7 @@ class RebuildCurve(AbstractBaseCreate):
 	apiTypeStr = "kRebuildCurve"
 	typeIdInt = 1314013763
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["degree", "endKnots", "fitRebuild", "inputCurve", "keepControlPoints", "keepEndPoints", "keepRange", "keepTangents", "matchCurve", "outputCurve", "rebuildType", "smartSurfaceCurveRebuild", "smooth", "spans", "tolerance"]
+	nodeLeafPlugs = ["degree", "endKnots", "fitRebuild", "inputCurve", "keepControlPoints", "keepEndPoints", "keepRange", "keepTangents", "matchCurve", "outputCurve", "rebuildType", "smartSurfaceCurveRebuild", "smooth", "spans", "tolerance"]
 	pass
 

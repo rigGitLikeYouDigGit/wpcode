@@ -52,5 +52,7 @@ class CopyColorSet(_BASE_):
 	apiTypeStr = "kCopyColorSet"
 	typeIdInt = 1129333587
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "dstColorName", "inputGeometry", "outputGeometry", "srcColorSetName"]
+	nodeLeafPlugs = ["binMembership", "dstColorName", "inputGeometry", "outputGeometry", "srcColorSetName"]
 	pass
 

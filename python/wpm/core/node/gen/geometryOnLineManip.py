@@ -33,5 +33,7 @@ class GeometryOnLineManip(Manip3D):
 	apiTypeStr = "kGeometryOnLineManip"
 	typeIdInt = 1431127884
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

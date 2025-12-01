@@ -116,5 +116,7 @@ class NComponent(_BASE_):
 	apiTypeStr = "kNComponent"
 	typeIdInt = 1313033552
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "componentGroupId", "componentIndices", "componentType", "elements", "glueStrength", "glueStrengthMap", "glueStrengthMapType", "glueStrengthPerVertex", "objectId", "outComponent", "strength", "strengthMap", "strengthMapType", "strengthPerVertex", "surface", "tangentStrength", "weight", "weightMap", "weightMapType", "weightPerVertex"]
+	nodeLeafPlugs = ["binMembership", "componentGroupId", "componentIndices", "componentType", "elements", "glueStrength", "glueStrengthMap", "glueStrengthMapType", "glueStrengthPerVertex", "objectId", "outComponent", "strength", "strengthMap", "strengthMapType", "strengthPerVertex", "surface", "tangentStrength", "weight", "weightMap", "weightMapType", "weightPerVertex"]
 	pass
 

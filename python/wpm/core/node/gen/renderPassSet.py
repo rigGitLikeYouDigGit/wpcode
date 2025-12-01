@@ -48,5 +48,7 @@ class RenderPassSet(_BASE_):
 	apiTypeStr = "kRenderPassSet"
 	typeIdInt = 1380995923
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "owner", "renderPass", "renderable"]
+	nodeLeafPlugs = ["binMembership", "owner", "renderPass", "renderable"]
 	pass
 

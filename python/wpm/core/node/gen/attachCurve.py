@@ -76,5 +76,7 @@ class AttachCurve(AbstractBaseCreate):
 	apiTypeStr = "kAttachCurve"
 	typeIdInt = 1312904259
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["blendBias", "blendKnotInsertion", "inputCurve1", "inputCurve2", "inputCurves", "keepMultipleKnots", "method", "outputCurve", "parameter", "reverse1", "reverse2"]
+	nodeLeafPlugs = ["blendBias", "blendKnotInsertion", "inputCurve1", "inputCurve2", "inputCurves", "keepMultipleKnots", "method", "outputCurve", "parameter", "reverse1", "reverse2"]
 	pass
 

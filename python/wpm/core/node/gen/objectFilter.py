@@ -68,5 +68,7 @@ class ObjectFilter(_BASE_):
 	apiTypeStr = "kObjectFilter"
 	typeIdInt = 1330007124
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["annotation", "binMembership", "category", "child", "disable", "filterClass", "inputList", "invert", "outputList"]
+	nodeLeafPlugs = ["annotation", "binMembership", "category", "child", "disable", "filterClass", "inputList", "invert", "outputList"]
 	pass
 

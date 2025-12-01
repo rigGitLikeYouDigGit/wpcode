@@ -133,5 +133,7 @@ class TransferAttributes(WeightGeometryFilter):
 	apiTypeStr = "kTransferAttributes"
 	typeIdInt = 1414676820
 	MFnCls = om.MFnGeometryFilter
+	nodeLeafClassAttrs = ["colorBorders", "flipUVs", "matchChoice", "matchCount", "sampleSpace", "searchDistance", "searchMethod", "searchScaleX", "searchScaleY", "searchScaleZ", "searchScale", "searchTolerance", "source", "sourceColorSet", "sourceUVSet", "sourceUVSpace", "targetColorSet", "targetUVSet", "targetUVSpace", "transferColors", "transferNormals", "transferPositions", "transferUVs"]
+	nodeLeafPlugs = ["colorBorders", "flipUVs", "matchChoice", "matchCount", "sampleSpace", "searchDistance", "searchMethod", "searchScale", "searchTolerance", "source", "sourceColorSet", "sourceUVSet", "sourceUVSpace", "targetColorSet", "targetUVSet", "targetUVSpace", "transferColors", "transferNormals", "transferPositions", "transferUVs"]
 	pass
 

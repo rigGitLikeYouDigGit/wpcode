@@ -33,5 +33,7 @@ class ExtendSurfaceDistanceManip(ManipContainer):
 	apiTypeStr = "kExtendSurfaceDistanceManip"
 	typeIdInt = 1431127379
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

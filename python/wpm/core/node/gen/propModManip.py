@@ -33,5 +33,7 @@ class PropModManip(ManipContainer):
 	apiTypeStr = "kPropModManip"
 	typeIdInt = 1431130189
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

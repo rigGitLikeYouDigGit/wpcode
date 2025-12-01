@@ -57,5 +57,7 @@ class NurbsToSubdivProc(NurbsToSubdiv):
 
 	typeName = "nurbsToSubdivProc"
 	typeIdInt = 1397642320
+	nodeLeafClassAttrs = ["bridge", "bridgeInU", "bridgeInV", "capType", "offset", "solidType", "transform"]
+	nodeLeafPlugs = ["bridge", "bridgeInU", "bridgeInV", "capType", "offset", "solidType", "transform"]
 	pass
 

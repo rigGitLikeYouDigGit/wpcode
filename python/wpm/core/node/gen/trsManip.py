@@ -33,5 +33,7 @@ class TrsManip(ManipContainer):
 	apiTypeStr = "kTrsManip"
 	typeIdInt = 1431126868
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

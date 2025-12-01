@@ -40,5 +40,7 @@ class ExplodeNurbsShell(AbstractBaseCreate):
 	apiTypeStr = "kExplodeNurbsShell"
 	typeIdInt = 1313166152
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["inputShell", "outputSurface"]
+	nodeLeafPlugs = ["inputShell", "outputSurface"]
 	pass
 

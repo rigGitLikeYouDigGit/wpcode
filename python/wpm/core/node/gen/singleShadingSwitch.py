@@ -58,5 +58,7 @@ class SingleShadingSwitch(BaseShadingSwitch):
 	apiTypeStr = "kSingleShadingSwitch"
 	typeIdInt = 1398229041
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["default", "inShape", "inSingle", "input", "output"]
+	nodeLeafPlugs = ["default", "input", "output"]
 	pass
 

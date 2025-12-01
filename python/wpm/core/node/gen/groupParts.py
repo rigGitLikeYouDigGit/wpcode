@@ -56,5 +56,7 @@ class GroupParts(_BASE_):
 	apiTypeStr = "kGroupParts"
 	typeIdInt = 1196576848
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "groupId", "inputComponents", "inputGeometry", "inputRemoveComponent", "outputGeometry"]
+	nodeLeafPlugs = ["binMembership", "groupId", "inputComponents", "inputGeometry", "inputRemoveComponent", "outputGeometry"]
 	pass
 

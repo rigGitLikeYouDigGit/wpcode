@@ -36,5 +36,7 @@ class Assembly(DagContainer):
 	apiTypeStr = "kAssembly"
 	typeIdInt = 1095975513
 	MFnCls = om.MFnAssembly
+	nodeLeafClassAttrs = ["assemblyEdits"]
+	nodeLeafPlugs = ["assemblyEdits"]
 	pass
 

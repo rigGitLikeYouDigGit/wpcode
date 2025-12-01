@@ -41,5 +41,7 @@ class ApplyConnectionOverride(ApplyOverride):
 
 	typeName = "applyConnectionOverride"
 	typeIdInt = 1476395908
+	nodeLeafClassAttrs = ["next", "previous", "target"]
+	nodeLeafPlugs = ["next", "previous", "target"]
 	pass
 

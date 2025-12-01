@@ -36,5 +36,7 @@ class PolySoftEdge(PolyModifierWorld):
 	apiTypeStr = "kPolySoftEdge"
 	typeIdInt = 1347637061
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["angle"]
+	nodeLeafPlugs = ["angle"]
 	pass
 

@@ -97,5 +97,7 @@ class SubsetFalloff(_BASE_):
 	apiTypeStr = "kSubsetFalloff"
 	typeIdInt = 1397966415
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "end", "falloffTags", "mode", "outputWeightFunction", "ramp_FloatValue", "ramp_Interp", "ramp_Position", "ramp", "scale", "start", "useFalloffTags", "useOriginalGeometry", "withinBoundary"]
+	nodeLeafPlugs = ["binMembership", "end", "falloffTags", "mode", "outputWeightFunction", "ramp", "scale", "start", "useFalloffTags", "useOriginalGeometry", "withinBoundary"]
 	pass
 

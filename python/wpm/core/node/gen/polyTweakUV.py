@@ -86,5 +86,7 @@ class PolyTweakUV(PolyModifier):
 	apiTypeStr = "kPolyTweakUV"
 	typeIdInt = 1347704150
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["faceId", "newUValue", "newVValue", "vertexId", "newUV", "uvSetName", "uvTweakU", "uvTweakV", "uvTweak"]
+	nodeLeafPlugs = ["newUV", "uvSetName", "uvTweak"]
 	pass
 

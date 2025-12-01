@@ -61,5 +61,7 @@ class SubdTweak(SubdModifier):
 	apiTypeStr = "kSubdTweak"
 	typeIdInt = 1398036299
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["map64BitIndices", "tweakX", "tweakY", "tweakZ", "tweak"]
+	nodeLeafPlugs = ["map64BitIndices", "tweak"]
 	pass
 

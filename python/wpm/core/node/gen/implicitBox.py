@@ -58,5 +58,7 @@ class ImplicitBox(GeometryShape):
 
 	typeName = "implicitBox"
 	typeIdInt = 1179206232
+	nodeLeafClassAttrs = ["box", "sizeX", "sizeY", "sizeZ", "size"]
+	nodeLeafPlugs = ["box", "size"]
 	pass
 

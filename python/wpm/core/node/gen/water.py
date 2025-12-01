@@ -172,5 +172,7 @@ class Water(Texture2d):
 	apiTypeStr = "kWater"
 	typeIdInt = 1381259073
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["boxMaxU", "boxMaxV", "boxMax", "boxMinU", "boxMinV", "boxMin", "dropSize", "fast", "groupVelocity", "numberOfWaves", "phaseVelocity", "reflectionBox", "rippleAmplitude", "rippleFrequency", "rippleOriginU", "rippleOriginV", "rippleOrigin", "rippleTime", "smoothness", "spreadRate", "spreadStart", "subWaveFrequency", "waveAmplitude", "waveFrequency", "waveTime", "waveVelocity", "windU", "windV", "windUV"]
+	nodeLeafPlugs = ["boxMax", "boxMin", "dropSize", "fast", "groupVelocity", "numberOfWaves", "phaseVelocity", "reflectionBox", "rippleAmplitude", "rippleFrequency", "rippleOrigin", "rippleTime", "smoothness", "spreadRate", "spreadStart", "subWaveFrequency", "waveAmplitude", "waveFrequency", "waveTime", "waveVelocity", "windUV"]
 	pass
 

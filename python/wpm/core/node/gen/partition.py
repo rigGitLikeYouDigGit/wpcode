@@ -48,5 +48,7 @@ class Partition(Entity):
 	apiTypeStr = "kPartition"
 	typeIdInt = 1347572814
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["annotation", "environment", "partitionType", "sets"]
+	nodeLeafPlugs = ["annotation", "environment", "partitionType", "sets"]
 	pass
 

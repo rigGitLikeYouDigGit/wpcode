@@ -262,5 +262,7 @@ class GeoConnector(_BASE_):
 	apiTypeStr = "kGeoConnector"
 	typeIdInt = 1497842516
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "componentCentroidX", "componentCentroidY", "componentCentroidZ", "componentCentroid", "componentCentroidLocalX", "componentCentroidLocalY", "componentCentroidLocalZ", "componentCentroidLocal", "componentPositions", "componentVelocities", "currentTime", "deltaTime", "friction", "geometryModified", "groupId", "idIndex", "sortedId", "idMapping", "inputForce", "inputGeometryMsg", "localGeometry", "localSweptGeometry", "matrixModified", "offset", "owner", "ownerCentroidX", "ownerCentroidY", "ownerCentroidZ", "ownerCentroid", "ownerCentroidLocalX", "ownerCentroidLocalY", "ownerCentroidLocalZ", "ownerCentroidLocal", "ownerMasses", "ownerPositions", "ownerVelocities", "preComponentPositions", "preOwnerPositions", "prevTime", "ratePPIn", "ratePPOut", "resilience", "sweptGeometry", "tessellationFactor", "uvSetName", "worldMatrix"]
+	nodeLeafPlugs = ["binMembership", "componentCentroid", "componentCentroidLocal", "componentPositions", "componentVelocities", "currentTime", "deltaTime", "friction", "geometryModified", "groupId", "idMapping", "inputForce", "inputGeometryMsg", "localGeometry", "localSweptGeometry", "matrixModified", "offset", "owner", "ownerCentroid", "ownerCentroidLocal", "ownerMasses", "ownerPositions", "ownerVelocities", "preComponentPositions", "preOwnerPositions", "prevTime", "ratePPIn", "ratePPOut", "resilience", "sweptGeometry", "tessellationFactor", "uvSetName", "worldMatrix"]
 	pass
 

@@ -30,5 +30,7 @@ class SubdModifierUV(SubdModifierWorld):
 
 	typeName = "subdModifierUV"
 	typeIdInt = 1397577078
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

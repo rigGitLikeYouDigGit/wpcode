@@ -52,5 +52,7 @@ class CopyUVSet(_BASE_):
 	apiTypeStr = "kCopyUVSet"
 	typeIdInt = 1129338195
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "inputGeometry", "outputGeometry", "uvSetName", "uvSetName2"]
+	nodeLeafPlugs = ["binMembership", "inputGeometry", "outputGeometry", "uvSetName", "uvSetName2"]
 	pass
 

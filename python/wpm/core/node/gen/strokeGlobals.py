@@ -101,5 +101,7 @@ class StrokeGlobals(_BASE_):
 	apiTypeStr = "kStrokeGlobals"
 	typeIdInt = 1398033223
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "canvasScale", "forceDepth", "forceRealLights", "forceTubeDirAlongPath", "lightDirectionX", "lightDirectionY", "lightDirectionZ", "lightDirection", "sceneScale", "sceneWrapH", "sceneWrapV", "useCanvasLight", "wrapH", "wrapV"]
+	nodeLeafPlugs = ["binMembership", "canvasScale", "forceDepth", "forceRealLights", "forceTubeDirAlongPath", "lightDirection", "sceneScale", "sceneWrapH", "sceneWrapV", "useCanvasLight", "wrapH", "wrapV"]
 	pass
 

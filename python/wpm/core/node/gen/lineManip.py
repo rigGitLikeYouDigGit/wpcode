@@ -33,5 +33,7 @@ class LineManip(Manip3D):
 	apiTypeStr = "kLineManip"
 	typeIdInt = 1431129166
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

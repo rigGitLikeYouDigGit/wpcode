@@ -117,5 +117,7 @@ class PolySplitRing(PolyModifierWorld):
 	apiTypeStr = "kPolySplitRing"
 	typeIdInt = 1347637330
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["absoluteWeight", "adjustEdgeFlow", "direction", "divisions", "enableProfileCurve", "fixQuads", "insertWithEdgeFlow", "profileCurve_FloatValue", "profileCurve_Interp", "profileCurve_Position", "profileCurve", "profileCurveInputOffset", "profileCurveInputScale", "rootEdge", "smoothingAngle", "splitType", "useEqualMultiplier", "useFaceNormalsAtEnds", "weight"]
+	nodeLeafPlugs = ["absoluteWeight", "adjustEdgeFlow", "direction", "divisions", "enableProfileCurve", "fixQuads", "insertWithEdgeFlow", "profileCurve", "profileCurveInputOffset", "profileCurveInputScale", "rootEdge", "smoothingAngle", "splitType", "useEqualMultiplier", "useFaceNormalsAtEnds", "weight"]
 	pass
 

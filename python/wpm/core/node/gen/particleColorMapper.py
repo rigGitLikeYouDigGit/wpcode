@@ -61,5 +61,7 @@ class ParticleColorMapper(_BASE_):
 	apiTypeStr = "kParticleColorMapper"
 	typeIdInt = 1346587969
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "particleColorB", "particleColorG", "particleColorR", "particleColor"]
+	nodeLeafPlugs = ["binMembership", "particleColor"]
 	pass
 

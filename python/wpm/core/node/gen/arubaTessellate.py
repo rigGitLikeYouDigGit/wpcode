@@ -69,5 +69,7 @@ class ArubaTessellate(AbstractBaseCreate):
 
 	typeName = "arubaTessellate"
 	typeIdInt = 1096041811
+	nodeLeafClassAttrs = ["adaptive", "chordalDeviation", "inputSurface", "maxChordLength", "minChordLength", "normalTolerance", "outMesh", "sampleType", "samples", "tolerance"]
+	nodeLeafPlugs = ["adaptive", "chordalDeviation", "inputSurface", "maxChordLength", "minChordLength", "normalTolerance", "outMesh", "sampleType", "samples", "tolerance"]
 	pass
 

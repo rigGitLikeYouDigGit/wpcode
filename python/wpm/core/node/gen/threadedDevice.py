@@ -48,5 +48,7 @@ class ThreadedDevice(_BASE_):
 	apiTypeStr = "kThreadedDevice"
 	typeIdInt = 1952998518
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "frameRate", "live", "output"]
+	nodeLeafPlugs = ["binMembership", "frameRate", "live", "output"]
 	pass
 

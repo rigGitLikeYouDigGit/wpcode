@@ -65,5 +65,7 @@ class RbfSrf(AbstractBaseCreate):
 
 	typeName = "rbfSrf"
 	typeIdInt = 1314013766
+	nodeLeafClassAttrs = ["outputSurface", "positionTolerance", "primaryRadius", "primarySurface", "secondaryRadius", "secondarySurface", "tangentTolerance", "trimCurveOnPrimary", "trimCurveOnSecondary"]
+	nodeLeafPlugs = ["outputSurface", "positionTolerance", "primaryRadius", "primarySurface", "secondaryRadius", "secondarySurface", "tangentTolerance", "trimCurveOnPrimary", "trimCurveOnSecondary"]
 	pass
 

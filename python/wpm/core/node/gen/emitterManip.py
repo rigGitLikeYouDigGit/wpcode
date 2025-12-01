@@ -30,5 +30,7 @@ class EmitterManip(ManipContainer):
 
 	typeName = "emitterManip"
 	typeIdInt = 1430537549
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

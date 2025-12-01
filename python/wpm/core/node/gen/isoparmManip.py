@@ -33,5 +33,7 @@ class IsoparmManip(Manip3D):
 	apiTypeStr = "kIsoparmManip"
 	typeIdInt = 1431128403
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -99,5 +99,7 @@ class RoundConstantRadius(AbstractBaseCreate):
 	apiTypeStr = "kRoundConstantRadius"
 	typeIdInt = 1314014034
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["cornerSurface", "edgeValid", "inSurfIdxA", "inSurfIdxB", "inputCurveA", "inputCurveB", "edge", "filletStatus", "filletSurface", "inputSurface", "originalSurface", "radius", "tolerance"]
+	nodeLeafPlugs = ["cornerSurface", "edge", "filletStatus", "filletSurface", "inputSurface", "originalSurface", "radius", "tolerance"]
 	pass
 

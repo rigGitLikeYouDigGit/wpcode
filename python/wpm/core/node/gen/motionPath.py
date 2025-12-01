@@ -203,5 +203,7 @@ class MotionPath(_BASE_):
 	apiTypeStr = "kMotionPath"
 	typeIdInt = 1297110088
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["xCoordinate", "yCoordinate", "zCoordinate", "allCoordinates", "bank", "bankLimit", "bankScale", "binMembership", "flowNode", "follow", "fractionMode", "frontAxis", "frontTwist", "geometryPath", "inverseFront", "inverseUp", "normal", "orientMatrix", "orientationMarkerTime", "positionMarkerTime", "rotateX", "rotateY", "rotateZ", "rotate", "rotateOrder", "sideTwist", "uValue", "upAxis", "upTwist", "updateOM", "worldUpMatrix", "worldUpType", "worldUpVectorX", "worldUpVectorY", "worldUpVectorZ", "worldUpVector"]
+	nodeLeafPlugs = ["allCoordinates", "bank", "bankLimit", "bankScale", "binMembership", "flowNode", "follow", "fractionMode", "frontAxis", "frontTwist", "geometryPath", "inverseFront", "inverseUp", "normal", "orientMatrix", "orientationMarkerTime", "positionMarkerTime", "rotate", "rotateOrder", "sideTwist", "uValue", "upAxis", "upTwist", "updateOM", "worldUpMatrix", "worldUpType", "worldUpVector"]
 	pass
 

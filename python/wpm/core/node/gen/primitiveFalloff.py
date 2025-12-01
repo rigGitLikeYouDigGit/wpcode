@@ -131,5 +131,7 @@ class PrimitiveFalloff(Transform):
 	apiTypeStr = "kPrimitiveFalloff"
 	typeIdInt = 1397116742
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = ["end", "negativeSizeX", "negativeSizeY", "negativeSizeZ", "negativeSize", "outputWeightFunction", "positiveSizeX", "positiveSizeY", "positiveSizeZ", "positiveSize", "primitive", "ramp_FloatValue", "ramp_Interp", "ramp_Position", "ramp", "start", "useOriginalGeometry", "vertexSpace"]
+	nodeLeafPlugs = ["end", "negativeSize", "outputWeightFunction", "positiveSize", "primitive", "ramp", "start", "useOriginalGeometry", "vertexSpace"]
 	pass
 

@@ -40,5 +40,7 @@ class PolySewEdge(PolyModifierWorld):
 	apiTypeStr = "kPolySewEdge"
 	typeIdInt = 1347639109
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["texture", "tolerance"]
+	nodeLeafPlugs = ["texture", "tolerance"]
 	pass
 

@@ -76,5 +76,7 @@ class PolyLayoutUV(PolyModifierUV):
 	apiTypeStr = "kPolyLayoutUV"
 	typeIdInt = 1347179862
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["denseLayout", "flipReversed", "gridU", "gridV", "layout", "layoutMethod", "percentageSpace", "rotateForBestFit", "scale", "separate", "twoSidedLayout"]
+	nodeLeafPlugs = ["denseLayout", "flipReversed", "gridU", "gridV", "layout", "layoutMethod", "percentageSpace", "rotateForBestFit", "scale", "separate", "twoSidedLayout"]
 	pass
 

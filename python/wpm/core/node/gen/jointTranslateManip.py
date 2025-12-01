@@ -33,5 +33,7 @@ class JointTranslateManip(TranslateManip):
 	apiTypeStr = "kJointTranslateManip"
 	typeIdInt = 1431128660
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

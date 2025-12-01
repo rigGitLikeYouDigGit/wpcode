@@ -33,5 +33,7 @@ class CoiManip(ManipContainer):
 	apiTypeStr = "kCoiManip"
 	typeIdInt = 1431126857
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

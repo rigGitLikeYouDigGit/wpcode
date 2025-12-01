@@ -36,5 +36,7 @@ class SubdHierBlind(BlindDataTemplate):
 	apiTypeStr = "kSubdHierBlind"
 	typeIdInt = 1397248578
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["whichOneIndex"]
+	nodeLeafPlugs = ["whichOneIndex"]
 	pass
 

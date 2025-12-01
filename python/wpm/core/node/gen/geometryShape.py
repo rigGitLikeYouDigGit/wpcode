@@ -172,5 +172,7 @@ class GeometryShape(Shape):
 
 	typeName = "geometryShape"
 	typeIdInt = 1196640336
+	nodeLeafClassAttrs = ["antialiasingLevel", "asBackground", "castsShadows", "compObjectGrpCompList", "compObjectGroups", "compInstObjGroups", "compObjectGroupId", "componentTagContents", "componentTagName", "componentTags", "depthJitter", "geometryAntialiasingOverride", "hardwareFogMultiplier", "ignoreSelfShadowing", "instMaterialAssign", "maxShadingSamples", "maxVisibilitySamples", "maxVisibilitySamplesOverride", "motionBlur", "pickTexture", "primaryVisibility", "receiveShadows", "referenceObject", "renderType", "renderVolume", "shadingSamples", "shadingSamplesOverride", "visibleFraction", "visibleInReflections", "visibleInRefractions", "volumeSamples", "volumeSamplesOverride"]
+	nodeLeafPlugs = ["antialiasingLevel", "asBackground", "castsShadows", "compInstObjGroups", "componentTags", "depthJitter", "geometryAntialiasingOverride", "hardwareFogMultiplier", "ignoreSelfShadowing", "instMaterialAssign", "maxShadingSamples", "maxVisibilitySamples", "maxVisibilitySamplesOverride", "motionBlur", "pickTexture", "primaryVisibility", "receiveShadows", "referenceObject", "renderType", "renderVolume", "shadingSamples", "shadingSamplesOverride", "visibleFraction", "visibleInReflections", "visibleInRefractions", "volumeSamples", "volumeSamplesOverride"]
 	pass
 

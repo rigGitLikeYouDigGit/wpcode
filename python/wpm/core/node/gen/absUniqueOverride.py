@@ -33,5 +33,7 @@ class AbsUniqueOverride(AbsOverride):
 
 	typeName = "absUniqueOverride"
 	typeIdInt = 1476395936
+	nodeLeafClassAttrs = ["targetNodeName"]
+	nodeLeafPlugs = ["targetNodeName"]
 	pass
 

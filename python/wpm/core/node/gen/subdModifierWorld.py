@@ -41,5 +41,7 @@ class SubdModifierWorld(SubdModifier):
 
 	typeName = "subdModifierWorld"
 	typeIdInt = 1397572695
+	nodeLeafClassAttrs = ["inputMatrix", "manipMatrix", "worldSpace"]
+	nodeLeafPlugs = ["inputMatrix", "manipMatrix", "worldSpace"]
 	pass
 

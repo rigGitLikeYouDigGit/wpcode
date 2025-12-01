@@ -60,5 +60,7 @@ class CloseSurface(AbstractBaseCreate):
 	apiTypeStr = "kCloseSurface"
 	typeIdInt = 1313035093
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["blendBias", "blendKnotInsertion", "direction", "inputSurface", "outputSurface", "parameter", "preserveShape"]
+	nodeLeafPlugs = ["blendBias", "blendKnotInsertion", "direction", "inputSurface", "outputSurface", "parameter", "preserveShape"]
 	pass
 

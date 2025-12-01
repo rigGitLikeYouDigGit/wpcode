@@ -33,5 +33,7 @@ class OffsetCosManip(ManipContainer):
 	apiTypeStr = "kOffsetCosManip"
 	typeIdInt = 1431257939
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

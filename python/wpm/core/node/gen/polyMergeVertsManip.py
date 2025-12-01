@@ -30,5 +30,7 @@ class PolyMergeVertsManip(Manip3D):
 
 	typeName = "polyMergeVertsManip"
 	typeIdInt = 1347245645
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

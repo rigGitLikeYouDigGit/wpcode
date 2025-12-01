@@ -233,5 +233,7 @@ class SkinCluster(GeometryFilter):
 
 	typeName = "skinCluster"
 	typeIdInt = 1179861836
+	nodeLeafClassAttrs = ["baseDirty", "basePoints", "bindMethod", "bindPose", "bindPreMatrix", "bindVolume", "blendWeights", "cacheSetup", "deformUserNormals", "dqsScaleX", "dqsScaleY", "dqsScaleZ", "dqsScale", "dqsSupportNonRigid", "driverPoints", "dropoff", "dropoffRate", "geomBind", "geomMatrix", "heatmapFalloff", "influenceColorB", "influenceColorG", "influenceColorR", "influenceColor", "lockWeights", "maintainMaxInfluences", "matrix", "maxInfluences", "normalizeWeights", "nurbsSamples", "paintArrDirty", "paintTrans", "paintWeights", "perInfluenceVertexWeights", "perInfluenceWeights", "relativeSpaceMatrix", "relativeSpaceMode", "skinningMethod", "smoothness", "useComponents", "useComponentsMatrix", "weightDistribution", "weights", "weightList", "wtDrty"]
+	nodeLeafPlugs = ["baseDirty", "basePoints", "bindMethod", "bindPose", "bindPreMatrix", "bindVolume", "blendWeights", "cacheSetup", "deformUserNormals", "dqsScale", "dqsSupportNonRigid", "driverPoints", "dropoff", "dropoffRate", "geomBind", "geomMatrix", "heatmapFalloff", "influenceColor", "lockWeights", "maintainMaxInfluences", "matrix", "maxInfluences", "normalizeWeights", "nurbsSamples", "paintArrDirty", "paintTrans", "paintWeights", "perInfluenceWeights", "relativeSpaceMatrix", "relativeSpaceMode", "skinningMethod", "smoothness", "useComponents", "useComponentsMatrix", "weightDistribution", "weightList", "wtDrty"]
 	pass
 

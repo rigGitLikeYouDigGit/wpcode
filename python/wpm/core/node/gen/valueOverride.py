@@ -30,5 +30,7 @@ class ValueOverride(Override):
 
 	typeName = "valueOverride"
 	typeIdInt = 1476395912
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

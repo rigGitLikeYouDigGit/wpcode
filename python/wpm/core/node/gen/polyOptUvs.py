@@ -73,5 +73,7 @@ class PolyOptUvs(PolyModifierUV):
 
 	typeName = "polyOptUvs"
 	typeIdInt = 1347376470
+	nodeLeafClassAttrs = ["applyToShell", "areaWeight", "globalBlend", "globalMethodBlend", "iterations", "optimizeAxis", "pinSelected", "pinUvBorder", "scale", "stoppingThreshold", "useScale"]
+	nodeLeafPlugs = ["applyToShell", "areaWeight", "globalBlend", "globalMethodBlend", "iterations", "optimizeAxis", "pinSelected", "pinUvBorder", "scale", "stoppingThreshold", "useScale"]
 	pass
 

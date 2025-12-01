@@ -44,5 +44,7 @@ class StitchAsNurbsShell(AbstractBaseCreate):
 	apiTypeStr = "kStitchAsNurbsShell"
 	typeIdInt = 1314083656
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["inputSurface", "outputShell", "tolerance"]
+	nodeLeafPlugs = ["inputSurface", "outputShell", "tolerance"]
 	pass
 

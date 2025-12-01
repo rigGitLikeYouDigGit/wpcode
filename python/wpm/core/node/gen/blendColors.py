@@ -119,5 +119,7 @@ class BlendColors(_BASE_):
 	apiTypeStr = "kBlendColors"
 	typeIdInt = 1380076594
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "blender", "color1B", "color1G", "color1R", "color1", "color2B", "color2G", "color2R", "color2", "outputB", "outputG", "outputR", "output", "renderPassMode"]
+	nodeLeafPlugs = ["binMembership", "blender", "color1", "color2", "output", "renderPassMode"]
 	pass
 

@@ -37,5 +37,7 @@ class DefaultRenderingList(_BASE_):
 
 	typeName = "defaultRenderingList"
 	typeIdInt = 1146244684
+	nodeLeafClassAttrs = ["binMembership", "rendering"]
+	nodeLeafPlugs = ["binMembership", "rendering"]
 	pass
 

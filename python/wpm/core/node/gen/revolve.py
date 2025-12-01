@@ -221,5 +221,7 @@ class Revolve(AbstractBaseCreate):
 	apiTypeStr = "kRevolve"
 	typeIdInt = 1314018892
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["autoCorrectNormal", "axisX", "axisY", "axisZ", "axis", "axisChoice", "bridge", "bridgeCurve", "compAnchorX", "compAnchorY", "compAnchorZ", "compAnchor", "compAxisX", "compAxisY", "compAxisZ", "compAxis", "compAxisChoice", "compPivotX", "compPivotY", "compPivotZ", "compPivot", "computePivotAndAxis", "degree", "endSweep", "inputCurve", "outputSurface", "pivotX", "pivotY", "pivotZ", "pivot", "radius", "radiusAnchor", "sections", "startSweep", "tolerance", "useTolerance"]
+	nodeLeafPlugs = ["autoCorrectNormal", "axis", "axisChoice", "bridge", "bridgeCurve", "compAnchor", "compAxis", "compAxisChoice", "compPivot", "computePivotAndAxis", "degree", "endSweep", "inputCurve", "outputSurface", "pivot", "radius", "radiusAnchor", "sections", "startSweep", "tolerance", "useTolerance"]
 	pass
 

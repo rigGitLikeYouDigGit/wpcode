@@ -17,13 +17,14 @@ at rocksteady and it worked pretty well
 
 maybe it's fine to copy/paste these lines
 """
-print("RUN WPM STARTUP")
+#print("RUN WPM STARTUP")
 import sys, os
 from pathlib import Path
-WP_ROOT = os.getenv("WEPRESENT_ROOT")
-assert WP_ROOT, "WEPRESENT_ROOT not set in environment"
-WP_ROOT_PATH = Path(WP_ROOT)
-WP_PY_ROOT = WP_ROOT_PATH / "code" / "python"
+# WP_ROOT = os.getenv("WEPRESENT_ROOT")
+# assert WP_ROOT, "WEPRESENT_ROOT not set in environment"
+# WP_ROOT_PATH = Path(WP_ROOT)
+#WP_PY_ROOT = WP_ROOT_PATH / "code" / "python"
+from wplib import WP_ROOT_PATH, WP_PY_ROOT
 sys.path.insert(0, str(WP_PY_ROOT))
 
 """I can immediately see how a proper package manager like Rez would be more helpful

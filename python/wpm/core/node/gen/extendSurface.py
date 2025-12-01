@@ -68,5 +68,7 @@ class ExtendSurface(AbstractBaseCreate):
 	apiTypeStr = "kExtendSurface"
 	typeIdInt = 1313167443
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["distance", "extendDirection", "extendMethod", "extendSide", "extensionType", "inputSurface", "join", "outputSurface", "targetObject"]
+	nodeLeafPlugs = ["distance", "extendDirection", "extendMethod", "extendSide", "extensionType", "inputSurface", "join", "outputSurface", "targetObject"]
 	pass
 

@@ -40,5 +40,7 @@ class ReverseCurve(AbstractBaseCreate):
 	apiTypeStr = "kReverseCurve"
 	typeIdInt = 1314018883
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["inputCurve", "outputCurve"]
+	nodeLeafPlugs = ["inputCurve", "outputCurve"]
 	pass
 

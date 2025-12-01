@@ -33,5 +33,7 @@ class PolyCaddyManip(CaddyManipBase):
 	apiTypeStr = "kPolyCaddyManip"
 	typeIdInt = 1346585677
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

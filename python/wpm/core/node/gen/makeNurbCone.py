@@ -33,5 +33,7 @@ class MakeNurbCone(RevolvedPrimitive):
 
 	typeName = "makeNurbCone"
 	typeIdInt = 1313033797
+	nodeLeafClassAttrs = ["useOldInitBehaviour"]
+	nodeLeafPlugs = ["useOldInitBehaviour"]
 	pass
 

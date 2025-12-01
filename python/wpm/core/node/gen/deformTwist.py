@@ -48,5 +48,7 @@ class DeformTwist(DeformFunc):
 	apiTypeStr = "kDeformTwist"
 	typeIdInt = 1178883159
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["endAngle", "highBound", "lowBound", "startAngle"]
+	nodeLeafPlugs = ["endAngle", "highBound", "lowBound", "startAngle"]
 	pass
 

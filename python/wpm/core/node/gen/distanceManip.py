@@ -33,5 +33,7 @@ class DistanceManip(PointOnLineManip):
 	apiTypeStr = "kDistanceManip"
 	typeIdInt = 1431127117
 	MFnCls = om.MFnDistanceManip
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

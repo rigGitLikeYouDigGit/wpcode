@@ -37,5 +37,7 @@ class OldBlindDataBase(_BASE_):
 
 	typeName = "oldBlindDataBase"
 	typeIdInt = 1111770196
+	nodeLeafClassAttrs = ["binMembership", "typeId"]
+	nodeLeafPlugs = ["binMembership", "typeId"]
 	pass
 

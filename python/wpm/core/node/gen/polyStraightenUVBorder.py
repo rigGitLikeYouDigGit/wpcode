@@ -48,5 +48,7 @@ class PolyStraightenUVBorder(PolyModifierUV):
 	apiTypeStr = "kPolyStraightenUVBorder"
 	typeIdInt = 1347638338
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["blendOriginal", "curvature", "gapTolerance", "preserveLength"]
+	nodeLeafPlugs = ["blendOriginal", "curvature", "gapTolerance", "preserveLength"]
 	pass
 

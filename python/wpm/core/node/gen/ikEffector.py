@@ -40,5 +40,7 @@ class IkEffector(Transform):
 	apiTypeStr = "kIkEffector"
 	typeIdInt = 1262831174
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = ["handlePath", "hideDisplay"]
+	nodeLeafPlugs = ["handlePath", "hideDisplay"]
 	pass
 

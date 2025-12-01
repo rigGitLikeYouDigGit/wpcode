@@ -60,5 +60,7 @@ class Facade(_BASE_):
 	apiTypeStr = "kFacade"
 	typeIdInt = 1145455438
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "connection", "keyWords", "sharedLibName", "uiName", "uiScript", "uniqueID"]
+	nodeLeafPlugs = ["binMembership", "connection", "keyWords", "sharedLibName", "uiName", "uiScript", "uniqueID"]
 	pass
 

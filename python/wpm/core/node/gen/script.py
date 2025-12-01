@@ -56,5 +56,7 @@ class Script(_BASE_):
 	apiTypeStr = "kScript"
 	typeIdInt = 1396920912
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["after", "before", "binMembership", "ignoreReferenceEdits", "scriptType", "sourceType"]
+	nodeLeafPlugs = ["after", "before", "binMembership", "ignoreReferenceEdits", "scriptType", "sourceType"]
 	pass
 

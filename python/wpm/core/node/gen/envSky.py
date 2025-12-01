@@ -316,5 +316,7 @@ class EnvSky(TextureEnv):
 	apiTypeStr = "kEnvSky"
 	typeIdInt = 1380275019
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["airDensity", "altitude", "azimuth", "blur", "cloudBrightnessB", "cloudBrightnessG", "cloudBrightnessR", "cloudBrightness", "cloudSamples", "cloudTexture", "density", "dustDensity", "elevation", "floorAltitude", "floorColorB", "floorColorG", "floorColorR", "floorColor", "floorSamples", "haloBrightnessB", "haloBrightnessG", "haloBrightnessR", "haloBrightness", "haloSize", "hasFloor", "pointCameraX", "pointCameraY", "pointCameraZ", "pointCamera", "power", "refPointCameraX", "refPointCameraY", "refPointCameraZ", "refPointCamera", "size", "skyBrightnessB", "skyBrightnessG", "skyBrightnessR", "skyBrightness", "skyRadius", "skySamples", "skyThickness", "sunBrightnessB", "sunBrightnessG", "sunBrightnessR", "sunBrightness", "sunsetBrightnessB", "sunsetBrightnessG", "sunsetBrightnessR", "sunsetBrightness", "threshold", "totalBrightness", "useTexture"]
+	nodeLeafPlugs = ["airDensity", "altitude", "azimuth", "blur", "cloudBrightness", "cloudSamples", "cloudTexture", "density", "dustDensity", "elevation", "floorAltitude", "floorColor", "floorSamples", "haloBrightness", "haloSize", "hasFloor", "pointCamera", "power", "refPointCamera", "size", "skyBrightness", "skyRadius", "skySamples", "skyThickness", "sunBrightness", "sunsetBrightness", "threshold", "totalBrightness", "useTexture"]
 	pass
 

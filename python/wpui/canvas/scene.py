@@ -125,6 +125,16 @@ class WpCanvasScene(QtWidgets.QGraphicsScene):
 		self._dragSource : ConnectionPoint = None # if not none, dragging in progress
 		self._candidateConnectPoint : ConnectionPoint = None
 
+		# graphics for selection modes
+		self._selectLassoPath = QtWidgets.QGraphicsPathItem()
+		pen = QtGui.QPen(QtCore.Qt.yellow, 1.0,
+		                 s=QtCore.Qt.PenStyle.DashDotLine)
+		self._selectLassoPath.setPen(pen)
+		self._selectRect = QtWidgets.QGraphicsRectItem()
+		pen = QtGui.QPen(QtCore.Qt.yellow, 1.0,
+		                 s=QtCore.Qt.PenStyle.DashDotLine)
+		self._selectRect.setPen(pen)
+
 		self._buildBackground()
 
 	def _buildBackground(self):

@@ -33,5 +33,7 @@ class HikSolver(IkSolver):
 	apiTypeStr = "kHikSolver"
 	typeIdInt = 1263028555
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

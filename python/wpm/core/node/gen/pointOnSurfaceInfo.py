@@ -248,5 +248,7 @@ class PointOnSurfaceInfo(AbstractBaseCreate):
 	apiTypeStr = "kPointOnSurfaceInfo"
 	typeIdInt = 1313887049
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["inputSurface", "parameterU", "parameterV", "normalX", "normalY", "normalZ", "normal", "normalizedNormalX", "normalizedNormalY", "normalizedNormalZ", "normalizedNormal", "normalizedTangentUX", "normalizedTangentUY", "normalizedTangentUZ", "normalizedTangentU", "normalizedTangentVX", "normalizedTangentVY", "normalizedTangentVZ", "normalizedTangentV", "positionX", "positionY", "positionZ", "position", "tangentUx", "tangentUy", "tangentUz", "tangentU", "tangentVx", "tangentVy", "tangentVz", "tangentV", "result", "turnOnPercentage"]
+	nodeLeafPlugs = ["inputSurface", "parameterU", "parameterV", "result", "turnOnPercentage"]
 	pass
 

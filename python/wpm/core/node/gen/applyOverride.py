@@ -37,5 +37,7 @@ class ApplyOverride(_BASE_):
 
 	typeName = "applyOverride"
 	typeIdInt = 1476395895
+	nodeLeafClassAttrs = ["binMembership", "enabled"]
+	nodeLeafPlugs = ["binMembership", "enabled"]
 	pass
 

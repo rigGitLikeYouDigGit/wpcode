@@ -44,5 +44,7 @@ class RenderLayerManager(_BASE_):
 	apiTypeStr = "kRenderLayerManager"
 	typeIdInt = 1380863053
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "currentRenderLayer", "renderLayerId"]
+	nodeLeafPlugs = ["binMembership", "currentRenderLayer", "renderLayerId"]
 	pass
 

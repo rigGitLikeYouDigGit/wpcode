@@ -126,5 +126,7 @@ class VertexBakeSet(BakeSet):
 	apiTypeStr = "kVertexBakeSet"
 	typeIdInt = 1447182667
 	MFnCls = om.MFnSet
+	nodeLeafClassAttrs = ["alphaBlending", "bakeColor", "clampMax", "clampMin", "colorBlending", "colorSetName", "maxAlpha", "maxColorB", "maxColorG", "maxColorR", "maxColor", "minAlpha", "minColorB", "minColorG", "minColorR", "minColor", "scaleRgba", "sharedVertices", "useFaceNormals"]
+	nodeLeafPlugs = ["alphaBlending", "bakeColor", "clampMax", "clampMin", "colorBlending", "colorSetName", "maxAlpha", "maxColor", "minAlpha", "minColor", "scaleRgba", "sharedVertices", "useFaceNormals"]
 	pass
 

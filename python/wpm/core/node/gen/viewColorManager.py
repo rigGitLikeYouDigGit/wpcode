@@ -60,5 +60,7 @@ class ViewColorManager(_BASE_):
 	apiTypeStr = "kViewColorManager"
 	typeIdInt = 1448559437
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "contrast", "contrastPivot", "displayColorProfile", "exposure", "imageColorProfile", "lutFile"]
+	nodeLeafPlugs = ["binMembership", "contrast", "contrastPivot", "displayColorProfile", "exposure", "imageColorProfile", "lutFile"]
 	pass
 

@@ -40,5 +40,7 @@ class MeshVarGroup(BaseGeometryVarGroup):
 	apiTypeStr = "kMeshVarGroup"
 	typeIdInt = 1313691207
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = ["create", "local"]
+	nodeLeafPlugs = ["create", "local"]
 	pass
 

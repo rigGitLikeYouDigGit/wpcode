@@ -30,5 +30,7 @@ class ApplyRelOverride(ApplyOverride):
 
 	typeName = "applyRelOverride"
 	typeIdInt = 1476395899
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -64,5 +64,7 @@ class SubdLayoutUV(SubdModifierUV):
 	apiTypeStr = "kSubdLayoutUV"
 	typeIdInt = 1397511510
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["denseLayout", "flipReversed", "layout", "layoutMethod", "percentageSpace", "rotateForBestFit", "scale", "separate"]
+	nodeLeafPlugs = ["denseLayout", "flipReversed", "layout", "layoutMethod", "percentageSpace", "rotateForBestFit", "scale", "separate"]
 	pass
 

@@ -223,5 +223,7 @@ class PointOnCurveInfo(AbstractBaseCreate):
 	apiTypeStr = "kPointOnCurveInfo"
 	typeIdInt = 1313882953
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["inputCurve", "parameter", "curvatureCenterX", "curvatureCenterY", "curvatureCenterZ", "curvatureCenter", "curvatureRadius", "normalX", "normalY", "normalZ", "normal", "normalizedNormalX", "normalizedNormalY", "normalizedNormalZ", "normalizedNormal", "normalizedTangentX", "normalizedTangentY", "normalizedTangentZ", "normalizedTangent", "positionX", "positionY", "positionZ", "position", "tangentX", "tangentY", "tangentZ", "tangent", "result", "turnOnPercentage"]
+	nodeLeafPlugs = ["inputCurve", "parameter", "result", "turnOnPercentage"]
 	pass
 

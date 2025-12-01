@@ -52,5 +52,7 @@ class PolyBlindData(_BASE_):
 	apiTypeStr = "kPolyBlindData"
 	typeIdInt = 1296188500
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "blindDataEntriesAreNew", "inMesh", "outMesh", "typeId"]
+	nodeLeafPlugs = ["binMembership", "blindDataEntriesAreNew", "inMesh", "outMesh", "typeId"]
 	pass
 

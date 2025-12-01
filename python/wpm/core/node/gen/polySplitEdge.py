@@ -36,5 +36,7 @@ class PolySplitEdge(PolyModifier):
 	apiTypeStr = "kPolySplitEdge"
 	typeIdInt = 1347634500
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["operation"]
+	nodeLeafPlugs = ["operation"]
 	pass
 

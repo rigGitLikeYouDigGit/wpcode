@@ -68,5 +68,7 @@ class ClipToGhostData(_BASE_):
 	apiTypeStr = "kClipToGhostData"
 	typeIdInt = 1127368516
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "character", "clipGhostData", "clipIntermediatePoses", "clipPostCycle", "clipPreCycle", "clipSourceEnd", "clipSourceStart", "members"]
+	nodeLeafPlugs = ["binMembership", "character", "clipGhostData", "clipIntermediatePoses", "clipPostCycle", "clipPreCycle", "clipSourceEnd", "clipSourceStart", "members"]
 	pass
 

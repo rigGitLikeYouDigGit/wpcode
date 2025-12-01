@@ -329,5 +329,7 @@ class DataBlockTest(_BASE_):
 
 	typeName = "dataBlockTest"
 	typeIdInt = 1145197651
+	nodeLeafClassAttrs = ["binMembership", "level3CCCS1", "level3CCCS2", "level2CCC", "level2CCM", "level3CCMCS1", "level3CCMCS2", "level2CCMC", "level2CCS", "level1CC", "level1CM", "level3CMCCS1", "level3CMCCS2", "level2CMCC", "level2CMCM", "level3CMCMCS1", "level3CMCMCS2", "level2CMCMC", "level2CMCS", "level1CMC", "level1CS", "compound", "multi", "level3MCCCS1", "level3MCCCS2", "level2MCCC", "level2MCCM", "level3MCCMCS1", "level3MCCMCS2", "level2MCCMC", "level2MCCS", "level1MCC", "level1MCM", "level3MCMCCS1", "level3MCMCCS2", "level2MCMCC", "level2MCMCM", "level3MCMCMCS1", "level3MCMCMCS2", "level2MCMCMC", "level2MCMCS", "level1MCMC", "level1MCS", "multiCompound", "single"]
+	nodeLeafPlugs = ["binMembership", "compound", "multi", "multiCompound", "single"]
 	pass
 

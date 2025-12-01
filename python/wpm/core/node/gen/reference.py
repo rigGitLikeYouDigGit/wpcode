@@ -133,5 +133,7 @@ class Reference(_BASE_):
 	apiTypeStr = "kReference"
 	typeIdInt = 1380271694
 	MFnCls = om.MFnReference
+	nodeLeafClassAttrs = ["addAttrList", "associatedNode", "binMembership", "brokenConnectionList", "connection", "connectionAttr", "connectionList", "deleteAttrList", "edits", "fileNames", "fosterParent", "fosterSiblings", "locked", "multiParent", "multiParentList", "parentList", "placeHolderList", "placeHolderNamespace", "proxyMsg", "proxyTag", "setAttrList", "sharedReference", "unknownReference"]
+	nodeLeafPlugs = ["addAttrList", "associatedNode", "binMembership", "brokenConnectionList", "connectionList", "deleteAttrList", "edits", "fileNames", "fosterParent", "fosterSiblings", "locked", "multiParentList", "parentList", "placeHolderList", "placeHolderNamespace", "proxyMsg", "proxyTag", "setAttrList", "sharedReference", "unknownReference"]
 	pass
 

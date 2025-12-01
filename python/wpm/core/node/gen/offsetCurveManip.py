@@ -33,5 +33,7 @@ class OffsetCurveManip(ManipContainer):
 	apiTypeStr = "kOffsetCurveManip"
 	typeIdInt = 1431129923
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

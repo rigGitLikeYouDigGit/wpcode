@@ -30,5 +30,7 @@ class TexBaseDeformManip(Manip2D):
 
 	typeName = "texBaseDeformManip"
 	typeIdInt = 1413629005
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

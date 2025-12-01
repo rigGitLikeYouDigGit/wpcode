@@ -41,5 +41,7 @@ class PolyModifierWorld(PolyModifier):
 
 	typeName = "polyModifierWorld"
 	typeIdInt = 1347241047
+	nodeLeafClassAttrs = ["inputMatrix", "manipMatrix", "worldSpace"]
+	nodeLeafPlugs = ["inputMatrix", "manipMatrix", "worldSpace"]
 	pass
 

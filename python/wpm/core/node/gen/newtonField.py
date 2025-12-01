@@ -37,5 +37,7 @@ class NewtonField(Field):
 
 	typeName = "newtonField"
 	typeIdInt = 1498301783
+	nodeLeafClassAttrs = ["minDistance", "ownerMassData"]
+	nodeLeafPlugs = ["minDistance", "ownerMassData"]
 	pass
 

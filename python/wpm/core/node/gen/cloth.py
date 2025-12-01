@@ -135,5 +135,7 @@ class Cloth(Texture2d):
 	apiTypeStr = "kCloth"
 	typeIdInt = 1381253964
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["brightSpread", "gapColorB", "gapColorG", "gapColorR", "gapColor", "randomness", "uColorB", "uColorG", "uColorR", "uColor", "uWave", "uWidth", "vColorB", "vColorG", "vColorR", "vColor", "vWave", "vWidth", "widthSpread"]
+	nodeLeafPlugs = ["brightSpread", "gapColor", "randomness", "uColor", "uWave", "uWidth", "vColor", "vWave", "vWidth", "widthSpread"]
 	pass
 

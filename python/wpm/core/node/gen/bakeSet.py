@@ -61,5 +61,7 @@ class BakeSet(ObjectSet):
 
 	typeName = "bakeSet"
 	typeIdInt = 1111575365
+	nodeLeafClassAttrs = ["alphaMode", "bakeAlpha", "colorMode", "customShader", "normalDirection", "occlusionFalloff", "occlusionRays", "orthogonalReflection"]
+	nodeLeafPlugs = ["alphaMode", "bakeAlpha", "colorMode", "customShader", "normalDirection", "occlusionFalloff", "occlusionRays", "orthogonalReflection"]
 	pass
 

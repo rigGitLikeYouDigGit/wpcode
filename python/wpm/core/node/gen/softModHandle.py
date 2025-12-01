@@ -83,5 +83,7 @@ class SoftModHandle(Shape):
 
 	typeName = "softModHandle"
 	typeIdInt = 1179865928
+	nodeLeafClassAttrs = ["originX", "originY", "originZ", "origin", "postWeightedMatrixTransform", "preWeightedMatrixTransform", "weightedMatrixTransform", "softModTransforms", "weightedNode"]
+	nodeLeafPlugs = ["origin", "softModTransforms", "weightedNode"]
 	pass
 

@@ -112,5 +112,7 @@ class ImageSource(_BASE_):
 	apiTypeStr = "kImageSource"
 	typeIdInt = 1380862291
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "fileHasAlpha", "outAlpha", "outColorB", "outColorG", "outColorR", "outColor", "outSizeX", "outSizeY", "outSize", "outTransparencyB", "outTransparencyG", "outTransparencyR", "outTransparency"]
+	nodeLeafPlugs = ["binMembership", "fileHasAlpha", "outAlpha", "outColor", "outSize", "outTransparency"]
 	pass
 

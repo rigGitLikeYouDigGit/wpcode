@@ -30,5 +30,7 @@ class Texture3dManip(Manip3D):
 
 	typeName = "texture3dManip"
 	typeIdInt = 1431131224
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

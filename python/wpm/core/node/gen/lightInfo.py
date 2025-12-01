@@ -127,5 +127,7 @@ class LightInfo(_BASE_):
 	apiTypeStr = "kLightInfo"
 	typeIdInt = 1380731214
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "lightDirectionX", "lightDirectionY", "lightDirectionZ", "lightDirection", "lightDirectionOnly", "lightPositionX", "lightPositionY", "lightPositionZ", "lightPosition", "matrixEyeToWorld", "pointCameraX", "pointCameraY", "pointCameraZ", "pointCamera", "sampleDistance", "worldMatrix"]
+	nodeLeafPlugs = ["binMembership", "lightDirection", "lightDirectionOnly", "lightPosition", "matrixEyeToWorld", "pointCamera", "sampleDistance", "worldMatrix"]
 	pass
 

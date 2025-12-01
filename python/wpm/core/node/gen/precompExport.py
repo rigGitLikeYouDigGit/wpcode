@@ -69,5 +69,7 @@ class PrecompExport(_BASE_):
 	apiTypeStr = "kPrecompExport"
 	typeIdInt = 1415072581
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "camera", "layer", "pass", "excludedExportItemList", "preCompositingAnchor", "preCompositingNotes"]
+	nodeLeafPlugs = ["binMembership", "excludedExportItemList", "preCompositingAnchor", "preCompositingNotes"]
 	pass
 

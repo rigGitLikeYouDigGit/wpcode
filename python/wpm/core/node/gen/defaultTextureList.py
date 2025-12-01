@@ -37,5 +37,7 @@ class DefaultTextureList(_BASE_):
 
 	typeName = "defaultTextureList"
 	typeIdInt = 1380209740
+	nodeLeafClassAttrs = ["binMembership", "textures"]
+	nodeLeafPlugs = ["binMembership", "textures"]
 	pass
 

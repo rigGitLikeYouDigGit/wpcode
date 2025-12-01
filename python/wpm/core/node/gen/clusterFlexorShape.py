@@ -30,5 +30,7 @@ class ClusterFlexorShape(FlexorShape):
 
 	typeName = "clusterFlexorShape"
 	typeIdInt = 1179272006
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

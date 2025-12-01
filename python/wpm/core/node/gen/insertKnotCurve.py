@@ -53,5 +53,7 @@ class InsertKnotCurve(AbstractBaseCreate):
 
 	typeName = "insertKnotCurve"
 	typeIdInt = 1313426243
+	nodeLeafClassAttrs = ["addKnots", "inputCurve", "insertBetween", "numberOfKnots", "outputCurve", "parameter"]
+	nodeLeafPlugs = ["addKnots", "inputCurve", "insertBetween", "numberOfKnots", "outputCurve", "parameter"]
 	pass
 

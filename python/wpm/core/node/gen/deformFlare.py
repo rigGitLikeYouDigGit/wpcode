@@ -60,5 +60,7 @@ class DeformFlare(DeformFunc):
 	apiTypeStr = "kDeformFlare"
 	typeIdInt = 1178879564
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["curve", "endFlareX", "endFlareZ", "highBound", "lowBound", "startFlareX", "startFlareZ"]
+	nodeLeafPlugs = ["curve", "endFlareX", "endFlareZ", "highBound", "lowBound", "startFlareX", "startFlareZ"]
 	pass
 

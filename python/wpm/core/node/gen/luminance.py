@@ -69,5 +69,7 @@ class Luminance(_BASE_):
 	apiTypeStr = "kLuminance"
 	typeIdInt = 1380734285
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "outValue", "renderPassMode", "valueB", "valueG", "valueR", "value"]
+	nodeLeafPlugs = ["binMembership", "outValue", "renderPassMode", "value"]
 	pass
 

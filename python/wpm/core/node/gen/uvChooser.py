@@ -310,5 +310,7 @@ class UvChooser(_BASE_):
 	apiTypeStr = "kUvChooser"
 	typeIdInt = 1431716680
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "infoBits", "outU", "outV", "outUv", "outVertexCameraOneX", "outVertexCameraOneY", "outVertexCameraOneZ", "outVertexCameraOne", "outVertexUvOneU", "outVertexUvOneV", "outVertexUvOne", "outVertexUvThreeU", "outVertexUvThreeV", "outVertexUvThree", "outVertexUvTwoU", "outVertexUvTwoV", "outVertexUvTwo", "sCoord", "tCoord", "stCoord", "uCoord", "vCoord", "uvCoord", "uvSets", "vertexCameraOneX", "vertexCameraOneY", "vertexCameraOneZ", "vertexCameraOne", "vertexStOneS", "vertexStOneT", "vertexStOne", "vertexStThreeS", "vertexStThreeT", "vertexStThree", "vertexStTwoS", "vertexStTwoT", "vertexStTwo", "vertexUvOneU", "vertexUvOneV", "vertexUvOne", "vertexUvThreeU", "vertexUvThreeV", "vertexUvThree", "vertexUvTwoU", "vertexUvTwoV", "vertexUvTwo"]
+	nodeLeafPlugs = ["binMembership", "infoBits", "outUv", "outVertexCameraOne", "outVertexUvOne", "outVertexUvThree", "outVertexUvTwo", "stCoord", "uvCoord", "uvSets", "vertexCameraOne", "vertexStOne", "vertexStThree", "vertexStTwo", "vertexUvOne", "vertexUvThree", "vertexUvTwo"]
 	pass
 

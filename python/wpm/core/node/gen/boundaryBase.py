@@ -53,5 +53,7 @@ class BoundaryBase(AbstractBaseCreate):
 
 	typeName = "boundaryBase"
 	typeIdInt = 1312965203
+	nodeLeafClassAttrs = ["endPointTolerance", "inputCurve1", "inputCurve2", "inputCurve3", "inputCurve4", "outputSurface"]
+	nodeLeafPlugs = ["endPointTolerance", "inputCurve1", "inputCurve2", "inputCurve3", "inputCurve4", "outputSurface"]
 	pass
 

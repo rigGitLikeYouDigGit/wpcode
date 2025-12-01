@@ -155,5 +155,7 @@ class HikEffector(Transform):
 	apiTypeStr = "kHikEffector"
 	typeIdInt = 1145456971
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = ["alpha", "auxEffector", "colorB", "colorG", "colorR", "color", "effectorID", "fkjoint", "handle", "joint", "markerLook", "pinning", "pivotOffsetX", "pivotOffsetY", "pivotOffsetZ", "pivotOffset", "pivots", "preRotationX", "preRotationY", "preRotationZ", "preRotation", "radius", "reachRotation", "reachTranslation"]
+	nodeLeafPlugs = ["alpha", "auxEffector", "color", "effectorID", "fkjoint", "handle", "joint", "markerLook", "pinning", "pivotOffset", "pivots", "preRotation", "radius", "reachRotation", "reachTranslation"]
 	pass
 

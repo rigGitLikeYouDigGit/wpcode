@@ -61,5 +61,7 @@ class BlendColorSets(PolyModifier):
 
 	typeName = "blendColorSets"
 	typeIdInt = 1346519891
+	nodeLeafClassAttrs = ["baseColorName", "blendFunc", "blendWeightA", "blendWeightB", "blendWeightC", "blendWeightD", "dstColorName", "srcColorName"]
+	nodeLeafPlugs = ["baseColorName", "blendFunc", "blendWeightA", "blendWeightB", "blendWeightC", "blendWeightD", "dstColorName", "srcColorName"]
 	pass
 

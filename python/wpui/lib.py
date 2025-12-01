@@ -127,6 +127,19 @@ def widgetChildMap(w:QtWidgets.QWidget, includeObjects=True, onlyNamed=True)->di
 		result[i.objectName()] = i
 	return result
 
+def widgetChildMapRecursive(w:QtWidgets.QWidget,
+                            includeObjects=True,
+                            onlyNamed=True):
+	flatMap = {}
+	toCheck = [w]
+	while toCheck:
+		currentW = toCheck.pop(0)
+		childMap = widgetChildMap(currentW, includeObjects, onlyNamed)
+		flatMap.update(childMap)
+		toCheck.extend(childMap.values())
+	return flatMap
+
+
 class muteQtSignals:
 	"""small context for muting qt signals around a block"""
 	def __init__(self, *objs:QtCore.QObject):

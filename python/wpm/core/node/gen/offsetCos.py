@@ -68,5 +68,7 @@ class OffsetCos(AbstractBaseCreate):
 	apiTypeStr = "kOffsetCos"
 	typeIdInt = 1313817427
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["checkPoints", "connectBreaks", "cutLoop", "distance", "inputCurve", "outputCurve", "stitch", "subdivisionDensity", "tolerance"]
+	nodeLeafPlugs = ["checkPoints", "connectBreaks", "cutLoop", "distance", "inputCurve", "outputCurve", "stitch", "subdivisionDensity", "tolerance"]
 	pass
 

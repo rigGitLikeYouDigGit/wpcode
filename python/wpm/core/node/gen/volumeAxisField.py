@@ -148,5 +148,7 @@ class VolumeAxisField(Field):
 
 	typeName = "volumeAxisField"
 	typeIdInt = 1498830918
+	nodeLeafClassAttrs = ["alongAxis", "aroundAxis", "awayFromAxis", "awayFromCenter", "detailTurbulence", "directionX", "directionY", "directionZ", "direction", "directionalSpeed", "displaySpeed", "invertAttenuation", "time", "turbulence", "turbulenceFrequencyX", "turbulenceFrequencyY", "turbulenceFrequencyZ", "turbulenceFrequency", "turbulenceOffsetX", "turbulenceOffsetY", "turbulenceOffsetZ", "turbulenceOffset", "turbulenceSpeed"]
+	nodeLeafPlugs = ["alongAxis", "aroundAxis", "awayFromAxis", "awayFromCenter", "detailTurbulence", "direction", "directionalSpeed", "displaySpeed", "invertAttenuation", "time", "turbulence", "turbulenceFrequency", "turbulenceOffset", "turbulenceSpeed"]
 	pass
 

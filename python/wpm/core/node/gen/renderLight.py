@@ -33,5 +33,7 @@ class RenderLight(Light):
 
 	typeName = "renderLight"
 	typeIdInt = 1380733774
+	nodeLeafClassAttrs = ["rayInstance"]
+	nodeLeafPlugs = ["rayInstance"]
 	pass
 

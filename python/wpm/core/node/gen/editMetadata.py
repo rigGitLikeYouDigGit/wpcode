@@ -111,5 +111,7 @@ class EditMetadata(_BASE_):
 	apiTypeStr = "kEditMetadata"
 	typeIdInt = 1162695748
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "streamEdits", "streamName", "channelEdits", "channelName", "edits", "inData", "outData", "error", "metadataEditType", "metadataEditValue", "metadataIndexValue", "metadataMember"]
+	nodeLeafPlugs = ["binMembership", "edits", "inData", "outData"]
 	pass
 

@@ -214,5 +214,7 @@ class RenderLayer(ImageSource):
 	apiTypeStr = "kRenderLayer"
 	typeIdInt = 1380861004
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["plug", "value", "adjustments", "attributeOverrideScript", "deferredOutAdjustments", "deferredUndoOutAdjustments", "displayOrder", "global", "imageName", "imageRendered", "isDefaultPrecompTemplateOverride", "layerChildren", "layerParent", "outId", "outPlug", "outValue", "outAdjustments", "passContributionMap", "precompTemplate", "psdAlphaChannel", "psdBlendMode", "recycleImage", "drawColor", "identification", "renderable", "renderInfo", "renderPass", "ambient", "beauty", "color", "diffuse", "shadow", "specular", "renderPassInfo", "shadingGroupOverride"]
+	nodeLeafPlugs = ["adjustments", "attributeOverrideScript", "deferredOutAdjustments", "deferredUndoOutAdjustments", "displayOrder", "global", "imageName", "imageRendered", "isDefaultPrecompTemplateOverride", "layerChildren", "layerParent", "outAdjustments", "passContributionMap", "precompTemplate", "psdAlphaChannel", "psdBlendMode", "recycleImage", "renderInfo", "renderPass", "renderPassInfo", "shadingGroupOverride"]
 	pass
 

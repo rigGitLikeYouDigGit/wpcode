@@ -95,5 +95,7 @@ class MakeCircularArc(AbstractBaseCreate):
 
 	typeName = "makeCircularArc"
 	typeIdInt = 1313030482
+	nodeLeafClassAttrs = ["centerX", "centerY", "centerZ", "center", "degree", "normalX", "normalY", "normalZ", "normal", "outputCurve", "sections", "sweep"]
+	nodeLeafPlugs = ["center", "degree", "normal", "outputCurve", "sections", "sweep"]
 	pass
 

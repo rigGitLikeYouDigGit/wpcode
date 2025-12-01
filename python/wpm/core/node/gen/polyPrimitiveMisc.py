@@ -52,5 +52,7 @@ class PolyPrimitiveMisc(PolyPrimitive):
 	apiTypeStr = "kPolyPrimitiveMisc"
 	typeIdInt = 1296651075
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["createUVs", "polyType", "radius", "sideLength", "texture"]
+	nodeLeafPlugs = ["createUVs", "polyType", "radius", "sideLength", "texture"]
 	pass
 

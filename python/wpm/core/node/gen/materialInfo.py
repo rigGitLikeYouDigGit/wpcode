@@ -64,5 +64,7 @@ class MaterialInfo(_BASE_):
 	apiTypeStr = "kMaterialInfo"
 	typeIdInt = 1145918537
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "material", "shadingGroup", "texture", "textureChannel", "textureFilter", "textureName", "texturePlug"]
+	nodeLeafPlugs = ["binMembership", "material", "shadingGroup", "texture", "textureChannel", "textureFilter", "textureName", "texturePlug"]
 	pass
 

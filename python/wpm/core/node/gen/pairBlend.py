@@ -218,5 +218,7 @@ class PairBlend(_BASE_):
 	apiTypeStr = "kPairBlend"
 	typeIdInt = 1095778892
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "currentDriver", "inRotateX1", "inRotateY1", "inRotateZ1", "inRotate1", "inRotateX2", "inRotateY2", "inRotateZ2", "inRotate2", "inTranslateX1", "inTranslateY1", "inTranslateZ1", "inTranslate1", "inTranslateX2", "inTranslateY2", "inTranslateZ2", "inTranslate2", "outRotateX", "outRotateY", "outRotateZ", "outRotate", "outTranslateX", "outTranslateY", "outTranslateZ", "outTranslate", "rotInterpolation", "rotateMode", "rotateOrder", "translateXMode", "translateYMode", "translateZMode", "weight"]
+	nodeLeafPlugs = ["binMembership", "currentDriver", "inRotate1", "inRotate2", "inTranslate1", "inTranslate2", "outRotate", "outTranslate", "rotInterpolation", "rotateMode", "rotateOrder", "translateXMode", "translateYMode", "translateZMode", "weight"]
 	pass
 

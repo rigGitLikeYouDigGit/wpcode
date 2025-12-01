@@ -36,5 +36,7 @@ class Unknown(_BASE_):
 	apiTypeStr = "kUnknown"
 	typeIdInt = 1431194446
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership"]
+	nodeLeafPlugs = ["binMembership"]
 	pass
 

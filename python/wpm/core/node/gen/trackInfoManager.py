@@ -58,5 +58,7 @@ class TrackInfoManager(_BASE_):
 	apiTypeStr = "kTrackInfoManager"
 	typeIdInt = 1414090055
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["audioTitle", "audioTrackInfo", "binMembership", "title", "trackInfo"]
+	nodeLeafPlugs = ["audioTrackInfo", "binMembership", "trackInfo"]
 	pass
 

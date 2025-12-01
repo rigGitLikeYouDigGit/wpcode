@@ -254,5 +254,7 @@ class RigidSolver(_BASE_):
 	apiTypeStr = "kRigidSolver"
 	typeIdInt = 1498631254
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["allowDisconnection", "autoSolverTolerances", "binMembership", "bounciness", "cacheData", "collisionTolerance", "constraintRotateX", "constraintRotateY", "constraintRotateZ", "constraintRotate", "constraintTranslateX", "constraintTranslateY", "constraintTranslateZ", "constraintTranslate", "contactData", "current", "currentTime", "deltaTime", "displayCenterOfMass", "displayConstraint", "displayLabel", "displayVelocity", "dynamics", "forceDynamics", "friction", "inputForce", "inputTorque", "generalForce", "lastSceneTime", "rigidBodyCount", "rotateX", "rotateY", "rotateZ", "rotate", "scaleVelocity", "solverMethod", "solving", "startTime", "state", "statistics", "stepSize", "translateX", "translateY", "translateZ", "translate"]
+	nodeLeafPlugs = ["allowDisconnection", "autoSolverTolerances", "binMembership", "bounciness", "cacheData", "collisionTolerance", "constraintRotate", "constraintTranslate", "contactData", "current", "currentTime", "deltaTime", "displayCenterOfMass", "displayConstraint", "displayLabel", "displayVelocity", "dynamics", "forceDynamics", "friction", "generalForce", "lastSceneTime", "rigidBodyCount", "rotate", "scaleVelocity", "solverMethod", "solving", "startTime", "state", "statistics", "stepSize", "translate"]
 	pass
 

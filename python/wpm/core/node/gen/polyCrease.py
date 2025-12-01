@@ -45,5 +45,7 @@ class PolyCrease(PolyModifierWorld):
 
 	typeName = "polyCrease"
 	typeIdInt = 1346589267
+	nodeLeafClassAttrs = ["crease", "creaseVertex", "inputVertexComponents", "operation"]
+	nodeLeafPlugs = ["crease", "creaseVertex", "inputVertexComponents", "operation"]
 	pass
 

@@ -48,5 +48,7 @@ class PolyMergeVert(PolyModifierWorld):
 	apiTypeStr = "kPolyMergeVert"
 	typeIdInt = 1347245637
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["alwaysMergeTwoVertices", "distance", "mergeToComponents", "texture"]
+	nodeLeafPlugs = ["alwaysMergeTwoVertices", "distance", "mergeToComponents", "texture"]
 	pass
 

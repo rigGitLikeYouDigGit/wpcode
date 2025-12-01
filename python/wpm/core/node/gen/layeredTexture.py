@@ -168,5 +168,7 @@ class LayeredTexture(ShadingDependNode):
 	apiTypeStr = "kLayeredTexture"
 	typeIdInt = 1280922196
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["alphaIsLuminance", "hardwareColorB", "hardwareColorG", "hardwareColorR", "hardwareColor", "alpha", "blendMode", "colorB", "colorG", "colorR", "color", "isVisible", "inputs", "outAlpha", "outColorB", "outColorG", "outColorR", "outColor", "outTransparencyB", "outTransparencyG", "outTransparencyR", "outTransparency"]
+	nodeLeafPlugs = ["alphaIsLuminance", "hardwareColor", "inputs", "outAlpha", "outColor", "outTransparency"]
 	pass
 

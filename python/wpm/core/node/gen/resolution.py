@@ -84,5 +84,7 @@ class Resolution(_BASE_):
 	apiTypeStr = "kResolution"
 	typeIdInt = 1380734030
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["aspectLock", "binMembership", "deviceAspectRatio", "dotsPerInch", "fields", "height", "imageSizeUnits", "lockDeviceAspectRatio", "oddFieldFirst", "pixelAspect", "pixelDensityUnits", "width", "zerothScanline"]
+	nodeLeafPlugs = ["aspectLock", "binMembership", "deviceAspectRatio", "dotsPerInch", "fields", "height", "imageSizeUnits", "lockDeviceAspectRatio", "oddFieldFirst", "pixelAspect", "pixelDensityUnits", "width", "zerothScanline"]
 	pass
 

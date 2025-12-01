@@ -66,5 +66,7 @@ class AnnotationShape(DimensionShape):
 
 	typeName = "annotationShape"
 	typeIdInt = 1095650899
+	nodeLeafClassAttrs = ["dagObjectMatrix", "displayArrow", "positionX", "positionY", "positionZ", "position", "text"]
+	nodeLeafPlugs = ["dagObjectMatrix", "displayArrow", "position", "text"]
 	pass
 

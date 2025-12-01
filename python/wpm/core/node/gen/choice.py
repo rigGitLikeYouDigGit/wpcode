@@ -48,5 +48,7 @@ class Choice(_BASE_):
 	apiTypeStr = "kChoice"
 	typeIdInt = 1128809285
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "input", "output", "selector"]
+	nodeLeafPlugs = ["binMembership", "input", "output", "selector"]
 	pass
 

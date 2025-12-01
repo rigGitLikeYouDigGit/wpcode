@@ -152,5 +152,7 @@ class PolyProj(PolyModifierWorld):
 	apiTypeStr = "kPolyProj"
 	typeIdInt = 1347441231
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["imageCenterX", "imageCenterY", "imageCenter", "imageScaleU", "imageScaleV", "imageScale", "projType", "projectionCenterX", "projectionCenterY", "projectionCenterZ", "projectionCenter", "projectionScaleU", "projectionScaleV", "projectionScale", "radius", "rotateX", "rotateY", "rotateZ", "rotate", "rotationAngle", "worldInverseMatrix"]
+	nodeLeafPlugs = ["imageCenter", "imageScale", "projType", "projectionCenter", "projectionScale", "radius", "rotate", "rotationAngle", "worldInverseMatrix"]
 	pass
 

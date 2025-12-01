@@ -37,5 +37,7 @@ class DefaultRenderUtilityList(_BASE_):
 
 	typeName = "defaultRenderUtilityList"
 	typeIdInt = 1146246476
+	nodeLeafClassAttrs = ["binMembership", "utilities"]
+	nodeLeafPlugs = ["binMembership", "utilities"]
 	pass
 

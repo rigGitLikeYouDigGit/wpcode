@@ -64,5 +64,7 @@ class SubdAutoProj(SubdModifierUV):
 	apiTypeStr = "kSubdAutoProj"
 	typeIdInt = 1396790608
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["denseLayout", "layout", "layoutMethod", "optimize", "percentageSpace", "planes", "scale", "skipIntersect"]
+	nodeLeafPlugs = ["denseLayout", "layout", "layoutMethod", "optimize", "percentageSpace", "planes", "scale", "skipIntersect"]
 	pass
 

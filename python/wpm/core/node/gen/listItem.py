@@ -45,5 +45,7 @@ class ListItem(_BASE_):
 
 	typeName = "listItem"
 	typeIdInt = 1476395894
+	nodeLeafClassAttrs = ["binMembership", "next", "parentList", "previous"]
+	nodeLeafPlugs = ["binMembership", "next", "parentList", "previous"]
 	pass
 

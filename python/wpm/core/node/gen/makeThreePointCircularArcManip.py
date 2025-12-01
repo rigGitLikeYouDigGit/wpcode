@@ -30,5 +30,7 @@ class MakeThreePointCircularArcManip(ManipContainer):
 
 	typeName = "makeThreePointCircularArcManip"
 	typeIdInt = 1431588929
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

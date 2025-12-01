@@ -109,5 +109,7 @@ class RenderTarget(ImageSource):
 	apiTypeStr = "kRenderTarget"
 	typeIdInt = 1380865095
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["alpha", "camera", "colorB", "colorG", "colorR", "color", "colorProfile", "frameBufferOverride", "frameBufferType", "height", "numberOfChannels", "renderLayer", "renderable", "renderer", "renderingOverride", "resolutionOverride", "width"]
+	nodeLeafPlugs = ["alpha", "camera", "color", "colorProfile", "frameBufferOverride", "frameBufferType", "height", "numberOfChannels", "renderLayer", "renderable", "renderer", "renderingOverride", "resolutionOverride", "width"]
 	pass
 

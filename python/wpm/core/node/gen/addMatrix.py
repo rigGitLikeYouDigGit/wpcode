@@ -41,5 +41,7 @@ class AddMatrix(_BASE_):
 
 	typeName = "addMatrix"
 	typeIdInt = 1145130328
+	nodeLeafClassAttrs = ["binMembership", "matrixIn", "matrixSum"]
+	nodeLeafPlugs = ["binMembership", "matrixIn", "matrixSum"]
 	pass
 

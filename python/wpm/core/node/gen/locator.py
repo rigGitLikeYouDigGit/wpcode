@@ -111,5 +111,7 @@ class Locator(GeometryShape):
 	apiTypeStr = "kLocator"
 	typeIdInt = 1280262996
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["localPositionX", "localPositionY", "localPositionZ", "localPosition", "localScaleX", "localScaleY", "localScaleZ", "localScale", "underWorldObject", "worldPositionX", "worldPositionY", "worldPositionZ", "worldPosition"]
+	nodeLeafPlugs = ["localPosition", "localScale", "underWorldObject", "worldPosition"]
 	pass
 

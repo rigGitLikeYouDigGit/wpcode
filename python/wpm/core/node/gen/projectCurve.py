@@ -77,5 +77,7 @@ class ProjectCurve(AbstractBaseCreate):
 	apiTypeStr = "kProjectCurve"
 	typeIdInt = 1313882962
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["directionX", "directionY", "directionZ", "direction", "inputCurve", "inputSurface", "outputCurve", "tolerance", "useNormal"]
+	nodeLeafPlugs = ["direction", "inputCurve", "inputSurface", "outputCurve", "tolerance", "useNormal"]
 	pass
 

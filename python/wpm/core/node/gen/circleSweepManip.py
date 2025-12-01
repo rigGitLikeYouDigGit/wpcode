@@ -33,5 +33,7 @@ class CircleSweepManip(Manip3D):
 	apiTypeStr = "kCircleSweepManip"
 	typeIdInt = 1430475597
 	MFnCls = om.MFnCircleSweepManip
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

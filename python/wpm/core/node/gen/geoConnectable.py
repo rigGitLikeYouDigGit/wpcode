@@ -80,5 +80,7 @@ class GeoConnectable(Shape):
 	apiTypeStr = "kGeoConnectable"
 	typeIdInt = 1497842511
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["auxiliariesOwned", "cachedPositions", "cachedVelocities", "componentPositions", "connectionsToMe", "doVelocity", "groupId", "inputGeometryMsg", "localSurfaceGeometry", "prevTime", "surfaceGeometry", "velocityValid"]
+	nodeLeafPlugs = ["auxiliariesOwned", "cachedPositions", "cachedVelocities", "componentPositions", "connectionsToMe", "doVelocity", "groupId", "inputGeometryMsg", "localSurfaceGeometry", "prevTime", "surfaceGeometry", "velocityValid"]
 	pass
 

@@ -30,5 +30,7 @@ class Group(RScontainer):
 
 	typeName = "group"
 	typeIdInt = 1476395941
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

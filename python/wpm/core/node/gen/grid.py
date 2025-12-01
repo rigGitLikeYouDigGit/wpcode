@@ -94,5 +94,7 @@ class Grid(Texture2d):
 	apiTypeStr = "kGrid"
 	typeIdInt = 1381254980
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["contrast", "fillerColorB", "fillerColorG", "fillerColorR", "fillerColor", "lineColorB", "lineColorG", "lineColorR", "lineColor", "uWidth", "vWidth"]
+	nodeLeafPlugs = ["contrast", "fillerColor", "lineColor", "uWidth", "vWidth"]
 	pass
 

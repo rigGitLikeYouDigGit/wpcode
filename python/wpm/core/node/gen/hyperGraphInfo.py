@@ -40,5 +40,7 @@ class HyperGraphInfo(_BASE_):
 	apiTypeStr = "kHyperGraphInfo"
 	typeIdInt = 1213812818
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "bookmarks"]
+	nodeLeafPlugs = ["binMembership", "bookmarks"]
 	pass
 

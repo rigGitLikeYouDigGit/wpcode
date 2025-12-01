@@ -72,5 +72,7 @@ class Solidify(WeightGeometryFilter):
 	apiTypeStr = "kSolidify"
 	typeIdInt = 1397705817
 	MFnCls = om.MFnGeometryFilter
+	nodeLeafClassAttrs = ["attachmentMode", "borderFalloffBlur", "cacheSetup", "islands", "normalScale", "scaleEnvelope", "scaleMode", "stabilizationLevel", "tangentPlaneScale", "useBorderFalloff"]
+	nodeLeafPlugs = ["attachmentMode", "borderFalloffBlur", "cacheSetup", "islands", "normalScale", "scaleEnvelope", "scaleMode", "stabilizationLevel", "tangentPlaneScale", "useBorderFalloff"]
 	pass
 

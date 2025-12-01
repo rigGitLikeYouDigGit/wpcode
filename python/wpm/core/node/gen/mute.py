@@ -56,5 +56,7 @@ class Mute(_BASE_):
 	apiTypeStr = "kMute"
 	typeIdInt = 1297437765
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "hold", "holdTime", "input", "mute", "output"]
+	nodeLeafPlugs = ["binMembership", "hold", "holdTime", "input", "mute", "output"]
 	pass
 

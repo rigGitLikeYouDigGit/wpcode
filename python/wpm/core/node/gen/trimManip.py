@@ -33,5 +33,7 @@ class TrimManip(PointOnSurfaceManip):
 	apiTypeStr = "kTrimManip"
 	typeIdInt = 1431131213
 	MFnCls = om.MFnPointOnSurfaceManip
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -86,5 +86,7 @@ class PolyMoveEdge(PolyMoveVertex):
 	apiTypeStr = "kPolyMoveEdge"
 	typeIdInt = 1347243845
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["localCenter", "localRotateX", "localRotateY", "localRotateZ", "localRotate", "localScaleX", "localScaleY", "localScaleZ", "localScale"]
+	nodeLeafPlugs = ["localCenter", "localRotate", "localScale"]
 	pass
 

@@ -30,5 +30,7 @@ class SnapUV2dManip(Uv2dManip):
 
 	typeName = "snapUV2dManip"
 	typeIdInt = 1429361486
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

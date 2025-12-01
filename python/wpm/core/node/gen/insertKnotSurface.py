@@ -57,5 +57,7 @@ class InsertKnotSurface(AbstractBaseCreate):
 
 	typeName = "insertKnotSurface"
 	typeIdInt = 1313426259
+	nodeLeafClassAttrs = ["addKnots", "direction", "inputSurface", "insertBetween", "numberOfKnots", "outputSurface", "parameter"]
+	nodeLeafPlugs = ["addKnots", "direction", "inputSurface", "insertBetween", "numberOfKnots", "outputSurface", "parameter"]
 	pass
 

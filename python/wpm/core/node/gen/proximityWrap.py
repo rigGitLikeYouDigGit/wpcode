@@ -282,5 +282,7 @@ class ProximityWrap(WeightGeometryFilter):
 	apiTypeStr = "kProximityWrap"
 	typeIdInt = 1347899984
 	MFnCls = om.MFnGeometryFilter
+	nodeLeafClassAttrs = ["associativeGeometry", "bindTagsFilter", "cacheSetup", "driverWeightFunction", "driverBindGeometry", "driverClusterMatrix", "driverClusterRestMatrix", "driverDropoffRate", "driverFalloffEnd", "driverFalloffRamp_FloatValue", "driverFalloffRamp_Interp", "driverFalloffRamp_Position", "driverFalloffRamp", "driverFalloffStart", "driverGeometry", "driverOverrideFalloffRamp", "driverOverrideSmoothNormals", "driverOverrideSpanSamples", "driverSmoothNormals", "driverSpanSamples", "driverStrength", "driverUseTransformAsDeformation", "driverWrapMode", "drivers", "dropoffRateScale", "falloffRamp_FloatValue", "falloffRamp_Interp", "falloffRamp_Position", "falloffRamp", "falloffScale", "maxDrivers", "perDriverVertexWeights", "perDriverWeights", "perDriverWeightsList", "perVertexDriverWeights", "perVertexWeights", "perVertexWeightsList", "smoothInfluences", "smoothNormals", "softNormalization", "spanSamples", "useBindTags", "wrapMode"]
+	nodeLeafPlugs = ["associativeGeometry", "bindTagsFilter", "cacheSetup", "driverWeightFunction", "drivers", "dropoffRateScale", "falloffRamp", "falloffScale", "maxDrivers", "perDriverWeightsList", "perVertexWeightsList", "smoothInfluences", "smoothNormals", "softNormalization", "spanSamples", "useBindTags", "wrapMode"]
 	pass
 

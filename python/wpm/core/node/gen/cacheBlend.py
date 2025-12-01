@@ -83,5 +83,7 @@ class CacheBlend(CacheBase):
 
 	typeName = "cacheBlend"
 	typeIdInt = 1129599563
+	nodeLeafClassAttrs = ["end", "range", "start", "weight", "cacheData", "disableAll", "perPtWeights", "vectorArray", "inCache"]
+	nodeLeafPlugs = ["cacheData", "disableAll", "inCache"]
 	pass
 

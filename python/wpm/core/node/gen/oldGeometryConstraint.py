@@ -221,5 +221,7 @@ class OldGeometryConstraint(_BASE_):
 	apiTypeStr = "kOldGeometryConstraint"
 	typeIdInt = 1145523523
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "geometry", "inputMatrix", "inputRotPivotX", "inputRotPivotY", "inputRotPivotZ", "inputRotPivot", "inputRotTransX", "inputRotTransY", "inputRotTransZ", "inputRotTrans", "inputTransX", "inputTransY", "inputTransZ", "inputTrans", "weight", "input", "objectRotPivotX", "objectRotPivotY", "objectRotPivotZ", "objectRotPivot", "objectRotTransX", "objectRotTransY", "objectRotTransZ", "objectRotTrans", "outputX", "outputY", "outputZ", "output", "parentInverseMatrix"]
+	nodeLeafPlugs = ["binMembership", "geometry", "input", "objectRotPivot", "objectRotTrans", "output", "parentInverseMatrix"]
 	pass
 

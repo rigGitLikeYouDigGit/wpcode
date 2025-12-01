@@ -33,5 +33,7 @@ class RotateManip(Manip3D):
 	apiTypeStr = "kRotateManip"
 	typeIdInt = 1431130689
 	MFnCls = om.MFnRotateManip
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

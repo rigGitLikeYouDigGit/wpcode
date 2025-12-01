@@ -44,5 +44,7 @@ class Untrim(AbstractBaseCreate):
 	apiTypeStr = "kUntrim"
 	typeIdInt = 1314214994
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["inputSurface", "outputCurve", "outputSurface"]
+	nodeLeafPlugs = ["inputSurface", "outputCurve", "outputSurface"]
 	pass
 

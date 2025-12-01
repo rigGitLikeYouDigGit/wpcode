@@ -30,5 +30,7 @@ class BallProjManip(Manip3D):
 
 	typeName = "ballProjManip"
 	typeIdInt = 1431126608
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

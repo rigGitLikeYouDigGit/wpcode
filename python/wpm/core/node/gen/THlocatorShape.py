@@ -29,5 +29,7 @@ class THlocatorShape(Locator):
 	# node attributes
 
 	typeName = "THlocatorShape"
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

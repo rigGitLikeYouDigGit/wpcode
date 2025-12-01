@@ -27,57 +27,11 @@ class StMatrixInPlug(Plug):
 	parent : StDataInPlug = PlugDescriptor("stDataIn")
 	node : StrataShape = None
 	pass
-class StSpaceIndexInPlug(Plug):
-	parent : StDataInPlug = PlugDescriptor("stDataIn")
-	node : StrataShape = None
-	pass
-class StSpaceModeInPlug(Plug):
-	parent : StDataInPlug = PlugDescriptor("stDataIn")
-	node : StrataShape = None
-	pass
-class StSpaceNameInPlug(Plug):
-	parent : StDataInPlug = PlugDescriptor("stDataIn")
-	node : StrataShape = None
-	pass
-class StUVNInXPlug(Plug):
-	parent : StUVNInPlug = PlugDescriptor("stUVNIn")
-	node : StrataShape = None
-	pass
-class StUVNInYPlug(Plug):
-	parent : StUVNInPlug = PlugDescriptor("stUVNIn")
-	node : StrataShape = None
-	pass
-class StUVNInZPlug(Plug):
-	parent : StUVNInPlug = PlugDescriptor("stUVNIn")
-	node : StrataShape = None
-	pass
-class StUVNInPlug(Plug):
-	parent : StDataInPlug = PlugDescriptor("stDataIn")
-	stUVNInX_ : StUVNInXPlug = PlugDescriptor("stUVNInX")
-	stUVNInx_ : StUVNInXPlug = PlugDescriptor("stUVNInX")
-	stUVNInY_ : StUVNInYPlug = PlugDescriptor("stUVNInY")
-	stUVNIny_ : StUVNInYPlug = PlugDescriptor("stUVNInY")
-	stUVNInZ_ : StUVNInZPlug = PlugDescriptor("stUVNInZ")
-	stUVNInz_ : StUVNInZPlug = PlugDescriptor("stUVNInZ")
-	node : StrataShape = None
-	pass
 class StDataInPlug(Plug):
 	stExpIn_ : StExpInPlug = PlugDescriptor("stExpIn")
 	stExpIn_ : StExpInPlug = PlugDescriptor("stExpIn")
 	stMatrixIn_ : StMatrixInPlug = PlugDescriptor("stMatrixIn")
 	stMatrixIn_ : StMatrixInPlug = PlugDescriptor("stMatrixIn")
-	stSpaceIndexIn_ : StSpaceIndexInPlug = PlugDescriptor("stSpaceIndexIn")
-	stSpaceIndexIn_ : StSpaceIndexInPlug = PlugDescriptor("stSpaceIndexIn")
-	stSpaceModeIn_ : StSpaceModeInPlug = PlugDescriptor("stSpaceModeIn")
-	stSpaceModeIn_ : StSpaceModeInPlug = PlugDescriptor("stSpaceModeIn")
-	stSpaceNameIn_ : StSpaceNameInPlug = PlugDescriptor("stSpaceNameIn")
-	stSpaceNameIn_ : StSpaceNameInPlug = PlugDescriptor("stSpaceNameIn")
-	stUVNIn_ : StUVNInPlug = PlugDescriptor("stUVNIn")
-	stUVNIn_ : StUVNInPlug = PlugDescriptor("stUVNIn")
-	node : StrataShape = None
-	pass
-class StCurveOutPlug(Plug):
-	parent : StDataOutPlug = PlugDescriptor("stDataOut")
 	node : StrataShape = None
 	pass
 class StExpOutPlug(Plug):
@@ -89,8 +43,6 @@ class StMatrixOutPlug(Plug):
 	node : StrataShape = None
 	pass
 class StDataOutPlug(Plug):
-	stCurveOut_ : StCurveOutPlug = PlugDescriptor("stCurveOut")
-	stCurveOut_ : StCurveOutPlug = PlugDescriptor("stCurveOut")
 	stExpOut_ : StExpOutPlug = PlugDescriptor("stExpOut")
 	stExpOut_ : StExpOutPlug = PlugDescriptor("stExpOut")
 	stMatrixOut_ : StMatrixOutPlug = PlugDescriptor("stMatrixOut")
@@ -119,15 +71,7 @@ class StShowPointsPlug(Plug):
 class StrataShape(THsurfaceShape):
 	stExpIn_ : StExpInPlug = PlugDescriptor("stExpIn")
 	stMatrixIn_ : StMatrixInPlug = PlugDescriptor("stMatrixIn")
-	stSpaceIndexIn_ : StSpaceIndexInPlug = PlugDescriptor("stSpaceIndexIn")
-	stSpaceModeIn_ : StSpaceModeInPlug = PlugDescriptor("stSpaceModeIn")
-	stSpaceNameIn_ : StSpaceNameInPlug = PlugDescriptor("stSpaceNameIn")
-	stUVNInX_ : StUVNInXPlug = PlugDescriptor("stUVNInX")
-	stUVNInY_ : StUVNInYPlug = PlugDescriptor("stUVNInY")
-	stUVNInZ_ : StUVNInZPlug = PlugDescriptor("stUVNInZ")
-	stUVNIn_ : StUVNInPlug = PlugDescriptor("stUVNIn")
 	stDataIn_ : StDataInPlug = PlugDescriptor("stDataIn")
-	stCurveOut_ : StCurveOutPlug = PlugDescriptor("stCurveOut")
 	stExpOut_ : StExpOutPlug = PlugDescriptor("stExpOut")
 	stMatrixOut_ : StMatrixOutPlug = PlugDescriptor("stMatrixOut")
 	stDataOut_ : StDataOutPlug = PlugDescriptor("stDataOut")
@@ -141,5 +85,7 @@ class StrataShape(THsurfaceShape):
 
 	typeName = "strataShape"
 	typeIdInt = 1191075
+	nodeLeafClassAttrs = ["stExpIn", "stMatrixIn", "stDataIn", "stExpOut", "stMatrixOut", "stDataOut", "stInput", "stOpName", "stOpNameOut", "stOutput", "stShowPoints"]
+	nodeLeafPlugs = ["stDataIn", "stDataOut", "stInput", "stOpName", "stOpNameOut", "stOutput", "stShowPoints"]
 	pass
 

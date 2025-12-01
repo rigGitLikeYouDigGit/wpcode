@@ -80,5 +80,7 @@ class ProjectTangent(AbstractBaseCreate):
 	apiTypeStr = "kProjectTangent"
 	typeIdInt = 1313887310
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["curvature", "curvatureScale", "ignoreEdges", "inputCurve1ToProjectTo", "inputCurve2ToProjectTo", "inputCurveToProject", "inputSurfaceToProjectTo", "outputCurve", "reverseTangent", "rotate", "tangentDirection", "tangentScale"]
+	nodeLeafPlugs = ["curvature", "curvatureScale", "ignoreEdges", "inputCurve1ToProjectTo", "inputCurve2ToProjectTo", "inputCurveToProject", "inputSurfaceToProjectTo", "outputCurve", "reverseTangent", "rotate", "tangentDirection", "tangentScale"]
 	pass
 

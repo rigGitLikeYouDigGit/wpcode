@@ -33,5 +33,7 @@ class SubdMapCut(SubdModifier):
 	apiTypeStr = "kSubdMapCut"
 	typeIdInt = 1397571907
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

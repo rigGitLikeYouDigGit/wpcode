@@ -33,5 +33,7 @@ class PointOnSurfaceManip(Manip3D):
 	apiTypeStr = "kPointOnSurfaceManip"
 	typeIdInt = 1431130195
 	MFnCls = om.MFnPointOnSurfaceManip
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

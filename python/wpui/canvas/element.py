@@ -37,6 +37,18 @@ class WpCanvasElement(base,
                    ):
 	#elementChanged = QtCore.Signal(QtWidgets.QGraphicsItem, int, object)
 	"""
+	Inherit thus:
+
+	class MyCanvasElement(
+		QtWidget.QGraphicsItem,
+		WpCanvasElement
+		):
+		...
+		def __init__(self)):
+			QtWidget.QGraphicsItem.__init__(self, args)
+			WpCanvasElement.__init__(self)
+
+
 	base class for moveable, selectable items in canvas
 	for ease, we don't disagree with the normal selection system
 

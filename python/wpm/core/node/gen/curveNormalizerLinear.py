@@ -40,5 +40,7 @@ class CurveNormalizerLinear(CurveNormalizer):
 	apiTypeStr = "kCurveNormalizerLinear"
 	typeIdInt = 1129206348
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["animInput", "output"]
+	nodeLeafPlugs = ["animInput", "output"]
 	pass
 

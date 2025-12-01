@@ -118,5 +118,7 @@ class GeometryFilter(_BASE_):
 
 	typeName = "geometryFilter"
 	typeIdInt = 1145521737
+	nodeLeafClassAttrs = ["binMembership", "blockGPU", "envelope", "envelopeWeights", "envelopeWeightsList", "fchild1", "fchild2", "fchild3", "function", "componentTagExpression", "groupId", "inputGeometry", "input", "map64BitIndices", "originalGeometry", "outputGeometry", "weightFunction"]
+	nodeLeafPlugs = ["binMembership", "blockGPU", "envelope", "envelopeWeightsList", "function", "input", "map64BitIndices", "originalGeometry", "outputGeometry", "weightFunction"]
 	pass
 

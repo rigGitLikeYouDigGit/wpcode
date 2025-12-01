@@ -41,5 +41,7 @@ class AnimBlendNodeBoolean(AnimBlendNodeBase):
 
 	typeName = "animBlendNodeBoolean"
 	typeIdInt = 1094861391
+	nodeLeafClassAttrs = ["inputA", "inputB", "output"]
+	nodeLeafPlugs = ["inputA", "inputB", "output"]
 	pass
 

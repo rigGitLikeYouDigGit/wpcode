@@ -70,5 +70,7 @@ class PolyCreateFace(PolyCreator):
 
 	typeName = "polyCreateFace"
 	typeIdInt = 1346589253
+	nodeLeafClassAttrs = ["loop", "subdivision", "texture", "uvSetName", "vtxx", "vtxy", "vtxz", "vertices"]
+	nodeLeafPlugs = ["loop", "subdivision", "texture", "uvSetName", "vertices"]
 	pass
 

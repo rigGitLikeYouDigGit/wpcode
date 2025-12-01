@@ -45,5 +45,7 @@ class PolyMergeFace(PolyModifier):
 
 	typeName = "polyMergeFace"
 	typeIdInt = 1347241286
+	nodeLeafClassAttrs = ["firstFacet", "mergeMode", "secondFacet", "useAreaTolerance"]
+	nodeLeafPlugs = ["firstFacet", "mergeMode", "secondFacet", "useAreaTolerance"]
 	pass
 

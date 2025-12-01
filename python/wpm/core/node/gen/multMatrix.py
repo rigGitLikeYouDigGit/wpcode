@@ -41,5 +41,7 @@ class MultMatrix(_BASE_):
 
 	typeName = "multMatrix"
 	typeIdInt = 1145918541
+	nodeLeafClassAttrs = ["binMembership", "matrixIn", "matrixSum"]
+	nodeLeafPlugs = ["binMembership", "matrixIn", "matrixSum"]
 	pass
 

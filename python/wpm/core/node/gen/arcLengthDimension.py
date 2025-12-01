@@ -37,5 +37,7 @@ class ArcLengthDimension(NurbsDimShape):
 
 	typeName = "arcLengthDimension"
 	typeIdInt = 1094995278
+	nodeLeafClassAttrs = ["arcLength", "arcLengthInV"]
+	nodeLeafPlugs = ["arcLength", "arcLengthInV"]
 	pass
 

@@ -33,5 +33,7 @@ class BaseLattice(Shape):
 	apiTypeStr = "kBaseLattice"
 	typeIdInt = 1178747219
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

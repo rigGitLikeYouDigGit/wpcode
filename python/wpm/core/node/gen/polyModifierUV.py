@@ -33,5 +33,7 @@ class PolyModifierUV(PolyModifierWorld):
 
 	typeName = "polyModifierUV"
 	typeIdInt = 1299142006
+	nodeLeafClassAttrs = ["uvSetName"]
+	nodeLeafPlugs = ["uvSetName"]
 	pass
 

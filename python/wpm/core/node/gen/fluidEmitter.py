@@ -186,5 +186,7 @@ class FluidEmitter(PointEmitter):
 	apiTypeStr = "kFluidEmitter"
 	typeIdInt = 1178946889
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = ["densityEmissionMap", "densityMethod", "detailTurbulence", "emissionFunction", "emitFluidColor", "fillObject", "fluidDensityEmission", "fluidDropoff", "fluidFuelEmission", "fluidHeatEmission", "fluidJitter", "fuelEmissionMap", "fuelMethod", "heatEmissionMap", "heatMethod", "inheritVelocity", "motionStreak", "normalizedDropoff", "radiusPP", "speedMethod", "startFrameEmission", "turbulence", "turbulenceFrequencyX", "turbulenceFrequencyY", "turbulenceFrequencyZ", "turbulenceFrequency", "turbulenceOffsetX", "turbulenceOffsetY", "turbulenceOffsetZ", "turbulenceOffset", "turbulenceSpeed", "turbulenceType", "useDistance", "useParticleRadius"]
+	nodeLeafPlugs = ["densityEmissionMap", "densityMethod", "detailTurbulence", "emissionFunction", "emitFluidColor", "fillObject", "fluidDensityEmission", "fluidDropoff", "fluidFuelEmission", "fluidHeatEmission", "fluidJitter", "fuelEmissionMap", "fuelMethod", "heatEmissionMap", "heatMethod", "inheritVelocity", "motionStreak", "normalizedDropoff", "radiusPP", "speedMethod", "startFrameEmission", "turbulence", "turbulenceFrequency", "turbulenceOffset", "turbulenceSpeed", "turbulenceType", "useDistance", "useParticleRadius"]
 	pass
 

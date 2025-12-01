@@ -30,5 +30,7 @@ class ContourProjManip(Manip3D):
 
 	typeName = "contourProjManip"
 	typeIdInt = 1129205837
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

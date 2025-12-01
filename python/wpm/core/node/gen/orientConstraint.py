@@ -315,5 +315,7 @@ class OrientConstraint(Constraint):
 	apiTypeStr = "kOrientConstraint"
 	typeIdInt = 1146049091
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = ["constraintJointOrientX", "constraintJointOrientY", "constraintJointOrientZ", "constraintJointOrient", "constraintParentInverseMatrix", "constraintRotateX", "constraintRotateY", "constraintRotateZ", "constraintRotate", "constraintRotateOrder", "interpCache", "interpType", "inverseScaleX", "inverseScaleY", "inverseScaleZ", "inverseScale", "lastTargetRotateX", "lastTargetRotateY", "lastTargetRotateZ", "lastTargetRotate", "offsetX", "offsetY", "offsetZ", "offset", "restRotateX", "restRotateY", "restRotateZ", "restRotate", "scaleCompensate", "targetJointOrientX", "targetJointOrientY", "targetJointOrientZ", "targetJointOrient", "targetParentMatrix", "targetRotateX", "targetRotateY", "targetRotateZ", "targetRotate", "targetRotateCachedX", "targetRotateCachedY", "targetRotateCachedZ", "targetRotateCached", "targetRotateOrder", "targetWeight", "target", "useOldOffsetCalculation"]
+	nodeLeafPlugs = ["constraintJointOrient", "constraintParentInverseMatrix", "constraintRotate", "constraintRotateOrder", "interpCache", "interpType", "inverseScale", "lastTargetRotate", "offset", "restRotate", "scaleCompensate", "target", "useOldOffsetCalculation"]
 	pass
 

@@ -105,5 +105,7 @@ class Guide(_BASE_):
 	apiTypeStr = "kGuide"
 	typeIdInt = 1179080009
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["autoGuide", "bendAngle", "bendMagnitude", "bendVectorX", "bendVectorY", "bendVectorZ", "bendVector", "binMembership", "jointAboveMatrix", "jointBelowMatrix", "jointGuideAxis", "jointXformMatrix", "maxXYZ", "rotateX", "rotateY", "rotateZ"]
+	nodeLeafPlugs = ["autoGuide", "bendAngle", "bendMagnitude", "bendVector", "binMembership", "jointAboveMatrix", "jointBelowMatrix", "jointGuideAxis", "jointXformMatrix", "maxXYZ", "rotateX", "rotateY", "rotateZ"]
 	pass
 

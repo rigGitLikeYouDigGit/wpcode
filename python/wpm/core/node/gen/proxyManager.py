@@ -48,5 +48,7 @@ class ProxyManager(_BASE_):
 	apiTypeStr = "kProxyManager"
 	typeIdInt = 1347964231
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["activeProxy", "binMembership", "proxyList", "sharedEditsOwner"]
+	nodeLeafPlugs = ["activeProxy", "binMembership", "proxyList", "sharedEditsOwner"]
 	pass
 

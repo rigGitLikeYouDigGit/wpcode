@@ -72,5 +72,7 @@ class PolyEdgeToCurve(AbstractBaseCreate):
 	apiTypeStr = "kPolyEdgeToCurve"
 	typeIdInt = 1347699542
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["conformToSmoothMeshPreview", "degree", "displaySmoothMesh", "form", "inputComponents", "inputMat", "inputPolymesh", "inputSmoothPolymesh", "outputcurve", "smoothLevel"]
+	nodeLeafPlugs = ["conformToSmoothMeshPreview", "degree", "displaySmoothMesh", "form", "inputComponents", "inputMat", "inputPolymesh", "inputSmoothPolymesh", "outputcurve", "smoothLevel"]
 	pass
 

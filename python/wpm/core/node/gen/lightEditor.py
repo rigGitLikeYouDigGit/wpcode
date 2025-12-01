@@ -30,5 +30,7 @@ class LightEditor(LightGroup):
 
 	typeName = "lightEditor"
 	typeIdInt = 1476396003
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

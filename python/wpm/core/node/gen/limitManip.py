@@ -33,5 +33,7 @@ class LimitManip(CenterManip):
 	apiTypeStr = "kLimitManip"
 	typeIdInt = 1280593232
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

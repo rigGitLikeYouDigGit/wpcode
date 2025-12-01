@@ -85,5 +85,7 @@ class ObjectSet(Entity):
 
 	typeName = "objectSet"
 	typeIdInt = 1329746772
+	nodeLeafClassAttrs = ["annotation", "dagSetMembers", "dnSetMembers", "edgesOnlySet", "editPointsOnlySet", "facetsOnlySet", "groupNodes", "hiddenInOutliner", "isLayer", "memberWireframeColor", "partition", "renderableOnlySet", "usedBy", "verticesOnlySet"]
+	nodeLeafPlugs = ["annotation", "dagSetMembers", "dnSetMembers", "edgesOnlySet", "editPointsOnlySet", "facetsOnlySet", "groupNodes", "hiddenInOutliner", "isLayer", "memberWireframeColor", "partition", "renderableOnlySet", "usedBy", "verticesOnlySet"]
 	pass
 

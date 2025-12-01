@@ -48,5 +48,7 @@ class AddDoubleLinear(_BASE_):
 	apiTypeStr = "kAddDoubleLinear"
 	typeIdInt = 1145128012
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "input1", "input2", "output"]
+	nodeLeafPlugs = ["binMembership", "input1", "input2", "output"]
 	pass
 

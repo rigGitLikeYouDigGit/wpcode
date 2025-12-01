@@ -30,5 +30,7 @@ class AovCollection(Collection):
 
 	typeName = "aovCollection"
 	typeIdInt = 1476395931
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

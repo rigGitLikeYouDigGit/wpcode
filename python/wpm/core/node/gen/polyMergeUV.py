@@ -36,5 +36,7 @@ class PolyMergeUV(PolyModifierUV):
 	apiTypeStr = "kPolyMergeUV"
 	typeIdInt = 1347241813
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["distance"]
+	nodeLeafPlugs = ["distance"]
 	pass
 

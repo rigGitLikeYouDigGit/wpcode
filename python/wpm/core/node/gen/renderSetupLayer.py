@@ -49,5 +49,7 @@ class RenderSetupLayer(ListItem):
 
 	typeName = "renderSetupLayer"
 	typeIdInt = 1476395890
+	nodeLeafClassAttrs = ["containerHighest", "containerLowest", "legacyRenderLayer", "listItems", "numIsolatedChildren"]
+	nodeLeafPlugs = ["containerHighest", "containerLowest", "legacyRenderLayer", "listItems", "numIsolatedChildren"]
 	pass
 

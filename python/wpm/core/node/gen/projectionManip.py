@@ -33,5 +33,7 @@ class ProjectionManip(ManipContainer):
 	apiTypeStr = "kProjectionManip"
 	typeIdInt = 1431326032
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

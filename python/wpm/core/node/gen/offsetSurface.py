@@ -48,5 +48,7 @@ class OffsetSurface(AbstractBaseCreate):
 	apiTypeStr = "kOffsetSurface"
 	typeIdInt = 1313821525
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["distance", "inputSurface", "method", "outputSurface"]
+	nodeLeafPlugs = ["distance", "inputSurface", "method", "outputSurface"]
 	pass
 

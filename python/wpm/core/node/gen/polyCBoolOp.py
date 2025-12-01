@@ -56,5 +56,7 @@ class PolyCBoolOp(PolyBoolOp):
 	apiTypeStr = "kPolyCBoolOp"
 	typeIdInt = 1346590274
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["edgeInterpolation", "mergeGroups", "planarTolerance", "sortOutput", "tagIntersection", "useCarveBooleans"]
+	nodeLeafPlugs = ["edgeInterpolation", "mergeGroups", "planarTolerance", "sortOutput", "tagIntersection", "useCarveBooleans"]
 	pass
 

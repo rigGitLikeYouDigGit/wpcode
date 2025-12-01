@@ -41,5 +41,7 @@ class SnapshotShape(ControlPoint):
 
 	typeName = "snapshotShape"
 	typeIdInt = 1397966913
+	nodeLeafClassAttrs = ["frames", "points", "showFrames"]
+	nodeLeafPlugs = ["frames", "points", "showFrames"]
 	pass
 

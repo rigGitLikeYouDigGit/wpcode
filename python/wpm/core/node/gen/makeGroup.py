@@ -60,5 +60,7 @@ class MakeGroup(_BASE_):
 	apiTypeStr = "kMakeGroup"
 	typeIdInt = 1347241810
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "elemList", "groupName", "groupType", "inputComponents", "inputGeometry", "outputGeometry"]
+	nodeLeafPlugs = ["binMembership", "elemList", "groupName", "groupType", "inputComponents", "inputGeometry", "outputGeometry"]
 	pass
 

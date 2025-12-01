@@ -105,5 +105,7 @@ class BlendMatrix(_BASE_):
 	apiTypeStr = "kBlendMatrix"
 	typeIdInt = 1112359252
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "enable", "envelope", "inputMatrix", "outputMatrix", "rotateWeight", "scaleWeight", "shearWeight", "targetMatrix", "translateWeight", "useMatrix", "weight", "target"]
+	nodeLeafPlugs = ["binMembership", "enable", "envelope", "inputMatrix", "outputMatrix", "target"]
 	pass
 

@@ -73,5 +73,7 @@ class HeightField(SurfaceShape):
 	apiTypeStr = "kHeightField"
 	typeIdInt = 1329811536
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["cacheNeedsRebuilding", "colorB", "colorG", "colorR", "color", "displacement", "heightScale", "resolution"]
+	nodeLeafPlugs = ["cacheNeedsRebuilding", "color", "displacement", "heightScale", "resolution"]
 	pass
 

@@ -33,5 +33,7 @@ class RenderCone(ImplicitCone):
 	apiTypeStr = "kRenderCone"
 	typeIdInt = 1380860751
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

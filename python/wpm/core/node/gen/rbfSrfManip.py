@@ -33,5 +33,7 @@ class RbfSrfManip(ManipContainer):
 	apiTypeStr = "kRbfSrfManip"
 	typeIdInt = 1431127635
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

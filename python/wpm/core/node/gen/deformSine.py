@@ -56,5 +56,7 @@ class DeformSine(DeformFunc):
 	apiTypeStr = "kDeformSine"
 	typeIdInt = 1178882894
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["amplitude", "dropoff", "highBound", "lowBound", "offset", "wavelength"]
+	nodeLeafPlugs = ["amplitude", "dropoff", "highBound", "lowBound", "offset", "wavelength"]
 	pass
 

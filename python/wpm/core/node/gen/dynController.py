@@ -121,5 +121,7 @@ class DynController(_BASE_):
 
 	typeName = "dynController"
 	typeIdInt = 1497584716
+	nodeLeafClassAttrs = ["allOn", "allOnWhenRun", "autoCreate", "binMembership", "breakRunup", "cacheTime", "currEvalTime", "doRunup", "evalTime", "firstEval", "lastEvalTime", "makeDirty", "output", "oversample", "particleCache", "particleLOD", "particlesOn", "rigidOn", "seed", "startFrame", "startRunup", "startTime", "traceDepth"]
+	nodeLeafPlugs = ["allOn", "allOnWhenRun", "autoCreate", "binMembership", "breakRunup", "cacheTime", "currEvalTime", "doRunup", "evalTime", "firstEval", "lastEvalTime", "makeDirty", "output", "oversample", "particleCache", "particleLOD", "particlesOn", "rigidOn", "seed", "startFrame", "startRunup", "startTime", "traceDepth"]
 	pass
 

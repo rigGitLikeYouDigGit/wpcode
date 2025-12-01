@@ -297,5 +297,7 @@ class CompactPlugArrayTest(_BASE_):
 
 	typeName = "compactPlugArrayTest"
 	typeIdInt = 1129333076
+	nodeLeafClassAttrs = ["attrAM", "attrAV", "attrZF", "attrAD", "attrAP", "attrAY", "attrZI", "attrAG", "attrAS", "attrZC", "attrZL", "attrAJ", "attrAA", "attrAN", "attrAW", "attrZG", "attrAE", "attrAQ", "attrAZ", "attrZJ", "attrAH", "attrAT", "attrZD", "attrZM", "attrAK", "attrAB", "attrAO", "attrAX", "attrZH", "attrAF", "attrAR", "attrZB", "attrZK", "attrAI", "attrAU", "attrZE", "attrZN", "attrAL", "attrAC", "binMembership"]
+	nodeLeafPlugs = ["attrAA", "attrAB", "attrAC", "binMembership"]
 	pass
 

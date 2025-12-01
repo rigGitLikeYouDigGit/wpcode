@@ -64,5 +64,7 @@ class PolyTorus(PolyPrimitive):
 	apiTypeStr = "kPolyTorus"
 	typeIdInt = 1347702610
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["createUVs", "radius", "reverseTexture", "sectionRadius", "subdivisionsAxis", "subdivisionsHeight", "texture", "twist"]
+	nodeLeafPlugs = ["createUVs", "radius", "reverseTexture", "sectionRadius", "subdivisionsAxis", "subdivisionsHeight", "texture", "twist"]
 	pass
 

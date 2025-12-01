@@ -65,5 +65,7 @@ class PolyAppendVertex(PolyModifier):
 	apiTypeStr = "kPolyAppendVertex"
 	typeIdInt = 1346457686
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["desc", "texture", "vtxx", "vtxy", "vtxz", "vertices"]
+	nodeLeafPlugs = ["desc", "texture", "vertices"]
 	pass
 

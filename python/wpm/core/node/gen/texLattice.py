@@ -98,5 +98,7 @@ class TexLattice(_BASE_):
 	apiTypeStr = "kTexLattice"
 	typeIdInt = 1415072852
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "boundingBoxLeft", "boundingBoxTop", "boundingBoxInf", "boundingBoxBottom", "boundingBoxRight", "boundingBoxSup", "latticeHeight", "latticePointX", "latticePointY", "latticePoint", "latticeWidth"]
+	nodeLeafPlugs = ["binMembership", "boundingBoxInf", "boundingBoxSup", "latticeHeight", "latticePoint", "latticeWidth"]
 	pass
 

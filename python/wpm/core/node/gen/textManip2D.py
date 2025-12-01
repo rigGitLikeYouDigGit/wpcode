@@ -30,5 +30,7 @@ class TextManip2D(Manip2D):
 
 	typeName = "textManip2D"
 	typeIdInt = 1431131205
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

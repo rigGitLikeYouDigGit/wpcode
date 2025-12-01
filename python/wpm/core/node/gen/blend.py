@@ -45,5 +45,7 @@ class Blend(_BASE_):
 
 	typeName = "blend"
 	typeIdInt = 1094863941
+	nodeLeafClassAttrs = ["binMembership", "current", "input", "output"]
+	nodeLeafPlugs = ["binMembership", "current", "input", "output"]
 	pass
 

@@ -48,5 +48,7 @@ class HistorySwitch(GeometryFilter):
 	apiTypeStr = "kHistorySwitch"
 	typeIdInt = 1212765011
 	MFnCls = om.MFnGeometryFilter
+	nodeLeafClassAttrs = ["inPositions", "outPositions", "playFromCache", "undeformedGeometry"]
+	nodeLeafPlugs = ["inPositions", "outPositions", "playFromCache", "undeformedGeometry"]
 	pass
 

@@ -30,5 +30,7 @@ class FieldsManip(FieldManip):
 
 	typeName = "fieldsManip"
 	typeIdInt = 1430537805
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

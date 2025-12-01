@@ -33,5 +33,7 @@ class PolyDelVertex(PolyModifier):
 	apiTypeStr = "kPolyDelVertex"
 	typeIdInt = 1346651478
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

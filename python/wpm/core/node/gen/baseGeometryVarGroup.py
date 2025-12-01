@@ -33,5 +33,7 @@ class BaseGeometryVarGroup(Transform):
 
 	typeName = "baseGeometryVarGroup"
 	typeIdInt = 1312970311
+	nodeLeafClassAttrs = ["maxCreated"]
+	nodeLeafPlugs = ["maxCreated"]
 	pass
 

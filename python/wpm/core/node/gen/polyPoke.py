@@ -90,5 +90,7 @@ class PolyPoke(PolyModifierWorld):
 	apiTypeStr = "kPolyPoke"
 	typeIdInt = 1347440715
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["localTranslateX", "localTranslateY", "localTranslateZ", "localTranslate", "matrix", "maya70", "translateX", "translateY", "translateZ", "translate"]
+	nodeLeafPlugs = ["localTranslate", "matrix", "maya70", "translate"]
 	pass
 

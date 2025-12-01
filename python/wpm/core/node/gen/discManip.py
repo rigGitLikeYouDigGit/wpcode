@@ -33,5 +33,7 @@ class DiscManip(Manip3D):
 	apiTypeStr = "kDiscManip"
 	typeIdInt = 1430541133
 	MFnCls = om.MFnDiscManip
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

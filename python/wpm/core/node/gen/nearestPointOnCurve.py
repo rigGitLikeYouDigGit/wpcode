@@ -100,5 +100,7 @@ class NearestPointOnCurve(AbstractBaseCreate):
 	apiTypeStr = "kNearestPointOnCurve"
 	typeIdInt = 1313886019
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["inPositionX", "inPositionY", "inPositionZ", "inPosition", "inputCurve", "parameter", "positionX", "positionY", "positionZ", "position", "result"]
+	nodeLeafPlugs = ["inPosition", "inputCurve", "result"]
 	pass
 

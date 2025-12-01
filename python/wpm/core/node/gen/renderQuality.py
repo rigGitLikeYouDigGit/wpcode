@@ -124,5 +124,7 @@ class RenderQuality(_BASE_):
 	apiTypeStr = "kRenderQuality"
 	typeIdInt = 1381061953
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "blueThreshold", "coverageThreshold", "edgeAntiAliasing", "enableRaytracing", "greenThreshold", "maxShadingSamples", "maxVisibilitySamples", "particleSamples", "pixelFilterType", "pixelFilterWidthX", "pixelFilterWidthY", "plugInFilterWeight", "rayTraceBias", "redThreshold", "reflections", "refractions", "renderSample", "shadingSamples", "shadows", "useMultiPixelFilter", "visibilitySamples", "volumeSamples"]
+	nodeLeafPlugs = ["binMembership", "blueThreshold", "coverageThreshold", "edgeAntiAliasing", "enableRaytracing", "greenThreshold", "maxShadingSamples", "maxVisibilitySamples", "particleSamples", "pixelFilterType", "pixelFilterWidthX", "pixelFilterWidthY", "plugInFilterWeight", "rayTraceBias", "redThreshold", "reflections", "refractions", "renderSample", "shadingSamples", "shadows", "useMultiPixelFilter", "visibilitySamples", "volumeSamples"]
 	pass
 

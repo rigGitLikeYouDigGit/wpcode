@@ -98,5 +98,7 @@ class DistanceBetween(_BASE_):
 	apiTypeStr = "kDistanceBetween"
 	typeIdInt = 1145324116
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "distance", "inMatrix1", "inMatrix2", "point1X", "point1Y", "point1Z", "point1", "point2X", "point2Y", "point2Z", "point2"]
+	nodeLeafPlugs = ["binMembership", "distance", "inMatrix1", "inMatrix2", "point1", "point2"]
 	pass
 

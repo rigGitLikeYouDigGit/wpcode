@@ -167,5 +167,7 @@ class SurfaceLuminance(_BASE_):
 	apiTypeStr = "kSurfaceLuminance"
 	typeIdInt = 1381190741
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "lightAmbient", "lightBlindData", "lightDiffuse", "lightDirectionX", "lightDirectionY", "lightDirectionZ", "lightDirection", "lightIntensityB", "lightIntensityG", "lightIntensityR", "lightIntensity", "lightShadowFraction", "lightSpecular", "preShadowIntensity", "lightDataArray", "normalCameraX", "normalCameraY", "normalCameraZ", "normalCamera", "outValue"]
+	nodeLeafPlugs = ["binMembership", "lightDataArray", "normalCamera", "outValue"]
 	pass
 

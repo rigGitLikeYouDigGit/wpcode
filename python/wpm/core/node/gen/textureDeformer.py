@@ -139,5 +139,7 @@ class TextureDeformer(WeightGeometryFilter):
 	apiTypeStr = "kTextureDeformer"
 	typeIdInt = 1415070790
 	MFnCls = om.MFnGeometryFilter
+	nodeLeafClassAttrs = ["cacheSetup", "direction", "handleMatrix", "handleVisibility", "offset", "pointSpace", "strength", "textureB", "textureG", "textureR", "texture", "vectorOffsetX", "vectorOffsetY", "vectorOffsetZ", "vectorOffset", "vectorSpace", "vectorStrengthX", "vectorStrengthY", "vectorStrengthZ", "vectorStrength"]
+	nodeLeafPlugs = ["cacheSetup", "direction", "handleMatrix", "handleVisibility", "offset", "pointSpace", "strength", "texture", "vectorOffset", "vectorSpace", "vectorStrength"]
 	pass
 

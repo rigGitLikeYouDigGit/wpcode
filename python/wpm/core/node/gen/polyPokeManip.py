@@ -33,5 +33,7 @@ class PolyPokeManip(ManipContainer):
 	apiTypeStr = "kPolyPokeManip"
 	typeIdInt = 1431326797
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

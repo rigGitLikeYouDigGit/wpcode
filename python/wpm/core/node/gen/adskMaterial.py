@@ -144,5 +144,7 @@ class AdskMaterial(TadskAssetInstanceNode_TdependNode):
 	apiTypeStr = "kAdskMaterial"
 	typeIdInt = 1094996813
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["glowIntensity", "matteOpacity", "matteOpacityMode", "outColorB", "outColorG", "outColorR", "outColor", "outGlowColorB", "outGlowColorG", "outGlowColorR", "outGlowColor", "outMatteOpacityB", "outMatteOpacityG", "outMatteOpacityR", "outMatteOpacity", "outTransparencyB", "outTransparencyG", "outTransparencyR", "outTransparency"]
+	nodeLeafPlugs = ["glowIntensity", "matteOpacity", "matteOpacityMode", "outColor", "outGlowColor", "outMatteOpacity", "outTransparency"]
 	pass
 

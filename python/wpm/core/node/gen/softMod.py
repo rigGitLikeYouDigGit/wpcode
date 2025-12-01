@@ -191,5 +191,7 @@ class SoftMod(WeightGeometryFilter):
 	apiTypeStr = "kSoftMod"
 	typeIdInt = 1179865932
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["angleInterpolation", "bindPreMatrix", "distanceCache", "distanceCacheDirty", "falloffAroundSelection", "falloffCenterX", "falloffCenterY", "falloffCenterZ", "falloffCenter", "falloffCurve_FloatValue", "falloffCurve_Interp", "falloffCurve_Position", "falloffCurve", "falloffInX", "falloffInY", "falloffInZ", "falloffMasking", "falloffMode", "falloffRadius", "fastFalloffCenter", "geomMatrix", "influenceMatrix", "limitCacheUpdates", "matrix", "percentResolution", "relative", "postMatrix", "preMatrix", "weightedMatrix", "softModXforms", "useDistanceCache", "usePartialResolution", "weightedCompensationMatrix"]
+	nodeLeafPlugs = ["angleInterpolation", "bindPreMatrix", "distanceCache", "distanceCacheDirty", "falloffAroundSelection", "falloffCenter", "falloffCurve", "falloffInX", "falloffInY", "falloffInZ", "falloffMasking", "falloffMode", "falloffRadius", "fastFalloffCenter", "geomMatrix", "influenceMatrix", "limitCacheUpdates", "matrix", "percentResolution", "relative", "softModXforms", "useDistanceCache", "usePartialResolution", "weightedCompensationMatrix"]
 	pass
 

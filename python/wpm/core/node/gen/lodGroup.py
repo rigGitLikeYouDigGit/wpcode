@@ -88,5 +88,7 @@ class LodGroup(Transform):
 	apiTypeStr = "kLodGroup"
 	typeIdInt = 1280263239
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = ["activeLevel", "cameraMatrix", "displayLevel", "distance", "focalLength", "maxDistance", "minDistance", "minMaxDistance", "output", "percentageThreshold", "screenHeightPercentage", "threshold", "useScreenHeightPercentage", "worldSpace"]
+	nodeLeafPlugs = ["activeLevel", "cameraMatrix", "displayLevel", "distance", "focalLength", "maxDistance", "minDistance", "minMaxDistance", "output", "percentageThreshold", "screenHeightPercentage", "threshold", "useScreenHeightPercentage", "worldSpace"]
 	pass
 

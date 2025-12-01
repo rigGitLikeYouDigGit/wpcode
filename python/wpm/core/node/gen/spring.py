@@ -182,5 +182,7 @@ class Spring(Shape):
 	apiTypeStr = "kSpring"
 	typeIdInt = 1498632274
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["count", "damping", "dampingPS", "deltaTime", "end1Weight", "end2Weight", "idIndex", "sortedId", "idMapping", "lengths", "manageParticleDeath", "maxUsed", "minSprings", "minUsed", "obj0Index", "obj1Index", "objCount", "object0", "object1", "objectMass", "objectPositions", "objectVelocities", "objects", "outputForce", "point0", "point1", "pt0Index", "pt1Index", "restLength", "restLengthPS", "stiffness", "stiffnessPS", "useDampingPS", "useRestLengthPS", "useStiffnessPS", "validIndex"]
+	nodeLeafPlugs = ["count", "damping", "dampingPS", "deltaTime", "end1Weight", "end2Weight", "idMapping", "lengths", "manageParticleDeath", "maxUsed", "minSprings", "minUsed", "obj0Index", "obj1Index", "objCount", "object0", "object1", "objectMass", "objectPositions", "objectVelocities", "objects", "outputForce", "point0", "point1", "pt0Index", "pt1Index", "restLength", "restLengthPS", "stiffness", "stiffnessPS", "useDampingPS", "useRestLengthPS", "useStiffnessPS", "validIndex"]
 	pass
 

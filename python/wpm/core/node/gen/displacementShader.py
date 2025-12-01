@@ -110,5 +110,7 @@ class DisplacementShader(_BASE_):
 	apiTypeStr = "kDisplacementShader"
 	typeIdInt = 1380209480
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "displacement", "displacementMode", "scale", "tangentX", "tangentY", "tangentZ", "tangent", "vectorDisplacementX", "vectorDisplacementY", "vectorDisplacementZ", "vectorDisplacement", "vectorEncoding", "vectorSpace", "yIsUp"]
+	nodeLeafPlugs = ["binMembership", "displacement", "displacementMode", "scale", "tangent", "vectorDisplacement", "vectorEncoding", "vectorSpace", "yIsUp"]
 	pass
 

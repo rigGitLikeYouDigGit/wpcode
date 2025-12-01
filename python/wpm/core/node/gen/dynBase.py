@@ -78,5 +78,7 @@ class DynBase(Transform):
 
 	typeName = "dynBase"
 	typeIdInt = 1497462136
+	nodeLeafClassAttrs = ["fromWhere", "owner", "ownerCentroidX", "ownerCentroidY", "ownerCentroidZ", "ownerCentroid", "ownerPosData", "ownerVelData", "positional", "subsetId"]
+	nodeLeafPlugs = ["fromWhere", "owner", "ownerCentroid", "ownerPosData", "ownerVelData", "positional", "subsetId"]
 	pass
 

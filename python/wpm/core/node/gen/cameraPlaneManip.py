@@ -33,5 +33,7 @@ class CameraPlaneManip(GeometryOnLineManip):
 	apiTypeStr = "kCameraPlaneManip"
 	typeIdInt = 1431126864
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

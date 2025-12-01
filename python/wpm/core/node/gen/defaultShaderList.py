@@ -37,5 +37,7 @@ class DefaultShaderList(_BASE_):
 
 	typeName = "defaultShaderList"
 	typeIdInt = 1380209484
+	nodeLeafClassAttrs = ["binMembership", "shaders"]
+	nodeLeafPlugs = ["binMembership", "shaders"]
 	pass
 

@@ -33,5 +33,7 @@ class SubdMappingManip(ManipContainer):
 	apiTypeStr = "kSubdMappingManip"
 	typeIdInt = 1431523917
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

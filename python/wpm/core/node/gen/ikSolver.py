@@ -41,5 +41,7 @@ class IkSolver(_BASE_):
 
 	typeName = "ikSolver"
 	typeIdInt = 1263752780
+	nodeLeafClassAttrs = ["binMembership", "maxIterations", "tolerance"]
+	nodeLeafPlugs = ["binMembership", "maxIterations", "tolerance"]
 	pass
 

@@ -107,5 +107,7 @@ class ClosestPointOnSurface(AbstractBaseCreate):
 	apiTypeStr = "kClosestPointOnSurface"
 	typeIdInt = 1313034323
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["inPositionX", "inPositionY", "inPositionZ", "inPosition", "inputSurface", "parameterU", "parameterV", "positionX", "positionY", "positionZ", "position", "result"]
+	nodeLeafPlugs = ["inPosition", "inputSurface", "result"]
 	pass
 

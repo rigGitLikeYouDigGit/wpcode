@@ -40,5 +40,7 @@ class ClientDevice(ThreadedDevice):
 	apiTypeStr = "kClientDevice"
 	typeIdInt = 1668047990
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["deviceName", "serverName"]
+	nodeLeafPlugs = ["deviceName", "serverName"]
 	pass
 

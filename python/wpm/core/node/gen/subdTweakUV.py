@@ -50,5 +50,7 @@ class SubdTweakUV(SubdModifier):
 	apiTypeStr = "kSubdTweakUV"
 	typeIdInt = 1398035798
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["uvTweakU", "uvTweakV", "uvTweak"]
+	nodeLeafPlugs = ["uvTweak"]
 	pass
 

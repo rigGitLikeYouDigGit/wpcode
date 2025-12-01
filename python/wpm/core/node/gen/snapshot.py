@@ -105,5 +105,7 @@ class Snapshot(_BASE_):
 	apiTypeStr = "kSnapshot"
 	typeIdInt = 1397641300
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["animCurveChanged", "binMembership", "endTime", "frames", "increment", "inputGeom", "inputMatrix", "localPositionX", "localPositionY", "localPositionZ", "localPosition", "outputGeom", "points", "snapshotObject", "startTime", "update"]
+	nodeLeafPlugs = ["animCurveChanged", "binMembership", "endTime", "frames", "increment", "inputGeom", "inputMatrix", "localPosition", "outputGeom", "points", "snapshotObject", "startTime", "update"]
 	pass
 

@@ -315,8 +315,6 @@ if T.TYPE_CHECKING:
 	from .fourByFourMatrix import FourByFourMatrix
 	from .fractal import Fractal
 	from .frameCache import FrameCache
-	from .frameCurve import FrameCurve
-	from .frameCurveNode import FrameCurveNode
 	from .freePointManip import FreePointManip
 	from .freePointTriadManip import FreePointTriadManip
 	from .gammaCorrect import GammaCorrect
@@ -1288,8 +1286,6 @@ if T.TYPE_CHECKING:
 		FourByFourMatrix = FourByFourMatrix
 		Fractal = Fractal
 		FrameCache = FrameCache
-		FrameCurve = FrameCurve
-		FrameCurveNode = FrameCurveNode
 		FreePointManip = FreePointManip
 		FreePointTriadManip = FreePointTriadManip
 		GammaCorrect = GammaCorrect

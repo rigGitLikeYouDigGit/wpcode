@@ -33,5 +33,7 @@ class BaseShadingSwitch(ShadingDependNode):
 
 	typeName = "baseShadingSwitch"
 	typeIdInt = 1112758088
+	nodeLeafClassAttrs = ["objectId"]
+	nodeLeafPlugs = ["objectId"]
 	pass
 

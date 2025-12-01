@@ -173,5 +173,7 @@ class PolyPlanarProj(PolyModifierWorld):
 
 	typeName = "polyPlanarProj"
 	typeIdInt = 1347439696
+	nodeLeafClassAttrs = ["cameraMatrix", "compId", "imageCenterX", "imageCenterY", "imageCenter", "imageScaleU", "imageScaleV", "imageScale", "isPerspective", "portBottom", "portLeft", "portRight", "portTop", "projectionCenterX", "projectionCenterY", "projectionCenterZ", "projectionCenter", "projectionHeight", "projectionWidth", "projectionScale", "radius", "rotateX", "rotateY", "rotateZ", "rotate", "rotationAngle", "uvSetName"]
+	nodeLeafPlugs = ["cameraMatrix", "compId", "imageCenter", "imageScale", "isPerspective", "portBottom", "portLeft", "portRight", "portTop", "projectionCenter", "projectionScale", "radius", "rotate", "rotationAngle", "uvSetName"]
 	pass
 

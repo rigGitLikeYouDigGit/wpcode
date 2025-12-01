@@ -119,5 +119,7 @@ class TimeEditorClipEvaluator(_BASE_):
 	apiTypeStr = "kTimeEditorClipEvaluator"
 	typeIdInt = 1094931023
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["input", "source", "start", "switcher", "value", "attribute", "binMembership", "layerAttributeIndex", "layerAttributeInput", "layerAttributeLayerId", "layerAttributeValue", "layerAttribute", "output", "parentContainerState", "rosterItems"]
+	nodeLeafPlugs = ["attribute", "binMembership", "layerAttribute", "output", "parentContainerState", "rosterItems"]
 	pass
 

@@ -33,5 +33,7 @@ class CircleManip(Manip3D):
 	apiTypeStr = "kCircleManip"
 	typeIdInt = 1431126860
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

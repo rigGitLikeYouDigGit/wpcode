@@ -263,5 +263,7 @@ class EnvChrome(TextureEnv):
 	apiTypeStr = "kEnvChrome"
 	typeIdInt = 1380270920
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["floorAltitude", "floorColorB", "floorColorG", "floorColorR", "floorColor", "gridColorB", "gridColorG", "gridColorR", "gridColor", "gridDepth", "gridDepthGain", "gridDepthOffset", "gridWidth", "gridWidthGain", "gridWidthOffset", "horizonColorB", "horizonColorG", "horizonColorR", "horizonColor", "lightColorB", "lightColorG", "lightColorR", "lightColor", "lightDepth", "lightDepthGain", "lightDepthOffset", "lightWidth", "lightWidthGain", "lightWidthOffset", "pointCameraX", "pointCameraY", "pointCameraZ", "pointCamera", "realFloor", "skyColorB", "skyColorG", "skyColorR", "skyColor", "zenithColorB", "zenithColorG", "zenithColorR", "zenithColor"]
+	nodeLeafPlugs = ["floorAltitude", "floorColor", "gridColor", "gridDepth", "gridDepthGain", "gridDepthOffset", "gridWidth", "gridWidthGain", "gridWidthOffset", "horizonColor", "lightColor", "lightDepth", "lightDepthGain", "lightDepthOffset", "lightWidth", "lightWidthGain", "lightWidthOffset", "pointCamera", "realFloor", "skyColor", "zenithColor"]
 	pass
 

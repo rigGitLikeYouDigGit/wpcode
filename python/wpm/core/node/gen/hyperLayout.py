@@ -112,5 +112,7 @@ class HyperLayout(_BASE_):
 	apiTypeStr = "kHyperLayout"
 	typeIdInt = 1213812812
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["allNodesFreeform", "binMembership", "dependNode", "isCollapsed", "isFreeform", "nodeVisualState", "positionX", "positionY", "hyperPosition", "imageName", "imagePositionX", "imagePositionY", "imagePosition", "imageScale"]
+	nodeLeafPlugs = ["allNodesFreeform", "binMembership", "hyperPosition", "imageName", "imagePosition", "imageScale"]
 	pass
 

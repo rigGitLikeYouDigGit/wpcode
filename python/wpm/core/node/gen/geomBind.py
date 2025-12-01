@@ -60,5 +60,7 @@ class GeomBind(_BASE_):
 	apiTypeStr = "kGeomBind"
 	typeIdInt = 1195526478
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "bindPose", "falloff", "gvPostVoxelCheck", "gvResolution", "maxInfluences", "skinClusters"]
+	nodeLeafPlugs = ["binMembership", "bindPose", "falloff", "gvPostVoxelCheck", "gvResolution", "maxInfluences", "skinClusters"]
 	pass
 

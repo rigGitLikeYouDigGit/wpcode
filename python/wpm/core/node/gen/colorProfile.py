@@ -173,5 +173,7 @@ class ColorProfile(_BASE_):
 	apiTypeStr = "kColorProfile"
 	typeIdInt = 1129270352
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "colorProfileType", "colorTemperature", "forceGamma", "gamma", "gammaOffset", "intensity", "transformRow1Col1", "transformRow1Col2", "transformRow1Col3", "transformRow1", "transformRow2Col1", "transformRow2Col2", "transformRow2Col3", "transformRow2", "transformRow3Col1", "transformRow3Col2", "transformRow3Col3", "transformRow3", "transform", "whitepointB", "whitepointG", "whitepointR", "whitepoint"]
+	nodeLeafPlugs = ["binMembership", "colorProfileType", "colorTemperature", "forceGamma", "gamma", "gammaOffset", "intensity", "transform", "whitepoint"]
 	pass
 

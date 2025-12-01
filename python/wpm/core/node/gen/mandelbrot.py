@@ -287,5 +287,7 @@ class Mandelbrot(Texture2d):
 	apiTypeStr = "kMandelbrot"
 	typeIdInt = 1381256513
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["amplitude", "boxMinRadius", "boxRadius", "boxRatio", "centerU", "centerV", "checker", "circleRadius", "circleSizeRatio", "circles", "color_ColorB", "color_ColorG", "color_ColorR", "color_Color", "color_Interp", "color_Position", "color", "depth", "escapeRadius", "fineOffsetU", "fineOffsetV", "focus", "implode", "implodeCenterU", "implodeCenterV", "implodeCenter", "juliaU", "juliaV", "leafEffect", "lineBlending", "lineFocus", "lineOffsetRatio", "lineOffsetU", "lineOffsetV", "lobes", "mandelbrotInsideMethod", "mandelbrotShadeMethod", "mandelbrotType", "orbitMap", "orbitMapColoring", "orbitMapping", "outU", "outV", "outUV", "points", "shift", "stalksU", "stalksV", "value_FloatValue", "value_Interp", "value_Position", "value", "wrapAmplitude", "zoomFactor"]
+	nodeLeafPlugs = ["amplitude", "boxMinRadius", "boxRadius", "boxRatio", "centerU", "centerV", "checker", "circleRadius", "circleSizeRatio", "circles", "color", "depth", "escapeRadius", "fineOffsetU", "fineOffsetV", "focus", "implode", "implodeCenter", "juliaU", "juliaV", "leafEffect", "lineBlending", "lineFocus", "lineOffsetRatio", "lineOffsetU", "lineOffsetV", "lobes", "mandelbrotInsideMethod", "mandelbrotShadeMethod", "mandelbrotType", "orbitMap", "orbitMapColoring", "orbitMapping", "outUV", "points", "shift", "stalksU", "stalksV", "value", "wrapAmplitude", "zoomFactor"]
 	pass
 

@@ -30,5 +30,7 @@ class DeformableShape(GeometryShape):
 
 	typeName = "deformableShape"
 	typeIdInt = 1145457996
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

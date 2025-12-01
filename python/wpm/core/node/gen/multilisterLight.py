@@ -163,5 +163,7 @@ class MultilisterLight(_BASE_):
 	apiTypeStr = "kMultilisterLight"
 	typeIdInt = 1297435724
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "lightAmbient", "lightBlindData", "lightDiffuse", "lightDirectionX", "lightDirectionY", "lightDirectionZ", "lightDirection", "lightIntensityB", "lightIntensityG", "lightIntensityR", "lightIntensity", "lightShadowFraction", "lightSpecular", "preShadowIntensity", "lightData", "pointCameraX", "pointCameraY", "pointCameraZ", "pointCamera"]
+	nodeLeafPlugs = ["binMembership", "lightData", "pointCamera"]
 	pass
 

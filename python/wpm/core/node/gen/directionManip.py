@@ -33,5 +33,7 @@ class DirectionManip(ManipContainer):
 	apiTypeStr = "kDirectionManip"
 	typeIdInt = 1431127122
 	MFnCls = om.MFnDirectionManip
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

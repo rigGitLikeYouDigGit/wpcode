@@ -137,5 +137,7 @@ class Clamp(_BASE_):
 
 	typeName = "clamp"
 	typeIdInt = 1380142131
+	nodeLeafClassAttrs = ["binMembership", "inputB", "inputG", "inputR", "input", "maxB", "maxG", "maxR", "max", "minB", "minG", "minR", "min", "outputB", "outputG", "outputR", "output", "renderPassMode"]
+	nodeLeafPlugs = ["binMembership", "input", "max", "min", "output", "renderPassMode"]
 	pass
 

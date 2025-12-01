@@ -40,5 +40,7 @@ class ImplicitSphere(GeometryShape):
 	apiTypeStr = "kImplicitSphere"
 	typeIdInt = 1179210576
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["radius", "sphere"]
+	nodeLeafPlugs = ["radius", "sphere"]
 	pass
 

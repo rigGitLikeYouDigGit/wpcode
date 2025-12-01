@@ -56,5 +56,7 @@ class PassContributionMap(_BASE_):
 	apiTypeStr = "kPassContributionMap"
 	typeIdInt = 1347633997
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["active", "binMembership", "dagObjects", "light", "owner", "renderPass"]
+	nodeLeafPlugs = ["active", "binMembership", "dagObjects", "light", "owner", "renderPass"]
 	pass
 

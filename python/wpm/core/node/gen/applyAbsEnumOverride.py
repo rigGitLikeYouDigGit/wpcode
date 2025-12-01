@@ -41,5 +41,7 @@ class ApplyAbsEnumOverride(ApplyAbsOverride):
 
 	typeName = "applyAbsEnumOverride"
 	typeIdInt = 1476395916
+	nodeLeafClassAttrs = ["original", "out", "value"]
+	nodeLeafPlugs = ["original", "out", "value"]
 	pass
 

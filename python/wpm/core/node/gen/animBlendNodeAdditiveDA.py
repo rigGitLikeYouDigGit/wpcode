@@ -45,5 +45,7 @@ class AnimBlendNodeAdditiveDA(AnimBlendNodeBase):
 
 	typeName = "animBlendNodeAdditiveDA"
 	typeIdInt = 1094861121
+	nodeLeafClassAttrs = ["inputA", "inputB", "interpolateMode", "output"]
+	nodeLeafPlugs = ["inputA", "inputB", "interpolateMode", "output"]
 	pass
 

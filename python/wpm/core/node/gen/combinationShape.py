@@ -48,5 +48,7 @@ class CombinationShape(_BASE_):
 	apiTypeStr = "kCombinationShape"
 	typeIdInt = 1178816083
 	MFnCls = om.MFnGeometryFilter
+	nodeLeafClassAttrs = ["binMembership", "combinationMethod", "inputWeight", "outputWeight"]
+	nodeLeafPlugs = ["binMembership", "combinationMethod", "inputWeight", "outputWeight"]
 	pass
 

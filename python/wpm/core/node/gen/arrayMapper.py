@@ -93,5 +93,7 @@ class ArrayMapper(_BASE_):
 	apiTypeStr = "kArrayMapper"
 	typeIdInt = 1145130320
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "computeNode", "computeNodeColorB", "computeNodeColorG", "computeNodeColorR", "computeNodeColor", "maxValue", "minValue", "outColorPP", "outValuePP", "time", "uCoordPP", "vCoordPP"]
+	nodeLeafPlugs = ["binMembership", "computeNode", "computeNodeColor", "maxValue", "minValue", "outColorPP", "outValuePP", "time", "uCoordPP", "vCoordPP"]
 	pass
 

@@ -30,5 +30,7 @@ class NexManip(THmanipContainer):
 
 	typeName = "nexManip"
 	typeIdInt = 717856
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

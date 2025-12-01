@@ -44,5 +44,7 @@ class ImplicitCone(GeometryShape):
 	apiTypeStr = "kImplicitCone"
 	typeIdInt = 1179206479
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["cone", "coneAngle", "coneCap"]
+	nodeLeafPlugs = ["cone", "coneAngle", "coneCap"]
 	pass
 

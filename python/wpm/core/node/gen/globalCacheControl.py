@@ -41,5 +41,7 @@ class GlobalCacheControl(_BASE_):
 
 	typeName = "globalCacheControl"
 	typeIdInt = 1195590476
+	nodeLeafClassAttrs = ["binMembership", "enableStatus", "writeEnable"]
+	nodeLeafPlugs = ["binMembership", "enableStatus", "writeEnable"]
 	pass
 

@@ -54,5 +54,7 @@ class GravityField(Field):
 
 	typeName = "gravityField"
 	typeIdInt = 1497846337
+	nodeLeafClassAttrs = ["directionX", "directionY", "directionZ", "direction"]
+	nodeLeafPlugs = ["direction"]
 	pass
 

@@ -52,5 +52,7 @@ class SubCurve(CurveRange):
 	apiTypeStr = "kSubCurve"
 	typeIdInt = 1314079299
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["inputCurve", "maxValue", "minValue", "outputCurve", "relative"]
+	nodeLeafPlugs = ["inputCurve", "maxValue", "minValue", "outputCurve", "relative"]
 	pass
 

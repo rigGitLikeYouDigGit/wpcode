@@ -30,5 +30,7 @@ class IkPASolver(IkSolver):
 
 	typeName = "ikPASolver"
 	typeIdInt = 1263550803
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

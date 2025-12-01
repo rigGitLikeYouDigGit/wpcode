@@ -286,5 +286,7 @@ class LayeredShader(ShadingDependNode):
 	apiTypeStr = "kLayeredShader"
 	typeIdInt = 1280922195
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["compositingFlag", "hardwareColorB", "hardwareColorG", "hardwareColorR", "hardwareColor", "hardwareShaderB", "hardwareShaderG", "hardwareShaderR", "hardwareShader", "colorB", "colorG", "colorR", "color", "glowColorB", "glowColorG", "glowColorR", "glowColor", "transparencyB", "transparencyG", "transparencyR", "transparency", "inputs", "matteOpacity", "matteOpacityMode", "outColorB", "outColorG", "outColorR", "outColor", "outGlowColorB", "outGlowColorG", "outGlowColorR", "outGlowColor", "outMatteOpacityB", "outMatteOpacityG", "outMatteOpacityR", "outMatteOpacity", "outTransparencyB", "outTransparencyG", "outTransparencyR", "outTransparency", "renderPassMode"]
+	nodeLeafPlugs = ["compositingFlag", "hardwareColor", "hardwareShader", "inputs", "matteOpacity", "matteOpacityMode", "outColor", "outGlowColor", "outMatteOpacity", "outTransparency", "renderPassMode"]
 	pass
 

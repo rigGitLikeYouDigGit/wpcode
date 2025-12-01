@@ -40,5 +40,7 @@ class Record(_BASE_):
 	apiTypeStr = "kRecord"
 	typeIdInt = 1380270916
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "input"]
+	nodeLeafPlugs = ["binMembership", "input"]
 	pass
 

@@ -49,5 +49,7 @@ class PolySubdFace(PolyModifier):
 
 	typeName = "polySubdFace"
 	typeIdInt = 1347638598
+	nodeLeafClassAttrs = ["divisions", "divisionsU", "divisionsV", "mode", "subdMethod"]
+	nodeLeafPlugs = ["divisions", "divisionsU", "divisionsV", "mode", "subdMethod"]
 	pass
 

@@ -137,5 +137,7 @@ class TextureBakeSet(BakeSet):
 	apiTypeStr = "kTextureBakeSet"
 	typeIdInt = 1413628235
 	MFnCls = om.MFnSet
+	nodeLeafClassAttrs = ["backgroundColorB", "backgroundColorG", "backgroundColorR", "backgroundColor", "backgroundMode", "bakeToOneMap", "bitsPerChannel", "fileFormat", "fillScale", "fillTextureSeams", "finalGatherQuality", "finalGatherReflect", "overrideUvSet", "prefix", "samples", "separation", "uMax", "uMin", "uvRange", "uvSetName", "vMax", "vMin", "xResolution", "yResolution"]
+	nodeLeafPlugs = ["backgroundColor", "backgroundMode", "bakeToOneMap", "bitsPerChannel", "fileFormat", "fillScale", "fillTextureSeams", "finalGatherQuality", "finalGatherReflect", "overrideUvSet", "prefix", "samples", "separation", "uMax", "uMin", "uvRange", "uvSetName", "vMax", "vMin", "xResolution", "yResolution"]
 	pass
 

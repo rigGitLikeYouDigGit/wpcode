@@ -127,5 +127,7 @@ class VolumeLight(PointLight):
 	apiTypeStr = "kVolumeLight"
 	typeIdInt = 1448037452
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["arc", "colorRange_ColorB", "colorRange_ColorG", "colorRange_ColorR", "colorRange_Color", "colorRange_Interp", "colorRange_Position", "colorRange", "coneEndRadius", "emitAmbient", "lightAngle", "lightShape", "penumbra_FloatValue", "penumbra_Interp", "penumbra_Position", "penumbra", "volumeLightDir"]
+	nodeLeafPlugs = ["arc", "colorRange", "coneEndRadius", "emitAmbient", "lightAngle", "lightShape", "penumbra", "volumeLightDir"]
 	pass
 

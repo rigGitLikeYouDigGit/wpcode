@@ -56,5 +56,7 @@ class PolyRemesh(PolyModifierWorld):
 	apiTypeStr = "kPolyRemesh"
 	typeIdInt = 1347571016
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["collapseThreshold", "interpolationType", "maxEdgeLength", "maxTriangleCount", "smoothStrength", "tessellateBorders"]
+	nodeLeafPlugs = ["collapseThreshold", "interpolationType", "maxEdgeLength", "maxTriangleCount", "smoothStrength", "tessellateBorders"]
 	pass
 

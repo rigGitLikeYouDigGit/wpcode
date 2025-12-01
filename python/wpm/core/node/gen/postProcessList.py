@@ -40,5 +40,7 @@ class PostProcessList(_BASE_):
 	apiTypeStr = "kPostProcessList"
 	typeIdInt = 1347441492
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "postProcesses"]
+	nodeLeafPlugs = ["binMembership", "postProcesses"]
 	pass
 

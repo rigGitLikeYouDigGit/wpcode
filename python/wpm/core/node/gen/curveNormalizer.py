@@ -37,5 +37,7 @@ class CurveNormalizer(_BASE_):
 
 	typeName = "curveNormalizer"
 	typeIdInt = 1129206349
+	nodeLeafClassAttrs = ["binMembership", "scalar"]
+	nodeLeafPlugs = ["binMembership", "scalar"]
 	pass
 

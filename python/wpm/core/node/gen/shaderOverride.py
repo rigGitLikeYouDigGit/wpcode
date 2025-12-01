@@ -30,5 +30,7 @@ class ShaderOverride(ConnectionOverride):
 
 	typeName = "shaderOverride"
 	typeIdInt = 1476395910
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

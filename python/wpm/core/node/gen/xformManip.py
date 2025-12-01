@@ -30,5 +30,7 @@ class XformManip(Manip3D):
 
 	typeName = "xformManip"
 	typeIdInt = 1431132230
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

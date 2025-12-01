@@ -33,5 +33,7 @@ class PropMoveTriadManip(FreePointTriadManip):
 	apiTypeStr = "kPropMoveTriadManip"
 	typeIdInt = 1431130196
 	MFnCls = om.MFnFreePointTriadManip
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

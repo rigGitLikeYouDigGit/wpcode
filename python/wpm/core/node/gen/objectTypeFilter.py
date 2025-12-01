@@ -40,5 +40,7 @@ class ObjectTypeFilter(ObjectFilter):
 	apiTypeStr = "kObjectTypeFilter"
 	typeIdInt = 1330923084
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["type", "typeName"]
+	nodeLeafPlugs = ["type", "typeName"]
 	pass
 

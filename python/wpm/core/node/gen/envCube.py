@@ -219,5 +219,7 @@ class EnvCube(TextureEnv):
 	apiTypeStr = "kEnvCube"
 	typeIdInt = 1380270914
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["backB", "backG", "backR", "back", "bottomB", "bottomG", "bottomR", "bottom", "frontB", "frontG", "frontR", "front", "infiniteSize", "infoBits", "leftB", "leftG", "leftR", "left", "lookupType", "pointWorldX", "pointWorldY", "pointWorldZ", "pointWorld", "rightB", "rightG", "rightR", "right", "topB", "topG", "topR", "top"]
+	nodeLeafPlugs = ["back", "bottom", "front", "infiniteSize", "infoBits", "left", "lookupType", "pointWorld", "right", "top"]
 	pass
 

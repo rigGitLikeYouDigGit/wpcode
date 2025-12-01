@@ -48,5 +48,7 @@ class CacheBase(_BASE_):
 	apiTypeStr = "kCacheBase"
 	typeIdInt = 1128415571
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "inRange", "outCacheArrayData", "outCacheData"]
+	nodeLeafPlugs = ["binMembership", "inRange", "outCacheArrayData", "outCacheData"]
 	pass
 

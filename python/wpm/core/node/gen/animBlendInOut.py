@@ -36,5 +36,7 @@ class AnimBlendInOut(AnimBlend):
 	apiTypeStr = "kAnimBlendInOut"
 	typeIdInt = 1094863183
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["rotateInterp"]
+	nodeLeafPlugs = ["rotateInterp"]
 	pass
 

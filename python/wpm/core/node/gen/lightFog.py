@@ -276,5 +276,7 @@ class LightFog(ShadingDependNode):
 
 	typeName = "lightFog"
 	typeIdInt = 1380339527
+	nodeLeafClassAttrs = ["colorB", "colorG", "colorR", "color", "colorBasedTransparency", "density", "fastDropOff", "filterSizeX", "filterSizeY", "filterSizeZ", "filterSize", "lightAmbient", "lightBlindData", "lightDiffuse", "lightDirectionX", "lightDirectionY", "lightDirectionZ", "lightDirection", "lightIntensityB", "lightIntensityG", "lightIntensityR", "lightIntensity", "lightShadowFraction", "lightSpecular", "preShadowIntensity", "lightDataArray", "matteOpacity", "matteOpacityMode", "outColorB", "outColorG", "outColorR", "outColor", "outMatteOpacityB", "outMatteOpacityG", "outMatteOpacityR", "outMatteOpacity", "outTransparencyB", "outTransparencyG", "outTransparencyR", "outTransparency"]
+	nodeLeafPlugs = ["color", "colorBasedTransparency", "density", "fastDropOff", "filterSize", "lightDataArray", "matteOpacity", "matteOpacityMode", "outColor", "outMatteOpacity", "outTransparency"]
 	pass
 

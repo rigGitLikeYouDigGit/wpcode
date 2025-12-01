@@ -41,5 +41,7 @@ class FlexorShape(Shape):
 
 	typeName = "flexorShape"
 	typeIdInt = 1179408456
+	nodeLeafClassAttrs = ["currentDriver", "driver", "flexorNodes"]
+	nodeLeafPlugs = ["currentDriver", "driver", "flexorNodes"]
 	pass
 

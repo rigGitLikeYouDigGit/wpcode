@@ -114,5 +114,7 @@ class Stencil(Texture2d):
 	apiTypeStr = "kStencil"
 	typeIdInt = 1381258068
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["colorKeyB", "colorKeyG", "colorKeyR", "colorKey", "edgeBlend", "hueRange", "imageB", "imageG", "imageR", "image", "keyMasking", "mask", "positiveKey", "saturationRange", "threshold", "valueRange"]
+	nodeLeafPlugs = ["colorKey", "edgeBlend", "hueRange", "image", "keyMasking", "mask", "positiveKey", "saturationRange", "threshold", "valueRange"]
 	pass
 

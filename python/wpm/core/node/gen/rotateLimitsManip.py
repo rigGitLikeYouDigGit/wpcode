@@ -33,5 +33,7 @@ class RotateLimitsManip(RotateManip):
 	apiTypeStr = "kRotateLimitsManip"
 	typeIdInt = 1431130700
 	MFnCls = om.MFnRotateManip
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

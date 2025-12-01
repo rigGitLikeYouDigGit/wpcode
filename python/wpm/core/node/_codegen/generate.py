@@ -12,7 +12,6 @@ import orjson
 
 from wplib import wpstring, log
 
-from wptree import Tree
 
 #from wpm import WN, om, cmds
 #from wpm.core import getMFn
@@ -270,6 +269,18 @@ def genNodeFileStr(data:NodeData,
 		nodeAssigns.append(Assign("MFnCls", "om." + data.mfnStr))
 	#nodeAssigns.append(Assign(("MFn", "om." + data.apiTypeStr)))
 
+	# leaf attrs are all attributes, plugs only top level
+	leafAttrAssign = Assign("nodeLeafClassAttrs",
+	    "[{}]".format(
+		    ", ".join(Literal(i.name).finalString() for i in newAttrDatas)
+	    ))
+	leafPlugAssign = Assign("nodeLeafPlugs",
+            "[{}]".format(
+                ", ".join(Literal(i.name).finalString() for i in newAttrDatas if not i.parentName)
+            )
+	                        )
+
+	nodeAssigns.extend([leafAttrAssign, leafPlugAssign])
 
 	# generate main node
 	if parent is not None:
@@ -452,24 +463,33 @@ def resetGenDir():
 
 
 
-if __name__ == '__main__':
-
-	# processGenInitFile(
-	# 	genDir / "__init__.py",
-	# 	genDir,
-	# 	genInitTemplatePath
-	#
-	# )
-
-
-	# print(genDir, genDir.is_dir())
-
+def regenMayaNodeFiles():
 	resetGenDir()
+	#gatherNodeData()
+	genNodes()
 
-	genNodes(
-		genDir,
-		refreshGenInitFile=True
-	)
+if __name__ == '__main__':
+	regenMayaNodeFiles()
+
+#
+# if __name__ == '__main__':
+#
+# 	# processGenInitFile(
+# 	# 	genDir / "__init__.py",
+# 	# 	genDir,
+# 	# 	genInitTemplatePath
+# 	#
+# 	# )
+#
+#
+# 	# print(genDir, genDir.is_dir())
+#
+# 	resetGenDir()
+#
+# 	genNodes(
+# 		genDir,
+# 		refreshGenInitFile=True
+# 	)
 
 
 

@@ -186,5 +186,7 @@ class SetRange(_BASE_):
 	apiTypeStr = "kSetRange"
 	typeIdInt = 1381125703
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "maxX", "maxY", "maxZ", "max", "minX", "minY", "minZ", "min", "oldMaxX", "oldMaxY", "oldMaxZ", "oldMax", "oldMinX", "oldMinY", "oldMinZ", "oldMin", "outValueX", "outValueY", "outValueZ", "outValue", "valueX", "valueY", "valueZ", "value"]
+	nodeLeafPlugs = ["binMembership", "max", "min", "oldMax", "oldMin", "outValue", "value"]
 	pass
 

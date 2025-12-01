@@ -140,5 +140,7 @@ class SurfaceShader(_BASE_):
 	apiTypeStr = "kSurfaceShader"
 	typeIdInt = 1381192520
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "materialAlphaGain", "outColorB", "outColorG", "outColorR", "outColor", "outGlowColorB", "outGlowColorG", "outGlowColorR", "outGlowColor", "outMatteOpacityB", "outMatteOpacityG", "outMatteOpacityR", "outMatteOpacity", "outTransparencyB", "outTransparencyG", "outTransparencyR", "outTransparency"]
+	nodeLeafPlugs = ["binMembership", "materialAlphaGain", "outColor", "outGlowColor", "outMatteOpacity", "outTransparency"]
 	pass
 

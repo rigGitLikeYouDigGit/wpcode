@@ -55,5 +55,7 @@ class WtAddMatrix(_BASE_):
 
 	typeName = "wtAddMatrix"
 	typeIdInt = 1146569037
+	nodeLeafClassAttrs = ["binMembership", "matrixSum", "matrixIn", "weightIn", "wtMatrix"]
+	nodeLeafPlugs = ["binMembership", "matrixSum", "wtMatrix"]
 	pass
 

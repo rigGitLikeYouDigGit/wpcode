@@ -190,5 +190,7 @@ class ShaderGlow(_BASE_):
 	apiTypeStr = "kShaderGlow"
 	typeIdInt = 1397245772
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["autoExposure", "binMembership", "glowColorB", "glowColorG", "glowColorR", "glowColor", "glowEccentricity", "glowFilterWidth", "glowIntensity", "glowOpacity", "glowRadialNoise", "glowRingFrequency", "glowRingIntensity", "glowSpread", "glowStarLevel", "glowType", "haloColorB", "haloColorG", "haloColorR", "haloColor", "haloEccentricity", "haloFilterWidth", "haloIntensity", "haloOpacity", "haloRadialNoise", "haloRingFrequency", "haloRingIntensity", "haloSpread", "haloStarLevel", "haloType", "quality", "radialFrequency", "rotation", "starPoints", "threshold"]
+	nodeLeafPlugs = ["autoExposure", "binMembership", "glowColor", "glowEccentricity", "glowFilterWidth", "glowIntensity", "glowOpacity", "glowRadialNoise", "glowRingFrequency", "glowRingIntensity", "glowSpread", "glowStarLevel", "glowType", "haloColor", "haloEccentricity", "haloFilterWidth", "haloIntensity", "haloOpacity", "haloRadialNoise", "haloRingFrequency", "haloRingIntensity", "haloSpread", "haloStarLevel", "haloType", "quality", "radialFrequency", "rotation", "starPoints", "threshold"]
 	pass
 

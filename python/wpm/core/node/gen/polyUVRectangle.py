@@ -36,5 +36,7 @@ class PolyUVRectangle(PolyModifier):
 	apiTypeStr = "kPolyUVRectangle"
 	typeIdInt = 1347769938
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["uvSetName"]
+	nodeLeafPlugs = ["uvSetName"]
 	pass
 

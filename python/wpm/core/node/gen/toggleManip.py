@@ -33,5 +33,7 @@ class ToggleManip(Manip3D):
 	apiTypeStr = "kToggleManip"
 	typeIdInt = 1431131207
 	MFnCls = om.MFnToggleManip
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

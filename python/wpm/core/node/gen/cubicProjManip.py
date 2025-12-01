@@ -30,5 +30,7 @@ class CubicProjManip(Manip3D):
 
 	typeName = "cubicProjManip"
 	typeIdInt = 1431126869
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

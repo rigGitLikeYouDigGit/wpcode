@@ -30,5 +30,7 @@ class MakeTwoPointCircularArcManip(ManipContainer):
 
 	typeName = "makeTwoPointCircularArcManip"
 	typeIdInt = 1429360705
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

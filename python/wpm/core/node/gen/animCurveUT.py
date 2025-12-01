@@ -55,5 +55,7 @@ class AnimCurveUT(AnimCurve):
 
 	typeName = "animCurveUT"
 	typeIdInt = 1346590036
+	nodeLeafClassAttrs = ["input", "keyTime", "keyValue", "keyTimeValue", "output"]
+	nodeLeafPlugs = ["input", "keyTimeValue", "output"]
 	pass
 

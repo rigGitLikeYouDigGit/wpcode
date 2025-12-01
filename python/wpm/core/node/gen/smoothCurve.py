@@ -48,5 +48,7 @@ class SmoothCurve(AbstractBaseCreate):
 	apiTypeStr = "kSmoothCurve"
 	typeIdInt = 1314082115
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["index", "inputCurve", "outputCurve", "smoothness"]
+	nodeLeafPlugs = ["index", "inputCurve", "outputCurve", "smoothness"]
 	pass
 

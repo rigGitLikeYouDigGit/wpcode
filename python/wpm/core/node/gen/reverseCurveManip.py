@@ -33,5 +33,7 @@ class ReverseCurveManip(ManipContainer):
 	apiTypeStr = "kReverseCurveManip"
 	typeIdInt = 1431130691
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

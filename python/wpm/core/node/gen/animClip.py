@@ -195,5 +195,7 @@ class AnimClip(_BASE_):
 
 	typeName = "animClip"
 	typeIdInt = 1129074766
+	nodeLeafClassAttrs = ["absoluteChannel", "absoluteRotations", "binMembership", "channelOffset", "clip", "clipData", "clipInstance", "cycle", "duration", "enable", "hold", "localStartPositionX", "localStartPositionY", "localStartPositionZ", "localStartPosition", "offset", "offsetXform", "pose", "postCycle", "preCycle", "recomputeOffset", "scale", "sourceEnd", "sourceStart", "start", "startFrame", "startPercent", "startTrim", "timeWarp", "timeWarpEnable", "useChannelOffset", "weight", "weightStyle", "worldStartPositionX", "worldStartPositionY", "worldStartPositionZ", "worldStartPosition"]
+	nodeLeafPlugs = ["absoluteChannel", "absoluteRotations", "binMembership", "channelOffset", "clip", "clipData", "clipInstance", "cycle", "duration", "enable", "hold", "localStartPosition", "offset", "offsetXform", "pose", "postCycle", "preCycle", "recomputeOffset", "scale", "sourceEnd", "sourceStart", "start", "startFrame", "startPercent", "startTrim", "timeWarp", "timeWarpEnable", "useChannelOffset", "weight", "weightStyle", "worldStartPosition"]
 	pass
 

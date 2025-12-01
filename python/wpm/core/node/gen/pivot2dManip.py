@@ -30,5 +30,7 @@ class Pivot2dManip(Manip2D):
 
 	typeName = "pivot2dManip"
 	typeIdInt = 1431319117
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

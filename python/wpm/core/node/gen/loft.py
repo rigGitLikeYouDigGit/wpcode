@@ -69,5 +69,7 @@ class Loft(AbstractBaseCreate):
 
 	typeName = "loft"
 	typeIdInt = 1314081614
+	nodeLeafClassAttrs = ["autoReverse", "close", "createCusp", "degree", "inputCurve", "outputSurface", "reverse", "reverseSurfaceNormals", "sectionSpans", "uniform"]
+	nodeLeafPlugs = ["autoReverse", "close", "createCusp", "degree", "inputCurve", "outputSurface", "reverse", "reverseSurfaceNormals", "sectionSpans", "uniform"]
 	pass
 

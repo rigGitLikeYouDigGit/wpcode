@@ -33,5 +33,7 @@ class Dof(_BASE_):
 
 	typeName = "dof"
 	typeIdInt = 1146046020
+	nodeLeafClassAttrs = ["binMembership"]
+	nodeLeafPlugs = ["binMembership"]
 	pass
 

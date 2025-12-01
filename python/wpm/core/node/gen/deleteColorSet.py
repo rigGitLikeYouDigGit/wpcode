@@ -48,5 +48,7 @@ class DeleteColorSet(_BASE_):
 	apiTypeStr = "kDeleteColorSet"
 	typeIdInt = 1145848659
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "colorSetName", "inputGeometry", "outputGeometry"]
+	nodeLeafPlugs = ["binMembership", "colorSetName", "inputGeometry", "outputGeometry"]
 	pass
 

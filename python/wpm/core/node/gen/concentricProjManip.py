@@ -30,5 +30,7 @@ class ConcentricProjManip(Manip3D):
 
 	typeName = "concentricProjManip"
 	typeIdInt = 1431126863
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

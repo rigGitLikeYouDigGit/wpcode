@@ -123,5 +123,7 @@ class HikFKJoint(Joint):
 	apiTypeStr = "kHikFKJoint"
 	typeIdInt = 1247037771
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = ["altConstraintTargetGX", "alternateGX", "look", "rotateOffsetX", "rotateOffsetY", "rotateOffsetZ", "rotateOffset", "scaleOffsetX", "scaleOffsetY", "scaleOffsetZ", "scaleOffset", "translateOffsetX", "translateOffsetY", "translateOffsetZ", "translateOffset", "useAlternateGX"]
+	nodeLeafPlugs = ["altConstraintTargetGX", "alternateGX", "look", "rotateOffset", "scaleOffset", "translateOffset", "useAlternateGX"]
 	pass
 

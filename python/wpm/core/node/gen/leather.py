@@ -156,5 +156,7 @@ class Leather(Texture3d):
 	apiTypeStr = "kLeather"
 	typeIdInt = 1381256261
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["cellColorB", "cellColorG", "cellColorR", "cellColor", "cellSize", "creaseColorB", "creaseColorG", "creaseColorR", "creaseColor", "creases", "density", "randomness", "refPointCameraX", "refPointCameraY", "refPointCameraZ", "refPointCamera", "refPointObjX", "refPointObjY", "refPointObjZ", "refPointObj", "spottyness", "threshold"]
+	nodeLeafPlugs = ["cellColor", "cellSize", "creaseColor", "creases", "density", "randomness", "refPointCamera", "refPointObj", "spottyness", "threshold"]
 	pass
 

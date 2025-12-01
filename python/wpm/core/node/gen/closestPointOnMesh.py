@@ -157,5 +157,7 @@ class ClosestPointOnMesh(_BASE_):
 	apiTypeStr = "kClosestPointOnMesh"
 	typeIdInt = 1129336653
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "inMesh", "inPositionX", "inPositionY", "inPositionZ", "inPosition", "inputMatrix", "closestFaceIndex", "closestVertexIndex", "normalX", "normalY", "normalZ", "normal", "parameterU", "parameterV", "positionX", "positionY", "positionZ", "position", "result"]
+	nodeLeafPlugs = ["binMembership", "inMesh", "inPosition", "inputMatrix", "result"]
 	pass
 

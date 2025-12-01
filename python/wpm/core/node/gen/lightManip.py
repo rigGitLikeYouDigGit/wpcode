@@ -33,5 +33,7 @@ class LightManip(ManipContainer):
 	apiTypeStr = "kLightManip"
 	typeIdInt = 1431129172
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

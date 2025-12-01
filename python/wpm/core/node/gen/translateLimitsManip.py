@@ -33,5 +33,7 @@ class TranslateLimitsManip(ManipContainer):
 	apiTypeStr = "kTranslateLimitsManip"
 	typeIdInt = 1431131212
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

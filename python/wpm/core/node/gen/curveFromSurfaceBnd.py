@@ -44,5 +44,7 @@ class CurveFromSurfaceBnd(CurveFromSurface):
 	apiTypeStr = "kCurveFromSurfaceBnd"
 	typeIdInt = 1313035074
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["boundary", "edge", "face"]
+	nodeLeafPlugs = ["boundary", "edge", "face"]
 	pass
 

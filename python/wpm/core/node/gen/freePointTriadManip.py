@@ -33,5 +33,7 @@ class FreePointTriadManip(Manip3D):
 	apiTypeStr = "kFreePointTriadManip"
 	typeIdInt = 1430671444
 	MFnCls = om.MFnFreePointTriadManip
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

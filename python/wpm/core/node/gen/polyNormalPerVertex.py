@@ -114,5 +114,7 @@ class PolyNormalPerVertex(PolyModifier):
 	apiTypeStr = "kPolyNormalPerVertex"
 	typeIdInt = 1347309654
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["normalAdd", "normalDeform", "vertexNormalY", "vertexNormalZ", "vertexNormalXYZ", "vertexNormal", "normalPerVertex", "vertexFaceNormalX", "vertexFaceNormalY", "vertexFaceNormalZ", "vertexFaceNormalXYZ", "vertexFaceNormal", "vertexNormalX"]
+	nodeLeafPlugs = ["normalAdd", "normalDeform", "normalPerVertex"]
 	pass
 

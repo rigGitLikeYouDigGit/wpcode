@@ -314,5 +314,7 @@ class Mandelbrot3D(Texture3d):
 	apiTypeStr = "kMandelbrot3D"
 	typeIdInt = 1381256499
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["amplitude", "boxMinRadius", "boxRadius", "boxRatio", "centerX", "centerY", "centerZ", "checker", "circleRadius", "circleSizeRatio", "circles", "color_ColorB", "color_ColorG", "color_ColorR", "color_Color", "color_Interp", "color_Position", "color", "depth", "escapeRadius", "focus", "implode", "implodeCenterX", "implodeCenterY", "implodeCenterZ", "implodeCenter", "juliaU", "juliaV", "leafEffect", "lineBlending", "lineFocus", "lineOffsetRatio", "lineOffsetU", "lineOffsetV", "lobes", "mandelbrotInsideMethod", "mandelbrotShadeMethod", "mandelbrotType", "points", "refPointCameraX", "refPointCameraY", "refPointCameraZ", "refPointCamera", "refPointObjX", "refPointObjY", "refPointObjZ", "refPointObj", "shift", "stalksU", "stalksV", "value_FloatValue", "value_Interp", "value_Position", "value", "wrapAmplitude", "xPixelAngle", "zoomFactor"]
+	nodeLeafPlugs = ["amplitude", "boxMinRadius", "boxRadius", "boxRatio", "centerX", "centerY", "centerZ", "checker", "circleRadius", "circleSizeRatio", "circles", "color", "depth", "escapeRadius", "focus", "implode", "implodeCenter", "juliaU", "juliaV", "leafEffect", "lineBlending", "lineFocus", "lineOffsetRatio", "lineOffsetU", "lineOffsetV", "lobes", "mandelbrotInsideMethod", "mandelbrotShadeMethod", "mandelbrotType", "points", "refPointCamera", "refPointObj", "shift", "stalksU", "stalksV", "value", "wrapAmplitude", "xPixelAngle", "zoomFactor"]
 	pass
 

@@ -92,5 +92,7 @@ class FilletCurve(AbstractBaseCreate):
 	apiTypeStr = "kFilletCurve"
 	typeIdInt = 1313227602
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["bias", "blendControl", "circular", "curveParameter1", "curveParameter2", "depth", "detachedCurve1", "detachedCurve2", "freeformBlend", "join", "outputCurve", "primaryCurve", "radius", "secondaryCurve", "trim"]
+	nodeLeafPlugs = ["bias", "blendControl", "circular", "curveParameter1", "curveParameter2", "depth", "detachedCurve1", "detachedCurve2", "freeformBlend", "join", "outputCurve", "primaryCurve", "radius", "secondaryCurve", "trim"]
 	pass
 

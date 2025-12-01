@@ -33,5 +33,7 @@ class SketchPlane(Plane):
 	apiTypeStr = "kSketchPlane"
 	typeIdInt = 1397444686
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

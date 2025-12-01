@@ -73,5 +73,7 @@ class SurfaceInfo(AbstractBaseCreate):
 	apiTypeStr = "kSurfaceInfo"
 	typeIdInt = 1314081102
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["xValue", "yValue", "zValue", "controlPoints", "inputSurface", "knotsU", "knotsV", "weights"]
+	nodeLeafPlugs = ["controlPoints", "inputSurface", "knotsU", "knotsV", "weights"]
 	pass
 

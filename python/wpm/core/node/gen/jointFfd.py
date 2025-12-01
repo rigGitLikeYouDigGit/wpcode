@@ -61,5 +61,7 @@ class JointFfd(Ffd):
 
 	typeName = "jointFfd"
 	typeIdInt = 1179010114
+	nodeLeafClassAttrs = ["baseLattice2Matrix", "groupIdLowerBindSkin", "groupIdUpperBindSkin", "lowerBindSkinNode", "lowerComponentCache", "upperBindSkinNode", "upperComponentCache", "useComponentCache"]
+	nodeLeafPlugs = ["baseLattice2Matrix", "groupIdLowerBindSkin", "groupIdUpperBindSkin", "lowerBindSkinNode", "lowerComponentCache", "upperBindSkinNode", "upperComponentCache", "useComponentCache"]
 	pass
 

@@ -33,5 +33,7 @@ class CreateCVManip(ManipContainer):
 	apiTypeStr = "kCreateCVManip"
 	typeIdInt = 1431126870
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

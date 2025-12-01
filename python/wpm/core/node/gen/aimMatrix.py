@@ -200,5 +200,7 @@ class AimMatrix(_BASE_):
 	apiTypeStr = "kAimMatrix"
 	typeIdInt = 1095582036
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "enable", "envelope", "inputMatrix", "outputMatrix", "primaryInputAxisX", "primaryInputAxisY", "primaryInputAxisZ", "primaryInputAxis", "primaryMode", "primaryTargetMatrix", "primaryTargetVectorX", "primaryTargetVectorY", "primaryTargetVectorZ", "primaryTargetVector", "primary", "secondaryInputAxisX", "secondaryInputAxisY", "secondaryInputAxisZ", "secondaryInputAxis", "secondaryMode", "secondaryTargetMatrix", "secondaryTargetVectorX", "secondaryTargetVectorY", "secondaryTargetVectorZ", "secondaryTargetVector", "secondary"]
+	nodeLeafPlugs = ["binMembership", "enable", "envelope", "inputMatrix", "outputMatrix", "primary", "secondary"]
 	pass
 

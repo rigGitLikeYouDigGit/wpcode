@@ -169,5 +169,7 @@ class Ocean(Texture2d):
 	apiTypeStr = "kOcean"
 	typeIdInt = 1381257027
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["colorMode", "foamEmission", "foamThreshold", "numFrequencies", "observerSpeed", "outFoam", "scale", "time", "waveDirSpread", "waveHeight_FloatValue", "waveHeight_Interp", "waveHeight_Position", "waveHeight", "waveLengthMax", "waveLengthMin", "wavePeaking_FloatValue", "wavePeaking_Interp", "wavePeaking_Position", "wavePeaking", "waveTurbulence_FloatValue", "waveTurbulence_Interp", "waveTurbulence_Position", "waveTurbulence", "windU", "windV", "windUV"]
+	nodeLeafPlugs = ["colorMode", "foamEmission", "foamThreshold", "numFrequencies", "observerSpeed", "outFoam", "scale", "time", "waveDirSpread", "waveHeight", "waveLengthMax", "waveLengthMin", "wavePeaking", "waveTurbulence", "windUV"]
 	pass
 

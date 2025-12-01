@@ -88,5 +88,7 @@ class AttachSurface(AbstractBaseCreate):
 	apiTypeStr = "kAttachSurface"
 	typeIdInt = 1312904275
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["blendBias", "blendKnotInsertion", "directionU", "inputSurface1", "inputSurface2", "keepMultipleKnots", "method", "outputSurface", "parameter", "reverse1", "reverse2", "swap1", "swap2", "twist"]
+	nodeLeafPlugs = ["blendBias", "blendKnotInsertion", "directionU", "inputSurface1", "inputSurface2", "keepMultipleKnots", "method", "outputSurface", "parameter", "reverse1", "reverse2", "swap1", "swap2", "twist"]
 	pass
 

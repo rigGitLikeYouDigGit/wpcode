@@ -62,5 +62,7 @@ class ResultCurveTimeToUnitless(ResultCurve):
 	apiTypeStr = "kResultCurveTimeToUnitless"
 	typeIdInt = 1380144213
 	MFnCls = om.MFnAnimCurve
+	nodeLeafClassAttrs = ["input", "inputResult", "keyTime", "keyValue", "keyTimeValue", "output"]
+	nodeLeafPlugs = ["input", "inputResult", "keyTimeValue", "output"]
 	pass
 

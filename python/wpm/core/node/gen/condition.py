@@ -123,5 +123,7 @@ class Condition(_BASE_):
 	apiTypeStr = "kCondition"
 	typeIdInt = 1380142660
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "colorIfFalseB", "colorIfFalseG", "colorIfFalseR", "colorIfFalse", "colorIfTrueB", "colorIfTrueG", "colorIfTrueR", "colorIfTrue", "firstTerm", "operation", "outColorB", "outColorG", "outColorR", "outColor", "secondTerm"]
+	nodeLeafPlugs = ["binMembership", "colorIfFalse", "colorIfTrue", "firstTerm", "operation", "outColor", "secondTerm"]
 	pass
 

@@ -33,5 +33,7 @@ class BasicSelector(SimpleSelector):
 
 	typeName = "basicSelector"
 	typeIdInt = 1476395893
+	nodeLeafClassAttrs = ["includeHierarchy"]
+	nodeLeafPlugs = ["includeHierarchy"]
 	pass
 

@@ -49,5 +49,7 @@ class CurveFromSubdiv(CurveRange):
 
 	typeName = "curveFromSubdiv"
 	typeIdInt = 1396917843
+	nodeLeafClassAttrs = ["inputSubdiv", "maxValue", "minValue", "outputCurve", "relative"]
+	nodeLeafPlugs = ["inputSubdiv", "maxValue", "minValue", "outputCurve", "relative"]
 	pass
 

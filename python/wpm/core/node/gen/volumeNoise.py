@@ -225,5 +225,7 @@ class VolumeNoise(Texture3d):
 	apiTypeStr = "kVolumeNoise"
 	typeIdInt = 1381258803
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["amplitude", "density", "depthMax", "falloff", "frequency", "frequencyRatio", "implode", "implodeCenterX", "implodeCenterY", "implodeCenterZ", "implodeCenter", "inflection", "noiseType", "numWaves", "originX", "originY", "originZ", "origin", "randomness", "ratio", "refPointCameraX", "refPointCameraY", "refPointCameraZ", "refPointCamera", "refPointObjX", "refPointObjY", "refPointObjZ", "refPointObj", "scaleX", "scaleY", "scaleZ", "scale", "sizeRand", "spottyness", "threshold", "time", "xPixelAngle"]
+	nodeLeafPlugs = ["amplitude", "density", "depthMax", "falloff", "frequency", "frequencyRatio", "implode", "implodeCenter", "inflection", "noiseType", "numWaves", "origin", "randomness", "ratio", "refPointCamera", "refPointObj", "scale", "sizeRand", "spottyness", "threshold", "time", "xPixelAngle"]
 	pass
 

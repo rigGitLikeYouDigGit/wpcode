@@ -33,5 +33,7 @@ class ShellTessellate(ParentTessellate):
 
 	typeName = "shellTessellate"
 	typeIdInt = 1398031699
+	nodeLeafClassAttrs = ["inputShell"]
+	nodeLeafPlugs = ["inputShell"]
 	pass
 

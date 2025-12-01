@@ -33,5 +33,7 @@ class DeformFlareManip(ManipContainer):
 	apiTypeStr = "kDeformFlareManip"
 	typeIdInt = 1430670418
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -44,5 +44,7 @@ class ResultCurve(AnimCurve):
 	apiTypeStr = "kResultCurve"
 	typeIdInt = 1381188438
 	MFnCls = om.MFnAnimCurve
+	nodeLeafClassAttrs = ["end", "sampleBy", "start"]
+	nodeLeafPlugs = ["end", "sampleBy", "start"]
 	pass
 

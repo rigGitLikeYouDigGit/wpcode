@@ -101,5 +101,7 @@ class ApplyRel2FloatsOverride(ApplyRelOverride):
 
 	typeName = "applyRel2FloatsOverride"
 	typeIdInt = 1476395929
+	nodeLeafClassAttrs = ["multiply0", "multiply1", "multiply", "offset0", "offset1", "offset", "original0", "original1", "original", "out0", "out1", "out"]
+	nodeLeafPlugs = ["multiply", "offset", "original", "out"]
 	pass
 

@@ -139,5 +139,7 @@ class PolyExtrudeEdge(PolyMoveEdge):
 	apiTypeStr = "kPolyExtrudeEdge"
 	typeIdInt = 1346721861
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["compBoundingBoxMaxX", "compBoundingBoxMaxY", "compBoundingBoxMaxZ", "compBoundingBoxMax", "compBoundingBoxMinX", "compBoundingBoxMinY", "compBoundingBoxMinZ", "compBoundingBoxMin", "divisions", "inputProfile", "keepFacesTogether", "offset", "smoothingAngle", "taper", "taperCurve_FloatValue", "taperCurve_Interp", "taperCurve_Position", "taperCurve", "thickness", "twist"]
+	nodeLeafPlugs = ["compBoundingBoxMax", "compBoundingBoxMin", "divisions", "inputProfile", "keepFacesTogether", "offset", "smoothingAngle", "taper", "taperCurve", "thickness", "twist"]
 	pass
 

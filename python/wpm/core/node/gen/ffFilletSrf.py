@@ -57,5 +57,7 @@ class FfFilletSrf(AbstractBaseCreate):
 
 	typeName = "ffFilletSrf"
 	typeIdInt = 1313228371
+	nodeLeafClassAttrs = ["bias", "depth", "leftCurve", "outputSurface", "positionTolerance", "rightCurve", "tangentTolerance"]
+	nodeLeafPlugs = ["bias", "depth", "leftCurve", "outputSurface", "positionTolerance", "rightCurve", "tangentTolerance"]
 	pass
 

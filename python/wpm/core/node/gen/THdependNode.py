@@ -29,5 +29,7 @@ class THdependNode(_BASE_):
 	# node attributes
 
 	typeName = "THdependNode"
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

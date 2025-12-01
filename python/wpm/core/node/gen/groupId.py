@@ -40,5 +40,7 @@ class GroupId(_BASE_):
 	apiTypeStr = "kGroupId"
 	typeIdInt = 1196443972
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "groupId"]
+	nodeLeafPlugs = ["binMembership", "groupId"]
 	pass
 

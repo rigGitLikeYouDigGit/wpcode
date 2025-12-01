@@ -30,5 +30,7 @@ class PointOnSurfManip(Manip3D):
 
 	typeName = "pointOnSurfManip"
 	typeIdInt = 1431130963
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -33,5 +33,7 @@ class PolyCreaseEdge(PolyCrease):
 	apiTypeStr = "kPolyCreaseEdge"
 	typeIdInt = 1346589509
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -33,5 +33,7 @@ class TowPointOnSurfaceManip(PointOnSurfManip):
 	apiTypeStr = "kTowPointOnSurfaceManip"
 	typeIdInt = 1431588947
 	MFnCls = om.MFnPointOnSurfaceManip
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

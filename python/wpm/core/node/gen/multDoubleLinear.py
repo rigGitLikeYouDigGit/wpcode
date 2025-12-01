@@ -48,5 +48,7 @@ class MultDoubleLinear(_BASE_):
 	apiTypeStr = "kMultDoubleLinear"
 	typeIdInt = 1145914444
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "input1", "input2", "output"]
+	nodeLeafPlugs = ["binMembership", "input1", "input2", "output"]
 	pass
 

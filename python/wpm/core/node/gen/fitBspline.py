@@ -48,5 +48,7 @@ class FitBspline(AbstractBaseCreate):
 	apiTypeStr = "kFitBspline"
 	typeIdInt = 1313231939
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["inputCurve", "keepRange", "outputCurve", "tolerance"]
+	nodeLeafPlugs = ["inputCurve", "keepRange", "outputCurve", "tolerance"]
 	pass
 

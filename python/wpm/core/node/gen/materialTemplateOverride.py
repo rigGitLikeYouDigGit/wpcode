@@ -30,5 +30,7 @@ class MaterialTemplateOverride(ConnectionOverride):
 
 	typeName = "materialTemplateOverride"
 	typeIdInt = 1476395913
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

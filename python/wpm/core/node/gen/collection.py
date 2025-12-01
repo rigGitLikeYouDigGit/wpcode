@@ -33,5 +33,7 @@ class Collection(RScontainer):
 
 	typeName = "collection"
 	typeIdInt = 1476395891
+	nodeLeafClassAttrs = ["selector"]
+	nodeLeafPlugs = ["selector"]
 	pass
 

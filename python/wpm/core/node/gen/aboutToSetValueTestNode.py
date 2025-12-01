@@ -41,5 +41,7 @@ class AboutToSetValueTestNode(_BASE_):
 
 	typeName = "aboutToSetValueTestNode"
 	typeIdInt = 1095980622
+	nodeLeafClassAttrs = ["attribA", "attribB", "binMembership"]
+	nodeLeafPlugs = ["attribA", "attribB", "binMembership"]
 	pass
 

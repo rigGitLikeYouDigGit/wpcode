@@ -49,5 +49,7 @@ class DpBirailSrf(BirailSrf):
 
 	typeName = "dpBirailSrf"
 	typeIdInt = 1313096275
+	nodeLeafClassAttrs = ["blendFactor", "inputProfile1", "inputProfile2", "tangentContinuityProfile1", "tangentContinuityProfile2"]
+	nodeLeafPlugs = ["blendFactor", "inputProfile1", "inputProfile2", "tangentContinuityProfile1", "tangentContinuityProfile2"]
 	pass
 

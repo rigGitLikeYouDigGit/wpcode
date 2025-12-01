@@ -30,5 +30,7 @@ class LightsChildCollection(Collection):
 
 	typeName = "lightsChildCollection"
 	typeIdInt = 1476395930
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

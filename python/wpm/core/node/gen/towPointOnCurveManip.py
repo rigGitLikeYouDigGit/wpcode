@@ -33,5 +33,7 @@ class TowPointOnCurveManip(PointOnCurveManip):
 	apiTypeStr = "kTowPointOnCurveManip"
 	typeIdInt = 1431588931
 	MFnCls = om.MFnPointOnCurveManip
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

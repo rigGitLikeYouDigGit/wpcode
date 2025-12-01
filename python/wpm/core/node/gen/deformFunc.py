@@ -40,5 +40,7 @@ class DeformFunc(Shape):
 	apiTypeStr = "kDeformFunc"
 	typeIdInt = 1178879558
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["deformerData", "handleWidth"]
+	nodeLeafPlugs = ["deformerData", "handleWidth"]
 	pass
 

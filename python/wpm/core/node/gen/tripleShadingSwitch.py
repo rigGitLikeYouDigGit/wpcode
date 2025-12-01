@@ -121,5 +121,7 @@ class TripleShadingSwitch(BaseShadingSwitch):
 	apiTypeStr = "kTripleShadingSwitch"
 	typeIdInt = 1398229043
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["defComp1", "defComp2", "defComp3", "default", "inComp1", "inComp2", "inComp3", "inShape", "inTriple", "input", "outComp1", "outComp2", "outComp3", "output"]
+	nodeLeafPlugs = ["default", "input", "output"]
 	pass
 

@@ -36,5 +36,7 @@ class Phong(Reflect):
 	apiTypeStr = "kPhong"
 	typeIdInt = 1380993103
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["cosinePower"]
+	nodeLeafPlugs = ["cosinePower"]
 	pass
 

@@ -270,5 +270,7 @@ class ShadingMap(ShadingDependNode):
 	apiTypeStr = "kShadingMap"
 	typeIdInt = 1396985168
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["colorB", "colorG", "colorR", "color", "glowColorB", "glowColorG", "glowColorR", "glowColor", "mapFunctionU", "mapFunctionV", "matteOpacity", "matteOpacityMode", "outColorB", "outColorG", "outColorR", "outColor", "outGlowColorB", "outGlowColorG", "outGlowColorR", "outGlowColor", "outMatteOpacityB", "outMatteOpacityG", "outMatteOpacityR", "outMatteOpacity", "outTransparencyB", "outTransparencyG", "outTransparencyR", "outTransparency", "renderPassMode", "shadingMapColorB", "shadingMapColorG", "shadingMapColorR", "shadingMapColor", "transparencyB", "transparencyG", "transparencyR", "transparency", "uCoord", "vCoord", "uvCoord"]
+	nodeLeafPlugs = ["color", "glowColor", "mapFunctionU", "mapFunctionV", "matteOpacity", "matteOpacityMode", "outColor", "outGlowColor", "outMatteOpacity", "outTransparency", "renderPassMode", "shadingMapColor", "transparency", "uvCoord"]
 	pass
 

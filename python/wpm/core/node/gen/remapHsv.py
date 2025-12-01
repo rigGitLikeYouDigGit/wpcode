@@ -181,5 +181,7 @@ class RemapHsv(_BASE_):
 	apiTypeStr = "kRemapHsv"
 	typeIdInt = 1380796499
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "colorB", "colorG", "colorR", "color", "hue_FloatValue", "hue_Interp", "hue_Position", "hue", "inputMax", "inputMin", "outColorB", "outColorG", "outColorR", "outColor", "outputMax", "outputMin", "renderPassMode", "saturation_FloatValue", "saturation_Interp", "saturation_Position", "saturation", "value_FloatValue", "value_Interp", "value_Position", "value"]
+	nodeLeafPlugs = ["binMembership", "color", "hue", "inputMax", "inputMin", "outColor", "outputMax", "outputMin", "renderPassMode", "saturation", "value"]
 	pass
 

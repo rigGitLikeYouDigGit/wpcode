@@ -44,5 +44,7 @@ class Blinn(Reflect):
 	apiTypeStr = "kBlinn"
 	typeIdInt = 1380076622
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["eccentricity", "reflectionRolloff", "specularRollOff"]
+	nodeLeafPlugs = ["eccentricity", "reflectionRolloff", "specularRollOff"]
 	pass
 

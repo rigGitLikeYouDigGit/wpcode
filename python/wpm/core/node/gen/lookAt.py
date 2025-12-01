@@ -44,5 +44,7 @@ class LookAt(AimConstraint):
 	apiTypeStr = "kLookAt"
 	typeIdInt = 1145848148
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = ["displayConnector", "distanceBetween", "twist"]
+	nodeLeafPlugs = ["displayConnector", "distanceBetween", "twist"]
 	pass
 

@@ -33,5 +33,7 @@ class PolyModifierManip(ManipContainer):
 	apiTypeStr = "kPolyModifierManip"
 	typeIdInt = 1431326029
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

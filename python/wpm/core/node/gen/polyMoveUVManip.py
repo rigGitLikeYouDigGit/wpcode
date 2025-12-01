@@ -33,5 +33,7 @@ class PolyMoveUVManip(Manip2DContainer):
 	apiTypeStr = "kPolyMoveUVManip"
 	typeIdInt = 1431328077
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

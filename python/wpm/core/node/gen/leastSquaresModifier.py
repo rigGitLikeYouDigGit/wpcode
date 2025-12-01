@@ -128,5 +128,7 @@ class LeastSquaresModifier(AbstractBaseCreate):
 
 	typeName = "leastSquaresModifier"
 	typeIdInt = 1313624909
+	nodeLeafClassAttrs = ["inputCache", "inputNurbsObject", "objectModifier", "outputNurbsObject", "pointConstraintV", "pointConstraintW", "pointConstraintUVW", "pointPositionY", "pointPositionZ", "pointPositionXYZ", "pointWeight", "pointConstraint", "pointConstraintU", "pointPositionX", "pointSymbolicIndex", "resetModifier", "updatePointModifier", "worldSpaceToObjectSpace"]
+	nodeLeafPlugs = ["inputCache", "inputNurbsObject", "objectModifier", "outputNurbsObject", "pointConstraint", "pointSymbolicIndex", "resetModifier", "updatePointModifier", "worldSpaceToObjectSpace"]
 	pass
 

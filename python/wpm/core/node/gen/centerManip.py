@@ -33,5 +33,7 @@ class CenterManip(FreePointManip):
 	apiTypeStr = "kCenterManip"
 	typeIdInt = 1129205072
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

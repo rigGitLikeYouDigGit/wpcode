@@ -45,5 +45,7 @@ class HardenPoint(AbstractBaseCreate):
 
 	typeName = "hardenPoint"
 	typeIdInt = 1313358928
+	nodeLeafClassAttrs = ["index", "inputCurve", "multiplicity", "outputCurve"]
+	nodeLeafPlugs = ["index", "inputCurve", "multiplicity", "outputCurve"]
 	pass
 

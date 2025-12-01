@@ -30,5 +30,7 @@ class Shape(DagNode):
 
 	typeName = "shape"
 	typeIdInt = 1397248069
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -30,5 +30,7 @@ class ChildNode(ListItem):
 
 	typeName = "childNode"
 	typeIdInt = 1476395917
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

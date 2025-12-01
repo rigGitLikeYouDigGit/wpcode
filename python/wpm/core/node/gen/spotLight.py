@@ -191,5 +191,7 @@ class SpotLight(NonExtendedLightShapeNode):
 	apiTypeStr = "kSpotLight"
 	typeIdInt = 1397773388
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["barnDoors", "bottomBarnDoor", "coneAngle", "dropoff", "endDistance1", "endDistance2", "endDistance3", "farPointWorldX", "farPointWorldY", "farPointWorldZ", "farPointWorld", "fogGeometry", "fogIntensity", "fogSpread", "leftBarnDoor", "lightGlow", "objectType", "penumbraAngle", "pointWorldX", "pointWorldY", "pointWorldZ", "pointWorld", "psIllumSamples", "rayDirectionX", "rayDirectionY", "rayDirectionZ", "rayDirection", "rightBarnDoor", "startDistance1", "startDistance2", "startDistance3", "topBarnDoor", "useDecayRegions"]
+	nodeLeafPlugs = ["barnDoors", "bottomBarnDoor", "coneAngle", "dropoff", "endDistance1", "endDistance2", "endDistance3", "farPointWorld", "fogGeometry", "fogIntensity", "fogSpread", "leftBarnDoor", "lightGlow", "objectType", "penumbraAngle", "pointWorld", "psIllumSamples", "rayDirection", "rightBarnDoor", "startDistance1", "startDistance2", "startDistance3", "topBarnDoor", "useDecayRegions"]
 	pass
 

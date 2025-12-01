@@ -229,5 +229,7 @@ class Field(DynBase):
 
 	typeName = "field"
 	typeIdInt = 1497779268
+	nodeLeafClassAttrs = ["applyPerVertex", "attenuation", "axialMagnitude_FloatValue", "axialMagnitude_Interp", "axialMagnitude_Position", "axialMagnitude", "curveRadius_FloatValue", "curveRadius_Interp", "curveRadius_Position", "curveRadius", "falloffCurve_FloatValue", "falloffCurve_Interp", "falloffCurve_Position", "falloffCurve", "inputCurve", "deltaTime", "inputMass", "inputPositions", "inputVelocities", "inputData", "inputForce", "inputPPData", "magnitude", "maxDistance", "outputForce", "ownerPPData", "sectionRadius", "trapEnds", "trapInside", "trapRadius", "useMaxDistance", "volumeExclusion", "volumeOffsetX", "volumeOffsetY", "volumeOffsetZ", "volumeOffset", "volumeShape", "volumeSweep"]
+	nodeLeafPlugs = ["applyPerVertex", "attenuation", "axialMagnitude", "curveRadius", "falloffCurve", "inputCurve", "inputData", "inputForce", "inputPPData", "magnitude", "maxDistance", "outputForce", "ownerPPData", "sectionRadius", "trapEnds", "trapInside", "trapRadius", "useMaxDistance", "volumeExclusion", "volumeOffset", "volumeShape", "volumeSweep"]
 	pass
 

@@ -33,5 +33,7 @@ class ScaleManip(Manip3D):
 	apiTypeStr = "kScaleManip"
 	typeIdInt = 1431130957
 	MFnCls = om.MFnScaleManip
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

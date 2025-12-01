@@ -69,5 +69,7 @@ class RScontainer(ListItem):
 
 	typeName = "RScontainer"
 	typeIdInt = 1476395942
+	nodeLeafClassAttrs = ["childHighest", "childLowest", "enabled", "isolateSelected", "listItems", "numIsolatedAncestors", "numIsolatedChildren", "parentEnabled", "parentNumIsolatedChildren", "selfEnabled"]
+	nodeLeafPlugs = ["childHighest", "childLowest", "enabled", "isolateSelected", "listItems", "numIsolatedAncestors", "numIsolatedChildren", "parentEnabled", "parentNumIsolatedChildren", "selfEnabled"]
 	pass
 

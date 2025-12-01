@@ -33,5 +33,7 @@ class CreateEPManip(ManipContainer):
 	apiTypeStr = "kCreateEPManip"
 	typeIdInt = 1431127376
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

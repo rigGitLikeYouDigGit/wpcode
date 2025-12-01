@@ -157,5 +157,7 @@ class DisplayLayer(_BASE_):
 	apiTypeStr = "kDisplayLayer"
 	typeIdInt = 1146310732
 	MFnCls = om.MFnDisplayLayer
+	nodeLeafClassAttrs = ["binMembership", "displayOrder", "color", "displayType", "enabled", "hideOnPlayback", "levelOfDetail", "overrideColorA", "overrideColorRGB", "overrideRGBColors", "playback", "shading", "texturing", "visibility", "drawInfo", "identification", "overrideColorB", "overrideColorG", "overrideColorR", "ufeMembers"]
+	nodeLeafPlugs = ["binMembership", "displayOrder", "drawInfo", "identification", "ufeMembers"]
 	pass
 

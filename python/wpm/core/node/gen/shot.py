@@ -172,5 +172,7 @@ class Shot(_BASE_):
 	apiTypeStr = "kShot"
 	typeIdInt = 1397247828
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["audio", "binMembership", "cameras", "clip", "clipDuration", "clipPostHold", "clipPreHold", "clipScale", "clipValid", "clipZeroOffset", "currentCamera", "customAnim", "endFrame", "favorite", "flags", "hResolution", "hasIncomingStt", "hasOutgoingStt", "members", "postHold", "preHold", "scale", "sequenceEndFrame", "sequenceStartFrame", "shotName", "startFrame", "track", "trackState", "transitionInLength", "transitionInType", "transitionOutLength", "transitionOutType", "userStatus1", "userStatus2", "wResolution"]
+	nodeLeafPlugs = ["audio", "binMembership", "cameras", "clip", "clipDuration", "clipPostHold", "clipPreHold", "clipScale", "clipValid", "clipZeroOffset", "currentCamera", "customAnim", "endFrame", "favorite", "flags", "hResolution", "hasIncomingStt", "hasOutgoingStt", "members", "postHold", "preHold", "scale", "sequenceEndFrame", "sequenceStartFrame", "shotName", "startFrame", "track", "trackState", "transitionInLength", "transitionInType", "transitionOutLength", "transitionOutType", "userStatus1", "userStatus2", "wResolution"]
 	pass
 

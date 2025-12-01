@@ -33,5 +33,7 @@ class BevelManip(ManipContainer):
 	apiTypeStr = "kBevelManip"
 	typeIdInt = 1431126614
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

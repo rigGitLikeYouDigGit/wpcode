@@ -30,5 +30,7 @@ class MakeNurbSphere(RevolvedPrimitive):
 
 	typeName = "makeNurbSphere"
 	typeIdInt = 1314082888
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -41,5 +41,7 @@ class NurbsDimShape(DimensionShape):
 
 	typeName = "nurbsDimShape"
 	typeIdInt = 1313100616
+	nodeLeafClassAttrs = ["nurbsGeometry", "uParamValue", "vParamValue"]
+	nodeLeafPlugs = ["nurbsGeometry", "uParamValue", "vParamValue"]
 	pass
 

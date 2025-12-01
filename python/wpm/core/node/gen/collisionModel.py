@@ -37,5 +37,7 @@ class CollisionModel(DynBase):
 
 	typeName = "collisionModel"
 	typeIdInt = 1497583436
+	nodeLeafClassAttrs = ["friction", "resilience"]
+	nodeLeafPlugs = ["friction", "resilience"]
 	pass
 

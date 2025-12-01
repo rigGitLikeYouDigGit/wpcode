@@ -44,5 +44,7 @@ class JointClusterManip(ManipContainer):
 	apiTypeStr = "kJointClusterManip"
 	typeIdInt = 1431128643
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = ["above", "aboveJointInstance", "belowJointInstance"]
+	nodeLeafPlugs = ["above", "aboveJointInstance", "belowJointInstance"]
 	pass
 

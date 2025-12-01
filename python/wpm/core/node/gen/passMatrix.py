@@ -45,5 +45,7 @@ class PassMatrix(_BASE_):
 
 	typeName = "passMatrix"
 	typeIdInt = 1146114893
+	nodeLeafClassAttrs = ["binMembership", "inMatrix", "inScale", "outMatrix"]
+	nodeLeafPlugs = ["binMembership", "inMatrix", "inScale", "outMatrix"]
 	pass
 

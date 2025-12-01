@@ -48,5 +48,7 @@ class ToonLineAttributes(_BASE_):
 	apiTypeStr = "kToonLineAttributes"
 	typeIdInt = 1414283604
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "lineVisibility", "lineWidth", "viewUpdate"]
+	nodeLeafPlugs = ["binMembership", "lineVisibility", "lineWidth", "viewUpdate"]
 	pass
 

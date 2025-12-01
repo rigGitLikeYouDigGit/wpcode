@@ -40,5 +40,7 @@ class CurveFromSubdivFace(CurveFromSubdiv):
 	apiTypeStr = "kCurveFromSubdivFace"
 	typeIdInt = 1396921158
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["faceIndexL", "faceIndexR"]
+	nodeLeafPlugs = ["faceIndexL", "faceIndexR"]
 	pass
 

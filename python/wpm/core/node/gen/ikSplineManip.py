@@ -33,5 +33,7 @@ class IkSplineManip(ManipContainer):
 	apiTypeStr = "kIkSplineManip"
 	typeIdInt = 1430866771
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

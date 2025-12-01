@@ -1,9 +1,10 @@
 from __future__ import annotations
 import types, typing as T
 import pprint
-from wplib import log
+#from wplib import log
 
-from PySide2 import QtCore, QtGui, QtWidgets
+#from PySide2 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 
 def rootWindow():

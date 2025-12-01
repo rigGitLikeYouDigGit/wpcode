@@ -53,5 +53,7 @@ class PolyPlane(PolyPrimitive):
 
 	typeName = "polyPlane"
 	typeIdInt = 1347241299
+	nodeLeafClassAttrs = ["createUVs", "height", "subdivisionsHeight", "subdivisionsWidth", "texture", "width"]
+	nodeLeafPlugs = ["createUVs", "height", "subdivisionsHeight", "subdivisionsWidth", "texture", "width"]
 	pass
 

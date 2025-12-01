@@ -56,5 +56,7 @@ class PolyBoolOp(PolyUnite):
 	apiTypeStr = "kPolyBoolOp"
 	typeIdInt = 1346522960
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["classification", "faceAreaThreshold", "operation", "preserveColor", "useThresholds", "vertexDistanceThreshold"]
+	nodeLeafPlugs = ["classification", "faceAreaThreshold", "operation", "preserveColor", "useThresholds", "vertexDistanceThreshold"]
 	pass
 

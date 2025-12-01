@@ -307,5 +307,7 @@ class TimeEditorClipBase(_BASE_):
 	apiTypeStr = "kTimeEditorClipBase"
 	typeIdInt = 1095517004
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "clipBlendMode", "clipColorB", "clipColorG", "clipColorR", "clipColor", "clipDuration", "clipEvaluationData", "clipHoldAfter", "clipHoldBefore", "clipLoopAfter", "clipLoopAfterMode", "clipLoopBefore", "clipLoopBeforeMode", "clipMuted", "clipName", "clipParent", "clipScale", "clipStart", "clipType", "clipid", "curveStart", "localTime", "parentTime", "speedInput", "timeWarpType", "timeWarped", "useClipColor", "clip", "lastEvaluationTime", "matchObj", "matchTime", "matchclip", "offsetMode", "offsetMtx", "pivotMtx", "roots", "offset", "rootObj", "rootObjLocalXform", "rootObjParentXform"]
+	nodeLeafPlugs = ["binMembership", "clip", "lastEvaluationTime", "offset"]
 	pass
 

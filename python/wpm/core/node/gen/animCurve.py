@@ -149,5 +149,7 @@ class AnimCurve(_BASE_):
 	apiTypeStr = "kAnimCurve"
 	typeIdInt = 1347240790
 	MFnCls = om.MFnAnimCurve
+	nodeLeafClassAttrs = ["apply", "binMembership", "curveColorB", "curveColorG", "curveColorR", "curveColor", "inStippleRange", "keyBreakdown", "keyTanInType", "keyTanInX", "keyTanInY", "keyTanLocked", "keyTanOutType", "keyTanOutX", "keyTanOutY", "keyTickDrawSpecial", "keyWeightLocked", "outStippleRange", "outStippleThreshold", "postInfinity", "preInfinity", "rotationInterpolation", "stipplePattern", "stippleReverse", "tangentType", "useCurveColor", "weightedTangents"]
+	nodeLeafPlugs = ["apply", "binMembership", "curveColor", "inStippleRange", "keyBreakdown", "keyTanInType", "keyTanInX", "keyTanInY", "keyTanLocked", "keyTanOutType", "keyTanOutX", "keyTanOutY", "keyTickDrawSpecial", "keyWeightLocked", "outStippleRange", "outStippleThreshold", "postInfinity", "preInfinity", "rotationInterpolation", "stipplePattern", "stippleReverse", "tangentType", "useCurveColor", "weightedTangents"]
 	pass
 

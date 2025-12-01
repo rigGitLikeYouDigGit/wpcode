@@ -30,5 +30,7 @@ class Movie(File):
 
 	typeName = "movie"
 	typeIdInt = 1381256534
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

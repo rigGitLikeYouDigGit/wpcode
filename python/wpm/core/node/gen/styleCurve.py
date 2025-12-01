@@ -40,5 +40,7 @@ class StyleCurve(AbstractBaseCreate):
 	apiTypeStr = "kStyleCurve"
 	typeIdInt = 1314083907
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["outCurve", "style"]
+	nodeLeafPlugs = ["outCurve", "style"]
 	pass
 

@@ -103,5 +103,7 @@ class Anisotropic(Reflect):
 
 	typeName = "anisotropic"
 	typeIdInt = 1380011593
+	nodeLeafClassAttrs = ["angle", "anisotropicReflectivity", "fresnelRefractiveIndex", "roughness", "spreadX", "spreadY", "tangentUCameraX", "tangentUCameraY", "tangentUCameraZ", "tangentUCamera", "tangentVCameraX", "tangentVCameraY", "tangentVCameraZ", "tangentVCamera"]
+	nodeLeafPlugs = ["angle", "anisotropicReflectivity", "fresnelRefractiveIndex", "roughness", "spreadX", "spreadY", "tangentUCamera", "tangentVCamera"]
 	pass
 

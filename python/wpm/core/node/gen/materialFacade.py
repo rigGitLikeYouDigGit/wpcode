@@ -65,5 +65,7 @@ class MaterialFacade(Facade):
 	apiTypeStr = "kMaterialFacade"
 	typeIdInt = 1380795971
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["hardwareProxy", "outColorB", "outColorG", "outColorR", "outColor", "proxyInitProc"]
+	nodeLeafPlugs = ["hardwareProxy", "outColor", "proxyInitProc"]
 	pass
 

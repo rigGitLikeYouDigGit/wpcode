@@ -115,5 +115,7 @@ class GammaCorrect(_BASE_):
 	apiTypeStr = "kGammaCorrect"
 	typeIdInt = 1380401485
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "gammaX", "gammaY", "gammaZ", "gamma", "outValueX", "outValueY", "outValueZ", "outValue", "renderPassMode", "valueX", "valueY", "valueZ", "value"]
+	nodeLeafPlugs = ["binMembership", "gamma", "outValue", "renderPassMode", "value"]
 	pass
 

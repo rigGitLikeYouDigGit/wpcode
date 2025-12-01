@@ -33,5 +33,7 @@ class RevolvedPrimitiveManip(ManipContainer):
 	apiTypeStr = "kRevolvedPrimitiveManip"
 	typeIdInt = 1431130704
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

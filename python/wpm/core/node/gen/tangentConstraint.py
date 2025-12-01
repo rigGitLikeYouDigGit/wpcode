@@ -316,5 +316,7 @@ class TangentConstraint(Constraint):
 	apiTypeStr = "kTangentConstraint"
 	typeIdInt = 1146372914
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = ["aimVectorX", "aimVectorY", "aimVectorZ", "aimVector", "constraintJointOrientX", "constraintJointOrientY", "constraintJointOrientZ", "constraintJointOrient", "constraintParentInverseMatrix", "constraintRotateX", "constraintRotateY", "constraintRotateZ", "constraintRotate", "constraintRotateOrder", "constraintRotatePivotX", "constraintRotatePivotY", "constraintRotatePivotZ", "constraintRotatePivot", "constraintRotateTranslateX", "constraintRotateTranslateY", "constraintRotateTranslateZ", "constraintRotateTranslate", "constraintTranslateX", "constraintTranslateY", "constraintTranslateZ", "constraintTranslate", "constraintVectorX", "constraintVectorY", "constraintVectorZ", "constraintVector", "restRotateX", "restRotateY", "restRotateZ", "restRotate", "targetGeometry", "targetWeight", "target", "upVectorX", "upVectorY", "upVectorZ", "upVector", "worldUpMatrix", "worldUpType", "worldUpVectorX", "worldUpVectorY", "worldUpVectorZ", "worldUpVector"]
+	nodeLeafPlugs = ["aimVector", "constraintJointOrient", "constraintParentInverseMatrix", "constraintRotate", "constraintRotateOrder", "constraintRotatePivot", "constraintRotateTranslate", "constraintTranslate", "constraintVector", "restRotate", "target", "upVector", "worldUpMatrix", "worldUpType", "worldUpVector"]
 	pass
 

@@ -74,5 +74,7 @@ class DragField(Field):
 
 	typeName = "dragField"
 	typeIdInt = 1497649735
+	nodeLeafClassAttrs = ["currentTime", "directionX", "directionY", "directionZ", "direction", "inheritVelocity", "motionAttenuation", "speedAttenuation", "useDirection"]
+	nodeLeafPlugs = ["currentTime", "direction", "inheritVelocity", "motionAttenuation", "speedAttenuation", "useDirection"]
 	pass
 

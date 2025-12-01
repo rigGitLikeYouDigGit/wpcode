@@ -56,5 +56,7 @@ class PolyPyramid(PolyPrimitive):
 	apiTypeStr = "kPolyPyramid"
 	typeIdInt = 1347443026
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["createUVs", "numberOfSides", "sideLength", "subdivisionsCaps", "subdivisionsHeight", "texture"]
+	nodeLeafPlugs = ["createUVs", "numberOfSides", "sideLength", "subdivisionsCaps", "subdivisionsHeight", "texture"]
 	pass
 

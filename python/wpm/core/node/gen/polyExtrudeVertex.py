@@ -44,5 +44,7 @@ class PolyExtrudeVertex(PolyModifierWorld):
 	apiTypeStr = "kPolyExtrudeVertex"
 	typeIdInt = 1346721878
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["divisions", "length", "width"]
+	nodeLeafPlugs = ["divisions", "length", "width"]
 	pass
 

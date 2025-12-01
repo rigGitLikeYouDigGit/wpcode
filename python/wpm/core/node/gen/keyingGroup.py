@@ -44,5 +44,7 @@ class KeyingGroup(ObjectSet):
 	apiTypeStr = "kKeyingGroup"
 	typeIdInt = 1262965328
 	MFnCls = om.MFnSet
+	nodeLeafClassAttrs = ["activators", "category", "minimizeRotation"]
+	nodeLeafPlugs = ["activators", "category", "minimizeRotation"]
 	pass
 

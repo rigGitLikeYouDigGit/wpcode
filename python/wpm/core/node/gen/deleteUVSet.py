@@ -48,5 +48,7 @@ class DeleteUVSet(_BASE_):
 	apiTypeStr = "kDeleteUVSet"
 	typeIdInt = 1145851219
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "inputGeometry", "outputGeometry", "uvSetName"]
+	nodeLeafPlugs = ["binMembership", "inputGeometry", "outputGeometry", "uvSetName"]
 	pass
 

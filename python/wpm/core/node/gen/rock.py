@@ -144,5 +144,7 @@ class Rock(Texture3d):
 	apiTypeStr = "kRock"
 	typeIdInt = 1381257803
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["color1B", "color1G", "color1R", "color1", "color2B", "color2G", "color2R", "color2", "diffusion", "grainSize", "mixRatio", "refPointCameraX", "refPointCameraY", "refPointCameraZ", "refPointCamera", "refPointObjX", "refPointObjY", "refPointObjZ", "refPointObj"]
+	nodeLeafPlugs = ["color1", "color2", "diffusion", "grainSize", "mixRatio", "refPointCamera", "refPointObj"]
 	pass
 

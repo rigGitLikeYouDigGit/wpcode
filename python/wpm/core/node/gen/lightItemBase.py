@@ -57,5 +57,7 @@ class LightItemBase(ChildNode):
 
 	typeName = "lightItemBase"
 	typeIdInt = 1476396000
+	nodeLeafClassAttrs = ["enabled", "isolateSelected", "numIsolatedAncestors", "numIsolatedChildren", "parentEnabled", "parentNumIsolatedChildren", "selfEnabled"]
+	nodeLeafPlugs = ["enabled", "isolateSelected", "numIsolatedAncestors", "numIsolatedChildren", "parentEnabled", "parentNumIsolatedChildren", "selfEnabled"]
 	pass
 

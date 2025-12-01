@@ -236,5 +236,7 @@ class Cloud(Texture3d):
 	apiTypeStr = "kCloud"
 	typeIdInt = 1381253956
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["amplitude", "centerThresh", "color1B", "color1G", "color1R", "color1", "color2B", "color2G", "color2R", "color2", "contrast", "depthMax", "depthMin", "depth", "edgeThresh", "eyeToTextureMatrix", "normalCameraX", "normalCameraY", "normalCameraZ", "normalCamera", "ratio", "refPointCameraX", "refPointCameraY", "refPointCameraZ", "refPointCamera", "refPointObjX", "refPointObjY", "refPointObjZ", "refPointObj", "ripplesX", "ripplesY", "ripplesZ", "ripples", "softEdges", "transpRange", "xPixelAngle"]
+	nodeLeafPlugs = ["amplitude", "centerThresh", "color1", "color2", "contrast", "depth", "edgeThresh", "eyeToTextureMatrix", "normalCamera", "ratio", "refPointCamera", "refPointObj", "ripples", "softEdges", "transpRange", "xPixelAngle"]
 	pass
 

@@ -33,5 +33,7 @@ class BlendManip(ManipContainer):
 	apiTypeStr = "kBlendManip"
 	typeIdInt = 1431126604
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

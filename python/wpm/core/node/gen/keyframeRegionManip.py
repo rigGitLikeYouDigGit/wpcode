@@ -33,5 +33,7 @@ class KeyframeRegionManip(Manip3D):
 	apiTypeStr = "kKeyframeRegionManip"
 	typeIdInt = 1262899789
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

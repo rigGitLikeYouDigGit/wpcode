@@ -323,5 +323,7 @@ class Light(Shape):
 
 	typeName = "light"
 	typeIdInt = 1280527941
+	nodeLeafClassAttrs = ["centerOfIllumination", "colorB", "colorG", "colorR", "color", "infoBits", "intensity", "lightAmbient", "lightBlindData", "lightDiffuse", "lightDirectionX", "lightDirectionY", "lightDirectionZ", "lightDirection", "lightIntensityB", "lightIntensityG", "lightIntensityR", "lightIntensity", "lightShadowFraction", "lightSpecular", "preShadowIntensity", "lightData", "locatorScale", "matrixEyeToWorld", "matrixWorldToEye", "objectId", "opticalFXvisibilityB", "opticalFXvisibilityG", "opticalFXvisibilityR", "opticalFXvisibility", "pointCameraX", "pointCameraY", "pointCameraZ", "pointCamera", "primitiveId", "rayDepth", "rayDepthLimit", "raySampler", "renderState", "shadColorB", "shadColorG", "shadColorR", "shadowColor", "shadowRays", "useRayTraceShadows", "uCoord", "vCoord", "uvCoord", "uvFilterSizeX", "uvFilterSizeY", "uvFilterSize"]
+	nodeLeafPlugs = ["centerOfIllumination", "color", "infoBits", "intensity", "lightData", "locatorScale", "matrixEyeToWorld", "matrixWorldToEye", "objectId", "opticalFXvisibility", "pointCamera", "primitiveId", "rayDepth", "rayDepthLimit", "raySampler", "renderState", "shadowColor", "shadowRays", "useRayTraceShadows", "uvCoord", "uvFilterSize"]
 	pass
 

@@ -114,5 +114,7 @@ class Mountain(Texture2d):
 	apiTypeStr = "kMountain"
 	typeIdInt = 1381256532
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["amplitude", "boundary", "depthMax", "rockColorB", "rockColorG", "rockColorR", "rockColor", "rockRoughness", "snowAltitude", "snowColorB", "snowColorG", "snowColorR", "snowColor", "snowDropoff", "snowRoughness", "snowSlope"]
+	nodeLeafPlugs = ["amplitude", "boundary", "depthMax", "rockColor", "rockRoughness", "snowAltitude", "snowColor", "snowDropoff", "snowRoughness", "snowSlope"]
 	pass
 

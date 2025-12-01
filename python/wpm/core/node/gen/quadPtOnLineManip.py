@@ -33,5 +33,7 @@ class QuadPtOnLineManip(ManipContainer):
 	apiTypeStr = "kQuadPtOnLineManip"
 	typeIdInt = 1431392332
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

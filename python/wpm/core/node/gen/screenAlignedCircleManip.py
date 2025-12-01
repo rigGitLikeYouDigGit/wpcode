@@ -33,5 +33,7 @@ class ScreenAlignedCircleManip(CircleManip):
 	apiTypeStr = "kScreenAlignedCircleManip"
 	typeIdInt = 1396785997
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

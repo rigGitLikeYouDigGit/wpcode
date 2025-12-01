@@ -84,5 +84,7 @@ class SquareSrf(BoundaryBase):
 	apiTypeStr = "kSquareSrf"
 	typeIdInt = 1314083155
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["continuityPassed1", "continuityPassed2", "continuityPassed3", "continuityPassed4", "continuityType1", "continuityType2", "continuityType3", "continuityType4", "curveFitCheckpoints", "rebuildCurve1", "rebuildCurve2", "rebuildCurve3", "rebuildCurve4"]
+	nodeLeafPlugs = ["continuityPassed1", "continuityPassed2", "continuityPassed3", "continuityPassed4", "continuityType1", "continuityType2", "continuityType3", "continuityType4", "curveFitCheckpoints", "rebuildCurve1", "rebuildCurve2", "rebuildCurve3", "rebuildCurve4"]
 	pass
 

@@ -30,5 +30,7 @@ class ScaleUV2dManip(Uv2dManip):
 
 	typeName = "scaleUV2dManip"
 	typeIdInt = 1429361475
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

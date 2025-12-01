@@ -140,5 +140,7 @@ class Contrast(_BASE_):
 	apiTypeStr = "kContrast"
 	typeIdInt = 1380142926
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["biasX", "biasY", "biasZ", "bias", "binMembership", "contrastX", "contrastY", "contrastZ", "contrast", "outValueX", "outValueY", "outValueZ", "outValue", "renderPassMode", "valueX", "valueY", "valueZ", "value"]
+	nodeLeafPlugs = ["bias", "binMembership", "contrast", "outValue", "renderPassMode", "value"]
 	pass
 

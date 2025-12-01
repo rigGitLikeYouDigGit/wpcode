@@ -33,5 +33,7 @@ class GroundPlane(SketchPlane):
 	apiTypeStr = "kGroundPlane"
 	typeIdInt = 1196444750
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

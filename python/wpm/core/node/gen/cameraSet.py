@@ -75,5 +75,7 @@ class CameraSet(_BASE_):
 	apiTypeStr = "kCameraSet"
 	typeIdInt = 1146246226
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "active", "camera", "clearDepth", "order", "sceneData", "cameraLayer"]
+	nodeLeafPlugs = ["binMembership", "cameraLayer"]
 	pass
 

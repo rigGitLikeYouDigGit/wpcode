@@ -40,5 +40,7 @@ class PolyMapSewMove(PolyModifierUV):
 	apiTypeStr = "kPolyMapSewMove"
 	typeIdInt = 1347634509
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["limitPieceSize", "numberFaces"]
+	nodeLeafPlugs = ["limitPieceSize", "numberFaces"]
 	pass
 

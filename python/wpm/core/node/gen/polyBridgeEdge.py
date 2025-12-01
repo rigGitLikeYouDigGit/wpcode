@@ -109,5 +109,7 @@ class PolyBridgeEdge(PolyModifierWorld):
 	apiTypeStr = "kPolyBridgeEdge"
 	typeIdInt = 1346523717
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["bridgeOffset", "curveType", "direction", "divisions", "inputProfile", "reverse", "smoothingAngle", "sourceDirection", "startVert1", "startVert2", "taper", "taperCurve_FloatValue", "taperCurve_Interp", "taperCurve_Position", "taperCurve", "targetDirection", "twist"]
+	nodeLeafPlugs = ["bridgeOffset", "curveType", "direction", "divisions", "inputProfile", "reverse", "smoothingAngle", "sourceDirection", "startVert1", "startVert2", "taper", "taperCurve", "targetDirection", "twist"]
 	pass
 

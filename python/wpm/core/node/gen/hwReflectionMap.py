@@ -73,5 +73,7 @@ class HwReflectionMap(_BASE_):
 
 	typeName = "hwReflectionMap"
 	typeIdInt = 1213682253
+	nodeLeafClassAttrs = ["binMembership", "cubeBackTextureName", "cubeBottomTextureName", "cubeFrontTextureName", "cubeLeftTextureName", "cubeMap", "cubeRightTextureName", "cubeTopTextureName", "decalMode", "sphereMapTextureName", "textureHasChanged"]
+	nodeLeafPlugs = ["binMembership", "cubeBackTextureName", "cubeBottomTextureName", "cubeFrontTextureName", "cubeLeftTextureName", "cubeMap", "cubeRightTextureName", "cubeTopTextureName", "decalMode", "sphereMapTextureName", "textureHasChanged"]
 	pass
 

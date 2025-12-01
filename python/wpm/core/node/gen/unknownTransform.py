@@ -33,5 +33,7 @@ class UnknownTransform(Transform):
 	apiTypeStr = "kUnknownTransform"
 	typeIdInt = 1431194452
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

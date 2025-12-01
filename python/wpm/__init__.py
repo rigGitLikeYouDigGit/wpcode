@@ -43,7 +43,7 @@ def isThisMaya():
 	try:
 		from maya import cmds
 		return True
-	except ModuleNotFoundError:
+	except (ModuleNotFoundError, ImportError):
 		return False
 
 

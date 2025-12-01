@@ -40,5 +40,7 @@ class PolyEditEdgeFlow(PolyModifier):
 	apiTypeStr = "kPolyEditEdgeFlow"
 	typeIdInt = 1347634502
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["adjustEdgeFlow", "edgeFlow"]
+	nodeLeafPlugs = ["adjustEdgeFlow", "edgeFlow"]
 	pass
 

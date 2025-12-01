@@ -33,5 +33,7 @@ class SpotCylinderManip(Manip3D):
 	apiTypeStr = "kSpotCylinderManip"
 	typeIdInt = 1396919632
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

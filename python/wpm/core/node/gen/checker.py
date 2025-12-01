@@ -86,5 +86,7 @@ class Checker(Texture2d):
 	apiTypeStr = "kChecker"
 	typeIdInt = 1381253960
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["color1B", "color1G", "color1R", "color1", "color2B", "color2G", "color2R", "color2", "contrast"]
+	nodeLeafPlugs = ["color1", "color2", "contrast"]
 	pass
 

@@ -60,5 +60,7 @@ class TimeWarp(_BASE_):
 	apiTypeStr = "kTimeWarp"
 	typeIdInt = 1414092609
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["apply", "binMembership", "endFrames", "input", "interpType", "origFrames", "output"]
+	nodeLeafPlugs = ["apply", "binMembership", "endFrames", "input", "interpType", "origFrames", "output"]
 	pass
 

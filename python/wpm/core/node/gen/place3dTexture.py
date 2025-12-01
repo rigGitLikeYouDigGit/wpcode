@@ -33,5 +33,7 @@ class Place3dTexture(Transform):
 	apiTypeStr = "kPlace3dTexture"
 	typeIdInt = 1380994116
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

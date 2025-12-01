@@ -260,5 +260,7 @@ class HikFloorContactMarker(Locator):
 	apiTypeStr = "kHikFloorContactMarker"
 	typeIdInt = 1212564301
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["handBack", "handFront", "handHeight", "handInSide", "handMiddle", "handOutSide", "contactsPosition", "footBack", "footFront", "footHeight", "footInSide", "footMiddle", "footOutSide", "feetContactPosition", "feetContactStiffness", "feetContactType", "feetFloorPivot", "feetFloorContactSetup", "fingersContactRollStiffness", "fingersContactType", "fingersFloorContactSetup", "drawFeetContact", "drawHandContact", "feetContact", "fingersContact", "handsContact", "toesContact", "floorContacts", "handsContactStiffness", "handsContactType", "handsFloorPivot", "handsFloorContactSetup", "markerSize", "toesContactRollStiffness", "toesContactType", "toesFloorContactSetup"]
+	nodeLeafPlugs = ["contactsPosition", "feetContactPosition", "feetFloorContactSetup", "fingersFloorContactSetup", "floorContacts", "handsFloorContactSetup", "markerSize", "toesFloorContactSetup"]
 	pass
 

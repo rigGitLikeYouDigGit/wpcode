@@ -33,5 +33,7 @@ class DirectedDisc(GeometryShape):
 	apiTypeStr = "kDirectedDisc"
 	typeIdInt = 1145328451
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

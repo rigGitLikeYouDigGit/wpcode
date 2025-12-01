@@ -157,5 +157,7 @@ class ShrinkWrap(WeightGeometryFilter):
 
 	typeName = "shrinkWrap"
 	typeIdInt = 1398231632
+	nodeLeafClassAttrs = ["alongX", "alongY", "alongZ", "axisReference", "bidirectional", "boundaryRule", "boundingBoxCenter", "cachedInflatedTarget", "cachedSmoothTarget", "closestIfNoIntersection", "continuity", "falloff", "falloffIterations", "innerGeom", "innerGroupId", "inputEnvelope", "keepBorder", "keepHardEdge", "keepMapBorders", "offset", "projection", "propagateEdgeHardness", "reverse", "shapePreservationEnable", "shapePreservationIterations", "shapePreservationMethod", "shapePreservationReprojection", "shapePreservationSteps", "smoothUVs", "targetGeom", "targetInflation", "targetSmoothLevel"]
+	nodeLeafPlugs = ["alongX", "alongY", "alongZ", "axisReference", "bidirectional", "boundaryRule", "boundingBoxCenter", "cachedInflatedTarget", "cachedSmoothTarget", "closestIfNoIntersection", "continuity", "falloff", "falloffIterations", "innerGeom", "innerGroupId", "inputEnvelope", "keepBorder", "keepHardEdge", "keepMapBorders", "offset", "projection", "propagateEdgeHardness", "reverse", "shapePreservationEnable", "shapePreservationIterations", "shapePreservationMethod", "shapePreservationReprojection", "shapePreservationSteps", "smoothUVs", "targetGeom", "targetInflation", "targetSmoothLevel"]
 	pass
 

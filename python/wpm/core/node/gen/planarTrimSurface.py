@@ -49,5 +49,7 @@ class PlanarTrimSurface(AbstractBaseCreate):
 
 	typeName = "planarTrimSurface"
 	typeIdInt = 1313885268
+	nodeLeafClassAttrs = ["degree", "inputCurve", "keepOutside", "outputSurface", "tolerance"]
+	nodeLeafPlugs = ["degree", "inputCurve", "keepOutside", "outputSurface", "tolerance"]
 	pass
 

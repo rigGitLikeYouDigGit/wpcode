@@ -33,5 +33,7 @@ class UfeProxyTransform(Transform):
 	apiTypeStr = "kUfeProxyTransform"
 	typeIdInt = 1430671448
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

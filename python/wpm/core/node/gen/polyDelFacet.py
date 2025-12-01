@@ -33,5 +33,7 @@ class PolyDelFacet(PolyModifier):
 	apiTypeStr = "kPolyDelFacet"
 	typeIdInt = 1346651462
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -33,5 +33,7 @@ class SpotManip(ManipContainer):
 	apiTypeStr = "kSpotManip"
 	typeIdInt = 1431522381
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

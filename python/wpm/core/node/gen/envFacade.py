@@ -33,5 +33,7 @@ class EnvFacade(Facade):
 	apiTypeStr = "kEnvFacade"
 	typeIdInt = 1380271683
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

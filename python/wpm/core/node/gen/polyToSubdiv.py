@@ -97,5 +97,7 @@ class PolyToSubdiv(_BASE_):
 	apiTypeStr = "kPolyToSubdiv"
 	typeIdInt = 1347634259
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["absolutePosition", "applyMatrixToResult", "binMembership", "uvPointsU", "uvPointsV", "uvPoints", "cachedUVs", "inMesh", "maxEdgesPerVert", "maxPolyCount", "outSubdiv", "preserveVertexOrdering", "quickConvert", "uvTreatment"]
+	nodeLeafPlugs = ["absolutePosition", "applyMatrixToResult", "binMembership", "cachedUVs", "inMesh", "maxEdgesPerVert", "maxPolyCount", "outSubdiv", "preserveVertexOrdering", "quickConvert", "uvTreatment"]
 	pass
 

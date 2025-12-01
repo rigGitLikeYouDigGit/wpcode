@@ -194,5 +194,7 @@ class Stucco(Texture3d):
 	apiTypeStr = "kStucco"
 	typeIdInt = 1381185072
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["channel1B", "channel1G", "channel1R", "channel1", "channel2B", "channel2G", "channel2R", "channel2", "normalCameraX", "normalCameraY", "normalCameraZ", "normalCamera", "normalDepth", "normalMelt", "outNormalX", "outNormalY", "outNormalZ", "outNormal", "refPointCameraX", "refPointCameraY", "refPointCameraZ", "refPointCamera", "refPointObjX", "refPointObjY", "refPointObjZ", "refPointObj", "shaker"]
+	nodeLeafPlugs = ["channel1", "channel2", "normalCamera", "normalDepth", "normalMelt", "outNormal", "refPointCamera", "refPointObj", "shaker"]
 	pass
 

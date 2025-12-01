@@ -74,5 +74,7 @@ class ParticleAgeMapper(_BASE_):
 	apiTypeStr = "kParticleAgeMapper"
 	typeIdInt = 1346456897
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "foldAtEnd", "outUCoord", "outVCoord", "outUvCoord", "particleAge", "particleLifespan", "relativeAge", "timeScale"]
+	nodeLeafPlugs = ["binMembership", "foldAtEnd", "outUvCoord", "particleAge", "particleLifespan", "relativeAge", "timeScale"]
 	pass
 

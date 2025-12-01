@@ -33,5 +33,7 @@ class RenderBox(ImplicitBox):
 	apiTypeStr = "kRenderBox"
 	typeIdInt = 1380860504
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

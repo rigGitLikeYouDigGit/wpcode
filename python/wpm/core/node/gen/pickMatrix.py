@@ -60,5 +60,7 @@ class PickMatrix(_BASE_):
 	apiTypeStr = "kPickMatrix"
 	typeIdInt = 1347240276
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "inputMatrix", "outputMatrix", "useRotate", "useScale", "useShear", "useTranslate"]
+	nodeLeafPlugs = ["binMembership", "inputMatrix", "outputMatrix", "useRotate", "useScale", "useShear", "useTranslate"]
 	pass
 

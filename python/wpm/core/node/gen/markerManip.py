@@ -33,5 +33,7 @@ class MarkerManip(Manip3D):
 	apiTypeStr = "kMarkerManip"
 	typeIdInt = 1431129409
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

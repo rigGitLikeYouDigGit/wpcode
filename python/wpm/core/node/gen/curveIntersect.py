@@ -78,5 +78,7 @@ class CurveIntersect(AbstractBaseCreate):
 
 	typeName = "curveIntersect"
 	typeIdInt = 1313030985
+	nodeLeafClassAttrs = ["directionX", "directionY", "directionZ", "direction", "inputCurve1", "inputCurve2", "parameter1", "parameter2", "tolerance", "useDirection"]
+	nodeLeafPlugs = ["direction", "inputCurve1", "inputCurve2", "parameter1", "parameter2", "tolerance", "useDirection"]
 	pass
 

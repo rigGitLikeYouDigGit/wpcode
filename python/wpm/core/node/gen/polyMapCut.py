@@ -44,5 +44,7 @@ class PolyMapCut(PolyModifier):
 	apiTypeStr = "kPolyMapCut"
 	typeIdInt = 1347240259
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["moveRatio", "usePinning", "uvSetName"]
+	nodeLeafPlugs = ["moveRatio", "usePinning", "uvSetName"]
 	pass
 

@@ -153,5 +153,7 @@ class NonExtendedLightShapeNode(NonAmbientLightShapeNode):
 
 	typeName = "nonExtendedLightShapeNode"
 	typeIdInt = 1313167444
+	nodeLeafClassAttrs = ["castSoftShadows", "dmapBias", "dmapFarClipPlane", "dmapFilterSize", "dmapFocus", "dmapFrameExt", "dmapLightName", "dmapName", "dmapNearClipPlane", "dmapResolution", "dmapSceneName", "dmapUseMacro", "dmapWidthFocus", "fogShadowIntensity", "lastWrittenDmapAnimExtName", "lightRadius", "receiveShadows", "reuseDmap", "useDepthMapShadows", "useDmapAutoClipping", "useDmapAutoFocus", "useMidDistDmap", "useOnlySingleDmap", "useXMinusDmap", "useXPlusDmap", "useYMinusDmap", "useYPlusDmap", "useZMinusDmap", "useZPlusDmap", "volumeShadowSamples", "writeDmap"]
+	nodeLeafPlugs = ["castSoftShadows", "dmapBias", "dmapFarClipPlane", "dmapFilterSize", "dmapFocus", "dmapFrameExt", "dmapLightName", "dmapName", "dmapNearClipPlane", "dmapResolution", "dmapSceneName", "dmapUseMacro", "dmapWidthFocus", "fogShadowIntensity", "lastWrittenDmapAnimExtName", "lightRadius", "receiveShadows", "reuseDmap", "useDepthMapShadows", "useDmapAutoClipping", "useDmapAutoFocus", "useMidDistDmap", "useOnlySingleDmap", "useXMinusDmap", "useXPlusDmap", "useYMinusDmap", "useYPlusDmap", "useZMinusDmap", "useZPlusDmap", "volumeShadowSamples", "writeDmap"]
 	pass
 

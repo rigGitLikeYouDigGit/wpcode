@@ -33,5 +33,7 @@ class TranslateUVManip(PointOnSurfaceManip):
 	apiTypeStr = "kTranslateUVManip"
 	typeIdInt = 1431131478
 	MFnCls = om.MFnPointOnSurfaceManip
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

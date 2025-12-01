@@ -41,5 +41,7 @@ class NonAmbientLightShapeNode(RenderLight):
 
 	typeName = "nonAmbientLightShapeNode"
 	typeIdInt = 1312902466
+	nodeLeafClassAttrs = ["decayRate", "emitDiffuse", "emitSpecular"]
+	nodeLeafPlugs = ["decayRate", "emitDiffuse", "emitSpecular"]
 	pass
 

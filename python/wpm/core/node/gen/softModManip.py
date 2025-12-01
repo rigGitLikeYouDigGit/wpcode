@@ -33,5 +33,7 @@ class SoftModManip(ManipContainer):
 	apiTypeStr = "kSoftModManip"
 	typeIdInt = 1397968206
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

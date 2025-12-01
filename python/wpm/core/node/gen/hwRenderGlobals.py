@@ -178,5 +178,7 @@ class HwRenderGlobals(_BASE_):
 
 	typeName = "hwRenderGlobals"
 	typeIdInt = 1497911876
+	nodeLeafClassAttrs = ["alphaSource", "antiAliasPolygons", "backgroundColorB", "backgroundColorG", "backgroundColorR", "backgroundColor", "binMembership", "byFrame", "cameraIcons", "collisionIcons", "displayShadows", "drawStyle", "edgeSmoothing", "emitterIcons", "endFrame", "extension", "fieldIcons", "filename", "fullImageResolution", "geometryMask", "grid", "imageFormat", "imfPluginKey", "imfPluginKeyExt", "lightIcons", "lightingMode", "lineSmoothing", "motionBlur", "multiPassRendering", "renderPasses", "resolution", "startFrame", "texturing", "transformIcons", "writeZDepth"]
+	nodeLeafPlugs = ["alphaSource", "antiAliasPolygons", "backgroundColor", "binMembership", "byFrame", "cameraIcons", "collisionIcons", "displayShadows", "drawStyle", "edgeSmoothing", "emitterIcons", "endFrame", "extension", "fieldIcons", "filename", "fullImageResolution", "geometryMask", "grid", "imageFormat", "imfPluginKey", "imfPluginKeyExt", "lightIcons", "lightingMode", "lineSmoothing", "motionBlur", "multiPassRendering", "renderPasses", "resolution", "startFrame", "texturing", "transformIcons", "writeZDepth"]
 	pass
 

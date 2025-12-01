@@ -36,5 +36,7 @@ class PolyTriangulate(PolyModifier):
 	apiTypeStr = "kPolyTriangulate"
 	typeIdInt = 1347703369
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["maya80"]
+	nodeLeafPlugs = ["maya80"]
 	pass
 

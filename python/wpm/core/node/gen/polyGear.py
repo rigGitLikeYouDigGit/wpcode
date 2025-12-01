@@ -85,5 +85,7 @@ class PolyGear(_BASE_):
 
 	typeName = "polyGear"
 	typeIdInt = 1195052
+	nodeLeafClassAttrs = ["binMembership", "gearMiddle", "gearOffset", "gearSpacing", "gearTip", "height", "heightBaseline", "heightDivisions", "internalRadius", "output", "radius", "sides", "taper", "twist"]
+	nodeLeafPlugs = ["binMembership", "gearMiddle", "gearOffset", "gearSpacing", "gearTip", "height", "heightBaseline", "heightDivisions", "internalRadius", "output", "radius", "sides", "taper", "twist"]
 	pass
 

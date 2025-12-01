@@ -33,5 +33,7 @@ class UnknownDag(DagNode):
 	apiTypeStr = "kUnknownDag"
 	typeIdInt = 1431194436
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

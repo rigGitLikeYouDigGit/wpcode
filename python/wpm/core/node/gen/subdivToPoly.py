@@ -136,5 +136,7 @@ class SubdivToPoly(_BASE_):
 	apiTypeStr = "kSubdivToPoly"
 	typeIdInt = 1396986704
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["applyMatrixToResult", "binMembership", "convertComp", "copyUVTopology", "depth", "extractPointPosition", "format", "inSubdCVIdLeft", "inSubdCVIdRight", "inSubdCVId", "inSubdiv", "level", "maxPolys", "outMesh", "outSubdCVIdLeft", "outSubdCVIdRight", "outSubdCVId", "outv", "polygonType", "preserveVertexOrdering", "sampleCount", "shareUVs", "subdNormals"]
+	nodeLeafPlugs = ["applyMatrixToResult", "binMembership", "convertComp", "copyUVTopology", "depth", "extractPointPosition", "format", "inSubdCVId", "inSubdiv", "level", "maxPolys", "outMesh", "outSubdCVId", "outv", "polygonType", "preserveVertexOrdering", "sampleCount", "shareUVs", "subdNormals"]
 	pass
 

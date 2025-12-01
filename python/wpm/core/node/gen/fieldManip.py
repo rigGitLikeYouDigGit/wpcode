@@ -30,5 +30,7 @@ class FieldManip(ManipContainer):
 
 	typeName = "fieldManip"
 	typeIdInt = 1430536774
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

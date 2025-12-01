@@ -33,5 +33,7 @@ class CreateBPManip(ManipContainer):
 	apiTypeStr = "kCreateBPManip"
 	typeIdInt = 1431126595
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

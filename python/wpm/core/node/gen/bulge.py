@@ -40,5 +40,7 @@ class Bulge(Texture2d):
 	apiTypeStr = "kBulge"
 	typeIdInt = 1381253717
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["uWidth", "vWidth"]
+	nodeLeafPlugs = ["uWidth", "vWidth"]
 	pass
 

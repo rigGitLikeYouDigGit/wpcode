@@ -33,5 +33,7 @@ class TextureDeformerHandle(Transform):
 	apiTypeStr = "kTextureDeformerHandle"
 	typeIdInt = 1413761092
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

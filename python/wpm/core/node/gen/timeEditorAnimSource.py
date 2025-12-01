@@ -96,5 +96,7 @@ class TimeEditorAnimSource(_BASE_):
 	apiTypeStr = "kTimeEditorAnimSource"
 	typeIdInt = 1413824851
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["source", "sourcePath", "sourceValue", "target", "animation", "binMembership", "blendShapeSource", "duration", "initialClipAbsoluteDuration", "initialClipDuration", "initialClipStart", "rosters", "start"]
+	nodeLeafPlugs = ["animation", "binMembership", "blendShapeSource", "duration", "initialClipAbsoluteDuration", "initialClipDuration", "initialClipStart", "rosters", "start"]
 	pass
 

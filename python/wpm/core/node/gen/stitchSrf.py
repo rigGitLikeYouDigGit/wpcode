@@ -183,5 +183,7 @@ class StitchSrf(AbstractBaseCreate):
 	apiTypeStr = "kStitchSrf"
 	typeIdInt = 1314083923
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["bias", "cvIthIndex", "cvJthIndex", "cvpositionX", "cvpositionY", "cvpositionZ", "cvPosition", "fixBoundary", "inputCurve", "inputMatchCurve", "inputReferenceCOS", "inputSurface", "normalX", "normalY", "normalZ", "normal", "outputSurface", "parameterU", "parameterV", "positionX", "positionY", "positionZ", "position", "positionalContinuity", "shouldBeLast", "stepCount", "tangentialContinuity", "togglePointNormals", "togglePointPosition", "toggleTolerance", "tolerance"]
+	nodeLeafPlugs = ["bias", "cvIthIndex", "cvJthIndex", "cvPosition", "fixBoundary", "inputCurve", "inputMatchCurve", "inputReferenceCOS", "inputSurface", "normal", "outputSurface", "parameterU", "parameterV", "position", "positionalContinuity", "shouldBeLast", "stepCount", "tangentialContinuity", "togglePointNormals", "togglePointPosition", "toggleTolerance", "tolerance"]
 	pass
 

@@ -210,5 +210,7 @@ class Granite(Texture3d):
 	apiTypeStr = "kGranite"
 	typeIdInt = 1381254994
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["cellSize", "color1B", "color1G", "color1R", "color1", "color2B", "color2G", "color2R", "color2", "color3B", "color3G", "color3R", "color3", "creases", "density", "fillerColorB", "fillerColorG", "fillerColorR", "fillerColor", "mixRatio", "randomness", "refPointCameraX", "refPointCameraY", "refPointCameraZ", "refPointCamera", "refPointObjX", "refPointObjY", "refPointObjZ", "refPointObj", "spottyness", "threshold"]
+	nodeLeafPlugs = ["cellSize", "color1", "color2", "color3", "creases", "density", "fillerColor", "mixRatio", "randomness", "refPointCamera", "refPointObj", "spottyness", "threshold"]
 	pass
 

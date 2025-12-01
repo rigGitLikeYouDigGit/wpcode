@@ -33,5 +33,7 @@ class TextButtonManip(ScriptManip):
 	apiTypeStr = "kTextButtonManip"
 	typeIdInt = 1431131202
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

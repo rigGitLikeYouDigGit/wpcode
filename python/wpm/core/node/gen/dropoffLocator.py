@@ -40,5 +40,7 @@ class DropoffLocator(Locator):
 	apiTypeStr = "kDropoffLocator"
 	typeIdInt = 1145848660
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["param", "percent"]
+	nodeLeafPlugs = ["param", "percent"]
 	pass
 

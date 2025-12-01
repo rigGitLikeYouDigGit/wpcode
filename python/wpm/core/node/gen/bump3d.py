@@ -285,5 +285,7 @@ class Bump3d(_BASE_):
 	apiTypeStr = "kBump3d"
 	typeIdInt = 1380078899
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "bumpDepth", "bumpFilter", "bumpFilterOffset", "bumpValue", "infoBits", "normalCameraX", "normalCameraY", "normalCameraZ", "normalCamera", "outNormalX", "outNormalY", "outNormalZ", "outNormal", "pointCameraX", "pointCameraY", "pointCameraZ", "pointCamera", "pointObjX", "pointObjY", "pointObjZ", "pointObj", "rayOriginX", "rayOriginY", "rayOriginZ", "rayOrigin", "refPointCameraX", "refPointCameraY", "refPointCameraZ", "refPointCamera", "refPointObjX", "refPointObjY", "refPointObjZ", "refPointObj", "tangentUx", "tangentUy", "tangentUz", "tangentUCamera", "tangentVx", "tangentVy", "tangentVz", "tangentVCamera", "xPixelAngle"]
+	nodeLeafPlugs = ["binMembership", "bumpDepth", "bumpFilter", "bumpFilterOffset", "bumpValue", "infoBits", "normalCamera", "outNormal", "pointCamera", "pointObj", "rayOrigin", "refPointCamera", "refPointObj", "tangentUCamera", "tangentVCamera", "xPixelAngle"]
 	pass
 

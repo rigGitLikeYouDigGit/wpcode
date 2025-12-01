@@ -78,5 +78,7 @@ class AirField(Field):
 
 	typeName = "airField"
 	typeIdInt = 1497450834
+	nodeLeafClassAttrs = ["componentOnly", "directionX", "directionY", "directionZ", "direction", "enableSpread", "inheritRotation", "inheritVelocity", "speed", "spread"]
+	nodeLeafPlugs = ["componentOnly", "direction", "enableSpread", "inheritRotation", "inheritVelocity", "speed", "spread"]
 	pass
 

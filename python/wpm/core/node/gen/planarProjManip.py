@@ -30,5 +30,7 @@ class PlanarProjManip(Manip3D):
 
 	typeName = "planarProjManip"
 	typeIdInt = 1431130192
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -53,5 +53,7 @@ class FrameCache(_BASE_):
 
 	typeName = "frameCache"
 	typeIdInt = 1178813256
+	nodeLeafClassAttrs = ["binMembership", "future", "past", "stream", "varyTime", "varying"]
+	nodeLeafPlugs = ["binMembership", "future", "past", "stream", "varyTime", "varying"]
 	pass
 

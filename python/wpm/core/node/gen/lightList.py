@@ -40,5 +40,7 @@ class LightList(_BASE_):
 	apiTypeStr = "kLightList"
 	typeIdInt = 1280070484
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "lights"]
+	nodeLeafPlugs = ["binMembership", "lights"]
 	pass
 

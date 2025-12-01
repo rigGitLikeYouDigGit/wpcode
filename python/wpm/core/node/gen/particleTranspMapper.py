@@ -58,5 +58,7 @@ class ParticleTranspMapper(_BASE_):
 
 	typeName = "particleTranspMapper"
 	typeIdInt = 1347702081
+	nodeLeafClassAttrs = ["binMembership", "particleTransparencyB", "particleTransparencyG", "particleTransparencyR", "particleTransparency"]
+	nodeLeafPlugs = ["binMembership", "particleTransparency"]
 	pass
 

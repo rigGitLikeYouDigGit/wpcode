@@ -36,5 +36,7 @@ class PolyColorDel(PolyModifier):
 	apiTypeStr = "kPolyColorDel"
 	typeIdInt = 1346585676
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["colorSetName"]
+	nodeLeafPlugs = ["colorSetName"]
 	pass
 

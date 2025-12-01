@@ -89,5 +89,7 @@ class SubdivComponentId(_BASE_):
 
 	typeName = "subdivComponentId"
 	typeIdInt = 1397967172
+	nodeLeafClassAttrs = ["binMembership", "inBase", "inEdge", "inFinal", "inLeft", "inLevel", "inPath", "inRight", "outBase", "outEdge", "outFinal", "outLeft", "outLevel", "outPath", "outRight"]
+	nodeLeafPlugs = ["binMembership", "inBase", "inEdge", "inFinal", "inLeft", "inLevel", "inPath", "inRight", "outBase", "outEdge", "outFinal", "outLeft", "outLevel", "outPath", "outRight"]
 	pass
 

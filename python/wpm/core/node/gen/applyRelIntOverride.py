@@ -45,5 +45,7 @@ class ApplyRelIntOverride(ApplyRelOverride):
 
 	typeName = "applyRelIntOverride"
 	typeIdInt = 1476395922
+	nodeLeafClassAttrs = ["multiply", "offset", "original", "out"]
+	nodeLeafPlugs = ["multiply", "offset", "original", "out"]
 	pass
 

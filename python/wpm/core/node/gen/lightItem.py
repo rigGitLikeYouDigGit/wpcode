@@ -33,5 +33,7 @@ class LightItem(LightItemBase):
 
 	typeName = "lightItem"
 	typeIdInt = 1476396001
+	nodeLeafClassAttrs = ["light"]
+	nodeLeafPlugs = ["light"]
 	pass
 

@@ -130,5 +130,7 @@ class EnvBall(TextureEnv):
 	apiTypeStr = "kEnvBall"
 	typeIdInt = 1380270668
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["back", "bottom", "elevation", "eyeSpace", "front", "imageB", "imageG", "imageR", "image", "inclination", "infoBits", "left", "pointCameraX", "pointCameraY", "pointCameraZ", "pointCamera", "reflect", "right", "skyRadius", "top"]
+	nodeLeafPlugs = ["back", "bottom", "elevation", "eyeSpace", "front", "image", "inclination", "infoBits", "left", "pointCamera", "reflect", "right", "skyRadius", "top"]
 	pass
 

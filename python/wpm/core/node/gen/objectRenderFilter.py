@@ -80,5 +80,7 @@ class ObjectRenderFilter(ObjectFilter):
 	apiTypeStr = "kObjectRenderFilter"
 	typeIdInt = 1330792012
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["exclusiveLights", "lightSets", "lights", "nonExclusiveLights", "postProcess", "renderableObjectSets", "rendering", "shaders", "textures", "textures2D", "textures3D", "utility"]
+	nodeLeafPlugs = ["exclusiveLights", "lightSets", "lights", "nonExclusiveLights", "postProcess", "renderableObjectSets", "rendering", "shaders", "textures", "textures2D", "textures3D", "utility"]
 	pass
 

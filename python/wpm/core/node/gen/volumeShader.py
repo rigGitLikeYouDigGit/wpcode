@@ -111,5 +111,7 @@ class VolumeShader(_BASE_):
 	apiTypeStr = "kVolumeShader"
 	typeIdInt = 1381389128
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "outColorB", "outColorG", "outColorR", "outColor", "outMatteOpacityB", "outMatteOpacityG", "outMatteOpacityR", "outMatteOpacity", "outTransparencyB", "outTransparencyG", "outTransparencyR", "outTransparency"]
+	nodeLeafPlugs = ["binMembership", "outColor", "outMatteOpacity", "outTransparency"]
 	pass
 

@@ -258,5 +258,7 @@ class NodeGraphEditorInfo(_BASE_):
 	apiTypeStr = "kNodeGraphEditorInfo"
 	typeIdInt = 1313293641
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "compViewXH", "compViewYH", "compViewRectHigh", "compViewXL", "compViewYL", "compViewRectLow", "default", "dependNode", "panelHeight", "parentEditorEmbedded", "compoundPath", "compoundInfo", "containerNode", "currentView", "hasInternalLayout", "nodeVisualState", "positionX", "positionY", "nodeInfo", "panelPosX", "panelPosY", "panelPos", "panelWidth", "panelSize", "tabName", "tornOff", "viewXH", "viewYH", "viewRectHigh", "viewXL", "viewYL", "viewRectLow", "tabGraphInfo"]
+	nodeLeafPlugs = ["binMembership", "default", "parentEditorEmbedded", "tabGraphInfo"]
 	pass
 

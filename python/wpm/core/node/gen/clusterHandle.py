@@ -83,5 +83,7 @@ class ClusterHandle(Shape):
 
 	typeName = "clusterHandle"
 	typeIdInt = 1178815560
+	nodeLeafClassAttrs = ["postWeightedMatrixTransform", "preWeightedMatrixTransform", "weightedMatrixTransform", "clusterTransforms", "originX", "originY", "originZ", "origin", "weightedNode"]
+	nodeLeafPlugs = ["clusterTransforms", "origin", "weightedNode"]
 	pass
 

@@ -56,5 +56,7 @@ class SubSurface(AbstractBaseCreate):
 	apiTypeStr = "kSubSurface"
 	typeIdInt = 1314083666
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["faceCountU", "faceCountV", "firstFaceU", "firstFaceV", "inputSurface", "outputSurface"]
+	nodeLeafPlugs = ["faceCountU", "faceCountV", "firstFaceU", "firstFaceV", "inputSurface", "outputSurface"]
 	pass
 

@@ -33,5 +33,7 @@ class PolyToolFeedbackManip(Manip3D):
 	apiTypeStr = "kPolyToolFeedbackManip"
 	typeIdInt = 1347700301
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

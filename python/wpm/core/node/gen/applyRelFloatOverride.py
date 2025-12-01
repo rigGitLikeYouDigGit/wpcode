@@ -45,5 +45,7 @@ class ApplyRelFloatOverride(ApplyRelOverride):
 
 	typeName = "applyRelFloatOverride"
 	typeIdInt = 1476395903
+	nodeLeafClassAttrs = ["multiply", "offset", "original", "out"]
+	nodeLeafPlugs = ["multiply", "offset", "original", "out"]
 	pass
 

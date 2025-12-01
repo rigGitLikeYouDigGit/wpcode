@@ -166,5 +166,7 @@ class HairTubeShader(Reflect):
 	apiTypeStr = "kHairTubeShader"
 	typeIdInt = 1380471874
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["colorScale_ColorB", "colorScale_ColorG", "colorScale_ColorR", "colorScale_Color", "colorScale_Interp", "colorScale_Position", "colorScale", "scatter", "scatterPower", "specularPower", "specularShift", "tangentUCameraX", "tangentUCameraY", "tangentUCameraZ", "tangentUCamera", "tangentVCameraX", "tangentVCameraY", "tangentVCameraZ", "tangentVCamera", "tubeDirection", "uCoord", "vCoord", "uvCoord"]
+	nodeLeafPlugs = ["colorScale", "scatter", "scatterPower", "specularPower", "specularShift", "tangentUCamera", "tangentVCamera", "tubeDirection", "uvCoord"]
 	pass
 

@@ -41,5 +41,7 @@ class HoldMatrix(_BASE_):
 
 	typeName = "holdMatrix"
 	typeIdInt = 1146112077
+	nodeLeafClassAttrs = ["binMembership", "inMatrix", "outMatrix"]
+	nodeLeafPlugs = ["binMembership", "inMatrix", "outMatrix"]
 	pass
 

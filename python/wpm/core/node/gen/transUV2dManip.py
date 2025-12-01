@@ -30,5 +30,7 @@ class TransUV2dManip(Uv2dManip):
 
 	typeName = "transUV2dManip"
 	typeIdInt = 1429361746
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -30,5 +30,7 @@ class AlignManip(Manip3D):
 
 	typeName = "alignManip"
 	typeIdInt = 1431126340
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

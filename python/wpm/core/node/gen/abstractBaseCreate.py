@@ -33,5 +33,7 @@ class AbstractBaseCreate(_BASE_):
 
 	typeName = "abstractBaseCreate"
 	typeIdInt = 1313034821
+	nodeLeafClassAttrs = ["binMembership"]
+	nodeLeafPlugs = ["binMembership"]
 	pass
 

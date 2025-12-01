@@ -41,5 +41,7 @@ class TadskAssetInstanceNode_TdependNode(_BASE_):
 
 	typeName = "TadskAssetInstanceNode_TdependNode"
 	typeIdInt = 1095323204
+	nodeLeafClassAttrs = ["assetID", "assetLibrary", "binMembership"]
+	nodeLeafPlugs = ["assetID", "assetLibrary", "binMembership"]
 	pass
 

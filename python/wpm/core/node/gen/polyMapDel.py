@@ -36,5 +36,7 @@ class PolyMapDel(PolyModifier):
 	apiTypeStr = "kPolyMapDel"
 	typeIdInt = 1347240260
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["uvSetName"]
+	nodeLeafPlugs = ["uvSetName"]
 	pass
 

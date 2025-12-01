@@ -30,5 +30,7 @@ class CylindricalProjManip(Manip3D):
 
 	typeName = "cylindricalProjManip"
 	typeIdInt = 1431126873
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

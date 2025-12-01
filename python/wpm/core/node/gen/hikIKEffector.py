@@ -242,5 +242,7 @@ class HikIKEffector(Transform):
 	apiTypeStr = "kHikIKEffector"
 	typeIdInt = 1229669702
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = ["alpha", "altConstraintTargetGX", "alternateGX", "auxEffector", "auxiliaries", "colorB", "colorG", "colorR", "color", "effectorID", "jointOrientX", "jointOrientY", "jointOrientZ", "jointOrient", "look", "markerLook", "pinR", "pinT", "pinning", "pivotOffsetX", "pivotOffsetY", "pivotOffsetZ", "pivotOffset", "radius", "reachRotation", "reachTranslation", "rotateOffsetX", "rotateOffsetY", "rotateOffsetZ", "rotateOffset", "scaleOffsetX", "scaleOffsetY", "scaleOffsetZ", "scaleOffset", "translateOffsetX", "translateOffsetY", "translateOffsetZ", "translateOffset", "useAlternateGX"]
+	nodeLeafPlugs = ["alpha", "altConstraintTargetGX", "alternateGX", "auxEffector", "auxiliaries", "color", "effectorID", "jointOrient", "look", "markerLook", "pinR", "pinT", "pinning", "pivotOffset", "radius", "reachRotation", "reachTranslation", "rotateOffset", "scaleOffset", "translateOffset", "useAlternateGX"]
 	pass
 

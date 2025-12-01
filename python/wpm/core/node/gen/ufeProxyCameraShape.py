@@ -30,5 +30,7 @@ class UfeProxyCameraShape(Camera):
 
 	typeName = "ufeProxyCameraShape"
 	typeIdInt = 1430671427
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -33,5 +33,7 @@ class TexSmudgeUVManip(TexBaseDeformManip):
 	apiTypeStr = "kTexSmudgeUVManip"
 	typeIdInt = 1414745421
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -36,5 +36,7 @@ class HikGroundPlane(Transform):
 	apiTypeStr = "kHikGroundPlane"
 	typeIdInt = 1212632644
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = ["length"]
+	nodeLeafPlugs = ["length"]
 	pass
 

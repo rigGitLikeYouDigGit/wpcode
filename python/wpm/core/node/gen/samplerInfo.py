@@ -255,5 +255,7 @@ class SamplerInfo(ShadingDependNode):
 	apiTypeStr = "kSamplerInfo"
 	typeIdInt = 1381189966
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["facingRatio", "flippedNormal", "matrixEyeToWorld", "normalCameraX", "normalCameraY", "normalCameraZ", "normalCamera", "pixelCenterX", "pixelCenterY", "pixelCenter", "pointCameraX", "pointCameraY", "pointCameraZ", "pointCamera", "pointObjX", "pointObjY", "pointObjZ", "pointObj", "pointWorldX", "pointWorldY", "pointWorldZ", "pointWorld", "rayDirectionX", "rayDirectionY", "rayDirectionZ", "rayDirection", "tangentUx", "tangentUy", "tangentUz", "tangentUCamera", "tangentVx", "tangentVy", "tangentVz", "tangentVCamera", "uCoord", "vCoord", "uvCoord"]
+	nodeLeafPlugs = ["facingRatio", "flippedNormal", "matrixEyeToWorld", "normalCamera", "pixelCenter", "pointCamera", "pointObj", "pointWorld", "rayDirection", "tangentUCamera", "tangentVCamera", "uvCoord"]
 	pass
 

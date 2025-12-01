@@ -78,5 +78,7 @@ class MakeIllustratorCurves(AbstractBaseCreate):
 
 	typeName = "makeIllustratorCurves"
 	typeIdInt = 1313687875
+	nodeLeafClassAttrs = ["count", "illustratorFilename", "outputCurves", "positionX", "positionY", "positionZ", "position", "reload", "scaleFactor", "tolerance"]
+	nodeLeafPlugs = ["count", "illustratorFilename", "outputCurves", "position", "reload", "scaleFactor", "tolerance"]
 	pass
 

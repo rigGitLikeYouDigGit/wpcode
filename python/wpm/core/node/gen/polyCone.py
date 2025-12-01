@@ -64,5 +64,7 @@ class PolyCone(PolyPrimitive):
 	apiTypeStr = "kPolyCone"
 	typeIdInt = 1346588494
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["createUVs", "height", "radius", "roundCap", "subdivisionsAxis", "subdivisionsCap", "subdivisionsHeight", "texture"]
+	nodeLeafPlugs = ["createUVs", "height", "radius", "roundCap", "subdivisionsAxis", "subdivisionsCap", "subdivisionsHeight", "texture"]
 	pass
 

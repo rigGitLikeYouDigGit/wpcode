@@ -33,5 +33,7 @@ class PolySelectEditFeedbackManip(PolyToolFeedbackManip):
 	apiTypeStr = "kPolySelectEditFeedbackManip"
 	typeIdInt = 1397048909
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

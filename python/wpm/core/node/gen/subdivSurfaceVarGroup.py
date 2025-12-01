@@ -37,5 +37,7 @@ class SubdivSurfaceVarGroup(BaseGeometryVarGroup):
 
 	typeName = "subdivSurfaceVarGroup"
 	typeIdInt = 1397970503
+	nodeLeafClassAttrs = ["create", "local"]
+	nodeLeafPlugs = ["create", "local"]
 	pass
 

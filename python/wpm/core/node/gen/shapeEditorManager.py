@@ -87,5 +87,7 @@ class ShapeEditorManager(_BASE_):
 	apiTypeStr = "kShapeEditorManager"
 	typeIdInt = 1396985164
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "childIndices", "directoryName", "directoryParentVisibility", "directoryVisibility", "parentIndex", "blendShapeDirectory", "blendShapeParent", "filterString", "outBlendShapeVisibility"]
+	nodeLeafPlugs = ["binMembership", "blendShapeDirectory", "blendShapeParent", "filterString", "outBlendShapeVisibility"]
 	pass
 

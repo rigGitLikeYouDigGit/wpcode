@@ -33,5 +33,7 @@ class PolyCutManipContainer(ManipContainer):
 	apiTypeStr = "kPolyCutManipContainer"
 	typeIdInt = 1346585421
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

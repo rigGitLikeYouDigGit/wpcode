@@ -44,5 +44,7 @@ class NonLinear(WeightGeometryFilter):
 	apiTypeStr = "kNonLinear"
 	typeIdInt = 1179536452
 	MFnCls = om.MFnGeometryFilter
+	nodeLeafClassAttrs = ["cacheSetup", "deformerData", "matrix"]
+	nodeLeafPlugs = ["cacheSetup", "deformerData", "matrix"]
 	pass
 

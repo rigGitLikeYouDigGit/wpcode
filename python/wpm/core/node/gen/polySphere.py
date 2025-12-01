@@ -52,5 +52,7 @@ class PolySphere(PolyPrimitive):
 	apiTypeStr = "kPolySphere"
 	typeIdInt = 1347637320
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["createUVs", "radius", "subdivisionsAxis", "subdivisionsHeight", "texture"]
+	nodeLeafPlugs = ["createUVs", "radius", "subdivisionsAxis", "subdivisionsHeight", "texture"]
 	pass
 

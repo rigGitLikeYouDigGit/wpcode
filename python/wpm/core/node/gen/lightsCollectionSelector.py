@@ -30,5 +30,7 @@ class LightsCollectionSelector(SimpleSelector):
 
 	typeName = "lightsCollectionSelector"
 	typeIdInt = 1476395940
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

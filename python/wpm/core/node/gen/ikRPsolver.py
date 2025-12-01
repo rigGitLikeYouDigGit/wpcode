@@ -30,5 +30,7 @@ class IkRPsolver(IkSCsolver):
 
 	typeName = "ikRPsolver"
 	typeIdInt = 1263685715
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

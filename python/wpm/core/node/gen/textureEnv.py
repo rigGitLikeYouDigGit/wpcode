@@ -185,5 +185,7 @@ class TextureEnv(ShadingDependNode):
 
 	typeName = "textureEnv"
 	typeIdInt = 1381259333
+	nodeLeafClassAttrs = ["filterSizeX", "filterSizeY", "filterSizeZ", "filterSize", "matrixEyeToWorld", "normalCameraX", "normalCameraY", "normalCameraZ", "normalCamera", "objectType", "outAlpha", "outColorB", "outColorG", "outColorR", "outColor", "placementMatrix", "rayDirectionX", "rayDirectionY", "rayDirectionZ", "rayDirection", "uCoord", "vCoord", "uvCoord", "uvFilterSizeX", "uvFilterSizeY", "uvFilterSize", "xPixelAngle"]
+	nodeLeafPlugs = ["filterSize", "matrixEyeToWorld", "normalCamera", "objectType", "outAlpha", "outColor", "placementMatrix", "rayDirection", "uvCoord", "uvFilterSize", "xPixelAngle"]
 	pass
 

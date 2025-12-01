@@ -49,5 +49,7 @@ class Boolean(AbstractBaseCreate):
 
 	typeName = "boolean"
 	typeIdInt = 1312968524
+	nodeLeafClassAttrs = ["inputShellA", "inputShellB", "operation", "outputShell", "tolerance"]
+	nodeLeafPlugs = ["inputShellA", "inputShellB", "operation", "outputShell", "tolerance"]
 	pass
 

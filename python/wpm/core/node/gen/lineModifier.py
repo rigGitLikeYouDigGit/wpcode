@@ -206,5 +206,7 @@ class LineModifier(Shape):
 	apiTypeStr = "kLineModifier"
 	typeIdInt = 1280134980
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["attractRadiusOffset", "attractRadiusScale", "branchDropout", "colorB", "colorG", "colorR", "color", "directionalDisplacement", "directionalForce", "displacement", "dropoff_FloatValue", "dropoff_Interp", "dropoff_Position", "dropoff", "dropoffNoise", "flowerDropout", "flowerScale", "force", "inputMesh", "leafDropout", "leafScale", "lineExtend", "modifyColor", "noiseFrequency", "occupyAttraction", "occupyBranchTermination", "occupyGridResolution", "occupyRadiusOffset", "occupyRadiusScale", "opacityOffset", "opacityScale", "outLineModifier", "shape", "surfaceOffset", "tubeDropout", "tubeScale", "twigDropout", "widthOffset", "widthScale"]
+	nodeLeafPlugs = ["attractRadiusOffset", "attractRadiusScale", "branchDropout", "color", "directionalDisplacement", "directionalForce", "displacement", "dropoff", "dropoffNoise", "flowerDropout", "flowerScale", "force", "inputMesh", "leafDropout", "leafScale", "lineExtend", "modifyColor", "noiseFrequency", "occupyAttraction", "occupyBranchTermination", "occupyGridResolution", "occupyRadiusOffset", "occupyRadiusScale", "opacityOffset", "opacityScale", "outLineModifier", "shape", "surfaceOffset", "tubeDropout", "tubeScale", "twigDropout", "widthOffset", "widthScale"]
 	pass
 

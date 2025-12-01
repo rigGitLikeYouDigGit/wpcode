@@ -120,5 +120,7 @@ class Ffd(WeightGeometryFilter):
 
 	typeName = "ffd"
 	typeIdInt = 1179010628
+	nodeLeafClassAttrs = ["baseLatticeMatrix", "baseLatticePoints", "baseLattice", "bindToOriginalGeometry", "cacheSetup", "deformedLatticeMatrix", "deformedLatticePoints", "deformedLattice", "freezeGeometry", "local", "localInfluenceS", "localInfluenceT", "localInfluenceU", "outsideFalloffDist", "outsideLattice", "partialResolution", "stuCache", "stuCacheList", "usePartialResolution"]
+	nodeLeafPlugs = ["baseLattice", "bindToOriginalGeometry", "cacheSetup", "deformedLattice", "freezeGeometry", "local", "localInfluenceS", "localInfluenceT", "localInfluenceU", "outsideFalloffDist", "outsideLattice", "partialResolution", "stuCacheList", "usePartialResolution"]
 	pass
 

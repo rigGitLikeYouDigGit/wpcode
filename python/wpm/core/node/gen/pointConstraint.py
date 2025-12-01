@@ -267,5 +267,7 @@ class PointConstraint(Constraint):
 	apiTypeStr = "kPointConstraint"
 	typeIdInt = 1146115139
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = ["constraintOffsetPolarity", "constraintParentInverseMatrix", "constraintRotatePivotX", "constraintRotatePivotY", "constraintRotatePivotZ", "constraintRotatePivot", "constraintRotateTranslateX", "constraintRotateTranslateY", "constraintRotateTranslateZ", "constraintRotateTranslate", "constraintTranslateX", "constraintTranslateY", "constraintTranslateZ", "constraintTranslate", "offsetX", "offsetY", "offsetZ", "offset", "restTranslateX", "restTranslateY", "restTranslateZ", "restTranslate", "targetParentMatrix", "targetRotatePivotX", "targetRotatePivotY", "targetRotatePivotZ", "targetRotatePivot", "targetRotateTranslateX", "targetRotateTranslateY", "targetRotateTranslateZ", "targetRotateTranslate", "targetTranslateX", "targetTranslateY", "targetTranslateZ", "targetTranslate", "targetWeight", "target"]
+	nodeLeafPlugs = ["constraintOffsetPolarity", "constraintParentInverseMatrix", "constraintRotatePivot", "constraintRotateTranslate", "constraintTranslate", "offset", "restTranslate", "target"]
 	pass
 

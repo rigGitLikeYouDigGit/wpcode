@@ -40,5 +40,7 @@ class PolyMapSew(PolyModifier):
 	apiTypeStr = "kPolyMapSew"
 	typeIdInt = 1347240275
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["usePinning", "uvSetName"]
+	nodeLeafPlugs = ["usePinning", "uvSetName"]
 	pass
 

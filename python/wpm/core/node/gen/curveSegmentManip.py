@@ -33,5 +33,7 @@ class CurveSegmentManip(ManipContainer):
 	apiTypeStr = "kCurveSegmentManip"
 	typeIdInt = 1431126867
 	MFnCls = om.MFnCurveSegmentManip
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

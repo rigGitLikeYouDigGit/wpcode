@@ -30,5 +30,7 @@ class SubdProjManip(ProjectionManip):
 
 	typeName = "subdProjManip"
 	typeIdInt = 1431522641
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

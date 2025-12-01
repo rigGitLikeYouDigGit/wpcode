@@ -58,5 +58,7 @@ class GeometryConstraint(Constraint):
 	apiTypeStr = "kGeometryConstraint"
 	typeIdInt = 1145523779
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = ["constraintGeometry", "constraintParentInverseMatrix", "targetGeometry", "targetWeight", "target"]
+	nodeLeafPlugs = ["constraintGeometry", "constraintParentInverseMatrix", "target"]
 	pass
 

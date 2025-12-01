@@ -65,5 +65,7 @@ class PolyModifier(PolyBase):
 
 	typeName = "polyModifier"
 	typeIdInt = 1347243844
+	nodeLeafClassAttrs = ["cacheInput", "edgeIdMap", "faceIdMap", "inMeshCache", "inputComponents", "inputPolymesh", "useInputComp", "useOldPolyArchitecture", "vertexIdMap"]
+	nodeLeafPlugs = ["cacheInput", "edgeIdMap", "faceIdMap", "inMeshCache", "inputComponents", "inputPolymesh", "useInputComp", "useOldPolyArchitecture", "vertexIdMap"]
 	pass
 

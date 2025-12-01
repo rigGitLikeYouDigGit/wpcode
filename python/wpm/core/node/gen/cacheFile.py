@@ -136,5 +136,7 @@ class CacheFile(CacheBase):
 	apiTypeStr = "kCacheFile"
 	typeIdInt = 1128482886
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["cacheName", "cachePath", "cacheWeights", "channel", "displayLoadProgress", "enable", "end", "format", "hold", "memQueueSize", "multiThread", "originalEnd", "originalStart", "oscillate", "perPtWeights", "postCycle", "preCycle", "reverse", "scale", "sourceEnd", "sourceStart", "start", "startFrame", "time", "track", "trackState"]
+	nodeLeafPlugs = ["cacheName", "cachePath", "cacheWeights", "channel", "displayLoadProgress", "enable", "end", "format", "hold", "memQueueSize", "multiThread", "originalEnd", "originalStart", "oscillate", "perPtWeights", "postCycle", "preCycle", "reverse", "scale", "sourceEnd", "sourceStart", "start", "startFrame", "time", "track", "trackState"]
 	pass
 

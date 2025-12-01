@@ -33,5 +33,7 @@ class PolyMoveVertexManip(ManipContainer):
 	apiTypeStr = "kPolyMoveVertexManip"
 	typeIdInt = 1431328333
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -33,5 +33,7 @@ class DofManip(ManipContainer):
 	apiTypeStr = "kDofManip"
 	typeIdInt = 1431127110
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -48,5 +48,7 @@ class SubdivToNurbs(AbstractBaseCreate):
 	apiTypeStr = "kSubdivToNurbs"
 	typeIdInt = 1396986702
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["applyMatrixToResult", "inSubdiv", "outputSurfaces", "outputType"]
+	nodeLeafPlugs = ["applyMatrixToResult", "inSubdiv", "outputSurfaces", "outputType"]
 	pass
 

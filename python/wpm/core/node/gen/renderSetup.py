@@ -45,5 +45,7 @@ class RenderSetup(_BASE_):
 
 	typeName = "renderSetup"
 	typeIdInt = 1476395889
+	nodeLeafClassAttrs = ["binMembership", "firstRenderLayer", "lastRenderLayer", "listItems"]
+	nodeLeafPlugs = ["binMembership", "firstRenderLayer", "lastRenderLayer", "listItems"]
 	pass
 

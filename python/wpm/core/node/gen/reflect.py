@@ -116,5 +116,7 @@ class Reflect(Lambert):
 
 	typeName = "reflect"
 	typeIdInt = 1380338755
+	nodeLeafClassAttrs = ["reflectedColorB", "reflectedColorG", "reflectedColorR", "reflectedColor", "reflectionLimit", "reflectionSpecularity", "reflectivity", "specularColorB", "specularColorG", "specularColorR", "specularColor", "triangleNormalCameraX", "triangleNormalCameraY", "triangleNormalCameraZ", "triangleNormalCamera"]
+	nodeLeafPlugs = ["reflectedColor", "reflectionLimit", "reflectionSpecularity", "reflectivity", "specularColor", "triangleNormalCamera"]
 	pass
 

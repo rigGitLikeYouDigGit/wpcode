@@ -137,5 +137,7 @@ class PolySmoothFace(PolyModifier):
 
 	typeName = "polySmoothFace"
 	typeIdInt = 1347636550
+	nodeLeafClassAttrs = ["boundaryRule", "continuity", "degree", "divisions", "divisionsPerEdge", "keepBorder", "keepHardEdge", "keepMapBorders", "keepSelectionBorder", "keepTessellation", "maya2008Above", "maya65Above", "method", "orderVerticesFromFacesFirst", "osdCreaseMethod", "osdFvarBoundary", "osdFvarPropagateCorners", "osdIndependentUVChannels", "osdSmoothTriangles", "osdVertBoundary", "propagateEdgeHardness", "pushStrength", "roundness", "smoothUVs", "subdivisionLevels", "subdivisionType", "useOsdBoundaryMethods"]
+	nodeLeafPlugs = ["boundaryRule", "continuity", "degree", "divisions", "divisionsPerEdge", "keepBorder", "keepHardEdge", "keepMapBorders", "keepSelectionBorder", "keepTessellation", "maya2008Above", "maya65Above", "method", "orderVerticesFromFacesFirst", "osdCreaseMethod", "osdFvarBoundary", "osdFvarPropagateCorners", "osdIndependentUVChannels", "osdSmoothTriangles", "osdVertBoundary", "propagateEdgeHardness", "pushStrength", "roundness", "smoothUVs", "subdivisionLevels", "subdivisionType", "useOsdBoundaryMethods"]
 	pass
 

@@ -96,5 +96,7 @@ class Expression(_BASE_):
 	apiTypeStr = "kExpression"
 	typeIdInt = 1145395280
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["animated", "attribute", "binMembership", "evaluateNow", "exprConnCount", "expression", "frame", "input", "internalExpression", "lastTimeEvaluated", "newFileFormat", "object", "objectMsg", "output", "time", "unitOption"]
+	nodeLeafPlugs = ["animated", "attribute", "binMembership", "evaluateNow", "exprConnCount", "expression", "frame", "input", "internalExpression", "lastTimeEvaluated", "newFileFormat", "object", "objectMsg", "output", "time", "unitOption"]
 	pass
 

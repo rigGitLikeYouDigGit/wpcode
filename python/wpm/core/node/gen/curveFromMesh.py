@@ -41,5 +41,7 @@ class CurveFromMesh(_BASE_):
 
 	typeName = "curveFromMesh"
 	typeIdInt = 1313031757
+	nodeLeafClassAttrs = ["binMembership", "inputMesh", "outputCurve"]
+	nodeLeafPlugs = ["binMembership", "inputMesh", "outputCurve"]
 	pass
 

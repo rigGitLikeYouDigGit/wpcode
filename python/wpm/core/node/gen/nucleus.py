@@ -268,5 +268,7 @@ class Nucleus(Transform):
 	apiTypeStr = "kNucleus"
 	typeIdInt = 1314085203
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = ["airDensity", "collisionFlag", "collisionLayerRange", "collisionSoftness", "currentTime", "enable", "evalId", "forceDynamics", "frameJumpLimit", "gravity", "gravityDirectionX", "gravityDirectionY", "gravityDirectionZ", "gravityDirection", "inputActive", "inputActiveStart", "inputCurrent", "inputPassive", "inputPassiveStart", "inputStart", "lastTime", "maxCollisionIterations", "outputObjects", "planeBounce", "planeFriction", "planeNormalX", "planeNormalY", "planeNormalZ", "planeNormal", "planeOriginX", "planeOriginY", "planeOriginZ", "planeOrigin", "planeStickiness", "selfCollisionFlag", "skipSetup", "spaceScale", "startFrame", "startTime", "subSteps", "timeScale", "timingOutput", "usePlane", "useTransform", "windDirectionX", "windDirectionY", "windDirectionZ", "windDirection", "windNoise", "windSpeed"]
+	nodeLeafPlugs = ["airDensity", "collisionFlag", "collisionLayerRange", "collisionSoftness", "currentTime", "enable", "evalId", "forceDynamics", "frameJumpLimit", "gravity", "gravityDirection", "inputActive", "inputActiveStart", "inputCurrent", "inputPassive", "inputPassiveStart", "inputStart", "lastTime", "maxCollisionIterations", "outputObjects", "planeBounce", "planeFriction", "planeNormal", "planeOrigin", "planeStickiness", "selfCollisionFlag", "skipSetup", "spaceScale", "startFrame", "startTime", "subSteps", "timeScale", "timingOutput", "usePlane", "useTransform", "windDirection", "windNoise", "windSpeed"]
 	pass
 

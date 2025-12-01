@@ -40,5 +40,7 @@ class SurfaceVarGroup(BaseGeometryVarGroup):
 	apiTypeStr = "kSurfaceVarGroup"
 	typeIdInt = 1314084423
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = ["create", "local"]
+	nodeLeafPlugs = ["create", "local"]
 	pass
 

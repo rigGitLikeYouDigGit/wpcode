@@ -33,5 +33,7 @@ class PolySplitVert(PolyModifierWorld):
 	apiTypeStr = "kPolySplitVert"
 	typeIdInt = 1347638853
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

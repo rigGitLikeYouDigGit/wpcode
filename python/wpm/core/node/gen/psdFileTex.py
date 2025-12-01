@@ -53,5 +53,7 @@ class PsdFileTex(File):
 
 	typeName = "psdFileTex"
 	typeIdInt = 1347634260
+	nodeLeafClassAttrs = ["alpha", "alphaList", "layerDepths", "layerIds", "layerSetName", "layerSets"]
+	nodeLeafPlugs = ["alpha", "alphaList", "layerDepths", "layerIds", "layerSetName", "layerSets"]
 	pass
 

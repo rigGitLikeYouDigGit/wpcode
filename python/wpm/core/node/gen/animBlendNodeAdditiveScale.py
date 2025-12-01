@@ -45,5 +45,7 @@ class AnimBlendNodeAdditiveScale(AnimBlendNodeBase):
 
 	typeName = "animBlendNodeAdditiveScale"
 	typeIdInt = 1094864467
+	nodeLeafClassAttrs = ["accumulationMode", "inputA", "inputB", "output"]
+	nodeLeafPlugs = ["accumulationMode", "inputA", "inputB", "output"]
 	pass
 

@@ -119,5 +119,7 @@ class Ramp(Texture2d):
 	apiTypeStr = "kRamp"
 	typeIdInt = 1381257793
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["colorB", "colorG", "colorR", "color", "position", "colorEntryList", "hueNoise", "hueNoiseFreq", "interpolation", "noise", "noiseFreq", "satNoise", "satNoiseFreq", "type", "uWave", "vWave", "valNoise", "valNoiseFreq"]
+	nodeLeafPlugs = ["colorEntryList", "hueNoise", "hueNoiseFreq", "interpolation", "noise", "noiseFreq", "satNoise", "satNoiseFreq", "type", "uWave", "vWave", "valNoise", "valNoiseFreq"]
 	pass
 

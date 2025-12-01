@@ -41,5 +41,7 @@ class AnimBlendNodeEnum(AnimBlendNodeBase):
 
 	typeName = "animBlendNodeEnum"
 	typeIdInt = 1094864453
+	nodeLeafClassAttrs = ["inputA", "inputB", "output"]
+	nodeLeafPlugs = ["inputA", "inputB", "output"]
 	pass
 

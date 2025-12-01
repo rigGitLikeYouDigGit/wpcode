@@ -180,5 +180,7 @@ class ComposeMatrix(_BASE_):
 	apiTypeStr = "kComposeMatrix"
 	typeIdInt = 1476395777
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "inputQuatW", "inputQuatX", "inputQuatY", "inputQuatZ", "inputQuat", "inputRotateX", "inputRotateY", "inputRotateZ", "inputRotate", "inputRotateOrder", "inputScaleX", "inputScaleY", "inputScaleZ", "inputScale", "inputShearX", "inputShearY", "inputShearZ", "inputShear", "inputTranslateX", "inputTranslateY", "inputTranslateZ", "inputTranslate", "outputMatrix", "useEulerRotation"]
+	nodeLeafPlugs = ["binMembership", "inputQuat", "inputRotate", "inputRotateOrder", "inputScale", "inputShear", "inputTranslate", "outputMatrix", "useEulerRotation"]
 	pass
 

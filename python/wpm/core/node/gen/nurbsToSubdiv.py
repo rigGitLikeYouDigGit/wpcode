@@ -56,5 +56,7 @@ class NurbsToSubdiv(AbstractBaseNurbsConversion):
 	apiTypeStr = "kNurbsToSubdiv"
 	typeIdInt = 1397642323
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["collapsePoles", "inputSurface", "matchPeriodic", "maxPolyCount", "outputSubd", "reverseNormal"]
+	nodeLeafPlugs = ["collapsePoles", "inputSurface", "matchPeriodic", "maxPolyCount", "outputSubd", "reverseNormal"]
 	pass
 

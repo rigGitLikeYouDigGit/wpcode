@@ -68,5 +68,7 @@ class SequenceManager(_BASE_):
 	apiTypeStr = "kSequenceManager"
 	typeIdInt = 1397837127
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "enabled", "outTime", "rangeEnabled", "rangeMax", "rangeMin", "sequences", "skipGaps", "trackInfoManager"]
+	nodeLeafPlugs = ["binMembership", "enabled", "outTime", "rangeEnabled", "rangeMax", "rangeMin", "sequences", "skipGaps", "trackInfoManager"]
 	pass
 

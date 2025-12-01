@@ -48,5 +48,7 @@ class DetachCurve(AbstractBaseCreate):
 	apiTypeStr = "kDetachCurve"
 	typeIdInt = 1313100867
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["inputCurve", "keep", "outputCurve", "parameter"]
+	nodeLeafPlugs = ["inputCurve", "keep", "outputCurve", "parameter"]
 	pass
 

@@ -33,5 +33,7 @@ class StitchSrfManip(ManipContainer):
 	apiTypeStr = "kStitchSrfManip"
 	typeIdInt = 1430475604
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -40,5 +40,7 @@ class NurbsCurveToBezier(AbstractBaseCreate):
 	apiTypeStr = "kNurbsCurveToBezier"
 	typeIdInt = 1314018370
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["inputCurve", "outputCurve"]
+	nodeLeafPlugs = ["inputCurve", "outputCurve"]
 	pass
 

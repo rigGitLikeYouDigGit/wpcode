@@ -40,5 +40,7 @@ class EditsManager(_BASE_):
 	apiTypeStr = "kEditsManager"
 	typeIdInt = 1162692434
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "edits"]
+	nodeLeafPlugs = ["binMembership", "edits"]
 	pass
 

@@ -33,5 +33,7 @@ class TrsInsertManip(ManipContainer):
 	apiTypeStr = "kTrsInsertManip"
 	typeIdInt = 1431587149
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -52,5 +52,7 @@ class DetachSurface(AbstractBaseCreate):
 	apiTypeStr = "kDetachSurface"
 	typeIdInt = 1313100883
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["direction", "inputSurface", "keep", "outputSurface", "parameter"]
+	nodeLeafPlugs = ["direction", "inputSurface", "keep", "outputSurface", "parameter"]
 	pass
 

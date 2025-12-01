@@ -33,5 +33,7 @@ class OrthoGrid(SketchPlane):
 	apiTypeStr = "kOrthoGrid"
 	typeIdInt = 1330792260
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

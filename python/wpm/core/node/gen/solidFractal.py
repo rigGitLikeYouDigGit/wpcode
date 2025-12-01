@@ -165,5 +165,7 @@ class SolidFractal(Texture3d):
 	apiTypeStr = "kSolidFractal"
 	typeIdInt = 1381254707
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["amplitude", "animated", "bias", "depthMax", "depthMin", "depth", "frequencyRatio", "inflection", "ratio", "refPointCameraX", "refPointCameraY", "refPointCameraZ", "refPointCamera", "refPointObjX", "refPointObjY", "refPointObjZ", "refPointObj", "ripplesX", "ripplesY", "ripplesZ", "ripples", "threshold", "time", "timeRatio", "xPixelAngle"]
+	nodeLeafPlugs = ["amplitude", "animated", "bias", "depth", "frequencyRatio", "inflection", "ratio", "refPointCamera", "refPointObj", "ripples", "threshold", "time", "timeRatio", "xPixelAngle"]
 	pass
 

@@ -40,5 +40,7 @@ class PolyConnectComponents(PolyModifier):
 	apiTypeStr = "kPolyConnectComponents"
 	typeIdInt = 1346585427
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["adjustEdgeFlow", "insertWithEdgeFlow"]
+	nodeLeafPlugs = ["adjustEdgeFlow", "insertWithEdgeFlow"]
 	pass
 

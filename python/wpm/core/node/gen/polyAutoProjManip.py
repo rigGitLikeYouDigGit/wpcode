@@ -33,5 +33,7 @@ class PolyAutoProjManip(TrsInsertManip):
 	apiTypeStr = "kPolyAutoProjManip"
 	typeIdInt = 1095782989
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

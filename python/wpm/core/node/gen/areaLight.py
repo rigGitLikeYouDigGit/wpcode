@@ -94,5 +94,7 @@ class AreaLight(NonExtendedLightShapeNode):
 	apiTypeStr = "kAreaLight"
 	typeIdInt = 1095912532
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["lightGlow", "normalCameraX", "normalCameraY", "normalCameraZ", "normalCamera", "normalize", "objectType", "pointWorldX", "pointWorldY", "pointWorldZ", "pointWorld"]
+	nodeLeafPlugs = ["lightGlow", "normalCamera", "normalize", "objectType", "pointWorld"]
 	pass
 

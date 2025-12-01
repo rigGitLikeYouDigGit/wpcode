@@ -30,5 +30,7 @@ class IndexManip(Manip3D):
 
 	typeName = "indexManip"
 	typeIdInt = 1431128408
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

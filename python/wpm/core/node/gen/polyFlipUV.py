@@ -56,5 +56,7 @@ class PolyFlipUV(PolyModifierUV):
 	apiTypeStr = "kPolyFlipUV"
 	typeIdInt = 1346786646
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["cutUV", "flipType", "local", "pivotU", "pivotV", "usePivot"]
+	nodeLeafPlugs = ["cutUV", "flipType", "local", "pivotU", "pivotV", "usePivot"]
 	pass
 

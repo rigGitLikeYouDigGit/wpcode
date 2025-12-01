@@ -33,5 +33,7 @@ class CaddyManipBase(Manip3D):
 	apiTypeStr = "kCaddyManipBase"
 	typeIdInt = 1128549698
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

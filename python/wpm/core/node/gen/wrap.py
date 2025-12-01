@@ -93,5 +93,7 @@ class Wrap(GeometryFilter):
 
 	typeName = "wrap"
 	typeIdInt = 1180127824
+	nodeLeafClassAttrs = ["autoWeightThreshold", "autoWeightThresholdValue", "baseDrt", "basePoints", "driverPoints", "dropoff", "exclusiveBind", "falloffMode", "geomMatrix", "inflType", "maxDistance", "nurbsSamples", "smoothness", "weightThreshold", "wrapBuffers", "wtDrty"]
+	nodeLeafPlugs = ["autoWeightThreshold", "autoWeightThresholdValue", "baseDrt", "basePoints", "driverPoints", "dropoff", "exclusiveBind", "falloffMode", "geomMatrix", "inflType", "maxDistance", "nurbsSamples", "smoothness", "weightThreshold", "wrapBuffers", "wtDrty"]
 	pass
 

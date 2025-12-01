@@ -33,5 +33,7 @@ class FreePointManip(Manip3D):
 	apiTypeStr = "kFreePointManip"
 	typeIdInt = 1431127632
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

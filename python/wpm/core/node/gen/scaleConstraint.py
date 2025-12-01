@@ -161,5 +161,7 @@ class ScaleConstraint(Constraint):
 	apiTypeStr = "kScaleConstraint"
 	typeIdInt = 1146307395
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = ["constraintParentInverseMatrix", "constraintScaleX", "constraintScaleY", "constraintScaleZ", "constraintScale", "constraintScaleCompensate", "offsetX", "offsetY", "offsetZ", "offset", "restScaleX", "restScaleY", "restScaleZ", "restScale", "targetParentMatrix", "targetScaleX", "targetScaleY", "targetScaleZ", "targetScale", "targetWeight", "target"]
+	nodeLeafPlugs = ["constraintParentInverseMatrix", "constraintScale", "constraintScaleCompensate", "offset", "restScale", "target"]
 	pass
 

@@ -30,5 +30,7 @@ class Plane(GeometryShape):
 
 	typeName = "plane"
 	typeIdInt = 1347178053
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

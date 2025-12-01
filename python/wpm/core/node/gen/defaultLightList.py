@@ -240,5 +240,7 @@ class DefaultLightList(_BASE_):
 	apiTypeStr = "kDefaultLightList"
 	typeIdInt = 1145390668
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "lightAmbientOut", "lightBlindDataOut", "lightDiffuseOut", "lightDirectionOutX", "lightDirectionOutY", "lightDirectionOutZ", "lightDirectionOut", "lightIntensityOutB", "lightIntensityOutG", "lightIntensityOutR", "lightIntensityOut", "lightShadowFractionOut", "lightSpecularOut", "preShadowIntensityOut", "lightData", "lightAmbient", "lightBlindData", "lightDiffuse", "lightDirectionX", "lightDirectionY", "lightDirectionZ", "lightDirection", "lightIntensityB", "lightIntensityG", "lightIntensityR", "lightIntensity", "lightShadowFraction", "lightSpecular", "preShadowIntensity", "lightDataArray"]
+	nodeLeafPlugs = ["binMembership", "lightData", "lightDataArray"]
 	pass
 

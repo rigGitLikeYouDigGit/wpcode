@@ -172,5 +172,7 @@ class TextureToGeom(_BASE_):
 
 	typeName = "textureToGeom"
 	typeIdInt = 1414809423
+	nodeLeafClassAttrs = ["binMembership", "colorRange", "fitTolerance", "hardCornerDetect", "hardCornerMaxLength", "imageFile", "inputMesh", "inputMeshUVSet", "maxColorDiff", "maxPointsAdded", "meshQuality", "minSegmentSize", "outAlpha", "outColorB", "outColorG", "outColorR", "outColor", "outColorData", "outSegFace", "output", "pointsOnBoundary", "quantize", "quantizeLevels", "segGroupIds", "segmentCount", "shaderScript", "simplifyBoundary", "simplifyThreshold", "smoothBoundary", "smoothFactor", "spatialRadius", "surfaceOffset"]
+	nodeLeafPlugs = ["binMembership", "colorRange", "fitTolerance", "hardCornerDetect", "hardCornerMaxLength", "imageFile", "inputMesh", "inputMeshUVSet", "maxColorDiff", "maxPointsAdded", "meshQuality", "minSegmentSize", "outColorData", "outSegFace", "output", "pointsOnBoundary", "quantize", "quantizeLevels", "segGroupIds", "segmentCount", "shaderScript", "simplifyBoundary", "simplifyThreshold", "smoothBoundary", "smoothFactor", "spatialRadius", "surfaceOffset"]
 	pass
 

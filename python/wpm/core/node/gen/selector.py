@@ -45,5 +45,7 @@ class Selector(_BASE_):
 
 	typeName = "selector"
 	typeIdInt = 1476395892
+	nodeLeafClassAttrs = ["binMembership", "collection", "input", "output"]
+	nodeLeafPlugs = ["binMembership", "collection", "input", "output"]
 	pass
 

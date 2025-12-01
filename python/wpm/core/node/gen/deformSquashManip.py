@@ -33,5 +33,7 @@ class DeformSquashManip(ManipContainer):
 	apiTypeStr = "kDeformSquashManip"
 	typeIdInt = 1431523656
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

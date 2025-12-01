@@ -33,5 +33,7 @@ class BarnDoorManip(ManipContainer):
 	apiTypeStr = "kBarnDoorManip"
 	typeIdInt = 1431126596
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

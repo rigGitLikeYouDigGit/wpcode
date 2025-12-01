@@ -108,5 +108,7 @@ class MakeThreePointCircularArc(MakeCircularArc):
 
 	typeName = "makeThreePointCircularArc"
 	typeIdInt = 1311982401
+	nodeLeafClassAttrs = ["point1X", "point1Y", "point1Z", "point1", "point2X", "point2Y", "point2Z", "point2", "point3X", "point3Y", "point3Z", "point3", "radius"]
+	nodeLeafPlugs = ["point1", "point2", "point3", "radius"]
 	pass
 

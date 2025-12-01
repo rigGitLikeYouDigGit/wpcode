@@ -62,5 +62,7 @@ class ResultCurveTimeToAngular(ResultCurve):
 	apiTypeStr = "kResultCurveTimeToAngular"
 	typeIdInt = 1380144193
 	MFnCls = om.MFnAnimCurve
+	nodeLeafClassAttrs = ["input", "inputResult", "keyTime", "keyValue", "keyTimeValue", "output"]
+	nodeLeafPlugs = ["input", "inputResult", "keyTimeValue", "output"]
 	pass
 

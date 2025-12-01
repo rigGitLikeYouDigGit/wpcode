@@ -146,5 +146,7 @@ class Flow(_BASE_):
 	apiTypeStr = "kFlow"
 	typeIdInt = 1179406167
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["xCoord", "yCoord", "zCoord", "allCoords", "binMembership", "centerX", "centerY", "centerZ", "center", "curve", "defMatrixInv", "defPts", "inBaseMatrix", "latticeOnObject", "motionPath", "objectWorldMatrix", "orientMatrix", "outBaseMatrix", "parmValue", "sDivisions", "setFrontAxis", "setUpAxis", "tDivisions", "uDivisions"]
+	nodeLeafPlugs = ["allCoords", "binMembership", "center", "curve", "defMatrixInv", "defPts", "inBaseMatrix", "latticeOnObject", "motionPath", "objectWorldMatrix", "orientMatrix", "outBaseMatrix", "parmValue", "sDivisions", "setFrontAxis", "setUpAxis", "tDivisions", "uDivisions"]
 	pass
 

@@ -33,5 +33,7 @@ class DynSpreadManip(ManipContainer):
 	apiTypeStr = "kDynSpreadManip"
 	typeIdInt = 1431523405
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

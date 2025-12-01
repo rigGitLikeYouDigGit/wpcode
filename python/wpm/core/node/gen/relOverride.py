@@ -30,5 +30,7 @@ class RelOverride(ValueOverride):
 
 	typeName = "relOverride"
 	typeIdInt = 1476395898
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

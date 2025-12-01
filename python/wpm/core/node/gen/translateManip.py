@@ -33,5 +33,7 @@ class TranslateManip(Manip3D):
 	apiTypeStr = "kTranslateManip"
 	typeIdInt = 1431589965
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -138,5 +138,7 @@ class AvgNurbsSurfacePoints(AbstractBaseCreate):
 	apiTypeStr = "kAvgNurbsSurfacePoints"
 	typeIdInt = 1312902736
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["normalX", "normalY", "normalZ", "normal", "positionX", "positionY", "positionZ", "position", "result", "cvIthIndex", "cvJthIndex", "inputSurface", "parameterU", "parameterV", "weight", "surfacePoint"]
+	nodeLeafPlugs = ["result", "surfacePoint"]
 	pass
 

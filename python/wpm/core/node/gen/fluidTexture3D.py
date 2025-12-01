@@ -119,5 +119,7 @@ class FluidTexture3D(FluidShape):
 	apiTypeStr = "kFluidTexture3D"
 	typeIdInt = 1179407448
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["alphaGain", "alphaOffset", "defaultColorB", "defaultColorG", "defaultColorR", "defaultColor", "outAlpha", "oucx", "oucy", "oucz", "outCoord", "refPointCameraX", "refPointCameraY", "refPointCameraZ", "refPointCamera"]
+	nodeLeafPlugs = ["alphaGain", "alphaOffset", "defaultColor", "outAlpha", "outCoord", "refPointCamera"]
 	pass
 

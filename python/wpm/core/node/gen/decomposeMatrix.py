@@ -176,5 +176,7 @@ class DecomposeMatrix(_BASE_):
 	apiTypeStr = "kDecomposeMatrix"
 	typeIdInt = 1476395776
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "inputMatrix", "inputRotateOrder", "outputQuatW", "outputQuatX", "outputQuatY", "outputQuatZ", "outputQuat", "outputRotateX", "outputRotateY", "outputRotateZ", "outputRotate", "outputScaleX", "outputScaleY", "outputScaleZ", "outputScale", "outputShearX", "outputShearY", "outputShearZ", "outputShear", "outputTranslateX", "outputTranslateY", "outputTranslateZ", "outputTranslate"]
+	nodeLeafPlugs = ["binMembership", "inputMatrix", "inputRotateOrder", "outputQuat", "outputRotate", "outputScale", "outputShear", "outputTranslate"]
 	pass
 

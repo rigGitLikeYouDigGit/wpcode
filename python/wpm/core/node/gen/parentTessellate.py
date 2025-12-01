@@ -105,5 +105,7 @@ class ParentTessellate(AbstractBaseNurbsConversion):
 
 	typeName = "parentTessellate"
 	typeIdInt = 1346458707
+	nodeLeafClassAttrs = ["chordHeight", "chordHeightRatio", "delta", "edgeSwap", "format", "fractionalTolerance", "matchNormalDir", "minEdgeLength", "normalizeTrimmedUVRange", "outputPolygon", "polygonCount", "polygonType", "pre70ChordHeightRatio", "uNumber", "uType", "useChordHeight", "useChordHeightRatio", "vNumber", "vType"]
+	nodeLeafPlugs = ["chordHeight", "chordHeightRatio", "delta", "edgeSwap", "format", "fractionalTolerance", "matchNormalDir", "minEdgeLength", "normalizeTrimmedUVRange", "outputPolygon", "polygonCount", "polygonType", "pre70ChordHeightRatio", "uNumber", "uType", "useChordHeight", "useChordHeightRatio", "vNumber", "vType"]
 	pass
 

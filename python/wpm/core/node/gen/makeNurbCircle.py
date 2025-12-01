@@ -136,5 +136,7 @@ class MakeNurbCircle(AbstractBaseCreate):
 
 	typeName = "makeNurbCircle"
 	typeIdInt = 1313034819
+	nodeLeafClassAttrs = ["centerX", "centerY", "centerZ", "center", "degree", "firstPointX", "firstPointY", "firstPointZ", "first", "fixCenter", "normalX", "normalY", "normalZ", "normal", "outputCurve", "radius", "sections", "sweep", "tolerance", "useTolerance"]
+	nodeLeafPlugs = ["center", "degree", "first", "fixCenter", "normal", "outputCurve", "radius", "sections", "sweep", "tolerance", "useTolerance"]
 	pass
 

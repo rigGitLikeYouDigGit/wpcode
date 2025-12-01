@@ -36,5 +36,7 @@ class BlendTwoAttr(Blend):
 	apiTypeStr = "kBlendTwoAttr"
 	typeIdInt = 1094863922
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["attributesBlender"]
+	nodeLeafPlugs = ["attributesBlender"]
 	pass
 

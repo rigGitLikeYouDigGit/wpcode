@@ -30,5 +30,7 @@ class PolyProjManip(ProjectionManip):
 
 	typeName = "polyProjManip"
 	typeIdInt = 1431326033
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -30,5 +30,7 @@ class FluidSliceManip(Manip3D):
 
 	typeName = "fluidSliceManip"
 	typeIdInt = 1179864141
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

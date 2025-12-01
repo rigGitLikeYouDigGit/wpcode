@@ -168,5 +168,7 @@ class NurbsCurve(CurveShape):
 	apiTypeStr = "kNurbsCurve"
 	typeIdInt = 1313034838
 	MFnCls = om.MFnNurbsCurve
+	nodeLeafClassAttrs = ["alwaysDrawOnTop", "cached", "create", "degree", "dispCV", "dispCurveEndPoints", "dispEP", "dispGeometry", "dispHull", "xValueEp", "yValueEp", "zValueEp", "editPoints", "form", "header", "inPlace", "lineWidth", "local", "maxValue", "minValue", "minMaxValue", "spans", "tweakSize", "worldNormalX", "worldNormalY", "worldNormalZ", "worldNormal", "worldSpace"]
+	nodeLeafPlugs = ["alwaysDrawOnTop", "cached", "create", "degree", "dispCV", "dispCurveEndPoints", "dispEP", "dispGeometry", "dispHull", "editPoints", "form", "header", "inPlace", "lineWidth", "local", "minMaxValue", "spans", "tweakSize", "worldNormal", "worldSpace"]
 	pass
 

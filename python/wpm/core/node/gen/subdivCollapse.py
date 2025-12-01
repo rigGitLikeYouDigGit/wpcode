@@ -48,5 +48,7 @@ class SubdivCollapse(_BASE_):
 	apiTypeStr = "kSubdivCollapse"
 	typeIdInt = 1396919376
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "inSubdiv", "level", "outSubdiv"]
+	nodeLeafPlugs = ["binMembership", "inSubdiv", "level", "outSubdiv"]
 	pass
 

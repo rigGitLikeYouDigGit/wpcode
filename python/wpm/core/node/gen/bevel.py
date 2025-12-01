@@ -84,5 +84,7 @@ class Bevel(AbstractBaseCreate):
 	apiTypeStr = "kBevel"
 	typeIdInt = 1312970316
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["bevelShapeType", "cornerType", "depth", "extrudeDepth", "inputCurve", "joinSurfaces", "numberOfSides", "outputSurface1", "outputSurface2", "outputSurface3", "tolerance", "useDirectionCurve", "width"]
+	nodeLeafPlugs = ["bevelShapeType", "cornerType", "depth", "extrudeDepth", "inputCurve", "joinSurfaces", "numberOfSides", "outputSurface1", "outputSurface2", "outputSurface3", "tolerance", "useDirectionCurve", "width"]
 	pass
 

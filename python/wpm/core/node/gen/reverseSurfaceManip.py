@@ -33,5 +33,7 @@ class ReverseSurfaceManip(ManipContainer):
 	apiTypeStr = "kReverseSurfaceManip"
 	typeIdInt = 1431130707
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

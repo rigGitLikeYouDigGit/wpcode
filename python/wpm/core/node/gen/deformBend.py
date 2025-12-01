@@ -44,5 +44,7 @@ class DeformBend(DeformFunc):
 	apiTypeStr = "kDeformBend"
 	typeIdInt = 1178878532
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["curvature", "highBound", "lowBound"]
+	nodeLeafPlugs = ["curvature", "highBound", "lowBound"]
 	pass
 

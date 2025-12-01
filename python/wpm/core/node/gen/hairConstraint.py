@@ -64,5 +64,7 @@ class HairConstraint(Shape):
 	apiTypeStr = "kHairConstraint"
 	typeIdInt = 1213221198
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["constraintMethod", "curveIndices", "glueStrength", "outPin", "pointMethod", "stiffness", "uDistance", "uParameter"]
+	nodeLeafPlugs = ["constraintMethod", "curveIndices", "glueStrength", "outPin", "pointMethod", "stiffness", "uDistance", "uParameter"]
 	pass
 

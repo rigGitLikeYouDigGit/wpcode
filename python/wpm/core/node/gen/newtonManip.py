@@ -30,5 +30,7 @@ class NewtonManip(FieldManip):
 
 	typeName = "newtonManip"
 	typeIdInt = 1430539853
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

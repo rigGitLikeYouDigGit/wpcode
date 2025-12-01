@@ -211,5 +211,7 @@ class ControlPoint(DeformableShape):
 
 	typeName = "controlPoint"
 	typeIdInt = 1145262164
+	nodeLeafClassAttrs = ["blindDataNodes", "clamped", "colorName", "colorSetPointsA", "colorSetPointsB", "colorSetPointsG", "colorSetPointsR", "colorSetPoints", "representation", "colorSet", "xValue", "yValue", "zValue", "controlPoints", "currentColorSet", "currentUVSet", "displayColorChannel", "displayColors", "displayImmediate", "relativeTweak", "tweak", "tweakLocation", "uvPivotX", "uvPivotY", "uvPivot", "uvSetName", "uvSetPointsU", "uvSetPointsV", "uvSetPoints", "uvSetTweakLocation", "uvSet", "weights"]
+	nodeLeafPlugs = ["blindDataNodes", "colorSet", "controlPoints", "currentColorSet", "currentUVSet", "displayColorChannel", "displayColors", "displayImmediate", "relativeTweak", "tweak", "tweakLocation", "uvPivot", "uvSet", "weights"]
 	pass
 

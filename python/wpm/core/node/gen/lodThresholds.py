@@ -127,5 +127,7 @@ class LodThresholds(_BASE_):
 	apiTypeStr = "kLodThresholds"
 	typeIdInt = 1280263252
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["activeLevel", "binMembership", "cameraX", "cameraY", "cameraZ", "camera", "distance", "inBoxMaxX", "inBoxMaxY", "inBoxMaxZ", "inBoxMax", "inBoxMinX", "inBoxMinY", "inBoxMinZ", "inBoxMin", "outLevel", "threshold"]
+	nodeLeafPlugs = ["activeLevel", "binMembership", "camera", "distance", "inBoxMax", "inBoxMin", "outLevel", "threshold"]
 	pass
 

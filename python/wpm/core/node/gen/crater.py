@@ -239,5 +239,7 @@ class Crater(Texture3d):
 	apiTypeStr = "kCrater"
 	typeIdInt = 1381184560
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["balance", "channel1B", "channel1G", "channel1R", "channel1", "channel2B", "channel2G", "channel2R", "channel2", "channel3B", "channel3G", "channel3R", "channel3", "frequency", "melt", "normBalance", "normDepth", "normFrequency", "normMelt", "normalCameraX", "normalCameraY", "normalCameraZ", "normalCamera", "outNormalX", "outNormalY", "outNormalZ", "outNormal", "refPointCameraX", "refPointCameraY", "refPointCameraZ", "refPointCamera", "refPointObjX", "refPointObjY", "refPointObjZ", "refPointObj", "shaker"]
+	nodeLeafPlugs = ["balance", "channel1", "channel2", "channel3", "frequency", "melt", "normBalance", "normDepth", "normFrequency", "normMelt", "normalCamera", "outNormal", "refPointCamera", "refPointObj", "shaker"]
 	pass
 

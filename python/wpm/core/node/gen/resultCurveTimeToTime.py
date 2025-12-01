@@ -62,5 +62,7 @@ class ResultCurveTimeToTime(ResultCurve):
 	apiTypeStr = "kResultCurveTimeToTime"
 	typeIdInt = 1380144212
 	MFnCls = om.MFnAnimCurve
+	nodeLeafClassAttrs = ["input", "inputResult", "keyTime", "keyValue", "keyTimeValue", "output"]
+	nodeLeafPlugs = ["input", "inputResult", "keyTimeValue", "output"]
 	pass
 

@@ -309,5 +309,7 @@ class Place2dTexture(ShadingDependNode):
 	apiTypeStr = "kPlace2dTexture"
 	typeIdInt = 1380994098
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["coverageU", "coverageV", "coverage", "doTransform", "fast", "mirrorU", "mirrorV", "noiseU", "noiseV", "noiseUV", "offsetU", "offsetV", "offset", "outU", "outV", "outUV", "outUvFilterSizeX", "outUvFilterSizeY", "outUvFilterSize", "repeatU", "repeatV", "repeatUV", "rotateFrame", "rotateUV", "stagger", "translateFrameU", "translateFrameV", "translateFrame", "uCoord", "vCoord", "uvCoord", "uvFilterSizeX", "uvFilterSizeY", "uvFilterSize", "vertexCameraOneX", "vertexCameraOneY", "vertexCameraOneZ", "vertexCameraOne", "vertexUvOneU", "vertexUvOneV", "vertexUvOne", "vertexUvThreeU", "vertexUvThreeV", "vertexUvThree", "vertexUvTwoU", "vertexUvTwoV", "vertexUvTwo", "wrapU", "wrapV"]
+	nodeLeafPlugs = ["coverage", "doTransform", "fast", "mirrorU", "mirrorV", "noiseUV", "offset", "outUV", "outUvFilterSize", "repeatUV", "rotateFrame", "rotateUV", "stagger", "translateFrame", "uvCoord", "uvFilterSize", "vertexCameraOne", "vertexUvOne", "vertexUvThree", "vertexUvTwo", "wrapU", "wrapV"]
 	pass
 

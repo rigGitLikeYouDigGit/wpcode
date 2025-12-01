@@ -33,5 +33,7 @@ class SquareSrfManip(ManipContainer):
 	apiTypeStr = "kSquareSrfManip"
 	typeIdInt = 1431130961
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

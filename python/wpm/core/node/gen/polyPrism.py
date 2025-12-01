@@ -64,5 +64,7 @@ class PolyPrism(PolyPrimitive):
 	apiTypeStr = "kPolyPrism"
 	typeIdInt = 1347441225
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["createUVs", "length", "maya2022UVs", "numberOfSides", "sideLength", "subdivisionsCaps", "subdivisionsHeight", "texture"]
+	nodeLeafPlugs = ["createUVs", "length", "maya2022UVs", "numberOfSides", "sideLength", "subdivisionsCaps", "subdivisionsHeight", "texture"]
 	pass
 

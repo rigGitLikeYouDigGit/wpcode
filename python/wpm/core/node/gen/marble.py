@@ -224,5 +224,7 @@ class Marble(Texture3d):
 	apiTypeStr = "kMarble"
 	typeIdInt = 1381256530
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["amplitude", "contrast", "depthMax", "depthMin", "depth", "diffusion", "fillerColorB", "fillerColorG", "fillerColorR", "fillerColor", "normalCameraX", "normalCameraY", "normalCameraZ", "normalCamera", "ratio", "refPointCameraX", "refPointCameraY", "refPointCameraZ", "refPointCamera", "refPointObjX", "refPointObjY", "refPointObjZ", "refPointObj", "ripplesX", "ripplesY", "ripplesZ", "ripples", "veinColorB", "veinColorG", "veinColorR", "veinColor", "veinWidth", "xPixelAngle"]
+	nodeLeafPlugs = ["amplitude", "contrast", "depth", "diffusion", "fillerColor", "normalCamera", "ratio", "refPointCamera", "refPointObj", "ripples", "veinColor", "veinWidth", "xPixelAngle"]
 	pass
 

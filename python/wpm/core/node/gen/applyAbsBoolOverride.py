@@ -41,5 +41,7 @@ class ApplyAbsBoolOverride(ApplyAbsOverride):
 
 	typeName = "applyAbsBoolOverride"
 	typeIdInt = 1476395914
+	nodeLeafClassAttrs = ["original", "out", "value"]
+	nodeLeafPlugs = ["original", "out", "value"]
 	pass
 

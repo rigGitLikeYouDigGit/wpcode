@@ -33,5 +33,7 @@ class PolyHoleFace(PolyModifierWorld):
 	apiTypeStr = "kPolyHoleFace"
 	typeIdInt = 1346913861
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

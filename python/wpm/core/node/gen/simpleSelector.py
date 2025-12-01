@@ -49,5 +49,7 @@ class SimpleSelector(Selector):
 
 	typeName = "simpleSelector"
 	typeIdInt = 1476395934
+	nodeLeafClassAttrs = ["customFilterValue", "pattern", "previousPattern", "staticSelection", "typeFilter"]
+	nodeLeafPlugs = ["customFilterValue", "pattern", "previousPattern", "staticSelection", "typeFilter"]
 	pass
 

@@ -109,5 +109,7 @@ class OffsetCurve(AbstractBaseCreate):
 	apiTypeStr = "kOffsetCurve"
 	typeIdInt = 1313817429
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["connectBreaks", "cutLoop", "cutRadius", "distance", "inputCurve", "normalX", "normalY", "normalZ", "normal", "outputCurve", "parameter", "reparameterize", "stitch", "subdivisionDensity", "tolerance", "useGivenNormal", "useParameter"]
+	nodeLeafPlugs = ["connectBreaks", "cutLoop", "cutRadius", "distance", "inputCurve", "normal", "outputCurve", "parameter", "reparameterize", "stitch", "subdivisionDensity", "tolerance", "useGivenNormal", "useParameter"]
 	pass
 

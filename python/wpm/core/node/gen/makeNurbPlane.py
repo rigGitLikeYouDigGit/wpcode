@@ -49,5 +49,7 @@ class MakeNurbPlane(Primitive):
 
 	typeName = "makeNurbPlane"
 	typeIdInt = 1313885262
+	nodeLeafClassAttrs = ["degree", "lengthRatio", "patchesU", "patchesV", "width"]
+	nodeLeafPlugs = ["degree", "lengthRatio", "patchesU", "patchesV", "width"]
 	pass
 

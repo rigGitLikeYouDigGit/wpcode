@@ -33,5 +33,7 @@ class DeformWaveManip(ManipContainer):
 	apiTypeStr = "kDeformWaveManip"
 	typeIdInt = 1431781718
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

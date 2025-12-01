@@ -58,5 +58,7 @@ class ParticleIncandMapper(_BASE_):
 
 	typeName = "particleIncandMapper"
 	typeIdInt = 1346981185
+	nodeLeafClassAttrs = ["binMembership", "particleIncandescenceB", "particleIncandescenceG", "particleIncandescenceR", "particleIncandescence"]
+	nodeLeafPlugs = ["binMembership", "particleIncandescence"]
 	pass
 

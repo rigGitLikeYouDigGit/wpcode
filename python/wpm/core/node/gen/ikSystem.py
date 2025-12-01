@@ -64,5 +64,7 @@ class IkSystem(_BASE_):
 	apiTypeStr = "kIkSystem"
 	typeIdInt = 1263753555
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "globalSnap", "globalSolve", "handleGroupsList", "handleGroupsListDirtyFlag", "handleGroupsListSortedFlag", "ikSolver", "preMaya2011IKFKBlend"]
+	nodeLeafPlugs = ["binMembership", "globalSnap", "globalSolve", "handleGroupsList", "handleGroupsListDirtyFlag", "handleGroupsListSortedFlag", "ikSolver", "preMaya2011IKFKBlend"]
 	pass
 

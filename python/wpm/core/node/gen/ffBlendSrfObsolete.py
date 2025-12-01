@@ -81,5 +81,7 @@ class FfBlendSrfObsolete(AbstractBaseCreate):
 
 	typeName = "ffBlendSrfObsolete"
 	typeIdInt = 1312967763
+	nodeLeafClassAttrs = ["autoDirection", "flipLeft", "flipRight", "leftCurve", "leftParameter", "leftRail", "multipleKnots", "outputSurface", "positionTolerance", "rightCurve", "rightParameter", "rightRail", "tangentTolerance"]
+	nodeLeafPlugs = ["autoDirection", "flipLeft", "flipRight", "leftCurve", "leftParameter", "leftRail", "multipleKnots", "outputSurface", "positionTolerance", "rightCurve", "rightParameter", "rightRail", "tangentTolerance"]
 	pass
 

@@ -97,5 +97,7 @@ class ColorManagementGlobals(_BASE_):
 
 	typeName = "colorManagementGlobals"
 	typeIdInt = 1129137986
+	nodeLeafClassAttrs = ["binMembership", "cmEnabled", "configFileEnabled", "configFilePath", "defaultInputSpaceName", "displayName", "outputTransformEnabled", "outputTransformName", "outputTransformUseColorConversion", "outputUseViewTransform", "playblastOutputTransformEnabled", "playblastOutputTransformName", "playblastOutputTransformUseColorConversion", "playblastOutputUseViewTransform", "viewName", "viewTransformName", "workingSpaceName"]
+	nodeLeafPlugs = ["binMembership", "cmEnabled", "configFileEnabled", "configFilePath", "defaultInputSpaceName", "displayName", "outputTransformEnabled", "outputTransformName", "outputTransformUseColorConversion", "outputUseViewTransform", "playblastOutputTransformEnabled", "playblastOutputTransformName", "playblastOutputTransformUseColorConversion", "playblastOutputUseViewTransform", "viewName", "viewTransformName", "workingSpaceName"]
 	pass
 

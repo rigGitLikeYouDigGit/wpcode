@@ -56,5 +56,7 @@ class SelectionListOperator(_BASE_):
 	apiTypeStr = "kSelectionListOperator"
 	typeIdInt = 1397509968
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "inputListA", "inputListB", "operation", "operatorClass", "outputList"]
+	nodeLeafPlugs = ["binMembership", "inputListA", "inputListB", "operation", "operatorClass", "outputList"]
 	pass
 

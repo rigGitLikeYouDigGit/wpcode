@@ -33,5 +33,7 @@ class PointOnCurveManip(Manip3D):
 	apiTypeStr = "kPointOnCurveManip"
 	typeIdInt = 1431130179
 	MFnCls = om.MFnPointOnCurveManip
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

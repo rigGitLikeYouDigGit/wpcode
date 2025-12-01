@@ -123,5 +123,7 @@ class FluidTexture2D(FluidShape):
 	apiTypeStr = "kFluidTexture2D"
 	typeIdInt = 1179407444
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["alphaGain", "alphaOffset", "defaultColorB", "defaultColorG", "defaultColorR", "defaultColor", "outAlpha", "outU", "outV", "outUV", "uCoord", "vCoord", "uvCoord", "uvFilterSizeX", "uvFilterSizeY", "uvFilterSize"]
+	nodeLeafPlugs = ["alphaGain", "alphaOffset", "defaultColor", "outAlpha", "outUV", "uvCoord", "uvFilterSize"]
 	pass
 

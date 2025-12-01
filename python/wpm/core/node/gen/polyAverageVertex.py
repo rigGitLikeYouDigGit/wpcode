@@ -44,5 +44,7 @@ class PolyAverageVertex(PolyModifierWorld):
 	apiTypeStr = "kPolyAverageVertex"
 	typeIdInt = 1346459222
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["alpha", "beta", "iterations"]
+	nodeLeafPlugs = ["alpha", "beta", "iterations"]
 	pass
 

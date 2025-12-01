@@ -61,5 +61,7 @@ class Controller(_BASE_):
 
 	typeName = "controller"
 	typeIdInt = 1128747600
+	nodeLeafClassAttrs = ["binMembership", "children", "controllerObject", "cycleWalkSibling", "parent", "parentprepopulate", "prepopulate", "visibilityMode"]
+	nodeLeafPlugs = ["binMembership", "children", "controllerObject", "cycleWalkSibling", "parent", "parentprepopulate", "prepopulate", "visibilityMode"]
 	pass
 

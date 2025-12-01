@@ -104,5 +104,7 @@ class AlignCurve(AbstractBaseCreate):
 	apiTypeStr = "kAlignCurve"
 	typeIdInt = 1312902211
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["attach", "curvatureContinuity", "curvatureScale1", "curvatureScale2", "inputCurve1", "inputCurve2", "joinParameter", "keepMultipleKnots", "outputCurve1", "outputCurve2", "positionalContinuity", "positionalContinuityType", "reverse1", "reverse2", "tangentContinuity", "tangentContinuityType", "tangentScale1", "tangentScale2"]
+	nodeLeafPlugs = ["attach", "curvatureContinuity", "curvatureScale1", "curvatureScale2", "inputCurve1", "inputCurve2", "joinParameter", "keepMultipleKnots", "outputCurve1", "outputCurve2", "positionalContinuity", "positionalContinuityType", "reverse1", "reverse2", "tangentContinuity", "tangentContinuityType", "tangentScale1", "tangentScale2"]
 	pass
 

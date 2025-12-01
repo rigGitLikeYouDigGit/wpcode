@@ -30,5 +30,7 @@ class TurbulenceManip(FieldManip):
 
 	typeName = "turbulenceManip"
 	typeIdInt = 1430541389
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

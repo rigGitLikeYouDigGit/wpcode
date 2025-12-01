@@ -30,5 +30,7 @@ class ToolDrawManip2D(Manip2D):
 
 	typeName = "toolDrawManip2D"
 	typeIdInt = 1413762354
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -37,5 +37,7 @@ class SubdBase(_BASE_):
 
 	typeName = "subdBase"
 	typeIdInt = 1395535406
+	nodeLeafClassAttrs = ["binMembership", "outSubdiv"]
+	nodeLeafPlugs = ["binMembership", "outSubdiv"]
 	pass
 

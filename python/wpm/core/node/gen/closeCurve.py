@@ -56,5 +56,7 @@ class CloseCurve(AbstractBaseCreate):
 	apiTypeStr = "kCloseCurve"
 	typeIdInt = 1313030997
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["blendBias", "blendKnotInsertion", "inputCurve", "outputCurve", "parameter", "preserveShape"]
+	nodeLeafPlugs = ["blendBias", "blendKnotInsertion", "inputCurve", "outputCurve", "parameter", "preserveShape"]
 	pass
 

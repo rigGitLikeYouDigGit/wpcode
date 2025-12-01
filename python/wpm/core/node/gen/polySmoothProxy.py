@@ -136,5 +136,7 @@ class PolySmoothProxy(PolyModifier):
 	apiTypeStr = "kPolySmoothProxy"
 	typeIdInt = 1347636560
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["boundaryRule", "cachedSmoothMesh", "continuity", "degree", "divisionsPerEdge", "exponentialLevel", "keepBorder", "keepHardEdge", "keepMapBorders", "linearLevel", "maya2008Above", "maya65Above", "method", "multiEdgeCrease", "osdCreaseMethod", "osdFvarBoundary", "osdFvarPropagateCorners", "osdIndependentUVChannels", "osdSmoothTriangles", "osdVertBoundary", "propagateEdgeHardness", "pushStrength", "roundness", "smoothUVs", "subdivisionType", "useOsdBoundaryMethods"]
+	nodeLeafPlugs = ["boundaryRule", "cachedSmoothMesh", "continuity", "degree", "divisionsPerEdge", "exponentialLevel", "keepBorder", "keepHardEdge", "keepMapBorders", "linearLevel", "maya2008Above", "maya65Above", "method", "multiEdgeCrease", "osdCreaseMethod", "osdFvarBoundary", "osdFvarPropagateCorners", "osdIndependentUVChannels", "osdSmoothTriangles", "osdVertBoundary", "propagateEdgeHardness", "pushStrength", "roundness", "smoothUVs", "subdivisionType", "useOsdBoundaryMethods"]
 	pass
 

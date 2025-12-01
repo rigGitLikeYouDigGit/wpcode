@@ -52,5 +52,7 @@ class ReorderUVSet(_BASE_):
 	apiTypeStr = "kReorderUVSet"
 	typeIdInt = 1380930899
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "inputGeometry", "outputGeometry", "uvSetName", "uvSetName2"]
+	nodeLeafPlugs = ["binMembership", "inputGeometry", "outputGeometry", "uvSetName", "uvSetName2"]
 	pass
 

@@ -100,5 +100,7 @@ class Tweak(GeometryFilter):
 	apiTypeStr = "kTweak"
 	typeIdInt = 1179471956
 	MFnCls = om.MFnGeometryFilter
+	nodeLeafClassAttrs = ["xValue", "yValue", "zValue", "controlPoints", "plist", "relativeTweak", "xVertex", "yVertex", "zVertex", "vertex", "vlist"]
+	nodeLeafPlugs = ["plist", "relativeTweak", "vlist"]
 	pass
 

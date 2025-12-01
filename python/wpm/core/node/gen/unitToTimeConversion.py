@@ -48,5 +48,7 @@ class UnitToTimeConversion(_BASE_):
 	apiTypeStr = "kUnitToTimeConversion"
 	typeIdInt = 1146442829
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "conversionFactor", "input", "output"]
+	nodeLeafPlugs = ["binMembership", "conversionFactor", "input", "output"]
 	pass
 

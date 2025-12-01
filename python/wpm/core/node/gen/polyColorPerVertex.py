@@ -132,5 +132,7 @@ class PolyColorPerVertex(PolyModifier):
 	apiTypeStr = "kPolyColorPerVertex"
 	typeIdInt = 1346588758
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["clamped", "vertexColorRGB", "vertexFaceColorRGB", "vertexFaceColor", "vertexColor", "colorPerVertex", "colorSetName", "representation", "vertexAlpha", "vertexColorB", "vertexColorG", "vertexColorR", "vertexFaceAlpha", "vertexFaceColorB", "vertexFaceColorG", "vertexFaceColorR"]
+	nodeLeafPlugs = ["clamped", "colorPerVertex", "colorSetName", "representation"]
 	pass
 

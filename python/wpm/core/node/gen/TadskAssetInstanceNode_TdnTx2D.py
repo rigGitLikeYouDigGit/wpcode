@@ -37,5 +37,7 @@ class TadskAssetInstanceNode_TdnTx2D(Texture2d):
 
 	typeName = "TadskAssetInstanceNode_TdnTx2D"
 	typeIdInt = 1095323220
+	nodeLeafClassAttrs = ["assetID", "assetLibrary"]
+	nodeLeafPlugs = ["assetID", "assetLibrary"]
 	pass
 

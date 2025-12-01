@@ -30,5 +30,7 @@ class Entity(ContainerBase):
 
 	typeName = "entity"
 	typeIdInt = 1162761305
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

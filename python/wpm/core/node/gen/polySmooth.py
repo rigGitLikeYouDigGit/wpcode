@@ -36,5 +36,7 @@ class PolySmooth(PolyModifier):
 	apiTypeStr = "kPolySmooth"
 	typeIdInt = 1347636564
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["smoothness"]
+	nodeLeafPlugs = ["smoothness"]
 	pass
 

@@ -200,5 +200,7 @@ class PolyMirror(PolyModifierWorld):
 	apiTypeStr = "kPolyMirror"
 	typeIdInt = 1347242322
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["axis", "axisDirection", "compId", "cutMesh", "direction", "firstNewFace", "flipUVs", "keepVertexIDs", "lastNewFace", "maya2017", "mergeMode", "mergeThreshold", "mergeThresholdType", "mirrorAxis", "mirrorPlaneCenterX", "mirrorPlaneCenterY", "mirrorPlaneCenterZ", "mirrorPlaneCenter", "mirrorPlaneRotateX", "mirrorPlaneRotateY", "mirrorPlaneRotateZ", "mirrorPlaneRotate", "mirrorPosition", "pivotX", "pivotY", "pivotZ", "pivot", "scalePivotX", "scalePivotY", "scalePivotZ", "scalePivot", "smoothingAngle", "userSpecifiedPivot"]
+	nodeLeafPlugs = ["axis", "axisDirection", "compId", "cutMesh", "direction", "firstNewFace", "flipUVs", "keepVertexIDs", "lastNewFace", "maya2017", "mergeMode", "mergeThreshold", "mergeThresholdType", "mirrorAxis", "mirrorPlaneCenter", "mirrorPlaneRotate", "mirrorPosition", "pivot", "scalePivot", "smoothingAngle", "userSpecifiedPivot"]
 	pass
 

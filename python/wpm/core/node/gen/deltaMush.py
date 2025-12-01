@@ -146,5 +146,7 @@ class DeltaMush(WeightGeometryFilter):
 	apiTypeStr = "kDeltaMush"
 	typeIdInt = 1145853005
 	MFnCls = om.MFnGeometryFilter
+	nodeLeafClassAttrs = ["cacheBindPositions", "cacheDisplacements", "cacheFrames", "cachePinBorderVertices", "cacheSmoothingAlgorithm", "cacheSmoothingIterations", "cacheSmoothingStep", "cache", "cacheSetup", "displacement", "distanceWeight", "inwardConstraint", "outwardConstraint", "pinBorderVertices", "scaleX", "scaleY", "scaleZ", "scale", "smoothingAlgorithm", "smoothingIterations", "smoothingStep"]
+	nodeLeafPlugs = ["cache", "cacheSetup", "displacement", "distanceWeight", "inwardConstraint", "outwardConstraint", "pinBorderVertices", "scale", "smoothingAlgorithm", "smoothingIterations", "smoothingStep"]
 	pass
 

@@ -76,5 +76,7 @@ class Fractal(Texture2d):
 	apiTypeStr = "kFractal"
 	typeIdInt = 1381249606
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["amplitude", "animated", "bias", "frequencyRatio", "inflection", "levelMax", "levelMin", "ratio", "threshold", "time", "timeRatio"]
+	nodeLeafPlugs = ["amplitude", "animated", "bias", "frequencyRatio", "inflection", "levelMax", "levelMin", "ratio", "threshold", "time", "timeRatio"]
 	pass
 

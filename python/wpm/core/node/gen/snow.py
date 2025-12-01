@@ -173,5 +173,7 @@ class Snow(Texture3d):
 	apiTypeStr = "kSnow"
 	typeIdInt = 1381258062
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["depthDecay", "eyeToTextureMatrix", "normalCameraX", "normalCameraY", "normalCameraZ", "normalCamera", "refPointCameraX", "refPointCameraY", "refPointCameraZ", "refPointCamera", "refPointObjX", "refPointObjY", "refPointObjZ", "refPointObj", "snowColorB", "snowColorG", "snowColorR", "snowColor", "surfaceColorB", "surfaceColorG", "surfaceColorR", "surfaceColor", "thickness", "threshold"]
+	nodeLeafPlugs = ["depthDecay", "eyeToTextureMatrix", "normalCamera", "refPointCamera", "refPointObj", "snowColor", "surfaceColor", "thickness", "threshold"]
 	pass
 

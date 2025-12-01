@@ -59,5 +59,7 @@ class ComponentTagBase(_BASE_):
 
 	typeName = "componentTagBase"
 	typeIdInt = 1129595475
+	nodeLeafClassAttrs = ["binMembership", "componentTagContents", "componentTagName", "componentTags", "inputGeometry", "outputGeometry"]
+	nodeLeafPlugs = ["binMembership", "componentTags", "inputGeometry", "outputGeometry"]
 	pass
 

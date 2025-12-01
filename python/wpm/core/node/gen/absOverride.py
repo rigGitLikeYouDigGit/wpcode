@@ -30,5 +30,7 @@ class AbsOverride(ValueOverride):
 
 	typeName = "absOverride"
 	typeIdInt = 1476395896
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

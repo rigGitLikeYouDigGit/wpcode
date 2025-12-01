@@ -33,5 +33,7 @@ class PolyVertexNormalManip(ManipContainer):
 	apiTypeStr = "kPolyVertexNormalManip"
 	typeIdInt = 1431719501
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -36,5 +36,7 @@ class CreaseSet(ObjectSet):
 	apiTypeStr = "kCreaseSet"
 	typeIdInt = 1129465153
 	MFnCls = om.MFnSet
+	nodeLeafClassAttrs = ["creaseLevel"]
+	nodeLeafPlugs = ["creaseLevel"]
 	pass
 

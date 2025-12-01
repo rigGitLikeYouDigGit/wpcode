@@ -33,5 +33,7 @@ class RelUniqueOverride(RelOverride):
 
 	typeName = "relUniqueOverride"
 	typeIdInt = 1476395937
+	nodeLeafClassAttrs = ["targetNodeName"]
+	nodeLeafPlugs = ["targetNodeName"]
 	pass
 

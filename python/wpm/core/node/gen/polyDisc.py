@@ -57,5 +57,7 @@ class PolyDisc(_BASE_):
 
 	typeName = "polyDisc"
 	typeIdInt = 1195050
+	nodeLeafClassAttrs = ["binMembership", "heightBaseline", "output", "radius", "sides", "subdivisionMode", "subdivisions"]
+	nodeLeafPlugs = ["binMembership", "heightBaseline", "output", "radius", "sides", "subdivisionMode", "subdivisions"]
 	pass
 

@@ -141,5 +141,7 @@ class HwShader(ShadingDependNode):
 
 	typeName = "hwShader"
 	typeIdInt = 1380472659
+	nodeLeafClassAttrs = ["enableHwShading", "outColorB", "outColorG", "outColorR", "outColor", "outGlowColorB", "outGlowColorG", "outGlowColorR", "outGlowColor", "outMatteOpacityB", "outMatteOpacityG", "outMatteOpacityR", "outMatteOpacity", "outTransparencyB", "outTransparencyG", "outTransparencyR", "outTransparency", "uniformParameters", "varyingParameters"]
+	nodeLeafPlugs = ["enableHwShading", "outColor", "outGlowColor", "outMatteOpacity", "outTransparency", "uniformParameters", "varyingParameters"]
 	pass
 

@@ -135,5 +135,7 @@ class StereoRigCamera(Camera):
 
 	typeName = "stereoRigCamera"
 	typeIdInt = 1397900097
+	nodeLeafClassAttrs = ["displayFarClip", "displayFrustum", "displayNearClip", "filmOffsetLeftCam", "filmOffsetRightCam", "interaxialSeparation", "safeStereo", "safeViewingVolume", "safeVolumeColorBlue", "safeVolumeColorGreen", "safeVolumeColorRed", "safeVolumeColor", "safeVolumeTransparency", "stereo", "toeInAdjust", "zeroParallax", "zeroParallaxColorBlue", "zeroParallaxColorGreen", "zeroParallaxColorRed", "zeroParallaxColor", "zeroParallaxPlane", "zeroParallaxTransparency"]
+	nodeLeafPlugs = ["displayFarClip", "displayFrustum", "displayNearClip", "filmOffsetLeftCam", "filmOffsetRightCam", "interaxialSeparation", "safeStereo", "safeViewingVolume", "safeVolumeColor", "safeVolumeTransparency", "stereo", "toeInAdjust", "zeroParallax", "zeroParallaxColor", "zeroParallaxPlane", "zeroParallaxTransparency"]
 	pass
 

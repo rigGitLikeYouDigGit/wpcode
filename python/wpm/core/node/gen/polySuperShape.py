@@ -201,5 +201,7 @@ class PolySuperShape(_BASE_):
 
 	typeName = "polySuperShape"
 	typeIdInt = 1195051
+	nodeLeafClassAttrs = ["binMembership", "ellipse0", "ellipse1", "ellipseMirror", "harmonics0", "harmonics1", "harmonics2", "harmonics3", "harmonics4", "harmonics5", "harmonics6", "harmonics7", "heightBaseline", "horizontalDivisions", "horizontalRevolutions", "internalRadius", "mergeVertices", "output", "radius", "shape", "ultra0", "ultra1", "ultra10", "ultra11", "ultra12", "ultra13", "ultra14", "ultra15", "ultra2", "ultra3", "ultra4", "ultra5", "ultra6", "ultra7", "ultra8", "ultra9", "ultraMirror", "uvMode", "verticalDivisions", "verticalOffset", "verticalRevolutions", "xOffset", "zOffset"]
+	nodeLeafPlugs = ["binMembership", "ellipse0", "ellipse1", "ellipseMirror", "harmonics0", "harmonics1", "harmonics2", "harmonics3", "harmonics4", "harmonics5", "harmonics6", "harmonics7", "heightBaseline", "horizontalDivisions", "horizontalRevolutions", "internalRadius", "mergeVertices", "output", "radius", "shape", "ultra0", "ultra1", "ultra10", "ultra11", "ultra12", "ultra13", "ultra14", "ultra15", "ultra2", "ultra3", "ultra4", "ultra5", "ultra6", "ultra7", "ultra8", "ultra9", "ultraMirror", "uvMode", "verticalDivisions", "verticalOffset", "verticalRevolutions", "xOffset", "zOffset"]
 	pass
 

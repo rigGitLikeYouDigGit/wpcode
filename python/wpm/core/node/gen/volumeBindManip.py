@@ -82,5 +82,7 @@ class VolumeBindManip(Manip3D):
 	apiTypeStr = "kVolumeBindManip"
 	typeIdInt = 1447185986
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = ["pivotRotateX", "pivotRotateY", "pivotRotateZ", "pivotRotate", "pivotTranslateX", "pivotTranslateY", "pivotTranslateZ", "pivotTranslate"]
+	nodeLeafPlugs = ["pivotRotate", "pivotTranslate"]
 	pass
 

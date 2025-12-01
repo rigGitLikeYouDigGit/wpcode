@@ -48,5 +48,7 @@ class CreateUVSet(_BASE_):
 	apiTypeStr = "kCreateUVSet"
 	typeIdInt = 1129469267
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "inputGeometry", "outputGeometry", "uvSetName"]
+	nodeLeafPlugs = ["binMembership", "inputGeometry", "outputGeometry", "uvSetName"]
 	pass
 

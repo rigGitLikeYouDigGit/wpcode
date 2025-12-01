@@ -33,5 +33,7 @@ class ToggleOnLineManip(GeometryOnLineManip):
 	apiTypeStr = "kToggleOnLineManip"
 	typeIdInt = 1431588684
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

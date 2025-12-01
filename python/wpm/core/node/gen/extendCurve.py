@@ -101,5 +101,7 @@ class ExtendCurve(AbstractBaseCreate):
 	apiTypeStr = "kExtendCurve"
 	typeIdInt = 1313167427
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["bothEnds", "distance", "extendMethod", "extensionType", "inputCurve1", "inputCurve2", "pointX", "pointY", "pointZ", "inputPoint", "inputSurface", "join", "outputCurve", "removeMultipleKnots", "start"]
+	nodeLeafPlugs = ["bothEnds", "distance", "extendMethod", "extensionType", "inputCurve1", "inputCurve2", "inputPoint", "inputSurface", "join", "outputCurve", "removeMultipleKnots", "start"]
 	pass
 

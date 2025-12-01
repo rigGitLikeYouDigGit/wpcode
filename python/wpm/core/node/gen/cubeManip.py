@@ -30,5 +30,7 @@ class CubeManip(Manip3D):
 
 	typeName = "cubeManip"
 	typeIdInt = 1431131735
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -33,5 +33,7 @@ class ScaleLimitsManip(ManipContainer):
 	apiTypeStr = "kScaleLimitsManip"
 	typeIdInt = 1431130956
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

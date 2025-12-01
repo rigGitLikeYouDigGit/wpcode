@@ -30,5 +30,7 @@ class AbstractBaseNurbsConversion(AbstractBaseCreate):
 
 	typeName = "abstractBaseNurbsConversion"
 	typeIdInt = 1312968259
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

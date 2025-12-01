@@ -33,5 +33,7 @@ class RoundConstantRadiusManip(ManipContainer):
 	apiTypeStr = "kRoundConstantRadiusManip"
 	typeIdInt = 1431130692
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

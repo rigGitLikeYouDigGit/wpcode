@@ -104,5 +104,7 @@ class ProximityPin(_BASE_):
 	apiTypeStr = "kProximityPin"
 	typeIdInt = 1347573840
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "cacheSetup", "coordMode", "deformedGeometry", "envelope", "inputMatrix", "normalAxis", "normalOverride", "offsetOrientation", "offsetTranslation", "originalGeometry", "originalRailCurve", "outputMatrix", "railCurve", "relativeSpaceMatrix", "relativeSpaceMode", "tangentAxis", "uvSetName"]
+	nodeLeafPlugs = ["binMembership", "cacheSetup", "coordMode", "deformedGeometry", "envelope", "inputMatrix", "normalAxis", "normalOverride", "offsetOrientation", "offsetTranslation", "originalGeometry", "originalRailCurve", "outputMatrix", "railCurve", "relativeSpaceMatrix", "relativeSpaceMode", "tangentAxis", "uvSetName"]
 	pass
 

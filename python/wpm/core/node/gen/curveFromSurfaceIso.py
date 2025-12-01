@@ -44,5 +44,7 @@ class CurveFromSurfaceIso(CurveFromSurface):
 	apiTypeStr = "kCurveFromSurfaceIso"
 	typeIdInt = 1313035081
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["isoparmDirection", "isoparmValue", "relativeValue"]
+	nodeLeafPlugs = ["isoparmDirection", "isoparmValue", "relativeValue"]
 	pass
 

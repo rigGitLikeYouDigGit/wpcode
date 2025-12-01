@@ -44,5 +44,7 @@ class TimeFunction(_BASE_):
 	apiTypeStr = "kTimeFunction"
 	typeIdInt = 1952872558
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "input", "output"]
+	nodeLeafPlugs = ["binMembership", "input", "output"]
 	pass
 

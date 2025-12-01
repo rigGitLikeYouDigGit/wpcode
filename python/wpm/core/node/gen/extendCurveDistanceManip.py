@@ -33,5 +33,7 @@ class ExtendCurveDistanceManip(ManipContainer):
 	apiTypeStr = "kExtendCurveDistanceManip"
 	typeIdInt = 1431127363
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

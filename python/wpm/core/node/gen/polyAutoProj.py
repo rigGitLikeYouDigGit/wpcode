@@ -180,5 +180,7 @@ class PolyAutoProj(PolyModifierUV):
 	apiTypeStr = "kPolyAutoProj"
 	typeIdInt = 1346458960
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["denseLayout", "layout", "layoutMethod", "maintainSymmetry", "optimize", "percentageSpace", "pivotX", "pivotY", "pivotZ", "pivot", "planes", "polyGeomObject", "projectBothDirections", "rotateX", "rotateY", "rotateZ", "rotate", "scaleX", "scaleY", "scaleZ", "scale", "scaleMode", "skipIntersect", "translateX", "translateY", "translateZ", "translate", "twoSidedLayout"]
+	nodeLeafPlugs = ["denseLayout", "layout", "layoutMethod", "maintainSymmetry", "optimize", "percentageSpace", "pivot", "planes", "polyGeomObject", "projectBothDirections", "rotate", "scale", "scaleMode", "skipIntersect", "translate", "twoSidedLayout"]
 	pass
 

@@ -88,5 +88,7 @@ class PolyBevel(PolyModifierWorld):
 	apiTypeStr = "kPolyBevel"
 	typeIdInt = 1346524748
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["angleTolerance", "autoFit", "fillNgons", "fraction", "maya2015", "mergeVertexTolerance", "mergeVertices", "miteringAngle", "offset", "offsetAsFraction", "roundness", "segments", "smoothingAngle", "uvAssignment"]
+	nodeLeafPlugs = ["angleTolerance", "autoFit", "fillNgons", "fraction", "maya2015", "mergeVertexTolerance", "mergeVertices", "miteringAngle", "offset", "offsetAsFraction", "roundness", "segments", "smoothingAngle", "uvAssignment"]
 	pass
 

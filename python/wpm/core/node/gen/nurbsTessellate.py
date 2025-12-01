@@ -57,5 +57,7 @@ class NurbsTessellate(ParentTessellate):
 
 	typeName = "nurbsTessellate"
 	typeIdInt = 1314145619
+	nodeLeafClassAttrs = ["curvatureTolerance", "explicitTessellationAttributes", "inputSurface", "smoothEdge", "smoothEdgeRatio", "uDivisionsFactor", "vDivisionsFactor"]
+	nodeLeafPlugs = ["curvatureTolerance", "explicitTessellationAttributes", "inputSurface", "smoothEdge", "smoothEdgeRatio", "uDivisionsFactor", "vDivisionsFactor"]
 	pass
 

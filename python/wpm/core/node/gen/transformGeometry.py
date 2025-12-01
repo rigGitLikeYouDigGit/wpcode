@@ -56,5 +56,7 @@ class TransformGeometry(AbstractBaseCreate):
 	apiTypeStr = "kTransformGeometry"
 	typeIdInt = 1413956943
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["freezeNormals", "inputGeometry", "invertTransform", "outputGeometry", "reverseNormals", "transform"]
+	nodeLeafPlugs = ["freezeNormals", "inputGeometry", "invertTransform", "outputGeometry", "reverseNormals", "transform"]
 	pass
 

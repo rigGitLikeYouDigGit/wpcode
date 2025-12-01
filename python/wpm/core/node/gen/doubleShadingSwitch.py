@@ -100,5 +100,7 @@ class DoubleShadingSwitch(BaseShadingSwitch):
 	apiTypeStr = "kDoubleShadingSwitch"
 	typeIdInt = 1398229042
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["defComp1", "defComp2", "default", "inComp1", "inComp2", "inDouble", "inShape", "input", "outComp1", "outComp2", "output"]
+	nodeLeafPlugs = ["default", "input", "output"]
 	pass
 

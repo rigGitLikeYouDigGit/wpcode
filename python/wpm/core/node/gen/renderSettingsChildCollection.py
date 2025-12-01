@@ -30,5 +30,7 @@ class RenderSettingsChildCollection(Collection):
 
 	typeName = "renderSettingsChildCollection"
 	typeIdInt = 1476395939
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

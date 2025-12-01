@@ -48,5 +48,7 @@ class RenderGlobalsList(_BASE_):
 	apiTypeStr = "kRenderGlobalsList"
 	typeIdInt = 1380206412
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "renderGlobals", "renderQualities", "renderResolutions"]
+	nodeLeafPlugs = ["binMembership", "renderGlobals", "renderQualities", "renderResolutions"]
 	pass
 

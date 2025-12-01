@@ -30,5 +30,7 @@ class MoveBezierHandleManip(ManipContainer):
 
 	typeName = "moveBezierHandleManip"
 	typeIdInt = 1296189520
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

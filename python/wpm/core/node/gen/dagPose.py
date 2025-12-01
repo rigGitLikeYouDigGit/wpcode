@@ -64,5 +64,7 @@ class DagPose(_BASE_):
 	apiTypeStr = "kDagPose"
 	typeIdInt = 1179668307
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "bindPose", "global", "members", "parents", "world", "worldMatrix", "xformMatrix"]
+	nodeLeafPlugs = ["binMembership", "bindPose", "global", "members", "parents", "world", "worldMatrix", "xformMatrix"]
 	pass
 

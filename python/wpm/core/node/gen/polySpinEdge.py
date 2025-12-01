@@ -40,5 +40,7 @@ class PolySpinEdge(PolyModifier):
 	apiTypeStr = "kPolySpinEdge"
 	typeIdInt = 1347637329
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["offset", "reverse"]
+	nodeLeafPlugs = ["offset", "reverse"]
 	pass
 

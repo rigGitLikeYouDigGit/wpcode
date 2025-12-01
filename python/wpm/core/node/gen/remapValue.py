@@ -156,5 +156,7 @@ class RemapValue(_BASE_):
 	apiTypeStr = "kRemapValue"
 	typeIdInt = 1380800076
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "color_ColorB", "color_ColorG", "color_ColorR", "color_Color", "color_Interp", "color_Position", "color", "inputMax", "inputMin", "inputValue", "outColorB", "outColorG", "outColorR", "outColor", "outValue", "outputMax", "outputMin", "value_FloatValue", "value_Interp", "value_Position", "value"]
+	nodeLeafPlugs = ["binMembership", "color", "inputMax", "inputMin", "inputValue", "outColor", "outValue", "outputMax", "outputMin", "value"]
 	pass
 

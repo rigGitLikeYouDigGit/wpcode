@@ -101,5 +101,7 @@ class ProximityFalloff(_BASE_):
 	apiTypeStr = "kProximityFalloff"
 	typeIdInt = 1347962447
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "bindTagsFilter", "end", "outputWeightFunction", "proximityGeometry", "proximitySubset", "ramp_FloatValue", "ramp_Interp", "ramp_Position", "ramp", "start", "useBindTags", "useOriginalGeometry", "vertexSpace", "volume"]
+	nodeLeafPlugs = ["binMembership", "bindTagsFilter", "end", "outputWeightFunction", "proximityGeometry", "proximitySubset", "ramp", "start", "useBindTags", "useOriginalGeometry", "vertexSpace", "volume"]
 	pass
 

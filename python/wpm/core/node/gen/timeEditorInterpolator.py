@@ -96,5 +96,7 @@ class TimeEditorInterpolator(_BASE_):
 	apiTypeStr = "kTimeEditorInterpolator"
 	typeIdInt = 1413826896
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "input", "layerAttributeIndex", "layerAttributeInput", "layerAttributeLayerId", "layerAttributeValue", "layerAttribute", "output", "outputRaw", "parentCompound", "parentCompoundState", "parentTracksState", "targetAttribute"]
+	nodeLeafPlugs = ["binMembership", "input", "layerAttribute", "output", "outputRaw", "parentCompound", "parentCompoundState", "parentTracksState", "targetAttribute"]
 	pass
 

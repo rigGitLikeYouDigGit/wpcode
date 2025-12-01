@@ -52,5 +52,7 @@ class ObjectScriptFilter(ObjectFilter):
 	apiTypeStr = "kObjectScriptFilter"
 	typeIdInt = 1330857548
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["arrayArg", "attrName", "procName", "pythonModule", "uniqueNodeNames"]
+	nodeLeafPlugs = ["arrayArg", "attrName", "procName", "pythonModule", "uniqueNodeNames"]
 	pass
 

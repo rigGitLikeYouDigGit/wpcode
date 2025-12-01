@@ -30,5 +30,7 @@ class CurveShape(ControlPoint):
 
 	typeName = "curveShape"
 	typeIdInt = 1313035859
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

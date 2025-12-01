@@ -33,5 +33,7 @@ class PolyMoveFacetUV(PolyMoveUV):
 	apiTypeStr = "kPolyMoveFacetUV"
 	typeIdInt = 1347241557
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

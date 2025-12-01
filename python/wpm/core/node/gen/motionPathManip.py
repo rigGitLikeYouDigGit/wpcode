@@ -33,5 +33,7 @@ class MotionPathManip(ManipContainer):
 	apiTypeStr = "kMotionPathManip"
 	typeIdInt = 1431129424
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

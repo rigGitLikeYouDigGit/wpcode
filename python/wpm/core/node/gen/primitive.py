@@ -83,5 +83,7 @@ class Primitive(AbstractBaseCreate):
 
 	typeName = "primitive"
 	typeIdInt = 1313886797
+	nodeLeafClassAttrs = ["axisX", "axisY", "axisZ", "axis", "outputSurface", "pivotX", "pivotY", "pivotZ", "pivot"]
+	nodeLeafPlugs = ["axis", "outputSurface", "pivot"]
 	pass
 

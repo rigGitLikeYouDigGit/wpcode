@@ -54,5 +54,7 @@ class VortexField(Field):
 
 	typeName = "vortexField"
 	typeIdInt = 1498828626
+	nodeLeafClassAttrs = ["axisX", "axisY", "axisZ", "axis"]
+	nodeLeafPlugs = ["axis"]
 	pass
 

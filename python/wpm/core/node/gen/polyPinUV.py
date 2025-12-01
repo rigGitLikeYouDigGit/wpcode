@@ -40,5 +40,7 @@ class PolyPinUV(PolyModifierUV):
 	apiTypeStr = "kPolyPinUV"
 	typeIdInt = 1347442006
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["operation", "pin"]
+	nodeLeafPlugs = ["operation", "pin"]
 	pass
 

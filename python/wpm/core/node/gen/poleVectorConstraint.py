@@ -36,5 +36,7 @@ class PoleVectorConstraint(PointConstraint):
 	apiTypeStr = "kPoleVectorConstraint"
 	typeIdInt = 1146115651
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = ["pivotSpace"]
+	nodeLeafPlugs = ["pivotSpace"]
 	pass
 

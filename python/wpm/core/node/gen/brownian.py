@@ -148,5 +148,7 @@ class Brownian(Texture3d):
 	apiTypeStr = "kBrownian"
 	typeIdInt = 1380336205
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["increment", "lacunarity", "normalCameraX", "normalCameraY", "normalCameraZ", "normalCamera", "octaves", "refPointCameraX", "refPointCameraY", "refPointCameraZ", "refPointCamera", "refPointObjX", "refPointObjY", "refPointObjZ", "refPointObj", "weight3dX", "weight3dY", "weight3dZ", "weight3d", "xPixelAngle"]
+	nodeLeafPlugs = ["increment", "lacunarity", "normalCamera", "octaves", "refPointCamera", "refPointObj", "weight3d", "xPixelAngle"]
 	pass
 

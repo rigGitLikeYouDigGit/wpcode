@@ -134,5 +134,7 @@ class Extrude(AbstractBaseCreate):
 	apiTypeStr = "kExtrude"
 	typeIdInt = 1313167442
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["degreeAlongLength", "directionX", "directionY", "directionZ", "direction", "extrudeType", "fixedPath", "length", "outputSurface", "path", "pivotX", "pivotY", "pivotZ", "pivot", "profile", "reverseSurfaceIfPathReversed", "rotation", "scale", "subCurveSubSurface", "useComponentPivot", "useProfileNormal"]
+	nodeLeafPlugs = ["degreeAlongLength", "direction", "extrudeType", "fixedPath", "length", "outputSurface", "path", "pivot", "profile", "reverseSurfaceIfPathReversed", "rotation", "scale", "subCurveSubSurface", "useComponentPivot", "useProfileNormal"]
 	pass
 

@@ -33,5 +33,7 @@ class FosterParent(Transform):
 	apiTypeStr = "kFosterParent"
 	typeIdInt = 1179669070
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

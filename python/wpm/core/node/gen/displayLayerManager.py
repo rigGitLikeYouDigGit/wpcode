@@ -44,5 +44,7 @@ class DisplayLayerManager(_BASE_):
 	apiTypeStr = "kDisplayLayerManager"
 	typeIdInt = 1146113101
 	MFnCls = om.MFnDisplayLayerManager
+	nodeLeafClassAttrs = ["binMembership", "currentDisplayLayer", "displayLayerId"]
+	nodeLeafPlugs = ["binMembership", "currentDisplayLayer", "displayLayerId"]
 	pass
 

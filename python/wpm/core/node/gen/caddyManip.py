@@ -30,5 +30,7 @@ class CaddyManip(Manip3D):
 
 	typeName = "caddyManip"
 	typeIdInt = 1431126852
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

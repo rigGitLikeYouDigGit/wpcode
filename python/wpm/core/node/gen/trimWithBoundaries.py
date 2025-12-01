@@ -60,5 +60,7 @@ class TrimWithBoundaries(AbstractBaseCreate):
 	apiTypeStr = "kTrimWithBoundaries"
 	typeIdInt = 1314150210
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["createNewFace", "flipNormal", "inputBoundaries", "inputSurface", "outputSurface", "toleranceE", "tolerancePE"]
+	nodeLeafPlugs = ["createNewFace", "flipNormal", "inputBoundaries", "inputSurface", "outputSurface", "toleranceE", "tolerancePE"]
 	pass
 

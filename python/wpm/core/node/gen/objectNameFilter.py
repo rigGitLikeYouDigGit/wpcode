@@ -44,5 +44,7 @@ class ObjectNameFilter(ObjectFilter):
 	apiTypeStr = "kObjectNameFilter"
 	typeIdInt = 1330529868
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["attrName", "nameStrings", "regExp"]
+	nodeLeafPlugs = ["attrName", "nameStrings", "regExp"]
 	pass
 

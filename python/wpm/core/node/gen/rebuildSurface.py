@@ -96,5 +96,7 @@ class RebuildSurface(AbstractBaseNurbsConversion):
 	apiTypeStr = "kRebuildSurface"
 	typeIdInt = 1314013779
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["degreeU", "degreeV", "direction", "endKnots", "fitRebuild", "inputSurface", "keepControlPoints", "keepCorners", "keepRange", "matchSurface", "oldRebuildRational", "outputSurface", "rebuildType", "spansU", "spansV", "tolerance"]
+	nodeLeafPlugs = ["degreeU", "degreeV", "direction", "endKnots", "fitRebuild", "inputSurface", "keepControlPoints", "keepCorners", "keepRange", "matchSurface", "oldRebuildRational", "outputSurface", "rebuildType", "spansU", "spansV", "tolerance"]
 	pass
 

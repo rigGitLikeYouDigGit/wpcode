@@ -33,5 +33,7 @@ class Manip2DContainer(Manip2D):
 	apiTypeStr = "kManip2DContainer"
 	typeIdInt = 1431122499
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -40,5 +40,7 @@ class CurveNormalizerAngle(CurveNormalizer):
 	apiTypeStr = "kCurveNormalizerAngle"
 	typeIdInt = 1129206337
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["animInput", "output"]
+	nodeLeafPlugs = ["animInput", "output"]
 	pass
 

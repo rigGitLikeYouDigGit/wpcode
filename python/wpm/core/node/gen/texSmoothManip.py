@@ -33,5 +33,7 @@ class TexSmoothManip(Uv2dManip):
 	apiTypeStr = "kTexSmoothManip"
 	typeIdInt = 1414746701
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

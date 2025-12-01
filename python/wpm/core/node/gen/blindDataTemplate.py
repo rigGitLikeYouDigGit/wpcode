@@ -90,5 +90,7 @@ class BlindDataTemplate(_BASE_):
 	apiTypeStr = "kBlindDataTemplate"
 	typeIdInt = 1112294484
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["bdPresetAttr", "bdUserInfoName", "bdUserInfoValue", "bdUserInfo", "binMembership", "bdPresetValue", "bdPresetElements", "bdPresetName", "blindDataPresets", "typeId"]
+	nodeLeafPlugs = ["bdUserInfo", "binMembership", "blindDataPresets", "typeId"]
 	pass
 

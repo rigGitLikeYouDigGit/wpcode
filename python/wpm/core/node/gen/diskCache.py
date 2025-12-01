@@ -76,5 +76,7 @@ class DiskCache(_BASE_):
 	apiTypeStr = "kDiskCache"
 	typeIdInt = 1146309443
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "cacheName", "cacheType", "copyLocally", "diskCache", "enable", "endTime", "hiddenCacheName", "samplingRate", "samplingType", "startTime"]
+	nodeLeafPlugs = ["binMembership", "cacheName", "cacheType", "copyLocally", "diskCache", "enable", "endTime", "hiddenCacheName", "samplingRate", "samplingType", "startTime"]
 	pass
 

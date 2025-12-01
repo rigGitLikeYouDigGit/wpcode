@@ -145,5 +145,7 @@ class SubdPlanarProj(SubdModifierWorld):
 
 	typeName = "subdPlanarProj"
 	typeIdInt = 1397771344
+	nodeLeafClassAttrs = ["compId", "imageCenterX", "imageCenterY", "imageCenter", "imageScaleU", "imageScaleV", "imageScale", "projectionCenterX", "projectionCenterY", "projectionCenterZ", "projectionCenter", "projectionHeight", "projectionWidth", "projectionScale", "radius", "rotateX", "rotateY", "rotateZ", "rotate", "rotationAngle"]
+	nodeLeafPlugs = ["compId", "imageCenter", "imageScale", "projectionCenter", "projectionScale", "radius", "rotate", "rotationAngle"]
 	pass
 

@@ -45,6 +45,8 @@ class _BASE_(WN):
 
 	typeName = "_BASE_"
 	typeIdInt = -1
-	MFnCls = om.MFnDependencyNode
+	MFnCls = om.MFnBase
+	nodeLeafClassAttrs = ["caching", "frozen", "isHistoricallyInteresting", "message", "nodeState"]
+	nodeLeafPlugs = ["caching", "frozen", "isHistoricallyInteresting", "message", "nodeState"]
 	pass
 

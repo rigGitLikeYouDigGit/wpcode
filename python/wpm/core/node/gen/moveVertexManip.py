@@ -33,5 +33,7 @@ class MoveVertexManip(Manip3D):
 	apiTypeStr = "kMoveVertexManip"
 	typeIdInt = 1431721037
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

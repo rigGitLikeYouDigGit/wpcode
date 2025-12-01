@@ -78,5 +78,7 @@ class PolyPrimitive(PolyCreator):
 
 	typeName = "polyPrimitive"
 	typeIdInt = 1347441229
+	nodeLeafClassAttrs = ["axisX", "axisY", "axisZ", "axis", "componentTagCreate", "componentTagPrefix", "componentTagSuffix", "heightBaseline", "paramWarn", "uvSetName"]
+	nodeLeafPlugs = ["axis", "componentTagCreate", "componentTagPrefix", "componentTagSuffix", "heightBaseline", "paramWarn", "uvSetName"]
 	pass
 

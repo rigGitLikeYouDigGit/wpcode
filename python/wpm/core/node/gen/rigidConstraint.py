@@ -230,5 +230,7 @@ class RigidConstraint(Transform):
 	apiTypeStr = "kRigidConstraint"
 	typeIdInt = 1497584468
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = ["angularVelocityX", "angularVelocityY", "angularVelocityZ", "angularVelocity", "constrain", "constraintType", "forceX", "forceY", "forceZ", "force", "initialOrientationX", "initialOrientationY", "initialOrientationZ", "initialOrientation", "initialPositionX", "initialPositionY", "initialPositionZ", "initialPosition", "interpenetrate", "isBounded", "isParented", "relativeTo", "rigidBody1", "rigidBody2", "solverId", "springDamping", "springRestLength", "springStiffness", "userDefinedPositionX", "userDefinedPositionY", "userDefinedPositionZ", "userDefinedPosition", "velocityX", "velocityY", "velocityZ", "velocity"]
+	nodeLeafPlugs = ["angularVelocity", "constrain", "constraintType", "force", "initialOrientation", "initialPosition", "interpenetrate", "isBounded", "isParented", "relativeTo", "rigidBody1", "rigidBody2", "solverId", "springDamping", "springRestLength", "springStiffness", "userDefinedPosition", "velocity"]
 	pass
 

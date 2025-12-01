@@ -76,5 +76,7 @@ class HierarchyTestNode1(_BASE_):
 
 	typeName = "hierarchyTestNode1"
 	typeIdInt = 1213484593
+	nodeLeafClassAttrs = ["binMembership", "n1level2M", "n1level2S", "n1level1C", "n1level1M", "n1level1S", "n1compound", "n1single"]
+	nodeLeafPlugs = ["binMembership", "n1compound", "n1single"]
 	pass
 

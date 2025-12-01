@@ -69,5 +69,7 @@ class DirectionalLight(NonExtendedLightShapeNode):
 	apiTypeStr = "kDirectionalLight"
 	typeIdInt = 1145655884
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["lightAngle", "objectType", "pointWorldX", "pointWorldY", "pointWorldZ", "pointWorld", "useLightPosition"]
+	nodeLeafPlugs = ["lightAngle", "objectType", "pointWorld", "useLightPosition"]
 	pass
 

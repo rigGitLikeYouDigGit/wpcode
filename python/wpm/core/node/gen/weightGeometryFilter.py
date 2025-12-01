@@ -40,5 +40,7 @@ class WeightGeometryFilter(GeometryFilter):
 
 	typeName = "weightGeometryFilter"
 	typeIdInt = 1146570566
+	nodeLeafClassAttrs = ["weights", "weightList"]
+	nodeLeafPlugs = ["weightList"]
 	pass
 

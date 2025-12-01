@@ -33,5 +33,7 @@ class RenderSphere(ImplicitSphere):
 	apiTypeStr = "kRenderSphere"
 	typeIdInt = 1380864848
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

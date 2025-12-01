@@ -30,5 +30,7 @@ class Uv2dManip(Manip2D):
 
 	typeName = "uv2dManip"
 	typeIdInt = 1431712333
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

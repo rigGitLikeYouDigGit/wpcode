@@ -36,5 +36,7 @@ class PolyFlipEdge(PolyModifier):
 	apiTypeStr = "kPolyFlipEdge"
 	typeIdInt = 1346784325
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["edge"]
+	nodeLeafPlugs = ["edge"]
 	pass
 

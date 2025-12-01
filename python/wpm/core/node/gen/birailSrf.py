@@ -53,5 +53,7 @@ class BirailSrf(AbstractBaseCreate):
 
 	typeName = "birailSrf"
 	typeIdInt = 1312969542
+	nodeLeafClassAttrs = ["inputRail1", "inputRail2", "outputSurface", "surfaceCache", "sweepStyle", "transformMode"]
+	nodeLeafPlugs = ["inputRail1", "inputRail2", "outputSurface", "surfaceCache", "sweepStyle", "transformMode"]
 	pass
 

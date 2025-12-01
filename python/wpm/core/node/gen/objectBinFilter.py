@@ -36,5 +36,7 @@ class ObjectBinFilter(ObjectFilter):
 	apiTypeStr = "kObjectBinFilter"
 	typeIdInt = 1330333260
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binName"]
+	nodeLeafPlugs = ["binName"]
 	pass
 

@@ -96,5 +96,7 @@ class Wire(WeightGeometryFilter):
 	apiTypeStr = "kWire"
 	typeIdInt = 1180125522
 	MFnCls = om.MFnGeometryFilter
+	nodeLeafClassAttrs = ["baseWire", "bindToOriginalGeometry", "cacheSetup", "crossingEffect", "deformedWire", "dropoffDistance", "freezeGeometry", "holder", "localInfluence", "rotation", "scale", "tension", "wireLocatorEnvelope", "wireLocatorParameter", "wireLocatorPercentage", "wireLocatorTwist"]
+	nodeLeafPlugs = ["baseWire", "bindToOriginalGeometry", "cacheSetup", "crossingEffect", "deformedWire", "dropoffDistance", "freezeGeometry", "holder", "localInfluence", "rotation", "scale", "tension", "wireLocatorEnvelope", "wireLocatorParameter", "wireLocatorPercentage", "wireLocatorTwist"]
 	pass
 

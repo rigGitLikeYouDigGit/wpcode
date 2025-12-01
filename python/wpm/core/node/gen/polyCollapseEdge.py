@@ -33,5 +33,7 @@ class PolyCollapseEdge(PolyModifier):
 	apiTypeStr = "kPolyCollapseEdge"
 	typeIdInt = 1346588485
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

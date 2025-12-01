@@ -28,9 +28,6 @@ class BlackBoxPlug(Plug):
 class BorderConnectionsPlug(Plug):
 	node : ContainerBase = None
 	pass
-class CachingPlug(Plug):
-	node : ContainerBase = None
-	pass
 class ContainerTypePlug(Plug):
 	node : ContainerBase = None
 	pass
@@ -43,9 +40,6 @@ class CreatorPlug(Plug):
 class CustomTreatmentPlug(Plug):
 	node : ContainerBase = None
 	pass
-class FrozenPlug(Plug):
-	node : ContainerBase = None
-	pass
 class HyperLayoutPlug(Plug):
 	node : ContainerBase = None
 	pass
@@ -56,15 +50,6 @@ class IsCollapsedPlug(Plug):
 	node : ContainerBase = None
 	pass
 class IsHierarchicalConnectionPlug(Plug):
-	node : ContainerBase = None
-	pass
-class IsHistoricallyInterestingPlug(Plug):
-	node : ContainerBase = None
-	pass
-class MessagePlug(Plug):
-	node : ContainerBase = None
-	pass
-class NodeStatePlug(Plug):
 	node : ContainerBase = None
 	pass
 class IsHierarchicalNodePlug(Plug):
@@ -117,19 +102,14 @@ class ContainerBase(_BASE_):
 	binMembership_ : BinMembershipPlug = PlugDescriptor("binMembership")
 	blackBox_ : BlackBoxPlug = PlugDescriptor("blackBox")
 	borderConnections_ : BorderConnectionsPlug = PlugDescriptor("borderConnections")
-	caching_ : CachingPlug = PlugDescriptor("caching")
 	containerType_ : ContainerTypePlug = PlugDescriptor("containerType")
 	creationDate_ : CreationDatePlug = PlugDescriptor("creationDate")
 	creator_ : CreatorPlug = PlugDescriptor("creator")
 	customTreatment_ : CustomTreatmentPlug = PlugDescriptor("customTreatment")
-	frozen_ : FrozenPlug = PlugDescriptor("frozen")
 	hyperLayout_ : HyperLayoutPlug = PlugDescriptor("hyperLayout")
 	iconName_ : IconNamePlug = PlugDescriptor("iconName")
 	isCollapsed_ : IsCollapsedPlug = PlugDescriptor("isCollapsed")
 	isHierarchicalConnection_ : IsHierarchicalConnectionPlug = PlugDescriptor("isHierarchicalConnection")
-	isHistoricallyInteresting_ : IsHistoricallyInterestingPlug = PlugDescriptor("isHistoricallyInteresting")
-	message_ : MessagePlug = PlugDescriptor("message")
-	nodeState_ : NodeStatePlug = PlugDescriptor("nodeState")
 	isHierarchicalNode_ : IsHierarchicalNodePlug = PlugDescriptor("isHierarchicalNode")
 	publishedNode_ : PublishedNodePlug = PlugDescriptor("publishedNode")
 	publishedNodeType_ : PublishedNodeTypePlug = PlugDescriptor("publishedNodeType")
@@ -149,5 +129,7 @@ class ContainerBase(_BASE_):
 	apiTypeStr = "kContainerBase"
 	typeIdInt = 1129267777
 	MFnCls = om.MFnContainerNode
+	nodeLeafClassAttrs = ["binMembership", "blackBox", "borderConnections", "containerType", "creationDate", "creator", "customTreatment", "hyperLayout", "iconName", "isCollapsed", "isHierarchicalConnection", "isHierarchicalNode", "publishedNode", "publishedNodeType", "publishedNodeInfo", "rmbCommand", "templateName", "templatePath", "templateVersion", "uiTreatment", "viewMode", "viewName"]
+	nodeLeafPlugs = ["binMembership", "blackBox", "borderConnections", "containerType", "creationDate", "creator", "customTreatment", "hyperLayout", "iconName", "isCollapsed", "isHierarchicalConnection", "publishedNodeInfo", "rmbCommand", "templateName", "templatePath", "templateVersion", "uiTreatment", "viewMode", "viewName"]
 	pass
 

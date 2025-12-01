@@ -77,5 +77,7 @@ class RevolvedPrimitive(Primitive):
 
 	typeName = "revolvedPrimitive"
 	typeIdInt = 1314017363
+	nodeLeafClassAttrs = ["absoluteSweepDifference", "bottomCapCurve", "degree", "endSweep", "heightRatio", "radius", "sections", "spans", "startSweep", "tolerance", "topCapCurve", "useTolerance"]
+	nodeLeafPlugs = ["absoluteSweepDifference", "bottomCapCurve", "degree", "endSweep", "heightRatio", "radius", "sections", "spans", "startSweep", "tolerance", "topCapCurve", "useTolerance"]
 	pass
 

@@ -53,5 +53,7 @@ class Override(ChildNode):
 
 	typeName = "override"
 	typeIdInt = 1476395888
+	nodeLeafClassAttrs = ["attribute", "enabled", "localRender", "parentEnabled", "parentNumIsolatedChildren", "selfEnabled"]
+	nodeLeafPlugs = ["attribute", "enabled", "localRender", "parentEnabled", "parentNumIsolatedChildren", "selfEnabled"]
 	pass
 

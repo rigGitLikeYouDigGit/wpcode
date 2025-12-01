@@ -72,5 +72,7 @@ class PolyPipe(PolyPrimitive):
 	apiTypeStr = "kPolyPipe"
 	typeIdInt = 1347438928
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["createUVs", "height", "radius", "roundCap", "roundCapHeightCompensation", "subdivisionsAxis", "subdivisionsCaps", "subdivisionsHeight", "texture", "thickness"]
+	nodeLeafPlugs = ["createUVs", "height", "radius", "roundCap", "roundCapHeightCompensation", "subdivisionsAxis", "subdivisionsCaps", "subdivisionsHeight", "texture", "thickness"]
 	pass
 

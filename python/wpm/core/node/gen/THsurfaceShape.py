@@ -29,5 +29,7 @@ class THsurfaceShape(SurfaceShape):
 	# node attributes
 
 	typeName = "THsurfaceShape"
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

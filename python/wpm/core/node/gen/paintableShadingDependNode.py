@@ -30,5 +30,7 @@ class PaintableShadingDependNode(ShadingDependNode):
 
 	typeName = "paintableShadingDependNode"
 	typeIdInt = 1347634254
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

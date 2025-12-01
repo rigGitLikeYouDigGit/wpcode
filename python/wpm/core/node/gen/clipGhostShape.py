@@ -97,5 +97,7 @@ class ClipGhostShape(Transform):
 	apiTypeStr = "kClipGhostShape"
 	typeIdInt = 1128747848
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = ["clipData", "clipDirectionScale", "clipEnabled", "clipGhostData", "colorB", "colorG", "colorR", "color", "intermediatePoses", "showClipPath", "showEndPose", "showIntermediatePoses", "showStartPose", "trackMuted"]
+	nodeLeafPlugs = ["clipData", "clipDirectionScale", "clipEnabled", "clipGhostData", "color", "intermediatePoses", "showClipPath", "showEndPose", "showIntermediatePoses", "showStartPose", "trackMuted"]
 	pass
 

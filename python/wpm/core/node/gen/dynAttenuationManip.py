@@ -33,5 +33,7 @@ class DynAttenuationManip(ManipContainer):
 	apiTypeStr = "kDynAttenuationManip"
 	typeIdInt = 1430344788
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

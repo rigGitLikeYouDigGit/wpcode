@@ -116,5 +116,7 @@ class Time(_BASE_):
 	apiTypeStr = "kTime"
 	typeIdInt = 1414090053
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "enableTimewarp", "outTime", "timecodeMayaStart", "timecodeProductionStart", "timewarpIn_Hidden", "timewarpIn_InmapFrom", "timewarpIn_InmapTo", "timewarpIn_Inmap", "timewarpIn_OutmapFrom", "timewarpIn_OutmapTo", "timewarpIn_Outmap", "timewarpIn_Raw", "timewarpIn", "unwarpedTime"]
+	nodeLeafPlugs = ["binMembership", "enableTimewarp", "outTime", "timecodeMayaStart", "timecodeProductionStart", "timewarpIn", "unwarpedTime"]
 	pass
 

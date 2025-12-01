@@ -64,5 +64,7 @@ class PolyCube(PolyPrimitive):
 	apiTypeStr = "kPolyCube"
 	typeIdInt = 1346590018
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["createUVs", "depth", "height", "subdivisionsDepth", "subdivisionsHeight", "subdivisionsWidth", "texture", "width"]
+	nodeLeafPlugs = ["createUVs", "depth", "height", "subdivisionsDepth", "subdivisionsHeight", "subdivisionsWidth", "texture", "width"]
 	pass
 

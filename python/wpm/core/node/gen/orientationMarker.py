@@ -44,5 +44,7 @@ class OrientationMarker(PositionMarker):
 	apiTypeStr = "kOrientationMarker"
 	typeIdInt = 1330795597
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["frontTwist", "sideTwist", "upTwist"]
+	nodeLeafPlugs = ["frontTwist", "sideTwist", "upTwist"]
 	pass
 

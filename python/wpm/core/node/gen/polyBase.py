@@ -37,5 +37,7 @@ class PolyBase(_BASE_):
 
 	typeName = "polyBase"
 	typeIdInt = 1345203758
+	nodeLeafClassAttrs = ["binMembership", "output"]
+	nodeLeafPlugs = ["binMembership", "output"]
 	pass
 

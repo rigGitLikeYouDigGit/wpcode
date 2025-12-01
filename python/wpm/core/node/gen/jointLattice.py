@@ -114,5 +114,7 @@ class JointLattice(GeometryFilter):
 
 	typeName = "jointLattice"
 	typeIdInt = 1178748236
+	nodeLeafClassAttrs = ["adjustedLowerBaseLatticeMatrix", "adjustedUpperBaseLatticeMatrix", "baseLatticeMatrix", "bendMagnitude", "bendVectorX", "bendVectorY", "bendVectorZ", "bendVector", "creasing", "deformedLatticeMatrix", "initialLowerMatrix", "initialUpperMatrix", "lengthIn", "lengthOut", "lowerMatrix", "rounding", "upperMatrix", "widthLeft", "widthRight"]
+	nodeLeafPlugs = ["adjustedLowerBaseLatticeMatrix", "adjustedUpperBaseLatticeMatrix", "baseLatticeMatrix", "bendMagnitude", "bendVector", "creasing", "deformedLatticeMatrix", "initialLowerMatrix", "initialUpperMatrix", "lengthIn", "lengthOut", "lowerMatrix", "rounding", "upperMatrix", "widthLeft", "widthRight"]
 	pass
 

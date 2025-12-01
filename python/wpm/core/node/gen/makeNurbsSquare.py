@@ -111,5 +111,7 @@ class MakeNurbsSquare(AbstractBaseCreate):
 
 	typeName = "makeNurbsSquare"
 	typeIdInt = 1314083154
+	nodeLeafClassAttrs = ["centerX", "centerY", "centerZ", "center", "degree", "normalX", "normalY", "normalZ", "normal", "outputCurve1", "outputCurve2", "outputCurve3", "outputCurve4", "sideLength1", "sideLength2", "spansPerSide"]
+	nodeLeafPlugs = ["center", "degree", "normal", "outputCurve1", "outputCurve2", "outputCurve3", "outputCurve4", "sideLength1", "sideLength2", "spansPerSide"]
 	pass
 

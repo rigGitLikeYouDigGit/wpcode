@@ -30,5 +30,7 @@ class EnvironmentFog(GeometryShape):
 
 	typeName = "environmentFog"
 	typeIdInt = 1162761798
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

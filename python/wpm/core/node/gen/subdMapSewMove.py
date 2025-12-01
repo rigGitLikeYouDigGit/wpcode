@@ -40,5 +40,7 @@ class SubdMapSewMove(SubdModifierUV):
 	apiTypeStr = "kSubdMapSewMove"
 	typeIdInt = 1397966157
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["limitPieceSize", "numberFaces"]
+	nodeLeafPlugs = ["limitPieceSize", "numberFaces"]
 	pass
 

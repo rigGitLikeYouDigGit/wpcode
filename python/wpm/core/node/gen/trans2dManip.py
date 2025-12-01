@@ -30,5 +30,7 @@ class Trans2dManip(Manip2D):
 
 	typeName = "trans2dManip"
 	typeIdInt = 1429361741
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -126,5 +126,7 @@ class HyperView(_BASE_):
 	apiTypeStr = "kHyperView"
 	typeIdInt = 1145589846
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "buildDirection", "dagView", "description", "focusNode", "fullName", "graphTraversalLimit", "hyperLayout", "positionX", "positionY", "position", "rootNode", "shortName", "viewXH", "viewYH", "viewRectHigh", "viewXL", "viewYL", "viewRectLow"]
+	nodeLeafPlugs = ["binMembership", "buildDirection", "dagView", "description", "focusNode", "fullName", "graphTraversalLimit", "hyperLayout", "position", "rootNode", "shortName", "viewRectHigh", "viewRectLow"]
 	pass
 

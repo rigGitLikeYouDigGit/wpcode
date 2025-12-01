@@ -163,5 +163,7 @@ class QuadShadingSwitch(BaseShadingSwitch):
 	apiTypeStr = "kQuadShadingSwitch"
 	typeIdInt = 1398229044
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["defComp1", "defComp2", "defComp3", "defSingle", "defTriple", "default", "inComp1", "inComp2", "inComp3", "inSingle", "inTriple", "inQuad", "inShape", "input", "outComp1", "outComp2", "outComp3", "outSingle", "outTriple", "output"]
+	nodeLeafPlugs = ["default", "input", "output"]
 	pass
 

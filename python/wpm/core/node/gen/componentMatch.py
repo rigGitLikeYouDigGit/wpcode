@@ -60,5 +60,7 @@ class ComponentMatch(_BASE_):
 	apiTypeStr = "kComponentMatch"
 	typeIdInt = 1414484045
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "componentLookup", "componentTagExpression", "inputGeometry", "matchMode", "targetGeometry", "uniqueMatch"]
+	nodeLeafPlugs = ["binMembership", "componentLookup", "componentTagExpression", "inputGeometry", "matchMode", "targetGeometry", "uniqueMatch"]
 	pass
 

@@ -104,5 +104,7 @@ class FourByFourMatrix(_BASE_):
 	apiTypeStr = "kFourByFourMatrix"
 	typeIdInt = 1178748493
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "in00", "in01", "in02", "in03", "in10", "in11", "in12", "in13", "in20", "in21", "in22", "in23", "in30", "in31", "in32", "in33", "output"]
+	nodeLeafPlugs = ["binMembership", "in00", "in01", "in02", "in03", "in10", "in11", "in12", "in13", "in20", "in21", "in22", "in23", "in30", "in31", "in32", "in33", "output"]
 	pass
 

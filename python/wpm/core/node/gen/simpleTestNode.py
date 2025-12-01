@@ -66,5 +66,7 @@ class SimpleTestNode(_BASE_):
 
 	typeName = "simpleTestNode"
 	typeIdInt = 1398033988
+	nodeLeafClassAttrs = ["binMembership", "level1S1", "level1S2", "level1S3", "compound", "flag", "single"]
+	nodeLeafPlugs = ["binMembership", "compound", "flag", "single"]
 	pass
 

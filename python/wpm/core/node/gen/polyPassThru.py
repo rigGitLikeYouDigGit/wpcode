@@ -33,5 +33,7 @@ class PolyPassThru(PolyModifierWorld):
 	apiTypeStr = "kPolyPassThru"
 	typeIdInt = 1348030548
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

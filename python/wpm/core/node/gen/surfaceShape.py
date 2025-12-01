@@ -198,5 +198,7 @@ class SurfaceShape(ControlPoint):
 
 	typeName = "surfaceShape"
 	typeIdInt = 1129534291
+	nodeLeafClassAttrs = ["boundingBoxScaleX", "boundingBoxScaleY", "boundingBoxScaleZ", "boundingBoxScale", "collisionDepthVelocityIncrement_FloatValue", "collisionDepthVelocityIncrement_Interp", "collisionDepthVelocityIncrement_Position", "collisionDepthVelocityIncrement", "collisionDepthVelocityMultiplier_FloatValue", "collisionDepthVelocityMultiplier_Interp", "collisionDepthVelocityMultiplier_Position", "collisionDepthVelocityMultiplier", "collisionOffsetVelocityIncrement_FloatValue", "collisionOffsetVelocityIncrement_Interp", "collisionOffsetVelocityIncrement_Position", "collisionOffsetVelocityIncrement", "collisionOffsetVelocityMultiplier_FloatValue", "collisionOffsetVelocityMultiplier_Interp", "collisionOffsetVelocityMultiplier_Position", "collisionOffsetVelocityMultiplier", "displayHWEnvironment", "doubleSided", "extraSampleRate", "featureDisplacement", "holdOut", "ignoreHwShader", "initialSampleRate", "normalThreshold", "opposite", "smoothShading", "textureThreshold"]
+	nodeLeafPlugs = ["boundingBoxScale", "collisionDepthVelocityIncrement", "collisionDepthVelocityMultiplier", "collisionOffsetVelocityIncrement", "collisionOffsetVelocityMultiplier", "displayHWEnvironment", "doubleSided", "extraSampleRate", "featureDisplacement", "holdOut", "ignoreHwShader", "initialSampleRate", "normalThreshold", "opposite", "smoothShading", "textureThreshold"]
 	pass
 

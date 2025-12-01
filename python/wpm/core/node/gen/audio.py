@@ -92,5 +92,7 @@ class Audio(_BASE_):
 	apiTypeStr = "kAudio"
 	typeIdInt = 1096107081
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "channels", "duration", "endFrame", "filename", "frameCount", "mute", "offset", "order", "sampleRate", "silence", "sourceEnd", "sourceStart", "track", "trackState"]
+	nodeLeafPlugs = ["binMembership", "channels", "duration", "endFrame", "filename", "frameCount", "mute", "offset", "order", "sampleRate", "silence", "sourceEnd", "sourceStart", "track", "trackState"]
 	pass
 

@@ -73,5 +73,7 @@ class ComponentFalloff(_BASE_):
 	apiTypeStr = "kComponentFalloff"
 	typeIdInt = 1195790150
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "outputWeightFunction", "defaultWeight", "layerName", "weightInfoLayers", "weights", "weightLayers", "weightedGeometry"]
+	nodeLeafPlugs = ["binMembership", "outputWeightFunction", "weightInfoLayers", "weightLayers", "weightedGeometry"]
 	pass
 

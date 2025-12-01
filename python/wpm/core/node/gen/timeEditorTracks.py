@@ -191,5 +191,7 @@ class TimeEditorTracks(_BASE_):
 	apiTypeStr = "kTimeEditorTracks"
 	typeIdInt = 1413829707
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "clip", "clipTime", "clipchanged", "composition", "crossfadeClipId1", "crossfadeClipId2", "crossfadeCurve", "crossfadeMode", "crossfade", "muted", "parentTime", "state", "index", "trackColorB", "trackColorG", "trackColorR", "trackColor", "trackGhost", "trackHeight", "trackMuted", "trackName", "trackSolo", "trackSoloMute", "type", "useTrackColor", "track"]
+	nodeLeafPlugs = ["binMembership", "clip", "clipTime", "clipchanged", "composition", "crossfade", "muted", "parentTime", "state", "track"]
 	pass
 

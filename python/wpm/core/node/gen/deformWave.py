@@ -60,5 +60,7 @@ class DeformWave(DeformFunc):
 	apiTypeStr = "kDeformWave"
 	typeIdInt = 1178883926
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["amplitude", "dropoff", "dropoffPosition", "maxRadius", "minRadius", "offset", "wavelength"]
+	nodeLeafPlugs = ["amplitude", "dropoff", "dropoffPosition", "maxRadius", "minRadius", "offset", "wavelength"]
 	pass
 

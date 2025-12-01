@@ -33,5 +33,7 @@ class TexLatticeDeformManip(TexBaseDeformManip):
 	apiTypeStr = "kTexLatticeDeformManip"
 	typeIdInt = 1414284365
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

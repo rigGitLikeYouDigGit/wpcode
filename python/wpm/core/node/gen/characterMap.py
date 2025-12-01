@@ -44,5 +44,7 @@ class CharacterMap(_BASE_):
 	apiTypeStr = "kCharacterMap"
 	typeIdInt = 1129136464
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "member", "memberIndex"]
+	nodeLeafPlugs = ["binMembership", "member", "memberIndex"]
 	pass
 

@@ -30,5 +30,7 @@ class SphericalProjManip(Manip3D):
 
 	typeName = "sphericalProjManip"
 	typeIdInt = 1431130960
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

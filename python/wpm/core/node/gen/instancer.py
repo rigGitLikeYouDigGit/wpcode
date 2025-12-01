@@ -80,5 +80,7 @@ class Instancer(Transform):
 	apiTypeStr = "kInstancer"
 	typeIdInt = 1498305364
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = ["cycle", "cycleStep", "cycleStepUnit", "displayPercentage", "fillArray", "hierarchyCount", "inputHierarchy", "inputPoints", "instanceCount", "levelOfDetail", "rotationAngleUnits", "rotationOrder"]
+	nodeLeafPlugs = ["cycle", "cycleStep", "cycleStepUnit", "displayPercentage", "fillArray", "hierarchyCount", "inputHierarchy", "inputPoints", "instanceCount", "levelOfDetail", "rotationAngleUnits", "rotationOrder"]
 	pass
 

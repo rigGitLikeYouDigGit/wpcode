@@ -112,5 +112,7 @@ class MakeTwoPointCircularArc(MakeCircularArc):
 
 	typeName = "makeTwoPointCircularArc"
 	typeIdInt = 1311916865
+	nodeLeafClassAttrs = ["directionVectorX", "directionVectorY", "directionVectorZ", "directionVector", "point1X", "point1Y", "point1Z", "point1", "point2X", "point2Y", "point2Z", "point2", "radius", "toggleArc"]
+	nodeLeafPlugs = ["directionVector", "point1", "point2", "radius", "toggleArc"]
 	pass
 

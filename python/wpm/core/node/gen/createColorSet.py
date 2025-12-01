@@ -56,5 +56,7 @@ class CreateColorSet(_BASE_):
 	apiTypeStr = "kCreateColorSet"
 	typeIdInt = 1129464659
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "clamped", "colorSetName", "inputGeometry", "outputGeometry", "representation"]
+	nodeLeafPlugs = ["binMembership", "clamped", "colorSetName", "inputGeometry", "outputGeometry", "representation"]
 	pass
 

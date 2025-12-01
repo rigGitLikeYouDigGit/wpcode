@@ -353,5 +353,7 @@ class UseBackground(ShadingDependNode):
 	apiTypeStr = "kUseBackground"
 	typeIdInt = 1431519815
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["backgroundSampler", "lightAmbient", "lightBlindData", "lightDiffuse", "lightDirectionX", "lightDirectionY", "lightDirectionZ", "lightDirection", "lightIntensityB", "lightIntensityG", "lightIntensityR", "lightIntensity", "lightShadowFraction", "lightSpecular", "preShadowIntensity", "lightDataArray", "matteOpacity", "matteOpacityMode", "normalCameraX", "normalCameraY", "normalCameraZ", "normalCamera", "objectId", "outColorB", "outColorG", "outColorR", "outColor", "outMatteOpacityB", "outMatteOpacityG", "outMatteOpacityR", "outMatteOpacity", "outTransparencyB", "outTransparencyG", "outTransparencyR", "outTransparency", "pointCameraX", "pointCameraY", "pointCameraZ", "pointCamera", "primitiveId", "rayDepth", "rayDirectionX", "rayDirectionY", "rayDirectionZ", "rayDirection", "rayInstance", "raySampler", "reflectionLimit", "reflectivity", "shadowMask", "specularColorB", "specularColorG", "specularColorR", "specularColor"]
+	nodeLeafPlugs = ["backgroundSampler", "lightDataArray", "matteOpacity", "matteOpacityMode", "normalCamera", "objectId", "outColor", "outMatteOpacity", "outTransparency", "pointCamera", "primitiveId", "rayDepth", "rayDirection", "rayInstance", "raySampler", "reflectionLimit", "reflectivity", "shadowMask", "specularColor"]
 	pass
 

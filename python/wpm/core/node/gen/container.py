@@ -56,5 +56,7 @@ class Container(ContainerBase):
 	apiTypeStr = "kContainer"
 	typeIdInt = 1129270868
 	MFnCls = om.MFnContainerNode
+	nodeLeafClassAttrs = ["canBeChild", "canBeParent", "isHierarchicalChild", "isHierarchicalParent", "isHierarchicalRoot", "rootTransform"]
+	nodeLeafPlugs = ["canBeChild", "canBeParent", "isHierarchicalChild", "isHierarchicalParent", "isHierarchicalRoot", "rootTransform"]
 	pass
 

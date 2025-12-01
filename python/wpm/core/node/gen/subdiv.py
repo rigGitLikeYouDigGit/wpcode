@@ -200,5 +200,7 @@ class Subdiv(SurfaceShape):
 	apiTypeStr = "kSubdiv"
 	typeIdInt = 1396986707
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["baseFaceCount", "cached", "create", "depth", "dispCreases", "dispEdges", "dispFaces", "dispGeometry", "dispMaps", "dispResolution", "dispUVBorder", "dispVertices", "dispVerticesAsLimitPoints", "displayFilter", "displayLevel", "edgeCrease", "faceUVIds", "format", "levelOneFaceCount", "localizeLimitPointsEdit", "normalsDisplayScale", "outSubdiv", "sampleCount", "scalingHierarchy", "textureCoord", "singleVertexX", "singleVertexY", "singleVertexZ", "singleVertex", "vertex", "singleVertexTweakX", "singleVertexTweakY", "singleVertexTweakZ", "singleVertexTweak", "vertexTweak", "worldSubdiv"]
+	nodeLeafPlugs = ["baseFaceCount", "cached", "create", "depth", "dispCreases", "dispEdges", "dispFaces", "dispGeometry", "dispMaps", "dispResolution", "dispUVBorder", "dispVertices", "dispVerticesAsLimitPoints", "displayFilter", "displayLevel", "edgeCrease", "faceUVIds", "format", "levelOneFaceCount", "localizeLimitPointsEdit", "normalsDisplayScale", "outSubdiv", "sampleCount", "scalingHierarchy", "textureCoord", "vertex", "vertexTweak", "worldSubdiv"]
 	pass
 

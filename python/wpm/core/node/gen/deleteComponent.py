@@ -64,5 +64,7 @@ class DeleteComponent(_BASE_):
 	apiTypeStr = "kDeleteComponent"
 	typeIdInt = 1145389908
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "deleteComponents", "edgeIdMap", "faceIdMap", "inputGeometry", "outputGeometry", "useOldPolyArchitecture", "vertexIdMap"]
+	nodeLeafPlugs = ["binMembership", "deleteComponents", "edgeIdMap", "faceIdMap", "inputGeometry", "outputGeometry", "useOldPolyArchitecture", "vertexIdMap"]
 	pass
 

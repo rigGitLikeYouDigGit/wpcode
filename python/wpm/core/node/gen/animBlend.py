@@ -44,5 +44,7 @@ class AnimBlend(_BASE_):
 	apiTypeStr = "kAnimBlend"
 	typeIdInt = 1094864452
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "blend", "weight"]
+	nodeLeafPlugs = ["binMembership", "blend", "weight"]
 	pass
 

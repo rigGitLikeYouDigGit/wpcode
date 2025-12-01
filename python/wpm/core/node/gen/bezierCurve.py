@@ -37,5 +37,7 @@ class BezierCurve(NurbsCurve):
 
 	typeName = "bezierCurve"
 	typeIdInt = 1111708246
+	nodeLeafClassAttrs = ["anchorSmoothness", "anchorWeighting"]
+	nodeLeafPlugs = ["anchorSmoothness", "anchorWeighting"]
 	pass
 

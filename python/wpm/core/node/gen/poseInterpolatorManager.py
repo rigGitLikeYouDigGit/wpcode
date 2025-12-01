@@ -65,5 +65,7 @@ class PoseInterpolatorManager(_BASE_):
 	apiTypeStr = "kPoseInterpolatorManager"
 	typeIdInt = 1347634253
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "childIndices", "directoryName", "parentIndex", "poseInterpolatorDirectory", "poseInterpolatorParent"]
+	nodeLeafPlugs = ["binMembership", "poseInterpolatorDirectory", "poseInterpolatorParent"]
 	pass
 

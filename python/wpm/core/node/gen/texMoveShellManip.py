@@ -30,5 +30,7 @@ class TexMoveShellManip(TransUV2dManip):
 
 	typeName = "texMoveShellManip"
 	typeIdInt = 1414353741
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

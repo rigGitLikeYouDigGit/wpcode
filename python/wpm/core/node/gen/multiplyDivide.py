@@ -111,5 +111,7 @@ class MultiplyDivide(ShadingDependNode):
 	apiTypeStr = "kMultiplyDivide"
 	typeIdInt = 1380795465
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["input1X", "input1Y", "input1Z", "input1", "input2X", "input2Y", "input2Z", "input2", "operation", "outputX", "outputY", "outputZ", "output"]
+	nodeLeafPlugs = ["input1", "input2", "operation", "output"]
 	pass
 

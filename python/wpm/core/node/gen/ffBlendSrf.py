@@ -109,5 +109,7 @@ class FfBlendSrf(AbstractBaseCreate):
 
 	typeName = "ffBlendSrf"
 	typeIdInt = 1312967764
+	nodeLeafClassAttrs = ["autoAnchor", "autoNormal", "flipLeftNormal", "flipRightNormal", "leftAnchor", "leftCurve", "leftEnd", "leftRail", "leftStart", "multipleKnots", "outputSurface", "positionTolerance", "reverseLeft", "reverseRight", "rightAnchor", "rightCurve", "rightEnd", "rightRail", "rightStart", "tangentTolerance"]
+	nodeLeafPlugs = ["autoAnchor", "autoNormal", "flipLeftNormal", "flipRightNormal", "leftAnchor", "leftCurve", "leftEnd", "leftRail", "leftStart", "multipleKnots", "outputSurface", "positionTolerance", "reverseLeft", "reverseRight", "rightAnchor", "rightCurve", "rightEnd", "rightRail", "rightStart", "tangentTolerance"]
 	pass
 

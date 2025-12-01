@@ -76,5 +76,7 @@ class Trim(AbstractBaseCreate):
 	apiTypeStr = "kTrim"
 	typeIdInt = 1314148941
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["inputCurve", "inputSurface", "locatorU", "locatorV", "outputSurface", "selected", "shouldBeLast", "shrink", "splitSurface", "tolerance", "usedCurves"]
+	nodeLeafPlugs = ["inputCurve", "inputSurface", "locatorU", "locatorV", "outputSurface", "selected", "shouldBeLast", "shrink", "splitSurface", "tolerance", "usedCurves"]
 	pass
 

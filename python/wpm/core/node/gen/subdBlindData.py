@@ -33,5 +33,7 @@ class SubdBlindData(PolyBlindData):
 	apiTypeStr = "kSubdBlindData"
 	typeIdInt = 1396851796
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -30,5 +30,7 @@ class AirManip(FieldManip):
 
 	typeName = "airManip"
 	typeIdInt = 1430536525
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

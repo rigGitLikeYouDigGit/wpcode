@@ -142,5 +142,7 @@ class PolyProjectCurve(AbstractBaseCreate):
 	apiTypeStr = "kPolyProjectCurve"
 	typeIdInt = 1347437398
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["automatic", "triangle", "projectedPoint", "curvePoints", "curveSamples", "directionX", "directionY", "directionZ", "direction", "inputCurve", "inputMatrix", "inputMesh", "outputCurve", "pointsOnEdges", "baryCoord1", "baryCoord2", "baryCoord3", "baryCoord", "face", "tolerance"]
+	nodeLeafPlugs = ["automatic", "curvePoints", "curveSamples", "direction", "inputCurve", "inputMatrix", "inputMesh", "outputCurve", "pointsOnEdges", "tolerance"]
 	pass
 

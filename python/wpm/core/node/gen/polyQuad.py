@@ -52,5 +52,7 @@ class PolyQuad(PolyModifierWorld):
 	apiTypeStr = "kPolyQuad"
 	typeIdInt = 1347507521
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["angle", "keepGroupBorder", "keepHardEdges", "keepTextureBorders", "maya80"]
+	nodeLeafPlugs = ["angle", "keepGroupBorder", "keepHardEdges", "keepTextureBorders", "maya80"]
 	pass
 

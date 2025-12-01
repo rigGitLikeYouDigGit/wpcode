@@ -58,5 +58,7 @@ class UniformField(Field):
 
 	typeName = "uniformField"
 	typeIdInt = 1498762825
+	nodeLeafClassAttrs = ["directionX", "directionY", "directionZ", "direction", "inheritFactor"]
+	nodeLeafPlugs = ["direction", "inheritFactor"]
 	pass
 

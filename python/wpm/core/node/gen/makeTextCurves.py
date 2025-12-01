@@ -74,5 +74,7 @@ class MakeTextCurves(AbstractBaseCreate):
 
 	typeName = "makeTextCurves"
 	typeIdInt = 1314150467
+	nodeLeafClassAttrs = ["count", "deprecatedFontName", "font", "outputCurve", "positionX", "positionY", "positionZ", "position", "text"]
+	nodeLeafPlugs = ["count", "deprecatedFontName", "font", "outputCurve", "position", "text"]
 	pass
 

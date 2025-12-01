@@ -29,5 +29,7 @@ class THmanipContainer(ManipContainer):
 	# node attributes
 
 	typeName = "THmanipContainer"
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

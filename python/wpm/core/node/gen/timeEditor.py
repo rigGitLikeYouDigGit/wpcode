@@ -77,5 +77,7 @@ class TimeEditor(_BASE_):
 	apiTypeStr = "kTimeEditor"
 	typeIdInt = 1414350148
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["activeComposition", "animationSource", "attribute", "value", "attributes", "binMembership", "composition", "mute", "nextClipId"]
+	nodeLeafPlugs = ["activeComposition", "attributes", "binMembership", "composition", "mute", "nextClipId"]
 	pass
 

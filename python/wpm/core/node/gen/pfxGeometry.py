@@ -197,5 +197,7 @@ class PfxGeometry(Shape):
 	apiTypeStr = "kPfxGeometry"
 	typeIdInt = 1346783045
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["brush", "cameraPointX", "cameraPointY", "cameraPointZ", "cameraPoint", "controlCurve", "curveAlign", "curveMode", "degree", "displayPercent", "drawAsMesh", "drawOrder", "flowerCurveMode", "flowerVertBufSize", "leafCurveMode", "leafVertBufSize", "lineModifier", "mainVertBufSize", "maxDrawSegments", "meshHardEdges", "meshPolyLimit", "meshQuadOutput", "meshVertexColorMode", "motionBlurred", "outFlowerCurveCount", "outFlowerCurves", "outFlowerMesh", "outLeafCurveCount", "outLeafCurves", "outLeafMesh", "outMainCurveCount", "outMainCurves", "outMainMesh", "primaryVisibility", "seed", "surfaceOffset", "worldFlowerMesh", "worldLeafMesh", "worldMainMesh"]
+	nodeLeafPlugs = ["brush", "cameraPoint", "controlCurve", "curveAlign", "curveMode", "degree", "displayPercent", "drawAsMesh", "drawOrder", "flowerCurveMode", "flowerVertBufSize", "leafCurveMode", "leafVertBufSize", "lineModifier", "mainVertBufSize", "maxDrawSegments", "meshHardEdges", "meshPolyLimit", "meshQuadOutput", "meshVertexColorMode", "motionBlurred", "outFlowerCurveCount", "outFlowerCurves", "outFlowerMesh", "outLeafCurveCount", "outLeafCurves", "outLeafMesh", "outMainCurveCount", "outMainCurves", "outMainMesh", "primaryVisibility", "seed", "surfaceOffset", "worldFlowerMesh", "worldLeafMesh", "worldMainMesh"]
 	pass
 

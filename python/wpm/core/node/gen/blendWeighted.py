@@ -36,5 +36,7 @@ class BlendWeighted(Blend):
 	apiTypeStr = "kBlendWeighted"
 	typeIdInt = 1094863959
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["weight"]
+	nodeLeafPlugs = ["weight"]
 	pass
 

@@ -119,5 +119,7 @@ class VectorProduct(ShadingDependNode):
 	apiTypeStr = "kVectorProduct"
 	typeIdInt = 1381385539
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["input1X", "input1Y", "input1Z", "input1", "input2X", "input2Y", "input2Z", "input2", "matrix", "normalizeOutput", "operation", "outputX", "outputY", "outputZ", "output"]
+	nodeLeafPlugs = ["input1", "input2", "matrix", "normalizeOutput", "operation", "output"]
 	pass
 

@@ -33,5 +33,7 @@ class ExtrudeManip(ManipContainer):
 	apiTypeStr = "kExtrudeManip"
 	typeIdInt = 1431127384
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -91,5 +91,7 @@ class PolyMoveFace(PolyMoveEdge):
 
 	typeName = "polyMoveFace"
 	typeIdInt = 1347243846
+	nodeLeafClassAttrs = ["attraction", "gravityX", "gravityY", "gravityZ", "gravity", "magnX", "magnY", "magnZ", "magnet", "offset", "weight"]
+	nodeLeafPlugs = ["attraction", "gravity", "magnet", "offset", "weight"]
 	pass
 

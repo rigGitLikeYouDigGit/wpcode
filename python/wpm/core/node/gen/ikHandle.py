@@ -278,5 +278,7 @@ class IkHandle(Transform):
 	apiTypeStr = "kIkHandle"
 	typeIdInt = 1263027276
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = ["checkSnappingFlag", "dForwardAxis", "dTwistControlEnable", "dTwistRampB", "dTwistRampG", "dTwistRampR", "dTwistRamp", "dTwistRampMult", "dTwistEnd", "dTwistStart", "dTwistStartEnd", "dTwistValueType", "dWorldUpAxis", "dWorldUpMatrix", "dWorldUpMatrixEnd", "dWorldUpType", "dWorldUpVectorX", "dWorldUpVectorY", "dWorldUpVectorZ", "dWorldUpVector", "dWorldUpVectorEndX", "dWorldUpVectorEndY", "dWorldUpVectorEndZ", "dWorldUpVectorEnd", "dofList", "dofListDirtyFlag", "endEffector", "handleDirtyFlag", "ikBlend", "ikFkManipulation", "ikSolver", "inCurve", "offset", "owningHandleGroup", "poWeight", "poleVectorX", "poleVectorY", "poleVectorZ", "poleVector", "priority", "roll", "rootOnCurve", "rootTwistMode", "skeletonDirtyFlag", "snapEnable", "splineIkOldStyle", "startJoint", "stickiness", "twist", "twistType", "weight"]
+	nodeLeafPlugs = ["checkSnappingFlag", "dForwardAxis", "dTwistControlEnable", "dTwistRamp", "dTwistRampMult", "dTwistStartEnd", "dTwistValueType", "dWorldUpAxis", "dWorldUpMatrix", "dWorldUpMatrixEnd", "dWorldUpType", "dWorldUpVector", "dWorldUpVectorEnd", "dofList", "dofListDirtyFlag", "endEffector", "handleDirtyFlag", "ikBlend", "ikFkManipulation", "ikSolver", "inCurve", "offset", "owningHandleGroup", "poWeight", "poleVector", "priority", "roll", "rootOnCurve", "rootTwistMode", "skeletonDirtyFlag", "snapEnable", "splineIkOldStyle", "startJoint", "stickiness", "twist", "twistType", "weight"]
 	pass
 

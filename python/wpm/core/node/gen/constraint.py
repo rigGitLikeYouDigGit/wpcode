@@ -37,5 +37,7 @@ class Constraint(Transform):
 
 	typeName = "constraint"
 	typeIdInt = 1129270867
+	nodeLeafClassAttrs = ["enableRestPosition", "lockOutput"]
+	nodeLeafPlugs = ["enableRestPosition", "lockOutput"]
 	pass
 

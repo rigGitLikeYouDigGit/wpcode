@@ -64,5 +64,7 @@ class PolyDuplicateEdge(PolyModifier):
 	apiTypeStr = "kPolyDuplicateEdge"
 	typeIdInt = 1346655557
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["adjustEdgeFlow", "deleteEdge", "endVertexOffset", "insertWithEdgeFlow", "offset", "smoothingAngle", "splitType", "startVertexOffset"]
+	nodeLeafPlugs = ["adjustEdgeFlow", "deleteEdge", "endVertexOffset", "insertWithEdgeFlow", "offset", "smoothingAngle", "splitType", "startVertexOffset"]
 	pass
 

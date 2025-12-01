@@ -33,5 +33,7 @@ class SubdCleanTopology(SubdModifier):
 	apiTypeStr = "kSubdCleanTopology"
 	typeIdInt = 1396921433
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

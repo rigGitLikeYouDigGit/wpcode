@@ -94,5 +94,7 @@ class PointMatrixMult(_BASE_):
 	apiTypeStr = "kPointMatrixMult"
 	typeIdInt = 1146113357
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "inMatrix", "inPointX", "inPointY", "inPointZ", "inPoint", "outputX", "outputY", "outputZ", "output", "vectorMultiply"]
+	nodeLeafPlugs = ["binMembership", "inMatrix", "inPoint", "output", "vectorMultiply"]
 	pass
 

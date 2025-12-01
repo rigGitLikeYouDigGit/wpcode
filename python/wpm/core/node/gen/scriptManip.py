@@ -33,5 +33,7 @@ class ScriptManip(Manip3D):
 	apiTypeStr = "kScriptManip"
 	typeIdInt = 1431130947
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

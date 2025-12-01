@@ -33,5 +33,7 @@ class ProjectTangentManip(ManipContainer):
 	apiTypeStr = "kProjectTangentManip"
 	typeIdInt = 1431327821
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

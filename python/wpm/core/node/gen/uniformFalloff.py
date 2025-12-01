@@ -44,5 +44,7 @@ class UniformFalloff(_BASE_):
 	apiTypeStr = "kUniformFalloff"
 	typeIdInt = 1431783252
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "outputWeightFunction", "uniformWeight"]
+	nodeLeafPlugs = ["binMembership", "outputWeightFunction", "uniformWeight"]
 	pass
 

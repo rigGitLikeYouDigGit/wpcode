@@ -130,5 +130,7 @@ class PlusMinusAverage(ShadingDependNode):
 	apiTypeStr = "kPlusMinusAverage"
 	typeIdInt = 1380994369
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["input1D", "input2Dx", "input2Dy", "input2D", "input3Dx", "input3Dy", "input3Dz", "input3D", "operation", "output1D", "output2Dx", "output2Dy", "output2D", "output3Dx", "output3Dy", "output3Dz", "output3D"]
+	nodeLeafPlugs = ["input1D", "input2D", "input3D", "operation", "output1D", "output2D", "output3D"]
 	pass
 

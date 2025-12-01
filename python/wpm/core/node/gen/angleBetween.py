@@ -150,5 +150,7 @@ class AngleBetween(_BASE_):
 	apiTypeStr = "kAngleBetween"
 	typeIdInt = 1312899668
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["angle", "axisX", "axisY", "axisZ", "axis", "axisAngle", "binMembership", "eulerX", "eulerY", "eulerZ", "euler", "vector1X", "vector1Y", "vector1Z", "vector1", "vector2X", "vector2Y", "vector2Z", "vector2"]
+	nodeLeafPlugs = ["axisAngle", "binMembership", "euler", "vector1", "vector2"]
 	pass
 

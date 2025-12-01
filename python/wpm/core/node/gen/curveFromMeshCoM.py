@@ -36,5 +36,7 @@ class CurveFromMeshCoM(CurveFromMesh):
 	apiTypeStr = "kCurveFromMeshCoM"
 	typeIdInt = 1313033539
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["curveOnMesh"]
+	nodeLeafPlugs = ["curveOnMesh"]
 	pass
 

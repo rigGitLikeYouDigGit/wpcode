@@ -92,5 +92,7 @@ class PolyContourProj(PolyModifierUV):
 	apiTypeStr = "kPolyContourProj"
 	typeIdInt = 1346588240
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["cornerVertices", "flipRails", "manipPoints", "method", "offset0", "offset1", "offset2", "offset3", "reduceShear", "smoothness0", "smoothness1", "smoothness2", "smoothness3", "surface", "userDefinedCorners"]
+	nodeLeafPlugs = ["cornerVertices", "flipRails", "manipPoints", "method", "offset0", "offset1", "offset2", "offset3", "reduceShear", "smoothness0", "smoothness1", "smoothness2", "smoothness3", "surface", "userDefinedCorners"]
 	pass
 

@@ -30,5 +30,7 @@ class DimensionShape(Shape):
 
 	typeName = "dimensionShape"
 	typeIdInt = 1146308688
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -101,5 +101,7 @@ class Lattice(ControlPoint):
 	apiTypeStr = "kLattice"
 	typeIdInt = 1179402580
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["cached", "dispLattice", "dispPoints", "displayControl", "latticeInput", "latticeOutput", "latticePointMoved", "originX", "originY", "originZ", "origin", "sDivisions", "tDivisions", "uDivisions", "worldLattice"]
+	nodeLeafPlugs = ["cached", "dispLattice", "dispPoints", "displayControl", "latticeInput", "latticeOutput", "latticePointMoved", "origin", "sDivisions", "tDivisions", "uDivisions", "worldLattice"]
 	pass
 

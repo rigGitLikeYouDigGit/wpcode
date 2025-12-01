@@ -56,5 +56,7 @@ class SubdivReverseFaces(_BASE_):
 	apiTypeStr = "kSubdivReverseFaces"
 	typeIdInt = 1397904966
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "inSubdiv", "outSubdiv", "xMirror", "yMirror", "zMirror"]
+	nodeLeafPlugs = ["binMembership", "inSubdiv", "outSubdiv", "xMirror", "yMirror", "zMirror"]
 	pass
 

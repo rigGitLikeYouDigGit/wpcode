@@ -148,5 +148,7 @@ class AnimLayer(ObjectSet):
 	apiTypeStr = "kAnimLayer"
 	typeIdInt = 1095650386
 	MFnCls = om.MFnSet
+	nodeLeafClassAttrs = ["backgroundWeight", "blendNodes", "childrenLayers", "childrenSolo", "childsoloed", "clips", "collapse", "cteRoot", "exclusive", "foregroundWeight", "ghost", "ghostColor", "ghostedClips", "lock", "mute", "outMute", "outRotationAccumulationMode", "override", "parentLayer", "parentMute", "parentWeight", "passthrough", "preferred", "rotationAccumulationMode", "scaleAccumulationMode", "selected", "siblingSolo", "solo", "weight"]
+	nodeLeafPlugs = ["backgroundWeight", "blendNodes", "childrenLayers", "childrenSolo", "childsoloed", "clips", "collapse", "cteRoot", "exclusive", "foregroundWeight", "ghost", "ghostColor", "ghostedClips", "lock", "mute", "outMute", "outRotationAccumulationMode", "override", "parentLayer", "parentMute", "parentWeight", "passthrough", "preferred", "rotationAccumulationMode", "scaleAccumulationMode", "selected", "siblingSolo", "solo", "weight"]
 	pass
 

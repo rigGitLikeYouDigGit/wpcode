@@ -48,5 +48,7 @@ class PolyNormalizeUV(PolyModifierUV):
 	apiTypeStr = "kPolyNormalizeUV"
 	typeIdInt = 1347310934
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["centerOnTile", "normalizeDirection", "normalizeType", "preserveAspectRatio"]
+	nodeLeafPlugs = ["centerOnTile", "normalizeDirection", "normalizeType", "preserveAspectRatio"]
 	pass
 

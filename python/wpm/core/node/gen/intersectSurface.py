@@ -56,5 +56,7 @@ class IntersectSurface(AbstractBaseCreate):
 	apiTypeStr = "kIntersectSurface"
 	typeIdInt = 1313428294
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["curveOnSurface1", "curveOnSurface2", "inputSurface1", "inputSurface2", "output3dCurve", "tolerance"]
+	nodeLeafPlugs = ["curveOnSurface1", "curveOnSurface2", "inputSurface1", "inputSurface2", "output3dCurve", "tolerance"]
 	pass
 

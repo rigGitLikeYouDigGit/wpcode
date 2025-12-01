@@ -94,5 +94,7 @@ class PolyWedgeFace(PolyModifierWorld):
 	apiTypeStr = "kPolyWedgeFace"
 	typeIdInt = 1347896899
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["axisX", "axisY", "axisZ", "axis", "centerX", "centerY", "centerZ", "center", "divisions", "edge", "wedgeAngle"]
+	nodeLeafPlugs = ["axis", "center", "divisions", "edge", "wedgeAngle"]
 	pass
 

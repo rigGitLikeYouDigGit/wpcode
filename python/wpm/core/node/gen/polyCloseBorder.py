@@ -33,5 +33,7 @@ class PolyCloseBorder(PolyModifier):
 	apiTypeStr = "kPolyCloseBorder"
 	typeIdInt = 1346587727
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -68,5 +68,7 @@ class DynGlobals(_BASE_):
 	apiTypeStr = "kDynGlobals"
 	typeIdInt = 1497646924
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "cacheDirectory", "confirmSceneName", "confirmedPath", "internalOverSamples", "maxFrameCached", "minFrameCached", "overSamples", "useParticleDiskCache"]
+	nodeLeafPlugs = ["binMembership", "cacheDirectory", "confirmSceneName", "confirmedPath", "internalOverSamples", "maxFrameCached", "minFrameCached", "overSamples", "useParticleDiskCache"]
 	pass
 

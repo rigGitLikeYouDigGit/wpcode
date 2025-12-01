@@ -77,5 +77,7 @@ class AmbientLight(RenderLight):
 	apiTypeStr = "kAmbientLight"
 	typeIdInt = 1095582284
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["ambientShade", "castSoftShadows", "normalCameraX", "normalCameraY", "normalCameraZ", "normalCamera", "objectType", "receiveShadows", "shadowRadius"]
+	nodeLeafPlugs = ["ambientShade", "castSoftShadows", "normalCamera", "objectType", "receiveShadows", "shadowRadius"]
 	pass
 

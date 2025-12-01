@@ -87,5 +87,7 @@ class DistanceDimShape(DimensionShape):
 
 	typeName = "distanceDimShape"
 	typeIdInt = 1145326926
+	nodeLeafClassAttrs = ["distance", "endPointX", "endPointY", "endPointZ", "endPoint", "precision", "startPointX", "startPointY", "startPointZ", "startPoint"]
+	nodeLeafPlugs = ["distance", "endPoint", "precision", "startPoint"]
 	pass
 

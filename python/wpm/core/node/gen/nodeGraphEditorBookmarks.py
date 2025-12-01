@@ -40,5 +40,7 @@ class NodeGraphEditorBookmarks(_BASE_):
 	apiTypeStr = "kNodeGraphEditorBookmarks"
 	typeIdInt = 1313293634
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "bookmarks"]
+	nodeLeafPlugs = ["binMembership", "bookmarks"]
 	pass
 

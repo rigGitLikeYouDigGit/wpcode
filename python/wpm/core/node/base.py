@@ -411,6 +411,9 @@ class WN( # short for WePresentNode
 
 	clsIsDag = False
 
+	nodeLeafClassAttrs : list[str] = []
+	nodeLeafPlugs : list[str] = []
+
 
 	apiTypeWNClassMap : dict[int, type[WN]] = {}
 	nodeTypeNameWNClassMap : dict[str, type[WN]] = {} # replace with MNodeClass
@@ -1125,7 +1128,18 @@ class WN( # short for WePresentNode
 			for k, v in self.defaultAttrs.items():
 				self(k).set(v)
 
-
-
 	#endregion
+
+	#region bases and RTTI inheritance
+	@classmethod
+	def nodeBaseClassWrappers(cls)->list[type[WN]]:
+		"""return list of bases starting from this class,
+		corresponding to node bases"""
+		return [i for i in cls.__mro__ if issubclass(i. WN) and i != WN]
+
+	@classmethod
+	def nodeClassLeafAttrs(cls)->list[om.MObject]:
+		"""return all attributes added by this exact node
+		class"""
+
 

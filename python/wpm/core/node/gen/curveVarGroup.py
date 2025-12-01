@@ -44,5 +44,7 @@ class CurveVarGroup(BaseGeometryVarGroup):
 	apiTypeStr = "kCurveVarGroup"
 	typeIdInt = 1313035847
 	MFnCls = om.MFnTransform
+	nodeLeafClassAttrs = ["create", "displaySmoothness", "local"]
+	nodeLeafPlugs = ["create", "displaySmoothness", "local"]
 	pass
 

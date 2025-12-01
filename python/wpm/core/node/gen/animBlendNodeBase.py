@@ -45,5 +45,7 @@ class AnimBlendNodeBase(_BASE_):
 
 	typeName = "animBlendNodeBase"
 	typeIdInt = 1094864450
+	nodeLeafClassAttrs = ["binMembership", "destinationPlug", "weightA", "weightB"]
+	nodeLeafPlugs = ["binMembership", "destinationPlug", "weightA", "weightB"]
 	pass
 

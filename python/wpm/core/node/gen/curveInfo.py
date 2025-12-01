@@ -73,5 +73,7 @@ class CurveInfo(AbstractBaseCreate):
 	apiTypeStr = "kCurveInfo"
 	typeIdInt = 1313032526
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["arcLength", "xValue", "yValue", "zValue", "controlPoints", "inputCurve", "knots", "weights"]
+	nodeLeafPlugs = ["arcLength", "controlPoints", "inputCurve", "knots", "weights"]
 	pass
 

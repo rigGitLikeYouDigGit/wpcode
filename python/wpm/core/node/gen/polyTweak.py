@@ -57,5 +57,7 @@ class PolyTweak(PolyModifier):
 	apiTypeStr = "kPolyTweak"
 	typeIdInt = 1347704651
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["tweakX", "tweakY", "tweakZ", "tweak"]
+	nodeLeafPlugs = ["tweak"]
 	pass
 

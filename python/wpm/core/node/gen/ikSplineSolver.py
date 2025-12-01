@@ -30,5 +30,7 @@ class IkSplineSolver(IkSolver):
 
 	typeName = "ikSplineSolver"
 	typeIdInt = 1263751251
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

@@ -37,5 +37,7 @@ class GeometryVarGroup(BaseGeometryVarGroup):
 
 	typeName = "geometryVarGroup"
 	typeIdInt = 1313297991
+	nodeLeafClassAttrs = ["create", "local"]
+	nodeLeafPlugs = ["create", "local"]
 	pass
 

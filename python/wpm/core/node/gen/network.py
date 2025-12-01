@@ -41,5 +41,7 @@ class Network(_BASE_):
 
 	typeName = "network"
 	typeIdInt = 1314150219
+	nodeLeafClassAttrs = ["affectedBy", "affects", "binMembership"]
+	nodeLeafPlugs = ["affectedBy", "affects", "binMembership"]
 	pass
 

@@ -52,5 +52,7 @@ class SmoothTangentSrf(AbstractBaseCreate):
 	apiTypeStr = "kSmoothTangentSrf"
 	typeIdInt = 1314083918
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["direction", "inputSurface", "outputSurface", "parameter", "smoothness"]
+	nodeLeafPlugs = ["direction", "inputSurface", "outputSurface", "parameter", "smoothness"]
 	pass
 

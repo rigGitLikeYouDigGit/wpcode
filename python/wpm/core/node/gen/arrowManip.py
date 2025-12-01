@@ -33,5 +33,7 @@ class ArrowManip(Manip3D):
 	apiTypeStr = "kArrowManip"
 	typeIdInt = 1431126354
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

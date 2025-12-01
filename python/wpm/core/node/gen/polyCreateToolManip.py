@@ -33,5 +33,7 @@ class PolyCreateToolManip(FreePointTriadManip):
 	apiTypeStr = "kPolyCreateToolManip"
 	typeIdInt = 1346589773
 	MFnCls = om.MFnFreePointTriadManip
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

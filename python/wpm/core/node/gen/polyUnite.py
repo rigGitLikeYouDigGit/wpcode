@@ -56,5 +56,7 @@ class PolyUnite(PolyCreator):
 	apiTypeStr = "kPolyUnite"
 	typeIdInt = 1347767881
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["componentTagName", "inputMat", "inputPoly", "mergeUVSets", "outputUVSetName", "useOldPolyArchitecture"]
+	nodeLeafPlugs = ["componentTagName", "inputMat", "inputPoly", "mergeUVSets", "outputUVSetName", "useOldPolyArchitecture"]
 	pass
 

@@ -33,5 +33,7 @@ class EnableManip(LimitManip):
 	apiTypeStr = "kEnableManip"
 	typeIdInt = 1162759504
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

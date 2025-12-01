@@ -40,5 +40,7 @@ class PolySubdEdge(PolyModifierWorld):
 	apiTypeStr = "kPolySubdEdge"
 	typeIdInt = 1347638597
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["divisions", "size"]
+	nodeLeafPlugs = ["divisions", "size"]
 	pass
 

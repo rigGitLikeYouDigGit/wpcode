@@ -44,5 +44,7 @@ class ReverseSurface(AbstractBaseCreate):
 	apiTypeStr = "kReverseSurface"
 	typeIdInt = 1314018899
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["direction", "inputSurface", "outputSurface"]
+	nodeLeafPlugs = ["direction", "inputSurface", "outputSurface"]
 	pass
 

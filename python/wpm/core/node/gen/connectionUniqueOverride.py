@@ -33,5 +33,7 @@ class ConnectionUniqueOverride(ConnectionOverride):
 
 	typeName = "connectionUniqueOverride"
 	typeIdInt = 1476395938
+	nodeLeafClassAttrs = ["targetNodeName"]
+	nodeLeafPlugs = ["targetNodeName"]
 	pass
 

@@ -30,5 +30,7 @@ class CurveRange(AbstractBaseCreate):
 
 	typeName = "curveRange"
 	typeIdInt = 1314079570
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

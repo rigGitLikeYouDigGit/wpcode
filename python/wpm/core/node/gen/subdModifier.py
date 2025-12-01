@@ -44,5 +44,7 @@ class SubdModifier(SubdBase):
 	apiTypeStr = "kSubdModifier"
 	typeIdInt = 1397575492
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["cachedSubdiv", "inSubdiv", "inputComponents"]
+	nodeLeafPlugs = ["cachedSubdiv", "inSubdiv", "inputComponents"]
 	pass
 

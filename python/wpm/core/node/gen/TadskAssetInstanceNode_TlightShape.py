@@ -37,5 +37,7 @@ class TadskAssetInstanceNode_TlightShape(Light):
 
 	typeName = "TadskAssetInstanceNode_TlightShape"
 	typeIdInt = 1095323219
+	nodeLeafClassAttrs = ["assetID", "assetLibrary"]
+	nodeLeafPlugs = ["assetID", "assetLibrary"]
 	pass
 

@@ -86,5 +86,7 @@ class Reverse(_BASE_):
 	apiTypeStr = "kReverse"
 	typeIdInt = 1381127763
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "inputX", "inputY", "inputZ", "input", "outputX", "outputY", "outputZ", "output"]
+	nodeLeafPlugs = ["binMembership", "input", "output"]
 	pass
 

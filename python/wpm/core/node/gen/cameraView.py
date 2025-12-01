@@ -184,5 +184,7 @@ class CameraView(_BASE_):
 	apiTypeStr = "kCameraView"
 	typeIdInt = 1145258326
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["binMembership", "centerOfInterestX", "centerOfInterestY", "centerOfInterestZ", "centerOfInterest", "description", "eyeX", "eyeY", "eyeZ", "eye", "focalLength", "horizontalAperture", "horizontalPan", "orthographic", "orthographicWidth", "panZoomEnabled", "renderPanZoom", "tumblePivotX", "tumblePivotY", "tumblePivotZ", "tumblePivot", "upX", "upY", "upZ", "up", "verticalAperture", "verticalPan", "viewType", "zoom"]
+	nodeLeafPlugs = ["binMembership", "centerOfInterest", "description", "eye", "focalLength", "horizontalAperture", "horizontalPan", "orthographic", "orthographicWidth", "panZoomEnabled", "renderPanZoom", "tumblePivot", "up", "verticalAperture", "verticalPan", "viewType", "zoom"]
 	pass
 

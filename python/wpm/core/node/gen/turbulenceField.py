@@ -57,5 +57,7 @@ class TurbulenceField(Field):
 
 	typeName = "turbulenceField"
 	typeIdInt = 1498699090
+	nodeLeafClassAttrs = ["frequency", "interpolationType", "noiseLevel", "noiseRatio", "phaseX", "phaseY", "phaseZ"]
+	nodeLeafPlugs = ["frequency", "interpolationType", "noiseLevel", "noiseRatio", "phaseX", "phaseY", "phaseZ"]
 	pass
 

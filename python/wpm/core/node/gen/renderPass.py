@@ -82,5 +82,7 @@ class RenderPass(ImageSource):
 	apiTypeStr = "kRenderPass"
 	typeIdInt = 1380864083
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["backupAttributes", "backupData", "backup", "colorProfile", "filtering", "frameBufferType", "numChannels", "owner", "passGroupName", "passID", "renderable"]
+	nodeLeafPlugs = ["backup", "colorProfile", "filtering", "frameBufferType", "numChannels", "owner", "passGroupName", "passID", "renderable"]
 	pass
 

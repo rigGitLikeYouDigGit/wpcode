@@ -40,5 +40,7 @@ class PolyCollapseF(PolyModifier):
 	apiTypeStr = "kPolyCollapseF"
 	typeIdInt = 1346588486
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["areaThreshold", "useAreaThreshold"]
+	nodeLeafPlugs = ["areaThreshold", "useAreaThreshold"]
 	pass
 

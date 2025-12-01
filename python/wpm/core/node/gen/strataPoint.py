@@ -198,5 +198,7 @@ class StrataPoint(THlocatorShape):
 
 	typeName = "strataPoint"
 	typeIdInt = 1191073
+	nodeLeafClassAttrs = ["balanceWheel", "stDriverClosestPoint0", "stDriverClosestPoint1", "stDriverClosestPoint2", "stDriverClosestPoint", "stDriverCurve", "stDriverCurveLength", "stDriverCurveLengthParamBlend", "stDriverCurveParam", "stDriverCurveReverseBlend", "stDriverLocalOffsetMatrix", "stDriverOutMatrix", "stDriverPointMatrix", "stDriverRefLengthCurve", "stDriverSurface", "stDriverType", "stDriverUpCurve", "stDriverUpdateParamsInEditMode", "stDriverUseClosestPoint", "stDriverWeight", "stDriver", "stEditMode", "stFinalDriverMatrix", "stFinalLocalMatrix", "stLinkNameToNode", "stName", "stRadius", "stUiData"]
+	nodeLeafPlugs = ["balanceWheel", "stDriver", "stEditMode", "stFinalDriverMatrix", "stFinalLocalMatrix", "stLinkNameToNode", "stName", "stRadius", "stUiData"]
 	pass
 

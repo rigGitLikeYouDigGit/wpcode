@@ -36,5 +36,7 @@ class PositionMarker(Locator):
 	apiTypeStr = "kPositionMarker"
 	typeIdInt = 1347375949
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["time"]
+	nodeLeafPlugs = ["time"]
 	pass
 

@@ -73,5 +73,7 @@ class MakeNurbCube(Primitive):
 
 	typeName = "makeNurbCube"
 	typeIdInt = 1313035586
+	nodeLeafClassAttrs = ["degree", "heightRatio", "lengthRatio", "outputSurface1", "outputSurface2", "outputSurface3", "outputSurface4", "outputSurface5", "patchesU", "patchesV", "width"]
+	nodeLeafPlugs = ["degree", "heightRatio", "lengthRatio", "outputSurface1", "outputSurface2", "outputSurface3", "outputSurface4", "outputSurface5", "patchesU", "patchesV", "width"]
 	pass
 

@@ -283,5 +283,7 @@ class Wood(Texture3d):
 	apiTypeStr = "kWood"
 	typeIdInt = 1381259076
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["age", "amplitudeX", "amplitudeY", "centerU", "centerV", "center", "depthMax", "depthMin", "depth", "fillerColorB", "fillerColorG", "fillerColorR", "fillerColor", "grainColorB", "grainColorG", "grainColorR", "grainColor", "grainContrast", "grainSpacing", "layerSize", "normalCameraX", "normalCameraY", "normalCameraZ", "normalCamera", "randomness", "ratio", "refPointCameraX", "refPointCameraY", "refPointCameraZ", "refPointCamera", "refPointObjX", "refPointObjY", "refPointObjZ", "refPointObj", "ripplesX", "ripplesY", "ripplesZ", "ripples", "veinColorB", "veinColorG", "veinColorR", "veinColor", "veinSpread", "xPixelAngle"]
+	nodeLeafPlugs = ["age", "amplitudeX", "amplitudeY", "center", "depth", "fillerColor", "grainColor", "grainContrast", "grainSpacing", "layerSize", "normalCamera", "randomness", "ratio", "refPointCamera", "refPointObj", "ripples", "veinColor", "veinSpread", "xPixelAngle"]
 	pass
 

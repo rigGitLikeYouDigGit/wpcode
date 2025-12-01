@@ -90,5 +90,7 @@ class ButtonManip(ManipContainer):
 	apiTypeStr = "kButtonManip"
 	typeIdInt = 1431126612
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = ["iconFile", "offsetX", "offsetY", "offsetZ", "offset", "positionX", "positionY", "positionZ", "position", "script"]
+	nodeLeafPlugs = ["iconFile", "offset", "position", "script"]
 	pass
 

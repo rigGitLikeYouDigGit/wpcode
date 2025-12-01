@@ -33,5 +33,7 @@ class GreasePlaneRenderShape(Mesh):
 	apiTypeStr = "kGreasePlaneRenderShape"
 	typeIdInt = 1196446291
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

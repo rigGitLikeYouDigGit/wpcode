@@ -33,5 +33,7 @@ class OffsetSurfaceManip(ManipContainer):
 	apiTypeStr = "kOffsetSurfaceManip"
 	typeIdInt = 1431129939
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

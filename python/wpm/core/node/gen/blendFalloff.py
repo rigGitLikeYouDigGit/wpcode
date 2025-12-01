@@ -69,5 +69,7 @@ class BlendFalloff(_BASE_):
 	apiTypeStr = "kBlendFalloff"
 	typeIdInt = 1111904070
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["baseWeight", "binMembership", "outputWeightFunction", "mode", "weight", "weightFunction", "target"]
+	nodeLeafPlugs = ["baseWeight", "binMembership", "outputWeightFunction", "target"]
 	pass
 

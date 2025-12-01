@@ -36,5 +36,7 @@ class NRigid(NBase):
 	apiTypeStr = "kNRigid"
 	typeIdInt = 1314015044
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = ["solverDisplay"]
+	nodeLeafPlugs = ["solverDisplay"]
 	pass
 

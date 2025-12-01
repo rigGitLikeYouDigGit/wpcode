@@ -105,5 +105,7 @@ class LightLinker(_BASE_):
 
 	typeName = "lightLinker"
 	typeIdInt = 1380731979
+	nodeLeafClassAttrs = ["binMembership", "lightIgnored", "objectIgnored", "ignore", "light", "object", "link", "shadowLightIgnored", "shadowObjectIgnored", "shadowIgnore", "shadowLight", "shadowObject", "shadowLink"]
+	nodeLeafPlugs = ["binMembership", "ignore", "link", "shadowIgnore", "shadowLink"]
 	pass
 

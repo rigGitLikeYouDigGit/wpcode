@@ -33,5 +33,7 @@ class PolyMirrorManipContainer(ManipContainer):
 	apiTypeStr = "kPolyMirrorManipContainer"
 	typeIdInt = 1347240781
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

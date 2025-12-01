@@ -40,5 +40,7 @@ class ObjectMultiFilter(ObjectFilter):
 	apiTypeStr = "kObjectMultiFilter"
 	typeIdInt = 1330464332
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["filterType", "resultList"]
+	nodeLeafPlugs = ["filterType", "resultList"]
 	pass
 

@@ -49,5 +49,7 @@ class CurveFromSurface(CurveRange):
 
 	typeName = "curveFromSurface"
 	typeIdInt = 1313031763
+	nodeLeafClassAttrs = ["inputSurface", "maxValue", "minValue", "outputCurve", "relative"]
+	nodeLeafPlugs = ["inputSurface", "maxValue", "minValue", "outputCurve", "relative"]
 	pass
 

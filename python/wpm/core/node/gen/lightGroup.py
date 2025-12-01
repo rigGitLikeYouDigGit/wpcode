@@ -41,5 +41,7 @@ class LightGroup(LightItemBase):
 
 	typeName = "lightGroup"
 	typeIdInt = 1476396002
+	nodeLeafClassAttrs = ["firstItem", "lastItem", "listItems"]
+	nodeLeafPlugs = ["firstItem", "lastItem", "listItems"]
 	pass
 

@@ -33,5 +33,7 @@ class ParamDimension(NurbsDimShape):
 	apiTypeStr = "kParamDimension"
 	typeIdInt = 1380207950
 	MFnCls = om.MFnDagNode
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

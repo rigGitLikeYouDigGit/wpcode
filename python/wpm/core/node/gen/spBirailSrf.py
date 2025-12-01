@@ -37,5 +37,7 @@ class SpBirailSrf(BirailSrf):
 
 	typeName = "spBirailSrf"
 	typeIdInt = 1314079315
+	nodeLeafClassAttrs = ["inputProfile", "tangentContinuityProfile1"]
+	nodeLeafPlugs = ["inputProfile", "tangentContinuityProfile1"]
 	pass
 

@@ -76,5 +76,7 @@ class PolyCylinder(PolyPrimitive):
 	apiTypeStr = "kPolyCylinder"
 	typeIdInt = 1346591052
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["createUVs", "height", "maya2022UVs", "maya70", "radius", "roundCap", "roundCapHeightCompensation", "subdivisionsAxis", "subdivisionsCaps", "subdivisionsHeight", "texture"]
+	nodeLeafPlugs = ["createUVs", "height", "maya2022UVs", "maya70", "radius", "roundCap", "roundCapHeightCompensation", "subdivisionsAxis", "subdivisionsCaps", "subdivisionsHeight", "texture"]
 	pass
 

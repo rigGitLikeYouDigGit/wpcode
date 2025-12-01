@@ -33,5 +33,7 @@ class PointOnLineManip(Manip3D):
 	apiTypeStr = "kPointOnLineManip"
 	typeIdInt = 1431130188
 	MFnCls = om.MFnManip3D
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 

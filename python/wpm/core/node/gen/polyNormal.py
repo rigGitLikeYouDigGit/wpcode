@@ -40,5 +40,7 @@ class PolyNormal(PolyModifier):
 	apiTypeStr = "kPolyNormal"
 	typeIdInt = 1347309394
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["normalMode", "userNormalMode"]
+	nodeLeafPlugs = ["normalMode", "userNormalMode"]
 	pass
 

@@ -40,5 +40,7 @@ class PolyChipOff(PolyMoveFace):
 	apiTypeStr = "kPolyChipOff"
 	typeIdInt = 1346586697
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["duplicate", "keepFacesTogether"]
+	nodeLeafPlugs = ["duplicate", "keepFacesTogether"]
 	pass
 

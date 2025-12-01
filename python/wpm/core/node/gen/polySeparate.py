@@ -64,5 +64,7 @@ class PolySeparate(PolyBase):
 	apiTypeStr = "kPolySeparate"
 	typeIdInt = 1347634512
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["endFace", "icount", "inPlace", "inputPoly", "remShells", "startFace", "useOldPolyArchitecture", "userSpecifiedShells"]
+	nodeLeafPlugs = ["endFace", "icount", "inPlace", "inputPoly", "remShells", "startFace", "useOldPolyArchitecture", "userSpecifiedShells"]
 	pass
 

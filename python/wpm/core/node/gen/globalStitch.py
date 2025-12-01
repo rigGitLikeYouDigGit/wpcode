@@ -92,5 +92,7 @@ class GlobalStitch(AbstractBaseCreate):
 	apiTypeStr = "kGlobalStitch"
 	typeIdInt = 1313297236
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["connectedEdges", "inputSurface", "lockSurface", "maxSeparation", "modificationResistance", "outputSurface", "sampling", "shouldBeLast", "stitchCorners", "stitchEdges", "stitchPartialEdges", "stitchSmoothness", "topology", "unconnectedEdges", "updateSampling"]
+	nodeLeafPlugs = ["connectedEdges", "inputSurface", "lockSurface", "maxSeparation", "modificationResistance", "outputSurface", "sampling", "shouldBeLast", "stitchCorners", "stitchEdges", "stitchPartialEdges", "stitchSmoothness", "topology", "unconnectedEdges", "updateSampling"]
 	pass
 

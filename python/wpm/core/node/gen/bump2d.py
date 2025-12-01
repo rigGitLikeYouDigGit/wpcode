@@ -412,5 +412,7 @@ class Bump2d(ShadingDependNode):
 
 	typeName = "bump2d"
 	typeIdInt = 1380078925
+	nodeLeafClassAttrs = ["adjustEdges", "bumpDepth", "bumpFilter", "bumpFilterOffset", "bumpInterp", "bumpValue", "infoBits", "normalCameraX", "normalCameraY", "normalCameraZ", "normalCamera", "outNormalX", "outNormalY", "outNormalZ", "outNormal", "pointCameraX", "pointCameraY", "pointCameraZ", "pointCamera", "pointObjX", "pointObjY", "pointObjZ", "pointObj", "provide3dInfo", "rayOriginX", "rayOriginY", "rayOriginZ", "rayOrigin", "refPointCameraX", "refPointCameraY", "refPointCameraZ", "refPointCamera", "refPointObjX", "refPointObjY", "refPointObjZ", "refPointObj", "tangentUx", "tangentUy", "tangentUz", "tangentUCamera", "tangentVx", "tangentVy", "tangentVz", "tangentVCamera", "uCoord", "vCoord", "uvCoord", "uvFilterSizeX", "uvFilterSizeY", "uvFilterSize", "vertexCameraOneX", "vertexCameraOneY", "vertexCameraOneZ", "vertexCameraOne", "vertexCameraTwoX", "vertexCameraTwoY", "vertexCameraTwoZ", "vertexCameraTwo", "vertexUvOneU", "vertexUvOneV", "vertexUvOne", "vertexUvTwoU", "vertexUvTwoV", "vertexUvTwo", "xPixelAngle"]
+	nodeLeafPlugs = ["adjustEdges", "bumpDepth", "bumpFilter", "bumpFilterOffset", "bumpInterp", "bumpValue", "infoBits", "normalCamera", "outNormal", "pointCamera", "pointObj", "provide3dInfo", "rayOrigin", "refPointCamera", "refPointObj", "tangentUCamera", "tangentVCamera", "uvCoord", "uvFilterSize", "vertexCameraOne", "vertexCameraTwo", "vertexUvOne", "vertexUvTwo", "xPixelAngle"]
 	pass
 

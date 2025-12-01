@@ -120,5 +120,7 @@ class AnimBlendNodeAdditiveRotation(AnimBlendNodeBase):
 
 	typeName = "animBlendNodeAdditiveRotation"
 	typeIdInt = 1094864466
+	nodeLeafClassAttrs = ["accumulationMode", "byLayerAccLegacyMode", "inputAX", "inputAY", "inputAZ", "inputA", "inputBX", "inputBY", "inputBZ", "inputB", "outputX", "outputY", "outputZ", "output", "rotateOrder", "rotationInterpolation"]
+	nodeLeafPlugs = ["accumulationMode", "byLayerAccLegacyMode", "inputA", "inputB", "output", "rotateOrder", "rotationInterpolation"]
 	pass
 

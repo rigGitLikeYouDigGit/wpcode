@@ -37,5 +37,7 @@ class DynHolder(Shape):
 
 	typeName = "dynHolder"
 	typeIdInt = 1497910340
+	nodeLeafClassAttrs = ["auxiliariesOwned", "connectionsToMe"]
+	nodeLeafPlugs = ["auxiliariesOwned", "connectionsToMe"]
 	pass
 

@@ -202,5 +202,7 @@ class PolyMoveVertex(PolyModifierWorld):
 	apiTypeStr = "kPolyMoveVertex"
 	typeIdInt = 1347243862
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["compId", "gain", "localDirectionX", "localDirectionY", "localDirectionZ", "localDirection", "localTranslateX", "localTranslateY", "localTranslateZ", "localTranslate", "matrix", "pivotX", "pivotY", "pivotZ", "pivot", "random", "randomSeed", "rotateX", "rotateY", "rotateZ", "rotate", "scaleX", "scaleY", "scaleZ", "scale", "translateX", "translateY", "translateZ", "translate"]
+	nodeLeafPlugs = ["compId", "gain", "localDirection", "localTranslate", "matrix", "pivot", "random", "randomSeed", "rotate", "scale", "translate"]
 	pass
 

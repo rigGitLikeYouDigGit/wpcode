@@ -60,5 +60,7 @@ class AvgCurves(AbstractBaseCreate):
 	apiTypeStr = "kAvgCurves"
 	typeIdInt = 1312899922
 	MFnCls = om.MFnDependencyNode
+	nodeLeafClassAttrs = ["automaticWeight", "inputCurve1", "inputCurve2", "normalizeWeights", "outputCurve", "weight1", "weight2"]
+	nodeLeafPlugs = ["automaticWeight", "inputCurve1", "inputCurve2", "normalizeWeights", "outputCurve", "weight1", "weight2"]
 	pass
 

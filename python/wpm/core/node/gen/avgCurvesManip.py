@@ -30,5 +30,7 @@ class AvgCurvesManip(ManipContainer):
 
 	typeName = "avgCurvesManip"
 	typeIdInt = 1431126339
+	nodeLeafClassAttrs = []
+	nodeLeafPlugs = []
 	pass
 
