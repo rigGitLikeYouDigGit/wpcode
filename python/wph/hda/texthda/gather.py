@@ -3,12 +3,13 @@ import types, typing as T
 import pprint
 from pathlib import Path
 
+import copy, json, importlib
+from collections import defaultdict
+from typing import NamedTuple
+from uuid import uuid4
 from orjson import loads
 
 from wplib import log
-
-import copy, json, importlib
-from typing import NamedTuple
 
 from deepdiff import DeepDiff, Delta
 
@@ -27,21 +28,90 @@ save the node's version mode and number as parametres, so if a node changes to a
 
 save header,
 meta,
-params
+connections,
+params,
+param dialog
+
+TODO: add wildcard expressions for connections. just a little bit as a treat
+
+
+hda def files should be named
+
+gridBase_v01_textHDA.json
+
 """
+
+# FOR TESTING - supply list of paths to be searched for text HDA definitions
+hdaDefDirs = [
+	"C:/Users/arthu/Desktop/textHDAs/"
+]
+
+# def getDefNameVersion(name)->tuple[str, int]:
+# 	tokens = name.split("_")
+# 	return tokens[0], int("".join(i for i in tokens[1] if i.isdigit()))
 
 NETWORK_BOX_S = "NETWORK_BOX"
 TOP_SEP_CHAR = "@@"
 VERSION_SEP_CHAR = "@"
 
 
+safeCharMap = {
+	"\t" : "£TAB",
+	"\"" : "£DQ",
+	"\'" : "£Q"
+}
+def makeSafeForJson(s:str):
+	for k, v in safeCharMap.items():
+		s = s.replace(k, v)
+	return s
+def regenFromJson(s:str):
+	for k, v in safeCharMap.items():
+		s = s.replace(v, k)
+	return s
+
 def truncate2Places(f:float):
 	return int(f * 100) / 100.0
+
+def getNameVersionFromFileName(s:str)->(str, int):
+	stem, *suffix = s.split(".")
+	tokens = stem.split("_")
+	endTokenIndex = 0
+	version = -1
+	for i, tok in enumerate(tokens):
+		# check if this token is version - if yes, all previous are the name
+		versionTest = tok.replace("v", "").replace("V", "")
+		if versionTest.isdigit():
+			endTokenIndex = i
+			version = int(versionTest)
+			break
+		if tok == "textHDA":
+			endTokenIndex = i
+
+	if endTokenIndex == 0: # no name found
+		return "", -1
+	return "_".join(tokens[:endTokenIndex+1]), version
+
+
+
+def availableTextHDADefs()->dict[str, dict[int, Path]]:
+	results = defaultdict(dict)
+	for hdaDir in hdaDefDirs:
+		dirPath = Path(hdaDir)
+		if not dirPath.is_dir():
+			continue
+		dirHdas = dirPath.glob("*_textHDA.json")
+		for i in dirHdas:
+			name, version = getNameVersionFromFileName(i.stem)
+			if not name:
+				continue
+			results[name][version] = i
+	return results
+
 
 def getNodeHeader(node:hou.Node, rootNode:hou.Node):
 	path = rootNode.relativePathTo(node)
 	if isinstance(node, hou.NetworkBox):
-		return NodeHeader(path, "NETWORK_BOX", "", "", "", 0)
+		return [path, "NETWORK_BOX", "", "", "", 0]
 	typeInfo = node.type()
 	"""
 	Returns a tuple of node type name components that constitute the full node type name. The components in the tuple appear in the following order: scope network type, node type namespace, node type core name, and version.
@@ -64,9 +134,9 @@ def getNodeHeader(node:hou.Node, rootNode:hou.Node):
 	exactVersionMatters = int(defaultType.nameComponents() != typeInfo.nameComponents())
 
 	# save everything EXCEPT the version at node level
-	return NodeHeader(path, scopeType, nodeTypeNS, nodeTypeName, exactVersion, exactVersionMatters,
+	return [path, scopeType, nodeTypeNS, nodeTypeName, exactVersion, exactVersionMatters,
 	                  truncate2Places(node.position()[0]),
-			truncate2Places(node.position()[1]))
+			truncate2Places(node.position()[1])]
 
 def createNodeFromHeader(rootNode:hou.Node, header:NodeHeader):
 	"""create a new node from the given header: path and node type.
@@ -82,7 +152,7 @@ def createNodeFromHeader(rootNode:hou.Node, header:NodeHeader):
 	parentNode : hou.Node = rootNode.node(parentNodePath)
 
 	if exactVersionMatters:
-		exactVersion = "::".join((nodeTypeNS, nodeTypeName, exactVersion))
+		exactVersion = "::".join(filter(None, (nodeTypeNS, nodeTypeName, exactVersion)))
 		print("CREATE EXACT VERSION ", exactVersion, nodeName)
 		newNode = parentNode.createNode(
 			exactVersion, nodeName, exact_type_name=True
@@ -93,18 +163,6 @@ def createNodeFromHeader(rootNode:hou.Node, header:NodeHeader):
 		)
 	newNode.setPosition(hou.Vector2(x, y))
 	return newNode
-
-# def getNodesDiff(baseData:set[NodeHeader], newData:set[NodeHeader])->dict[str, list[NodeHeader]]:
-# 	"""return a dict of {"add" : [], "del" : [] }
-# 	"""
-# 	result = {"add" : [], "del" : []}
-# 	for i in baseData:
-# 		if not i in newData:
-# 			result["del"].append(i)
-# 	for i in newData:
-# 		if not i in baseData:
-# 			result["add"].append(i)
-# 	return result
 
 
 def getChildrenConnectionData(parentNode:hou.Node)->list[list[str]]:
@@ -276,7 +334,7 @@ def getParmDialogScripts(node:hou.Node)->dict[str]:
 		p : hou.Parm
 		template = p.parmTemplate()
 		ptg = hou.ParmTemplateGroup([template])
-		result[p.name()] = ptg.asDialogScript()
+		result[p.name()] = makeSafeForJson(ptg.asDialogScript())
 	return result
 
 def getTextHDAParmDialogScripts(node:hou.Node):
@@ -288,32 +346,66 @@ def getTextHDAParmDialogScripts(node:hou.Node):
 	# leafPtg = hou.ParmTemplateGroup(hda.leafHDAParmTemplates())
 	# parentPtg = hou.ParmTemplateGroup(hda.parentHDAParmTemplates())
 	result = {
-		"parent" : {i.name() : hou.ParmTemplateGroup(i).asDialogScript() for i in hda.parentHDAParmTemplates()},
-		"leaf" : {i.name() : hou.ParmTemplateGroup(i).asDialogScript() for i in hda.leafHDAParmTemplates()},
+		"parent" : {i.name() : makeSafeForJson(hou.ParmTemplateGroup([
+			i]).asDialogScript())
+		            for i in hda.parentHDAParmTemplates()},
+		"leaf" : {i.name() : makeSafeForJson(hou.ParmTemplateGroup([
+			i]).asDialogScript())
+		          for i in hda.leafHDAParmTemplates()},
 	}
 	return result
 
 def setTextHDAParmDialogScripts(node:hou.Node, data:dict):
-	"""remove existing hda parms and reset from given data"""
+	"""remove existing hda parms and reset from given data
+	switch to using spare parms to avoid the HDA system screaming at you
+	when it thinks the main node template has been modified
+
+	"""
+	# print("text parms")
+	# print(data)
 	hda = TextHDANode(node)
 	ptg : hou.ParmTemplateGroup = node.parmTemplateGroup()
 
-	parmNames = {"parent" : ParmNames.parentHDAParmFolder,
-	             "leaf" : ParmNames.leafHDAParmFolder}
+	parmNames = {"parent" : (ParmNames.parentHDAParmFolderLABEL, hou.ParmTemplateGroup()),
+	             "leaf" : (ParmNames.leafHDAParmFolderLABEL, hou.ParmTemplateGroup())
+	             }
+
 	for cat in ("parent", "leaf"):
+		folderPT: hou.FolderParmTemplate = ptg.findFolder(parmNames[cat][0])
+
+		#print("folderPT", folderPT)
+		ptg.replace(folderPT, folderPT)
+		origFolderPT: hou.FolderParmTemplate = ptg.findFolder(parmNames[cat][0])
+		folderPT.setParmTemplates(())
+		ptg.replace(origFolderPT, folderPT)
+		folderPT: hou.FolderParmTemplate = ptg.findFolder(parmNames[cat][0])
+		origFolderPT: hou.FolderParmTemplate = ptg.findFolder(parmNames[cat][0])
 		for k, v in data.get(cat, {}).items():
-			parm = node.parm(k)
-			if parm is not None: # exists on node
-				try:
-					ptg.remove(parm.parmTemplate())
-				except hou.OperationFailed:
-					pass
+			#parm = node.parm(k)
+			# if parm is not None: # exists on node
+			# 	try:
+			# 		ptg.remove(parm.parmTemplate())
+			# 	except hou.OperationFailed:
+			# 		pass
+
 
 			parmPTG = hou.ParmTemplateGroup()
-			parmPTG.setToDialogScript(v)
-			folderPT : hou.FolderParmTemplate = ptg.findFolder(parmNames[cat])
+			parmPTG.setToDialogScript( regenFromJson(v) )
+			#pt : hou.ParmTemplate = parmPTG.parmTemplates()[0]
+			pt : hou.ParmTemplate = parmPTG.find(k)
 
+			folderPT.addParmTemplate(pt)
 
+			# try:
+			# 	ptg.appendToFolder(folderPT, pt) # ERROR, "invalid indices/name/parm template"
+			# except:
+			# 	raise
+			# ptg.insertAfter(prevParm)
+			# prevParm
+		ptg.replace(origFolderPT, folderPT)
+
+	# update new folders on node
+	node.setParmTemplateGroup(ptg)
 
 
 
@@ -323,7 +415,7 @@ def setParmDialogScripts(node:hou.Node, ptgData:dict):
 	masterPtg : hou.ParmTemplateGroup = node.parmTemplateGroup()
 	for parmName, data in ptgData.items():
 		ptg = hou.ParmTemplateGroup()
-		ptg.setToDialogScript(data)
+		ptg.setToDialogScript(regenFromJson(data))
 		masterPtg.append(ptg.parmTemplates()[0])
 	node.setParmTemplateGroup(masterPtg)
 
@@ -391,8 +483,8 @@ def getFullNodeState(
 			continue
 		parmTemplatesToAdd[node.relativePathTo(i)] = parmDialogData
 
-	print("pts to add:")
-	pprint.pprint(parmTemplatesToAdd)
+	#print("pts to add:")
+	#pprint.pprint(parmTemplatesToAdd)
 
 	parmVals = {}
 	for i in nodes:
@@ -447,6 +539,10 @@ def mergeNodeStates(
 
 	return baseData
 
+def parmValsAreEqual(a, b):
+	"""dumb and stupid for now, make this more complex if needed
+	"""
+	return str(a) == str(b)
 
 def diffNodeState(
 		baseData:dict,
@@ -465,22 +561,36 @@ def diffNodeState(
 	for k, v in result.items():
 		baseData.setdefault(k, v)
 	print("diffNodeState:")
-	print("base:")
-	pprint.pprint(baseData)
-	print("whole state:")
-	pprint.pprint(wholeNodeState)
+
+	print(baseData["nodes"])
+	print(wholeNodeState["nodes"])
+	#print("base:")
+	#pprint.pprint(baseData)
+	#print("whole state:")
+	#pprint.pprint(wholeNodeState)
+
+
 	for nodePath, nodeData in wholeNodeState.get("nodes", {}).items():
 		"""override node creation if leaf node is not found,
 		or if it has a different type/version compared to base"""
-		if str(nodeData) != str(baseData["nodes"].get(nodePath, "")):
+		if not nodePath in baseData["nodes"]:
+			result["nodes"][nodePath] = nodeData
+			continue
+		# check that version and name are identical
+		if not all(nodeV == baseV
+		           for nodeV, baseV in zip(
+			nodeData[:6], baseData["nodes"][nodePath][:6])):
 			result["nodes"][nodePath] = nodeData
 
+	print("diff nodes:")
+	print(result["nodes"].keys())
 	for nodePath, parmData in wholeNodeState.get("parmTemplates", {}).items():
 		if not nodePath in baseData["parmTemplates"]:
 			result["parmTemplates"][nodePath] = parmData
 			continue
 		for parmName, parmScript in parmData.items():
 			if str(parmScript) != str(baseData["parmTemplates"][nodePath].get(parmName, "")):
+				result["parmTemplates"].setdefault(nodePath, {})
 				result["parmTemplates"][nodePath][parmName] = parmScript
 
 	comp = set(map(tuple, baseData.get("connections", [])))
@@ -489,13 +599,22 @@ def diffNodeState(
 			result["connections"].append(i)
 
 	for nodePath, parmData in wholeNodeState.get("parmVals", {}).items():
-		if not nodePath in baseData["parmVals"]:
+		if not nodePath in baseData["parmVals"]: # new node
 			result["parmVals"][nodePath] = parmData
 			continue
-		for parmName, parmVals in parmData.items():
-			if not parmName in baseData["parmVals"][nodePath].get(parmName, {}):
-				result["parmVals"][nodePath][parmName] = parmVals
+		for parmName, parmVal in parmData.items():
+			if not parmName in baseData["parmVals"][nodePath]: # new parm
+				result["parmVals"].setdefault(nodePath, {})
+				result["parmVals"][nodePath][parmName] = parmVal
+				continue
+			if not parmValsAreEqual(
+					baseData["parmVals"][nodePath][parmName],
+					parmVal): # save if not equal
+				result["parmVals"].setdefault(nodePath, {})
+				result["parmVals"][nodePath][parmName] = parmVal
+
 	return result
+
 
 
 def isTextHDANode(node:hou.Node):
@@ -508,8 +627,11 @@ def setNodeToState(
 	"""conform node exactly to the given state - this WILL
 	delete all non-tracked nodes and connections
 	TODO: test if this is faster than going through more carefully item by item
+
+	TODO: check where parent/leaf keys aren't getting passed properly
 	"""
-	node.deleteItems(node.allSubChildren())
+	print("before delete", node)
+	node.deleteItems(node.children())
 	for nodePath, nodeData in state["nodes"].items():
 		createNodeFromHeader(node, nodeData)
 	for nodePath, ptgData in state["parmTemplates"].items():
@@ -521,6 +643,65 @@ def setNodeToState(
 	setChildrenConnectionData(node, state["connections"])
 	for nodePath, parmVals in state["parmVals"].items():
 		setNodeParamsFromText(node.node(nodePath), parmVals )
+
+
+# namespace to find texthda nodes declared in file -
+# one per name per active version
+TEXT_HDA_NAMESPACE = "TEXTHDA"
+SAVED_TO_SCENE_TOKEN = "Embedded" # hardcoded
+TEXT_HDA_BASE_DEF_NAME = "textHDA"
+def hdaIsSavedToScene(hdaDef:hou.HDADefinition):
+	return hdaDef.libraryFilePath() == SAVED_TO_SCENE_TOKEN
+
+def getRandomStringName()->str:
+	"""would be cool to have a random string of actual words
+	but for now uuid is fine"""
+
+
+def getBaseTextHDADef()->hou.HDADefinition:
+	for name, nodeType in hou.sopNodeTypeCategory().nodeTypes().items():
+		nodeType : hou.NodeType
+		if hdaDef := nodeType.definition() is None: # only consider hdas
+			continue
+		if name == TEXT_HDA_BASE_DEF_NAME:
+			return nodeType.definition()
+
+def getEmbeddedTextHDADefs()->list[tuple[hou.NodeType, hou.HDADefinition]]:
+	results = []
+	for name, nodeType in hou.sopNodeTypeCategory().nodeTypes().items():
+		nodeType : hou.NodeType
+		if (hdaDef := nodeType.definition()) is None: # only consider hdas
+			continue
+		if not hdaIsSavedToScene(hdaDef):
+			continue
+		# check if "TEXTHDA" in namespace
+		scopeName, namespace, typeName, version = nodeType.nameComponents()
+		if TEXT_HDA_NAMESPACE in namespace:
+			results.append((nodeType, hdaDef))
+	return results
+
+def createTempTextHDADefinition(
+		node:hou.Node,
+		newId = None
+)->hou.HDADefinition:
+	"""call this whenever allowEditing is ticked on,
+	and whenever a parent base changes -
+	we need a separate scene HDA definition for each permutation
+	of local deltas and parent bases in scene
+	"""
+	hdaNode = TextHDANode(node)
+	newId = newId or f"textHDA-{str(uuid4())}"
+	hdaNode.setHDADefId(newId)
+	hdaNode.hdaDefParm().lock(True)
+	node.createDigitalAsset(
+		name=newId,
+		change_node_type=True,
+		create_backup=False,
+		save_as_embedded=True
+	)
+
+	pass
+
 
 
 class TextHDAWorkContext:
@@ -579,6 +760,38 @@ class TextHDANode:
 			)
 		return self._nodeCachedParentState()
 
+	def hdaDefParm(self)->hou.Parm:
+		"""return the label for the hda def id"""
+		return self.node.parm(ParmNames.hdaDef)
+
+	def hdaDefId(self)->str:
+		return self.hdaDefParm().evalAsString()
+	def setHDADefId(self, text:str):
+		self.hdaDefParm().set(text)
+
+	def hdaDef(self)->hou.HDADefinition:
+		for nodeType, hdaDef in getEmbeddedTextHDADefs():
+			if nodeType.name() == self.hdaDefId():
+				return hdaDef
+		return None
+
+	def getHDADef(self)->hou.HDADefinition:
+		"""create def if node doesn't already have one, then return it"""
+		if hdaDef := self.hdaDef():
+			return hdaDef
+		newDef = createTempTextHDADefinition(self.node)
+		self.setHDADefId(newDef.nodeTypeName())
+		return self.hdaDef()
+
+	def fullReset(self):
+		"""reset node to base textHDA definition"""
+		self.node.changeNodeType(
+			TEXT_HDA_BASE_DEF_NAME,
+			keep_name=True,
+			keep_parms=False,
+			keep_network_contents=False
+		)
+		self.hdaDefParm().set("")
 
 	def _parentParms(self, parmName:str)->list[hou.Parm]:
 		"""
@@ -647,6 +860,12 @@ class TextHDANode:
 			print(e)
 			return {}
 		return data
+
+	def nodeLeafPath(self)->Path:
+		s = self.node.parm(ParmNames.endFile).eval()
+		if not s:
+			return None
+		return Path(s)
 
 	def leafHDAParmFolderTemplate(self)->hou.FolderParmTemplate:
 		return self.node.parmTemplateGroup().findFolder(ParmNames.leafHDAParmFolderLABEL)

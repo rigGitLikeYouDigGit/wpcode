@@ -8,10 +8,32 @@ from typing import NamedTuple, TypedDict, Tuple
 
 try:
 	import orjson
-	from orjson import loads, dumps as _dumps
-	dumps = lambda *args, **kwargs : _dumps(*args, option=orjson.OPT_INDENT_2).decode("utf-8")
+	from orjson import loads, dumps as __dumps
+	dumps = lambda *args, **kwargs : __dumps(*args,
+	                                         option=orjson.OPT_INDENT_2).decode("utf-8")
 except (ImportError, ModuleNotFoundError):
 	from json import loads, dumps
+
+"""sometimes when saving param dialog scripts, you end up with too 
+many slashes and json gets confused"""
+safeCharMap = {
+	"\t" : "£TAB",
+	"\"" : "£DQ",
+	"\'" : "£Q"
+}
+def makeSafeForJson(s:str):
+	for k, v in safeCharMap.items():
+		s = s.replace(k, v)
+	return s
+def regenFromJson(s:str):
+	for k, v in safeCharMap.items():
+		s = s.replace(v, k)
+	return s
+
+# def loads(s, *a, **k):
+# 	return _loads(regenFromJson(s), *a, **k)
+# def dumps(s, *a, **k):
+# 	return makeSafeForJson(_dumps(s, *a, **k))
 
 from deepdiff import Delta
 
@@ -61,6 +83,10 @@ class ParmNames:
 	parentNodeDelta = "parentnodedelta"
 	recursiveParents = "recursiveparentsbox"
 
+	hdaDef = "hdadefid"
+
+	resetToBasesBtn = "resettobasesbtn"
+	resetToTextHDABtn = "resettotexthdabtn"
 
 @dataclass
 class CachedFile:
