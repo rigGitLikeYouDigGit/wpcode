@@ -61,6 +61,12 @@ class NodeDelta(TypedDict):
 class ParmNames:
 	"""just for easier referring"""
 
+	defFile = "deffile"
+	selectDefBtn = "selectdefbtn"
+	nameLabel = "namelabel"
+	versionLabel = "versionlabel"
+
+
 	syncBtn = "syncbtn"
 
 	localEdits = "nodeeditdelta"

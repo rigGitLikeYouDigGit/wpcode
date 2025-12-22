@@ -91,7 +91,13 @@ def getNameVersionFromFileName(s:str)->(str, int):
 		return "", -1
 	return "_".join(tokens[:endTokenIndex+1]), version
 
-
+def hdaEmbeddedIdDefMap()->dict[str, hou.HDADefinition]:
+	result = {}
+	for i in hou.hda.definitionsInFile("Embedded"):
+		i : hou.HDADefinition
+		result[i.nodeTypeName()] = i
+		result[i.nodeTypeName().lower()] = i
+	return result
 
 def availableTextHDADefs()->dict[str, dict[int, Path]]:
 	results = defaultdict(dict)
@@ -231,14 +237,16 @@ def getConnectionsDiff(
 	return result
 
 
-def getNodeParamText(node:hou.OpNode)->dict[str, T.Any]:
+def getNodeParamText(node:hou.OpNode, saveDefaults=True)->dict[str, T.Any]:
 	"""get verbose so we can iterate over dictionary easier when diffing
 	but no way to
 	"""
 	result = {}
 	for i in node.parms():
-		if i.isAtDefault():
-			continue
+		i : hou.Parm
+		if not saveDefaults:
+			if i.isAtDefault():
+				continue
 		result[i.name()] = i.asData()
 	return result
 
@@ -246,6 +254,17 @@ def setNodeParamsFromText(node:hou.OpNode, data):
 	for parmName, v in data.items():
 		node.parm(parmName).setFromData(v)
 
+def getNodeParmValues(node:hou.Node)->dict[str, T.Any]:
+	""""""
+	return {
+		i.name() : i.eval() for i in node.parms()
+	}
+
+def setNodeParmValues(node:hou.Node, data:dict):
+	for k, v in data.items():
+		if not node.parm(k):
+			continue
+		node.parm(k).set(v)
 
 """very quick and dirty deep diff and update system"""
 
@@ -357,14 +376,12 @@ def getTextHDAParmDialogScripts(node:hou.Node):
 
 def setTextHDAParmDialogScripts(node:hou.Node, data:dict):
 	"""remove existing hda parms and reset from given data
-	switch to using spare parms to avoid the HDA system screaming at you
-	when it thinks the main node template has been modified
-
+	we modify the current hda definition ptg used by the node
 	"""
 	# print("text parms")
 	# print(data)
 	hda = TextHDANode(node)
-	ptg : hou.ParmTemplateGroup = node.parmTemplateGroup()
+	ptg : hou.ParmTemplateGroup = hda.hdaDef().parmTemplateGroup()
 
 	parmNames = {"parent" : (ParmNames.parentHDAParmFolderLABEL, hou.ParmTemplateGroup()),
 	             "leaf" : (ParmNames.leafHDAParmFolderLABEL, hou.ParmTemplateGroup())
@@ -381,13 +398,6 @@ def setTextHDAParmDialogScripts(node:hou.Node, data:dict):
 		folderPT: hou.FolderParmTemplate = ptg.findFolder(parmNames[cat][0])
 		origFolderPT: hou.FolderParmTemplate = ptg.findFolder(parmNames[cat][0])
 		for k, v in data.get(cat, {}).items():
-			#parm = node.parm(k)
-			# if parm is not None: # exists on node
-			# 	try:
-			# 		ptg.remove(parm.parmTemplate())
-			# 	except hou.OperationFailed:
-			# 		pass
-
 
 			parmPTG = hou.ParmTemplateGroup()
 			parmPTG.setToDialogScript( regenFromJson(v) )
@@ -396,16 +406,11 @@ def setTextHDAParmDialogScripts(node:hou.Node, data:dict):
 
 			folderPT.addParmTemplate(pt)
 
-			# try:
-			# 	ptg.appendToFolder(folderPT, pt) # ERROR, "invalid indices/name/parm template"
-			# except:
-			# 	raise
-			# ptg.insertAfter(prevParm)
-			# prevParm
 		ptg.replace(origFolderPT, folderPT)
 
 	# update new folders on node
-	node.setParmTemplateGroup(ptg)
+	hda.hdaDef().setParmTemplateGroup(
+		ptg, rename_conflicting_parms=False, create_backup=False)
 
 
 
@@ -618,7 +623,7 @@ def diffNodeState(
 
 
 def isTextHDANode(node:hou.Node):
-	return node.type().nameComponents()[2].lower() in ("texthda", "textdeltahda")
+	return node.type().nameComponents()[2].lower() in ("texthda", )
 
 def setNodeToState(
 		node:hou.Node,
@@ -630,7 +635,7 @@ def setNodeToState(
 
 	TODO: check where parent/leaf keys aren't getting passed properly
 	"""
-	print("before delete", node)
+	#print("set node to state", node)
 	node.deleteItems(node.children())
 	for nodePath, nodeData in state["nodes"].items():
 		createNodeFromHeader(node, nodeData)
@@ -663,7 +668,7 @@ def getBaseTextHDADef()->hou.HDADefinition:
 		nodeType : hou.NodeType
 		if hdaDef := nodeType.definition() is None: # only consider hdas
 			continue
-		if name == TEXT_HDA_BASE_DEF_NAME:
+		if name.lower() == TEXT_HDA_BASE_DEF_NAME.lower():
 			return nodeType.definition()
 
 def getEmbeddedTextHDADefs()->list[tuple[hou.NodeType, hou.HDADefinition]]:
@@ -680,27 +685,94 @@ def getEmbeddedTextHDADefs()->list[tuple[hou.NodeType, hou.HDADefinition]]:
 			results.append((nodeType, hdaDef))
 	return results
 
+"""
+allow composing by default, """
+
 def createTempTextHDADefinition(
 		node:hou.Node,
 		newId = None
-)->hou.HDADefinition:
+)->(hou.HDADefinition, hou.Node):
 	"""call this whenever allowEditing is ticked on,
 	and whenever a parent base changes -
 	we need a separate scene HDA definition for each permutation
 	of local deltas and parent bases in scene
+
+	in order to save the hdamodule on the new node hda type,
+	we copy the original node and update the new definition
+	from it before deleting it
+
+	maybe call temp definitions _EDIT before tag?
+
+	IF NO DEF FILE GIVEN, use node's name at creation with _EDIT and uid
+	IF DEF FILE GIVEN, use that with _EDIT and uid
+
+	TODO: if I'm reading the docs right, there's a way to set HDA section
+		contents paths to actual filenames? unsure if that would allow
+		setting a literal python module as section, rather than
+		relying on embedded code
 	"""
 	hdaNode = TextHDANode(node)
-	newId = newId or f"textHDA-{str(uuid4())}"
+
+	newId = newId or f"{node.name()}_EDIT-{str(uuid4())[:4]}"
+	masterHDADef = getBaseTextHDADef()
+	masterPTG = masterHDADef.parmTemplateGroup()
+	#tempNode = hou.copyNodesTo((node, ), node.parent())[0]
 	hdaNode.setHDADefId(newId)
-	hdaNode.hdaDefParm().lock(True)
-	node.createDigitalAsset(
+	origParmData = getNodeParmValues(node)
+	hdaNode.hdaDefParm().lock(False)
+
+	# we have to change the actual node type to a subnetwork before making an
+	# HDA?
+
+	baseHMSection : hou.HDASection = masterHDADef.sections()["PythonModule"]
+	node.setName(node.name() + "_EDIT")
+	nodePath = node.path()
+	node = node.changeNodeType(
+		"subnet", keep_name=True, keep_parms=True,
+		keep_network_contents=True, force_change_on_node_type_match=True
+	)
+
+
+
+	# node = newNode
+	hdaNode = TextHDANode(node)
+	# need to re-get node from houdini object model
+	node : hou.Node = hou.node(nodePath)
+	print("new subnet node", node)
+	# createDigitalAsset seems to always take the node's actual name
+	newNode = node.createDigitalAsset(
 		name=newId,
 		change_node_type=True,
 		create_backup=False,
 		save_as_embedded=True
 	)
 
-	pass
+
+	# and again
+	node = hou.node(nodePath)
+	print("new hda def node", node)
+
+
+	newHDADef : hou.HDADefinition = newNode.type().definition()
+
+	if not "PythonModule" in newHDADef.sections():
+		section = newHDADef.addSection("PythonModule")
+	newHDADef.sections()["PythonModule"].setContents(baseHMSection.contents())
+
+	# newNode = node.changeNodeType(
+	# 	newHDADef.nodeTypeName(),
+	# 	keep_parms=True
+	# )
+
+	print("new def", newHDADef)
+
+
+	newHDADef.setParmTemplateGroup(masterPTG, create_backup=False)
+	setNodeParmValues(node, origParmData)
+	newHDADef.save("Embedded", create_backup=False)
+	print("completed type change")
+
+	return newHDADef, node
 
 
 
@@ -721,6 +793,9 @@ class TextHDANode:
 	"""
 	helper wrapper for TextHDA
 	expose getting incoming state
+
+	each node may have a defined hda archetype,
+	and a temporary hda definition to allow editing
 	"""
 
 	def __init__(self, node:hou.Node):
@@ -732,12 +807,26 @@ class TextHDANode:
 		self.node.setUserData("_working", str(int(state)))
 	def isWorking(self)->bool:
 		return bool(int(self.node.userData("_working") or 0))
-
 	def workCtx(self)->TextHDAWorkContext:
 		return TextHDAWorkContext(self)
 
+	def defFileParm(self)->hou.Parm:
+		return self.node.parm(ParmNames.defFile)
+
+	def hdaDefParm(self) -> hou.Parm:
+		"""return the label for the hda def id"""
+		return self.node.parm(ParmNames.hdaDef)
+	def hdaDefId(self) -> str:
+		return self.hdaDefParm().evalAsString()
+	def setHDADefId(self, text: str):
+		self.hdaDefParm().lock(False)
+		self.hdaDefParm().set(text)
+		self.hdaDefParm().lock(True)
+
+	def editingAllowedParm(self)->hou.Parm:
+		return self.node.parm(ParmNames.allowEditing)
 	def editingAllowed(self)->bool:
-		return self.node.parm(ParmNames.allowEditing).eval()
+		return self.editingAllowedParm().eval()
 
 	def nParentSources(self)->int:
 		parentFolder: hou.Parm = self.node.parm("parentfolder")
@@ -760,38 +849,38 @@ class TextHDANode:
 			)
 		return self._nodeCachedParentState()
 
-	def hdaDefParm(self)->hou.Parm:
-		"""return the label for the hda def id"""
-		return self.node.parm(ParmNames.hdaDef)
-
-	def hdaDefId(self)->str:
-		return self.hdaDefParm().evalAsString()
-	def setHDADefId(self, text:str):
-		self.hdaDefParm().set(text)
-
 	def hdaDef(self)->hou.HDADefinition:
-		for nodeType, hdaDef in getEmbeddedTextHDADefs():
-			if nodeType.name() == self.hdaDefId():
-				return hdaDef
-		return None
-
-	def getHDADef(self)->hou.HDADefinition:
+		return self.node.type().definition()
+	def getCustomHDADef(self)->hou.HDADefinition:
 		"""create def if node doesn't already have one, then return it"""
-		if hdaDef := self.hdaDef():
-			return hdaDef
-		newDef = createTempTextHDADefinition(self.node)
-		self.setHDADefId(newDef.nodeTypeName())
+		if ((not self.hdaDef()) or self.hdaDef().nodeTypeName().lower() ==
+				TEXT_HDA_BASE_DEF_NAME.lower()):
+			newDef, newNode = createTempTextHDADefinition(self.node)
+			self.node = newNode
+			self.setHDADefId(newDef.nodeTypeName())
 		return self.hdaDef()
 
-	def fullReset(self):
+	def fullReset(self, resetParms=True):
 		"""reset node to base textHDA definition"""
-		self.node.changeNodeType(
-			TEXT_HDA_BASE_DEF_NAME,
+		leafDef = self.hdaDef()
+		newNode = self.node.changeNodeType(
+			TEXT_HDA_BASE_DEF_NAME.lower(),
 			keep_name=True,
-			keep_parms=False,
+			keep_parms=not resetParms,
 			keep_network_contents=False
 		)
+		self.defFileParm().set("")
+		self.editingAllowedParm().set(False)
+		self.node = newNode
+		self.hdaDefParm().lock(False)
 		self.hdaDefParm().set("")
+		print("reset def parm")
+		self.hdaDefParm().lock(True)
+
+		print("final def parm value", self.hdaDefParm().eval())
+
+		# remove old def from scene
+		leafDef.destroy()
 
 	def _parentParms(self, parmName:str)->list[hou.Parm]:
 		"""
@@ -819,6 +908,13 @@ class TextHDANode:
 			loads(i.evalAsString()) or {}
 			for i in self._parentParms(ParmNames.parentNodeDelta)
 		]
+
+	def hasIncomingStates(self)->bool:
+		"""check if node has any incoming data from parents or leaf"""
+		for i in self.parentStoredStates() + [self.nodeLeafStoredState()]:
+			if any(i.values()):
+				return True
+		return False
 
 	def reloadParentStates(self):
 		parentStates = []
@@ -879,4 +975,7 @@ class TextHDANode:
 	def parentHDAParmTemplates(self)->list[hou.ParmTemplate]:
 		return self.parentHDAParmFolderTemplate().parmTemplates()
 
-
+	def statusParm(self)->hou.Parm:
+		return self.node.parm("debuglabel")
+	def setStatusMsg(self, msg:str):
+		self.statusParm().set(msg)
