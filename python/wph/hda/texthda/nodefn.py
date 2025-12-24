@@ -15,7 +15,8 @@ from .gather import mergeNodeStates, TextHDANode
 from .types import ParmNames, CachedFile, loads, dumps
 """direct functions called by textHDA node"""
 
-def getMultiFolderChildParm(folderParm:hou.Parm, name:str, folderIndex=0, nParmsPerFolder=3):
+def getMultiFolderChildParm(folderParm:hou.Parm, name:str, folderIndex=0,
+                            nParmsPerFolder=3):
 	folderParm.multiParmInstances()
 
 
