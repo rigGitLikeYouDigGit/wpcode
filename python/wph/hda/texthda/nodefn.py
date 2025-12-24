@@ -43,7 +43,7 @@ def addNodeInternalCallbacks(node:hou.Node):
 	)
 
 def removeNodeInternalCallbacks(node:hou.Node):
-	node.removeEventCallback((
+	for i in (
 		hou.nodeEventType.ParmTupleChanged,
 		hou.nodeEventType.ChildDeleted,
 		hou.nodeEventType.ChildReordered,
@@ -60,23 +60,40 @@ def removeNodeInternalCallbacks(node:hou.Node):
 		hou.nodeEventType.IndirectInputRewired,
 		hou.nodeEventType.IndirectInputDeleted,
 
-	),
-		# lambda *a, **k : onNodeInternalChanged(node )
-		onNodeInternalChanged
-	)
+	):
+		try:
+			node.removeEventCallback(
+			(i,),
+				# lambda *a, **k : onNodeInternalChanged(node )
+				onNodeInternalChanged
+			)
+		except:
+			pass
 
-def onNodeCreated(node:hou.Node, kwargs):
+def onNodeCreated(node:hou.Node, *args, **kwargs):
 	"""attach callback to node"""
-	print("on node created", node, node.type())
-	pprint.pprint(kwargs)
-
-
 	hdaNode = TextHDANode(node)
 	if not hdaNode.defFileParm().evalAsString():
 		hdaNode.editingAllowedParm().disable(True)
 
+	node.addEventCallback(
+		(hou.nodeEventType.NodeNNameChanged, ),
+		onNodeNameChanged
+	)
+
 	print("textHda created:", node)
 
+def onNodeNameChanged(node:hou.Node, *args, **kwargs):
+	"""here's a silly(?) idea - since we give every textHDA node its own HDA
+	definition, link the name of the definition
+	to the node itself.
+	otherwise if no local edits are present, reset to base def
+	"""
+	hda = TextHDANode(node)
+	if hda.filteredParentStoredStates() or hda.editingAllowed():
+		gather.createLocalTextHDADefinition(node, node.name() + "_TextHDA")
+	else:
+		hda.fullReset(resetParms=False)
 
 def onChildNodeCreated(rootTextNode:hou.Node, *args, **kwargs):
 	"""also propagate callback to children contained"""
@@ -251,6 +268,14 @@ def onDefFileLineChanged(node:hou.Node, kwargs):
 	"""check if file is valid, try and resolve valid one etc
 	set new value on def file line if possible, if not,
 	set warning"""
+	hdaNode = TextHDANode(node)
+	if hdaNode.isWorking():
+		return
+	with hdaNode.workCtx():
+		newDefStr = hdaNode.defFileParm().evalAsString()
+		if not newDefStr:
+			hdaNode.fullReset()
+
 	pass
 
 def onSelectDefBtnPressed(node:hou.Node, kwargs):

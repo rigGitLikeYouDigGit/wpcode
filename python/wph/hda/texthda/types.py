@@ -87,6 +87,7 @@ class ParmNames:
 	# these are all suffixed "#"
 	parentFile = "parentfile"
 	parentNodeDelta = "parentnodedelta"
+	parentNodeLocalOverride = "parentnodemanualdelta"
 	recursiveParents = "recursiveparentsbox"
 
 	hdaDef = "hdadefid"
