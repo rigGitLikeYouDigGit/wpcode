@@ -4,9 +4,15 @@ from __future__ import annotations
 import typing as T
 import itertools, inspect
 from collections import defaultdict
-import networkx as nx
 from wplib.log import log
 from wplib.inheritance import SuperClassLookupMap, superClassLookup, clsSuper, containsSuperClass
+
+nx = None
+try:
+	import networkx as nx
+except ImportError:
+	print('networkx not installed')
+	nx = None
 
 class Adaptor:
 	"""Abstract-abstract class for registering "companion" objects

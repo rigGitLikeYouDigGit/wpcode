@@ -679,19 +679,18 @@ def getRandomStringName()->str:
 	but for now uuid is fine"""
 
 
-def getBaseTextHDADef()->hou.HDADefinition:
-	for name, nodeType in hou.sopNodeTypeCategory().nodeTypes().items():
-		nodeType : hou.NodeType
-		if hdaDef := nodeType.definition() is None: # only consider hdas
-			continue
-		if name.lower() == TEXT_HDA_BASE_DEF_NAME.lower():
-			return nodeType.definition()
+_baseHDADef : hou.HDADefinition = None
 
-MASTER_TEXT_HDA_DEF : hou.HDADefinition = None
-try:
-	MASTER_TEXT_HDA_DEF = getBaseTextHDADef()
-except Exception as e:
-	traceback.print_exc()
+def getBaseTextHDADef()->hou.HDADefinition:
+	"""TODO: this only looks at one version,
+	add something that defaults to """
+	print("get base def:")
+	global _baseHDADef
+	if _baseHDADef is None:
+		found = hou.nodeType("Sop/textHDA::1.0")
+		if found is not None:
+			_baseHDADef = found.definition()
+	return _baseHDADef
 
 def getEmbeddedTextHDADefs()->list[tuple[hou.NodeType, hou.HDADefinition]]:
 	results = []
@@ -895,8 +894,10 @@ class TextHDANode:
 
 		"""
 		leafDef = self.hdaDef()
+		masterDef = getBaseTextHDADef()
+		assert masterDef
 		newNode = self.node.changeNodeType(
-			TEXT_HDA_BASE_DEF_NAME.lower(),
+			masterDef.nodeTypeName(),
 			keep_name=True,
 			keep_parms=not resetParms,
 			keep_network_contents=False
@@ -1006,7 +1007,7 @@ class TextHDANode:
 		return data
 
 	def nodeLeafPath(self)->Path:
-		s = self.node.parm(ParmNames.endFile).eval()
+		s = self.node.parm(ParmNames.defFile).eval()
 		if not s:
 			return None
 		return Path(s)

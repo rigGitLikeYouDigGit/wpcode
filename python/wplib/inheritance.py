@@ -4,7 +4,6 @@ import types
 import typing as T
 import inspect
 from ordered_set import OrderedSet
-from six import with_metaclass
 
 from wplib import log
 from wplib.sentinel import Sentinel
@@ -60,7 +59,6 @@ def leafParentBases(*desiredBases:tuple[type])->tuple[type, ...]:
 
 	super temp for now, come back and make this work properly if needed
 	"""
-	#resultBases = {desiredBases[0]}
 	resultBases = OrderedSet((desiredBases[0], ))
 	for secondaryBase in desiredBases[1:]:
 		resultBases -= set(secondaryBase.__mro__)
