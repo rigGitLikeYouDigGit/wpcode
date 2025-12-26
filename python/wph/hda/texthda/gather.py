@@ -59,7 +59,7 @@ hdaDefDirs = [
 NETWORK_BOX_S = "NETWORK_BOX"
 TOP_SEP_CHAR = "@@"
 VERSION_SEP_CHAR = "@"
-
+TEXT_HDA_BUNDLE_NAME = "textHDA_bundle_nodes"
 
 safeCharMap = {
 	"\t" : "£TAB",
@@ -313,6 +313,30 @@ def deepUpdatePath(baseData:dict|list, path:list, value):
 			return
 		return deepUpdatePath(baseData[index], path, value)
 
+
+def getTextHDANodeBundle()->hou.NodeBundle:
+	"""return a dumb node bundle to manually add nodes on creation,
+	for more efficient tracking of textHDAs by HDA definition and
+	def file"""
+	if not hou.nodeBundle(TEXT_HDA_BUNDLE_NAME):
+		hou.addNodeBundle(TEXT_HDA_BUNDLE_NAME)
+	return hou.nodeBundle(TEXT_HDA_BUNDLE_NAME)
+
+def allSceneTextHDANodes()->list[hou.OpNode]:
+	return getTextHDANodeBundle().nodes()
+
+def getSceneTextHDANodesByDef()->dict[str|Path, list[hou.OpNode]]:
+	result = {}
+	for i in allSceneTextHDANodes():
+		defStr = i.parm(ParmNames.defFile).evalAsString().strip()
+		if "." in defStr and "/" in defStr:
+			key = Path(defStr)
+		else:
+			key = defStr
+		if not key in result:
+			result[key] = []
+		result[key].append(i)
+	return result
 
 """generate separate paths from nested patch dict"""
 def deepUpdate(baseData:dict|list, patch:list[tuple[list[str], T.Any]]):
@@ -716,7 +740,7 @@ def createLocalTextHDADefinition(
 		node:hou.Node,
 		newId = None,
 		deleteAssignedHDA=True
-)->(hou.HDADefinition, hou.Node):
+)->tuple[hou.HDADefinition, hou.Node]:
 	"""we just give each node its own hda whenever it's edited away
 	from the raw textHDA baseline.
 
@@ -798,7 +822,18 @@ def createLocalTextHDADefinition(
 
 	return newHDADef, node
 
+def defIsPath(defStr:str):
+	"""check if written def is valid path """
+	if "." in defStr and "/" in defStr:
+		return True
+	return False
 
+def hdaDefNameFromDefFile(defStr:str, edit=False)->str:
+	if defIsPath(defStr):
+		defStr = "FILE_" + Path(defStr).stem.split(".")[0]
+	if edit:
+		defStr = defStr + "_EDIT"
+	return defStr + "_TextHDA"
 
 class TextHDAWorkContext:
 	"""context to only set working state on outermost level
@@ -816,6 +851,7 @@ class TextHDAWorkContext:
 		if not hda.isWorking():
 			self.isOuter = True
 			hda.setWorking(True)
+		return self
 	def __exit__(self, exc_type, exc_val, exc_tb):
 		hda = TextHDANode(self.node())
 		if self.isOuter:
@@ -847,10 +883,17 @@ class TextHDANode:
 	def isWorking(self)->bool:
 		return bool(int(self.node.userData("_working") or 0))
 	def workCtx(self)->TextHDAWorkContext:
-		return TextHDAWorkContext(self)
+		ctx = TextHDAWorkContext(self)
+		return ctx
 
 	def defFileParm(self)->hou.Parm:
 		return self.node.parm(ParmNames.defFile)
+	def defFile(self)->Path|str:
+		raw = self.defFileParm().evalAsString().strip()
+		if not raw:
+			return None
+
+		return Path(raw) if defIsPath(raw) else raw
 
 	# def hdaDefParm(self) -> hou.Parm:
 	# 	"""return the label for the hda def id"""
@@ -907,7 +950,7 @@ class TextHDANode:
 			self.node = newNode
 		return self.hdaDef()
 
-	def fullReset(self, resetParms=True):
+	def fullReset(self, resetParms=False):
 		"""reset node to base textHDA definition
 		ok FUN FACT, destroy() will absolutely delete the file of an HDA's
 		definition
@@ -930,8 +973,9 @@ class TextHDANode:
 			# remove old def from scene
 			# leafDef.destroy()
 			print("WOULD HAVE DESTROYED:", leafDef, leafDef.nodeTypeName())
+			self.editingAllowedParm().disable(False)
 		#self.defFileParm().set("")
-		self.editingAllowedParm().set(False)
+		#self.editingAllowedParm().set(False)
 
 
 

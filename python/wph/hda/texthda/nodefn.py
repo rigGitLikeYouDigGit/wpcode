@@ -5,7 +5,7 @@ import traceback, time
 from importlib import reload
 
 import hou
-from hou import qt, undos
+#from hou import qt, undos
 from PySide6 import QtWidgets, QtCore, QtGui
 
 from . import gather, types
@@ -72,10 +72,12 @@ def removeNodeInternalCallbacks(node:hou.Node):
 			pass
 
 def onNodeCreated(node:hou.Node, *args, **kwargs):
-	"""attach callback to node"""
+	"""attach callback to node, add it to the
+	main TextHDA node bundle"""
 	hdaNode = TextHDANode(node)
 	if not hdaNode.defFileParm().evalAsString():
 		hdaNode.editingAllowedParm().disable(True)
+	bundle = gather.getTextHDANodeBundle()
 
 	# node.addEventCallback(
 	# 	(hou.nodeEventType.NameChanged, ),
@@ -270,20 +272,34 @@ def onClearLeafPressed(node, *args, **kwargs):
 def onDefFileLineChanged(node:hou.Node, kwargs):
 	"""check if file is valid, try and resolve valid one etc
 	set new value on def file line if possible, if not,
-	set warning"""
+	set warning
+	ok FINE we test now what happens if you don't pass a full file path
+	here - emulates a scene-bound definition,
+	changing the name of the HDA created.
+	"""
 	print("on defFileLineChanged")
 	hdaNode = TextHDANode(node)
 	if hdaNode.isWorking():
 		print("node", node, "still working")
 		return
-	with hdaNode.workCtx():
+	with hdaNode.workCtx() as ctx:
 		newDefStr = hdaNode.defFileParm().evalAsString().strip()
 		if newDefStr:
 			hdaNode.editingAllowedParm().disable(False)
+			# rename current hda def if needed
+			defName = gather.hdaDefNameFromDefFile(
+				newDefStr, edit=hdaNode.editingAllowed())
+			hdaDef, newNode = gather.createLocalTextHDADefinition(
+				node, defName)
+			print("ctx", ctx)
+			print(hdaDef, newNode)
+			ctx.path = newNode.path()
+
 		else: # prevent local edits if no def file set
+
+			hdaNode.fullReset(resetParms=False)
 			hdaNode.editingAllowedParm().set(False)
 			hdaNode.editingAllowedParm().disable(True)
-
 	pass
 
 def onSelectDefBtnPressed(node:hou.Node, kwargs):
@@ -311,10 +327,14 @@ def onAllowEditingChanged(node:hou.Node, *args, **kwargs):
 		print(hda.editingAllowed(), bool(hda.editingAllowed()))
 		if hda.editingAllowed():
 			print("editing allowed")
-			hdaDef = hda.getCustomHDADef()  # create new def if it doesn't exist
-			print("hda def:", hdaDef)
-			node = hda.node
-			node.allowEditingOfContents(False)
+			# hdaDef = hda.getCustomHDADef()  # create new def if it doesn't exist
+			# print("hda def:", hdaDef)
+			# node = hda.node
+			#
+			# options : hou.HDAOptions = hdaDef.options()
+			# options.setLockContents(False)
+			# hdaDef.setOptions(options)
+			#node.allowEditingOfContents(False)
 
 			#addNodeInternalCallbacks(node)
 
@@ -332,10 +352,11 @@ def onAllowEditingChanged(node:hou.Node, *args, **kwargs):
 				refreshParentBasesRegenNode(node)
 
 			else: # nothing in any text params
-				print("no incoming states, resetting to textHDA")
-				hda.fullReset()
-				node = hda.node
-		pass
+				if hda.defFile():
+					#hda.fullReset(resetParms=False)
+					pass
+				else: # no def file given, fully reset
+					hda.fullReset(resetParms=True)
 
 
 
