@@ -690,6 +690,7 @@ def getBaseTextHDADef()->hou.HDADefinition:
 		found = hou.nodeType("Sop/textHDA::1.0")
 		if found is not None:
 			_baseHDADef = found.definition()
+	#raise
 	return _baseHDADef
 
 def getEmbeddedTextHDADefs()->list[tuple[hou.NodeType, hou.HDADefinition]]:
@@ -735,12 +736,13 @@ def createLocalTextHDADefinition(
 		relying on embedded code
 	"""
 	hdaNode = TextHDANode(node)
-
+	baseTextHdaDef = getBaseTextHDADef()
 	newId = newId or f"{node.name()}_EDIT-{str(uuid4())[:4]}"
-	masterPTG = MASTER_TEXT_HDA_DEF.parmTemplateGroup()
+	masterPTG = baseTextHdaDef.parmTemplateGroup()
 	#tempNode = hou.copyNodesTo((node, ), node.parent())[0]
 	#hdaNode.setHDADefId(newId)
 	origParmData = getNodeParmValues(node)
+	origName = node.name()
 	#hdaNode.hdaDefParm().lock(False)
 
 	# delete the original def
@@ -749,13 +751,15 @@ def createLocalTextHDADefinition(
 
 	# we have to change the actual node type to a subnetwork before making an
 	# HDA?
-	baseHMSection : hou.HDASection = MASTER_TEXT_HDA_DEF.sections()["PythonModule"]
+	baseHMSection : hou.HDASection = baseTextHdaDef.sections()["PythonModule"]
 	node.setName(newId)
 	nodePath = node.path()
+	print(" before change to subnet")
 	node = node.changeNodeType(
 		"subnet", keep_name=True, keep_parms=True,
 		keep_network_contents=True, force_change_on_node_type_match=True
 	)
+	print(" after change to subnet")
 
 	# node = newNode
 	hdaNode = TextHDANode(node)
@@ -785,9 +789,11 @@ def createLocalTextHDADefinition(
 	newHDADef.save("Embedded", create_backup=False)
 
 	if deleteAssignedHDA:
-		if origDef.nodeTypeName() == MASTER_TEXT_HDA_DEF.nodeTypeName():
+		if origDef.nodeTypeName() != baseTextHdaDef.nodeTypeName():
 			#origDef.destroy()
 			print("createLocal WOULD HAVE DESTROYED:", origDef, origDef.nodeTypeName())
+	# restore base name
+	newNode.setName(origName)
 	print("completed type change")
 
 	return newHDADef, node
@@ -795,17 +801,25 @@ def createLocalTextHDADefinition(
 
 
 class TextHDAWorkContext:
-	"""context to only set working state on outermost level"""
+	"""context to only set working state on outermost level
+	need to keep """
 	def __init__(self, hda:TextHDANode):
-		self.hda = hda
+		self.path = hda.node.path()
 		self.isOuter = False
+
+	def node(self)->hou.Node:
+		node = hou.node(self.path)
+		assert node
+		return node
 	def __enter__(self):
-		if not self.hda.isWorking():
+		hda = TextHDANode(self.node())
+		if not hda.isWorking():
 			self.isOuter = True
-			self.hda.setWorking(True)
+			hda.setWorking(True)
 	def __exit__(self, exc_type, exc_val, exc_tb):
+		hda = TextHDANode(self.node())
 		if self.isOuter:
-			self.hda.setWorking(False)
+			hda.setWorking(False)
 
 class TextHDANode:
 	"""
@@ -822,7 +836,14 @@ class TextHDANode:
 	"""use working state to prevent looping signals
 	when internal processes change attributes"""
 	def setWorking(self, state=True):
+		from .nodefn import addNodeInternalCallbacks, removeNodeInternalCallbacks
+		print("setting working state to", state,self.node)
 		self.node.setUserData("_working", str(int(state)))
+		return
+		if state:
+			removeNodeInternalCallbacks(self.node)
+		else:
+			addNodeInternalCallbacks(self.node)
 	def isWorking(self)->bool:
 		return bool(int(self.node.userData("_working") or 0))
 	def workCtx(self)->TextHDAWorkContext:
@@ -880,10 +901,9 @@ class TextHDANode:
 		"""create def if node doesn't already have one, then return it
 
 		"""
-		if ((not self.hdaDef()) or self.hdaDef().nodeTypeName().lower() ==
-				TEXT_HDA_BASE_DEF_NAME.lower()):
+		if ((not self.hdaDef()) or self.hdaDef() == getBaseTextHDADef()):
 			newDef, newNode = createLocalTextHDADefinition(
-				self.node, newId=self.node.name() + "_TextHDA")
+				self.node, newId=self.node.name() + "_EDIT_TextHDA")
 			self.node = newNode
 		return self.hdaDef()
 
@@ -893,22 +913,27 @@ class TextHDANode:
 		definition
 
 		"""
+		print("fullReset:", self.node, resetParms)
 		leafDef = self.hdaDef()
 		masterDef = getBaseTextHDADef()
 		assert masterDef
-		newNode = self.node.changeNodeType(
-			masterDef.nodeTypeName(),
-			keep_name=True,
-			keep_parms=not resetParms,
-			keep_network_contents=False
-		)
-		self.defFileParm().set("")
+		if leafDef == masterDef:
+			print("hda def is already master")
+		else:
+			newNode = self.node.changeNodeType(
+				masterDef.nodeTypeName(),
+				keep_name=True,
+				keep_parms=not resetParms,
+				keep_network_contents=False
+			)
+			self.node = newNode
+			# remove old def from scene
+			# leafDef.destroy()
+			print("WOULD HAVE DESTROYED:", leafDef, leafDef.nodeTypeName())
+		#self.defFileParm().set("")
 		self.editingAllowedParm().set(False)
-		self.node = newNode
 
-		# remove old def from scene
-		#leafDef.destroy()
-		print("WOULD HAVE DESTROYED:", leafDef, leafDef.nodeTypeName())
+
 
 	nFolderParms = 3
 

@@ -77,10 +77,10 @@ def onNodeCreated(node:hou.Node, *args, **kwargs):
 	if not hdaNode.defFileParm().evalAsString():
 		hdaNode.editingAllowedParm().disable(True)
 
-	node.addEventCallback(
-		(hou.nodeEventType.NodeNNameChanged, ),
-		onNodeNameChanged
-	)
+	# node.addEventCallback(
+	# 	(hou.nodeEventType.NameChanged, ),
+	# 	onNodeNameChanged
+	# )
 
 	print("textHda created:", node)
 
@@ -106,13 +106,15 @@ def onNodeInternalChanged(node:hou.Node, *args, **kwargs):
 	split into 2 stages, pulling and diffing local node, and updating node from parent states -
 	auto update only does local pull
 	"""
-	if not node.parm(ParmNames.liveUpdate).eval():
-		return
-	hda = TextHDANode(node)
-	if hda.isWorking():
-		return
-	with hda.workCtx():
-		pullLocalNodeState(node)
+	print("node internal changed:", node)
+	# hda = TextHDANode(node)
+	# if hda.isWorking():
+	# 	return
+	# if not node.parm(ParmNames.liveUpdate).eval():
+	# 	return
+	#
+	# with hda.workCtx():
+	# 	pullLocalNodeState(node)
 
 def onNodeOperationErrored(*args, **kwargs):
 	"""automatically press undo after node errors -
@@ -269,13 +271,18 @@ def onDefFileLineChanged(node:hou.Node, kwargs):
 	"""check if file is valid, try and resolve valid one etc
 	set new value on def file line if possible, if not,
 	set warning"""
+	print("on defFileLineChanged")
 	hdaNode = TextHDANode(node)
 	if hdaNode.isWorking():
+		print("node", node, "still working")
 		return
 	with hdaNode.workCtx():
-		newDefStr = hdaNode.defFileParm().evalAsString()
-		if not newDefStr:
-			hdaNode.fullReset()
+		newDefStr = hdaNode.defFileParm().evalAsString().strip()
+		if newDefStr:
+			hdaNode.editingAllowedParm().disable(False)
+		else: # prevent local edits if no def file set
+			hdaNode.editingAllowedParm().set(False)
+			hdaNode.editingAllowedParm().disable(True)
 
 	pass
 
@@ -293,36 +300,39 @@ def onAllowEditingChanged(node:hou.Node, *args, **kwargs):
 
 	"""
 	hda = TextHDANode(node)
+	print("on editing changed", hda.editingAllowed(),
+	      bool(hda.editingAllowed()))
 	if hda.isWorking():
 		print("node still working, aborting")
 		return
 
 	with hda.workCtx():
-		print("on editing changed", hda.editingAllowed(), bool(hda.editingAllowed()))
-		hdaDef = hda.getCustomHDADef() # create new def if it doesn't exist
 		node = hda.node
-		print("hda def:", hdaDef)
 		print(hda.editingAllowed(), bool(hda.editingAllowed()))
 		if hda.editingAllowed():
 			print("editing allowed")
-			hda.getCustomHDADef()
+			hdaDef = hda.getCustomHDADef()  # create new def if it doesn't exist
+			print("hda def:", hdaDef)
 			node = hda.node
 			node.allowEditingOfContents(False)
 
-			addNodeInternalCallbacks(node)
+			#addNodeInternalCallbacks(node)
 
 			return
 		else:
 			print("edit not allowed")
-			removeNodeInternalCallbacks(node)
+			#removeNodeInternalCallbacks(node)
 			# just freeze local contents
 			if hda.hasIncomingStates():
+				print("incoming states found")
+				removeNodeInternalCallbacks(node)
+				hdaDef = hda.getCustomHDADef()
 				node = hdaDef.updateFromNode(node)
 				node.matchCurrentDefinition()
 				refreshParentBasesRegenNode(node)
 
 			else: # nothing in any text params
-				print("resetting to textHDA")
+				print("no incoming states, resetting to textHDA")
 				hda.fullReset()
 				node = hda.node
 		pass
