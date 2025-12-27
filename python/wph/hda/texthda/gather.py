@@ -61,6 +61,12 @@ TOP_SEP_CHAR = "@@"
 VERSION_SEP_CHAR = "@"
 TEXT_HDA_BUNDLE_NAME = "textHDA_bundle_nodes"
 
+HDA_SECTIONS_TO_COPY = [
+	"OnCreated",
+	"PythonModule",
+	"PostLastDelete"
+]
+
 safeCharMap = {
 	"\t" : "£TAB",
 	"\"" : "£DQ",
@@ -129,6 +135,20 @@ def availableTextHDADefs()->dict[str, dict[int, Path]]:
 			results[name][version] = i
 	return results
 
+def getSceneHDADefs()->dict[str, list[hou.Node]]:
+	result = defaultdict(list)
+	nodes = allSceneTextHDANodes()
+	print("nodes", nodes)
+
+	for node in allSceneTextHDANodes():
+		hdaNode = TextHDANode(node)
+		if not hdaNode.defFileParm():
+			continue
+		# skip if it points to a real file path on disk
+		if isinstance(hdaNode.defFile(), Path):
+			continue
+		result[hdaNode.defFile()].append(node)
+	return result
 
 def getNodeHeader(node:hou.Node, rootNode:hou.Node):
 	path = rootNode.relativePathTo(node)
@@ -736,9 +756,14 @@ so we need a separate hda def for each sequence of parent defs,
 plus a hda def for each node.
 """
 
+def deleteHDADefIfUnused(hdaDef:hou.HDADefinition):
+	if not hdaDef.nodeType().instances():
+		print("deleting unused hda:", hdaDef)
+		hdaDef.destroy()
+
 def createLocalTextHDADefinition(
-		node:hou.Node,
-		newId = None,
+		node:hou.OpNode,
+		newId,
 		deleteAssignedHDA=True
 )->tuple[hou.HDADefinition, hou.Node]:
 	"""we just give each node its own hda whenever it's edited away
@@ -761,7 +786,6 @@ def createLocalTextHDADefinition(
 	"""
 	hdaNode = TextHDANode(node)
 	baseTextHdaDef = getBaseTextHDADef()
-	newId = newId or f"{node.name()}_EDIT-{str(uuid4())[:4]}"
 	masterPTG = baseTextHdaDef.parmTemplateGroup()
 	#tempNode = hou.copyNodesTo((node, ), node.parent())[0]
 	#hdaNode.setHDADefId(newId)
@@ -769,13 +793,30 @@ def createLocalTextHDADefinition(
 	origName = node.name()
 	#hdaNode.hdaDefParm().lock(False)
 
+	# check if def already exists
+	existNodeTypeName = f"Sop/{newId}"
+	# rules of when to prepend Sop bewilder me
+	existingType = hou.nodeType(existNodeTypeName)
+	if existingType:
+		newNode = node.changeNodeType(
+			newId,
+			keep_name=True,
+			keep_parms=True,
+			keep_network_contents=True,
+			force_change_on_node_type_match=True
+		)
+		return existingType.definition(), newNode
+
 	# delete the original def
 	origType : hou.NodeType = node.type()
 	origDef : hou.HDADefinition = origType.definition()
 
 	# we have to change the actual node type to a subnetwork before making an
 	# HDA?
-	baseHMSection : hou.HDASection = baseTextHdaDef.sections()["PythonModule"]
+	baseHMSections = [baseTextHdaDef.sections()[i] for i in HDA_SECTIONS_TO_COPY]
+	# baseHMSection : hou.HDASection = baseTextHdaDef.sections()["PythonModule"]
+	# baseOnCreatedSection : hou.HDASection = baseTextHdaDef.sections()[
+	# 	"OnCreated"]
 	node.setName(newId)
 	nodePath = node.path()
 	print(" before change to subnet")
@@ -804,18 +845,21 @@ def createLocalTextHDADefinition(
 
 	newHDADef : hou.HDADefinition = newNode.type().definition()
 
-	if not "PythonModule" in newHDADef.sections():
-		section = newHDADef.addSection("PythonModule")
-	newHDADef.sections()["PythonModule"].setContents(baseHMSection.contents())
+	for i in HDA_SECTIONS_TO_COPY:
+		if not i in newHDADef.sections():
+			section = newHDADef.addSection(i)
+	for i, key in enumerate(HDA_SECTIONS_TO_COPY):
+		newHDADef.sections()[key].setContents(baseHMSections[i].contents())
 
 	newHDADef.setParmTemplateGroup(masterPTG, create_backup=False)
+	print("set orig parm data on node:", node)
+	print(" orig parm data", origParmData)
 	setNodeParmValues(node, origParmData)
 	newHDADef.save("Embedded", create_backup=False)
 
 	if deleteAssignedHDA:
 		if origDef.nodeTypeName() != baseTextHdaDef.nodeTypeName():
-			#origDef.destroy()
-			print("createLocal WOULD HAVE DESTROYED:", origDef, origDef.nodeTypeName())
+			deleteHDADefIfUnused(origDef)
 	# restore base name
 	newNode.setName(origName)
 	print("completed type change")
@@ -971,8 +1015,7 @@ class TextHDANode:
 			)
 			self.node = newNode
 			# remove old def from scene
-			# leafDef.destroy()
-			print("WOULD HAVE DESTROYED:", leafDef, leafDef.nodeTypeName())
+			deleteHDADefIfUnused(leafDef)
 			self.editingAllowedParm().disable(False)
 		#self.defFileParm().set("")
 		#self.editingAllowedParm().set(False)

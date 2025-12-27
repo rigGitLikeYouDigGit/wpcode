@@ -78,13 +78,22 @@ def onNodeCreated(node:hou.Node, *args, **kwargs):
 	if not hdaNode.defFileParm().evalAsString():
 		hdaNode.editingAllowedParm().disable(True)
 	bundle = gather.getTextHDANodeBundle()
-
-	# node.addEventCallback(
-	# 	(hou.nodeEventType.NameChanged, ),
-	# 	onNodeNameChanged
-	# )
+	bundle.addNode(node)
 
 	print("textHda created:", node)
+	print("nodes in bundle:", gather.allSceneTextHDANodes())
+
+def onNodeLastDelete(node:hou.Node, *args, **kwargs):
+	"""called after the last instance of an HDA definition is deleted from
+	scene; NB this includes DERIVED definitions too.
+	So here we check if node currently uses a definition other than the master
+	textHDA, and if so, delete that definition from the scene
+	"""
+	hdaDef : hou.HDADefinition = node.type().definition()
+	if hdaDef == gather.getBaseTextHDADef():
+		return
+	hdaDef.destroy()
+
 
 def onNodeNameChanged(node:hou.Node, *args, **kwargs):
 	"""here's a silly(?) idea - since we give every textHDA node its own HDA
@@ -327,25 +336,15 @@ def onAllowEditingChanged(node:hou.Node, *args, **kwargs):
 		print(hda.editingAllowed(), bool(hda.editingAllowed()))
 		if hda.editingAllowed():
 			print("editing allowed")
-			# hdaDef = hda.getCustomHDADef()  # create new def if it doesn't exist
-			# print("hda def:", hdaDef)
-			# node = hda.node
-			#
-			# options : hou.HDAOptions = hdaDef.options()
-			# options.setLockContents(False)
-			# hdaDef.setOptions(options)
-			#node.allowEditingOfContents(False)
-
-			#addNodeInternalCallbacks(node)
+			addNodeInternalCallbacks(node)
 
 			return
 		else:
 			print("edit not allowed")
-			#removeNodeInternalCallbacks(node)
+			removeNodeInternalCallbacks(node)
 			# just freeze local contents
 			if hda.hasIncomingStates():
 				print("incoming states found")
-				removeNodeInternalCallbacks(node)
 				hdaDef = hda.getCustomHDADef()
 				node = hdaDef.updateFromNode(node)
 				node.matchCurrentDefinition()
@@ -357,6 +356,40 @@ def onAllowEditingChanged(node:hou.Node, *args, **kwargs):
 					pass
 				else: # no def file given, fully reset
 					hda.fullReset(resetParms=True)
+
+def getDefMenuItems(kwargs)->list[str]:
+	"""
+	look over all definitions under files and in scene
+	need to return list of
+	["value1", "label1", "value2", "label2"]
+	"""
+	print("getDefMenuItems", kwargs)
+	hda = TextHDANode(kwargs['node'])
+	parm : hou.Parm = kwargs['parm']
+	result = []
+	# don't list node's own def as available
+	currentDef = hda.defFile()
+
+	sceneDefs = gather.getSceneHDADefs()
+	print("sceneDefs", sceneDefs)
+	if currentDef in sceneDefs:
+		sceneDefs.pop(currentDef)
+	if sceneDefs:
+		result.extend(["", "==SCENE DEFS=="])
+		for defName, nodes in sceneDefs.items():
+			result.extend([defName, defName])
+
+	fileDefs = gather.availableTextHDADefs()
+	print("fileDefs", fileDefs)
+	if currentDef in fileDefs:
+		sceneDefs.pop(currentDef)
+	if fileDefs:
+		result.extend(["", "==FILE DEFS=="])
+		for defName, versionMap in fileDefs.items():
+			latest = list(versionMap.values())[-1]
+			result.extend([defName, latest])
+
+	return result
 
 
 
