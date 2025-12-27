@@ -71,27 +71,48 @@ def removeNodeInternalCallbacks(node:hou.Node):
 		except:
 			pass
 
-def onNodeCreated(node:hou.Node, *args, **kwargs):
+def onNodeCreated(node:hou.OpNode, *args, **kwargs):
 	"""attach callback to node, add it to the
 	main TextHDA node bundle"""
 	hdaNode = TextHDANode(node)
+	node.setExpressionLanguage(hou.exprLanguage.Python)
 	if not hdaNode.defFileParm().evalAsString():
 		hdaNode.editingAllowedParm().disable(True)
 	bundle = gather.getTextHDANodeBundle()
 	bundle.addNode(node)
 
+
 	print("textHda created:", node)
 	print("nodes in bundle:", gather.allSceneTextHDANodes())
 
-def onNodeLastDelete(node:hou.Node, *args, **kwargs):
+"""analysing hda section infos:
+nothing in either ExtraFileOptions or InternalFileOptions
+
+"""
+
+def onNodeDeleted(node:hou.Node, type:hou.OpNodeType, *args, **kwargs):
+	hdaDef : hou.HDADefinition = type.definition()
+	if hdaDef == gather.getBaseTextHDADef():
+		print("is base def, skipping")
+		return
+	# get instances
+	if not type.instances():
+		print("not instances, destroying")
+		hdaDef.destroy()
+
+def onNodeLastDeleted(*args, **kwargs):
 	"""called after the last instance of an HDA definition is deleted from
 	scene; NB this includes DERIVED definitions too.
 	So here we check if node currently uses a definition other than the master
 	textHDA, and if so, delete that definition from the scene
 	"""
-	hdaDef : hou.HDADefinition = node.type().definition()
+	nodeType : hou.NodeType = kwargs["type"]
+	hdaDef : hou.HDADefinition = nodeType.definition()
+	print("on node last deleted:", hdaDef)
 	if hdaDef == gather.getBaseTextHDADef():
+		print("is base def, skipping")
 		return
+	print("deleting")
 	hdaDef.destroy()
 
 

@@ -64,6 +64,7 @@ TEXT_HDA_BUNDLE_NAME = "textHDA_bundle_nodes"
 HDA_SECTIONS_TO_COPY = [
 	"OnCreated",
 	"PythonModule",
+	#"OnDeleted",
 	"PostLastDelete"
 ]
 
@@ -757,9 +758,12 @@ plus a hda def for each node.
 """
 
 def deleteHDADefIfUnused(hdaDef:hou.HDADefinition):
-	if not hdaDef.nodeType().instances():
-		print("deleting unused hda:", hdaDef)
-		hdaDef.destroy()
+	try:
+		if not hdaDef.nodeType().instances():
+			print("deleting unused hda:", hdaDef)
+			hdaDef.destroy()
+	except hou.ObjectWasDeleted: # already cleaned up
+		pass
 
 def createLocalTextHDADefinition(
 		node:hou.OpNode,
@@ -829,7 +833,7 @@ def createLocalTextHDADefinition(
 	# node = newNode
 	hdaNode = TextHDANode(node)
 	# need to re-get node from houdini object model
-	node : hou.Node = hou.node(nodePath)
+	node : hou.OpNode = hou.node(nodePath)
 	print("new subnet node", node)
 	# createDigitalAsset seems to always take the node's actual name
 	newNode = node.createDigitalAsset(
@@ -849,6 +853,7 @@ def createLocalTextHDADefinition(
 		if not i in newHDADef.sections():
 			section = newHDADef.addSection(i)
 	for i, key in enumerate(HDA_SECTIONS_TO_COPY):
+		newHDADef.setExtraFileOption(f"{key}/IsPython", True)
 		newHDADef.sections()[key].setContents(baseHMSections[i].contents())
 
 	newHDADef.setParmTemplateGroup(masterPTG, create_backup=False)
