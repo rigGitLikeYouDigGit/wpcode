@@ -1,16 +1,12 @@
 from __future__ import annotations
-import types, typing as T
-import pprint
-from wplib import log
 
-from dataclasses import dataclass
 from typing import Callable, Tuple
 
-import jax
 import jax.numpy as jnp
 import jax_dataclasses as jdc
 
-from . import state, maths
+from wpsim import maths
+from wpsim.kine import state
 
 
 @jdc.pytree_dataclass
@@ -19,6 +15,10 @@ class ConstraintState:
 	point: PointConstraintBucket
 	hingeAxis: HingeJointConstraintBucket
 	#orient: OrientationDriveConstraintBucket
+
+	# Optional: measurement-based constraints with internal DOFs
+	measurements: state.MeasurementState | None = None
+	measurementConstraints: MeasurementConstraintBucket | None = None
 
 
 constraintAccumFn = Callable[
@@ -38,9 +38,9 @@ don't forget nurbs constraints, surface constraints etc
 constraintAlphaMapFn = Callable[
 	[state.BodyState,
 	 ConstraintState,
-	 int, # constraint type index
-	 int, # constraint index
-	 int # DOF index
+	 int,  # constraint type index
+	 int,  # constraint index
+	 int  # DOF index
 	 ],
 	float
 ]
@@ -634,3 +634,137 @@ class OrientationDriveConstraintBucket:
 		)
 
 		return newBufs, newBucket
+
+
+@jdc.pytree_dataclass
+class MeasurementConstraintBucket(ConstraintBucket):
+	"""
+	Constraints between arbitrary user-defined measurements with internal geometric DOFs.
+
+	This enables holonomic constraints like:
+	  - "as distance(A,B) decreases, angle(C,D) increases"
+	  - "point on surface S at (u,v) equals point on curve C at t"
+	  - "normal of surface patch aligns with body orientation"
+
+	Key features:
+	  1. Constraints arbitrary measurement functions (not just body coordinates)
+	  2. Supports internal parameters (u, v, t) that solver can adjust
+	  3. Uses autodiff-computed Jacobians for both body and parameter corrections
+	  4. Optional anisotropic weighting (e.g., normal vs tangent directions)
+
+	Workflow:
+	  - User defines measurement functions via tracing system
+	  - Tracing system computes J_body and J_param via autodiff
+	  - Solver updates both body state AND internal parameters each iteration
+	"""
+	isActive: jnp.ndarray            # (m,) bool/int mask
+
+	# Which measurements to constrain (indices into MeasurementState)
+	measurementA: jnp.ndarray        # (m,) int32
+	measurementB: jnp.ndarray        # (m,) int32
+
+	# Constraint type: equality (targetDelta=0) or delta relationship
+	# Shape: (m, maxDim) where maxDim matches MeasurementState.values
+	targetDelta: jnp.ndarray         # (m, maxDim) - usually zero for equality
+
+	# XPBD compliance and weighting
+	alpha: jnp.ndarray               # (m,) - compliance / dt^2
+	weight: jnp.ndarray              # (m,) - constraint strength multiplier
+
+	# Optional: anisotropic weighting per constraint
+	# Example: weight normal direction 10x more than tangent
+	# If None, uniform weighting used
+	metricWeights: jnp.ndarray | None  # (m, maxDim) - diagonal metric
+
+	# XPBD lambda accumulator (dimension matches maxDim)
+	lambdaState: XpbdLambdaN         # lambdaState.Lambda: (m, maxDim)
+
+	@classmethod
+	def accumulate(
+			cls,
+			bs: state.BodyState,
+			bufs: state.BodyDeltaBuffers,
+			ms: state.MeasurementState,
+			bucket: MeasurementConstraintBucket,
+			dt: float) -> tuple[
+		state.BodyDeltaBuffers,
+		state.MeasurementState,
+		MeasurementConstraintBucket
+	]:
+		"""
+		Accumulate measurement constraint corrections.
+
+		Strategy:
+		  1. Compute residual: C = valueA - valueB - targetDelta
+		  2. Update internal parameters using J_param (slide along geometry)
+		  3. Apply remaining error to bodies using J_body
+		  4. Update XPBD lambda
+
+		Note: This is a sketch - full implementation requires:
+		  - Gathering J_body and J_param from MeasurementState
+		  - Mapping measurement body dependencies to constraint body pairs
+		  - Careful handling of parameter bounds (u,v in [0,1], etc.)
+		"""
+		del dt  # alpha is pre-divided by dt^2
+
+		active = bucket.isActive.astype(jnp.float32)
+		m = active.shape[0]
+
+		# Gather measurement values
+		idxA = bucket.measurementA.astype(jnp.int32)
+		idxB = bucket.measurementB.astype(jnp.int32)
+
+		valA = ms.values[idxA]  # (m, maxDim)
+		valB = ms.values[idxB]  # (m, maxDim)
+		dimA = ms.valueDims[idxA]  # (m,)
+		dimB = ms.valueDims[idxB]  # (m,)
+
+		# Create dimension masks (only valid dims contribute to residual)
+		maxDim = valA.shape[1]
+		mask = (jnp.arange(maxDim)[None, :] < jnp.minimum(dimA, dimB)[:, None]).astype(jnp.float32)
+
+		# Compute residual (masked)
+		c = (valA - valB - bucket.targetDelta) * mask  # (m, maxDim)
+
+		# Apply metric weighting if present
+		if bucket.metricWeights is not None:
+			c = c * bucket.metricWeights
+
+		# Apply constraint weight
+		c = c * bucket.weight[:, None]
+
+		# XPBD update (simplified - full version needs J_body and J_param)
+		alpha = bucket.alpha.astype(bs.position.dtype)[:, None]  # (m, 1)
+		lambdaPrev = bucket.lambdaState.Lambda  # (m, maxDim)
+
+		# TODO: Full implementation requires:
+		# 1. Extract J_body from MeasurementState for measurements A and B
+		# 2. Compute effective mass per DOF: wEff = J^T M^-1 J
+		# 3. Solve for deltaLambda per DOF
+		# 4. Apply corrections to bodies via J_body
+		# 5. Apply corrections to parameters via J_param
+		# 6. Update ms.params with new parameter values
+
+		# For now, simplified update assuming diagonal effective mass
+		# (This is a placeholder - real implementation needs proper Jacobian handling)
+		wEffDummy = jnp.ones_like(c) * 2.0  # placeholder: assumes 2 bodies contribute
+		wEffDummy = jnp.maximum(wEffDummy, 1e-12)
+
+		deltaLambda = -(c + alpha * lambdaPrev) / (wEffDummy + alpha)
+		deltaLambda = deltaLambda * active[:, None] * mask
+
+		lambdaNew = lambdaPrev + deltaLambda
+
+		# Return updated state (placeholder - needs actual body/param corrections)
+		newBucket = MeasurementConstraintBucket(
+			isActive=bucket.isActive,
+			measurementA=bucket.measurementA,
+			measurementB=bucket.measurementB,
+			targetDelta=bucket.targetDelta,
+			alpha=bucket.alpha,
+			weight=bucket.weight,
+			metricWeights=bucket.metricWeights,
+			lambdaState=XpbdLambdaN(Lambda=lambdaNew),
+		)
+
+		return bufs, ms, newBucket

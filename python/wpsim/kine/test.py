@@ -1,15 +1,10 @@
 from __future__ import annotations
-import types, typing as T
-import pprint
 #from wplib import log
 
-import jax
-from jax import numpy as jnp, jit
-
-from wprig.simrigid import solveFrame
-from wprig.state import *
-from wprig.constraint import *
-from wprig.maths import *
+from wpsim.kine.simrigid import solveFrame
+from wpsim.kine.state import *
+from wpsim.kine.constraint import *
+from wpsim.maths import *
 
 
 def makeIdentityQuat(n: int, dtype=jnp.float32) -> jnp.ndarray:

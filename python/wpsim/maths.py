@@ -3,8 +3,13 @@ import types, typing as T
 import pprint
 from wplib import log
 
+import jax
 from jax import numpy as jnp
 
+def uint8ToFloat16(n:jnp.ndarray):
+	return n.astype(jnp.float16) / 255.0
+def uint8ToFloat32(n:jnp.ndarray):
+	return n.astype(jnp.float32) / 2 ^ 32
 def safeNormalize(v: jnp.ndarray, eps: float = 1e-8) -> jnp.ndarray:
 	return v / (jnp.linalg.norm(v, axis=-1, keepdims=True) + eps)
 
@@ -112,4 +117,30 @@ def shortestAngleDelta(delta: jnp.ndarray) -> jnp.ndarray:
 	"""
 	return (delta + jnp.pi) % (2.0 * jnp.pi) - jnp.pi
 
+@jax.vmap
+def polarDecomp3x3(mat:jnp.ndarray[3,3]):
+	"""
+	Extracts Rotation (R) and Stretch (S) from F.
+	Uses SVD to handle inverted tets gracefully.
+	"""
+	U, S, Vt = jnp.linalg.svd(mat)
+	R = U @ Vt
+	# Correct for reflection to maintain det(R) = 1
+	Det = jnp.linalg.det(R)
+	U = U.at[:, 2].multiply(jnp.where(Det < 0, -1.0, 1.0))
+	R = U @ Vt
+	return R
 
+
+def fastOrthonormalize(m):
+	"""
+	A cheaper alternative to SVD for 'almost-orthonormal' matrices.
+	"""
+	x = m[:, 0]
+	x = x / (jnp.linalg.norm(x) + 1e-10)
+
+	z = jnp.cross(x, m[:, 1])
+	z = z / (jnp.linalg.norm(z) + 1e-10)
+
+	y = jnp.cross(z, x)
+	return jnp.stack([x, y, z], axis=1)

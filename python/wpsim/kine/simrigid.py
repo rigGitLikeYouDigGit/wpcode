@@ -1,11 +1,9 @@
 from __future__ import annotations
-import types, typing as T
-import pprint
-from wplib import log
 import jax
-from jax import numpy as jnp, jit, vmap
-from . import state, maths, constraint
-from .maths import quatMul, quatNormalize, quatConj, quatRotate
+from jax import numpy as jnp
+from wpsim import maths
+from wpsim.kine import state, constraint
+from wpsim.maths import quatMul, quatNormalize
 
 """ main meat
 to run at kinematics level - mainly rigid bodies of the skeleton, 
@@ -63,7 +61,7 @@ def solverIterationPlan(
 		bs: state.BodyState,
 		cs: constraint.ConstraintState,
 		dtSub: float,
-		plan:constraint.ConstraintPlan) -> tuple[
+		plan: constraint.ConstraintPlan) -> tuple[
 	state.BodyState, constraint.ConstraintState]:
 	"""solve sequence of constraint types given in plan
 	"""
@@ -105,7 +103,7 @@ def solveSubstep(
 		bs: state.BodyState,
 		cs: constraint.ConstraintState,
 		dt: float,
-		plan:constraint.ConstraintPlan
+		plan: constraint.ConstraintPlan
 ) -> tuple[state.BodyState, constraint.ConstraintState]:
 	def iterBody(i, carry):
 		curBs, curCs = carry
@@ -128,7 +126,7 @@ def solveSubstep(
 def solveFrame(
 		bs: state.BodyState,
 		cs: constraint.ConstraintState,
-		plan:constraint.ConstraintPlan
+		plan: constraint.ConstraintPlan
                ) -> tuple[state.BodyState, constraint.ConstraintState]:
 	substepDt = cs.settings.dt / cs.settings.substepCount
 
