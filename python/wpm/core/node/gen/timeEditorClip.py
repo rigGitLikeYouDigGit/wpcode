@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-TimeEditorClipBase = retriever.getNodeCls("TimeEditorClipBase")
-assert TimeEditorClipBase
 if T.TYPE_CHECKING:
-	from .. import TimeEditorClipBase
+	from ..author import Catalogue
+	TimeEditorClipBase = Catalogue.TimeEditorClipBase
+else:
+	from .. import retriever
+	TimeEditorClipBase = retriever.getNodeCls("TimeEditorClipBase")
+	assert TimeEditorClipBase
 
 # add node doc
 

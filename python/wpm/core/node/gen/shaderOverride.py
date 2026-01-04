@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-ConnectionOverride = retriever.getNodeCls("ConnectionOverride")
-assert ConnectionOverride
 if T.TYPE_CHECKING:
-	from .. import ConnectionOverride
+	from ..author import Catalogue
+	ConnectionOverride = Catalogue.ConnectionOverride
+else:
+	from .. import retriever
+	ConnectionOverride = retriever.getNodeCls("ConnectionOverride")
+	assert ConnectionOverride
 
 # add node doc
 

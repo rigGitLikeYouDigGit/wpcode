@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-PfxGeometry = retriever.getNodeCls("PfxGeometry")
-assert PfxGeometry
 if T.TYPE_CHECKING:
-	from .. import PfxGeometry
+	from ..author import Catalogue
+	PfxGeometry = Catalogue.PfxGeometry
+else:
+	from .. import retriever
+	PfxGeometry = retriever.getNodeCls("PfxGeometry")
+	assert PfxGeometry
 
 # add node doc
 

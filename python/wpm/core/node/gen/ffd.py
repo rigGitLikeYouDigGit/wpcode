@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-WeightGeometryFilter = retriever.getNodeCls("WeightGeometryFilter")
-assert WeightGeometryFilter
 if T.TYPE_CHECKING:
-	from .. import WeightGeometryFilter
+	from ..author import Catalogue
+	WeightGeometryFilter = Catalogue.WeightGeometryFilter
+else:
+	from .. import retriever
+	WeightGeometryFilter = retriever.getNodeCls("WeightGeometryFilter")
+	assert WeightGeometryFilter
 
 # add node doc
 

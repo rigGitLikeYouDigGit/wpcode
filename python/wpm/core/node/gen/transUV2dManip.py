@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-Uv2dManip = retriever.getNodeCls("Uv2dManip")
-assert Uv2dManip
 if T.TYPE_CHECKING:
-	from .. import Uv2dManip
+	from ..author import Catalogue
+	Uv2dManip = Catalogue.Uv2dManip
+else:
+	from .. import retriever
+	Uv2dManip = retriever.getNodeCls("Uv2dManip")
+	assert Uv2dManip
 
 # add node doc
 

@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-TrsInsertManip = retriever.getNodeCls("TrsInsertManip")
-assert TrsInsertManip
 if T.TYPE_CHECKING:
-	from .. import TrsInsertManip
+	from ..author import Catalogue
+	TrsInsertManip = Catalogue.TrsInsertManip
+else:
+	from .. import retriever
+	TrsInsertManip = retriever.getNodeCls("TrsInsertManip")
+	assert TrsInsertManip
 
 # add node doc
 

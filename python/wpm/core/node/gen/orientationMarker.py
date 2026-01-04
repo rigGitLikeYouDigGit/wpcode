@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-PositionMarker = retriever.getNodeCls("PositionMarker")
-assert PositionMarker
 if T.TYPE_CHECKING:
-	from .. import PositionMarker
+	from ..author import Catalogue
+	PositionMarker = Catalogue.PositionMarker
+else:
+	from .. import retriever
+	PositionMarker = retriever.getNodeCls("PositionMarker")
+	assert PositionMarker
 
 # add node doc
 

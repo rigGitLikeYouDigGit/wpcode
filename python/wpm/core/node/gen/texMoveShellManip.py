@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-TransUV2dManip = retriever.getNodeCls("TransUV2dManip")
-assert TransUV2dManip
 if T.TYPE_CHECKING:
-	from .. import TransUV2dManip
+	from ..author import Catalogue
+	TransUV2dManip = Catalogue.TransUV2dManip
+else:
+	from .. import retriever
+	TransUV2dManip = retriever.getNodeCls("TransUV2dManip")
+	assert TransUV2dManip
 
 # add node doc
 

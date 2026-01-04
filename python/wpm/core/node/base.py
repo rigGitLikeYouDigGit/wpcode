@@ -317,11 +317,12 @@ class WNMeta(type):
 
 
 
-class Catalogue:
-	pass
-if T.TYPE_CHECKING:
-	from .author import Catalogue
+# class Catalogue:
+# 	pass
+# if T.TYPE_CHECKING:
+# 	from .author import Catalogue
 
+from .author import Catalogue
 
 class FilterSequence(list):
 	"""return an ordered sequence allowing wildcard matching and filtering

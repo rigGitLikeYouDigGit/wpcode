@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-DeformableShape = retriever.getNodeCls("DeformableShape")
-assert DeformableShape
 if T.TYPE_CHECKING:
-	from .. import DeformableShape
+	from ..author import Catalogue
+	DeformableShape = Catalogue.DeformableShape
+else:
+	from .. import retriever
+	DeformableShape = retriever.getNodeCls("DeformableShape")
+	assert DeformableShape
 
 # add node doc
 

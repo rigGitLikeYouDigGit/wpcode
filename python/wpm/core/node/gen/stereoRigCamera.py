@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-Camera = retriever.getNodeCls("Camera")
-assert Camera
 if T.TYPE_CHECKING:
-	from .. import Camera
+	from ..author import Catalogue
+	Camera = Catalogue.Camera
+else:
+	from .. import retriever
+	Camera = retriever.getNodeCls("Camera")
+	assert Camera
 
 # add node doc
 

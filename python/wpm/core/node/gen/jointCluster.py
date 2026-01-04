@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-Cluster = retriever.getNodeCls("Cluster")
-assert Cluster
 if T.TYPE_CHECKING:
-	from .. import Cluster
+	from ..author import Catalogue
+	Cluster = Catalogue.Cluster
+else:
+	from .. import retriever
+	Cluster = retriever.getNodeCls("Cluster")
+	assert Cluster
 
 # add node doc
 

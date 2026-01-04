@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-Texture2d = retriever.getNodeCls("Texture2d")
-assert Texture2d
 if T.TYPE_CHECKING:
-	from .. import Texture2d
+	from ..author import Catalogue
+	Texture2d = Catalogue.Texture2d
+else:
+	from .. import retriever
+	Texture2d = retriever.getNodeCls("Texture2d")
+	assert Texture2d
 
 # add node doc
 

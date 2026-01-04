@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-AnimCurve = retriever.getNodeCls("AnimCurve")
-assert AnimCurve
 if T.TYPE_CHECKING:
-	from .. import AnimCurve
+	from ..author import Catalogue
+	AnimCurve = Catalogue.AnimCurve
+else:
+	from .. import retriever
+	AnimCurve = retriever.getNodeCls("AnimCurve")
+	assert AnimCurve
 
 # add node doc
 

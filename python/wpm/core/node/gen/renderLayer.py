@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-ImageSource = retriever.getNodeCls("ImageSource")
-assert ImageSource
 if T.TYPE_CHECKING:
-	from .. import ImageSource
+	from ..author import Catalogue
+	ImageSource = Catalogue.ImageSource
+else:
+	from .. import retriever
+	ImageSource = retriever.getNodeCls("ImageSource")
+	assert ImageSource
 
 # add node doc
 

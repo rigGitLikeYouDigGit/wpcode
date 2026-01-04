@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-IkSolver = retriever.getNodeCls("IkSolver")
-assert IkSolver
 if T.TYPE_CHECKING:
-	from .. import IkSolver
+	from ..author import Catalogue
+	IkSolver = Catalogue.IkSolver
+else:
+	from .. import retriever
+	IkSolver = retriever.getNodeCls("IkSolver")
+	assert IkSolver
 
 # add node doc
 

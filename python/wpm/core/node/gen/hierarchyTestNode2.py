@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-HierarchyTestNode1 = retriever.getNodeCls("HierarchyTestNode1")
-assert HierarchyTestNode1
 if T.TYPE_CHECKING:
-	from .. import HierarchyTestNode1
+	from ..author import Catalogue
+	HierarchyTestNode1 = Catalogue.HierarchyTestNode1
+else:
+	from .. import retriever
+	HierarchyTestNode1 = retriever.getNodeCls("HierarchyTestNode1")
+	assert HierarchyTestNode1
 
 # add node doc
 

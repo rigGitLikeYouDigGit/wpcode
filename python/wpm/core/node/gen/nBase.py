@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-Particle = retriever.getNodeCls("Particle")
-assert Particle
 if T.TYPE_CHECKING:
-	from .. import Particle
+	from ..author import Catalogue
+	Particle = Catalogue.Particle
+else:
+	from .. import retriever
+	Particle = retriever.getNodeCls("Particle")
+	assert Particle
 
 # add node doc
 

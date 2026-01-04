@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-DagNode = retriever.getNodeCls("DagNode")
-assert DagNode
 if T.TYPE_CHECKING:
-	from .. import DagNode
+	from ..author import Catalogue
+	DagNode = Catalogue.DagNode
+else:
+	from .. import retriever
+	DagNode = retriever.getNodeCls("DagNode")
+	assert DagNode
 
 # add node doc
 

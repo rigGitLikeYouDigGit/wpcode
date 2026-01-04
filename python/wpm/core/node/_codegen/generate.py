@@ -161,6 +161,8 @@ def genNodeFileStr(data:NodeData,
 	PROBLEM - hinting "Transform" in the plugs points to the generated
 	class in the same file, not the final (potential) overridden
 	Transform in the authored file
+
+	each gen class has to look at the final catalogue in author.__init__
 	"""
 
 
@@ -169,25 +171,33 @@ def genNodeFileStr(data:NodeData,
 	importLines = []
 	parent = None
 	if data.bases: # get parent classes (gen at runtime, author at compile time)
+
+		realImportLines = []
 		parent = data.bases[-1]
 		# no direct import, go through retriever class
-		importLines.append("from .. import retriever")
+		realImportLines.append("from .. import retriever")
 
 		if(parent.lower() == "thdependnode"):
 			parent = "_BASE_"
-		importLines.append(f"{wpstring.cap(parent)} = retriever.getNodeCls(\"{wpstring.cap(parent)}\")")
+		realImportLines.append(f"{wpstring.cap(parent)} = retriever.getNodeCls(\"{wpstring.cap(parent)}\")")
 
-		importLines.append(f"assert {wpstring.cap(parent)}")
+		realImportLines.append(f"assert {wpstring.cap(parent)}")
+
 
 		# type-checking time import for final user-authored file
 		# for parent class and for node itself,
 		# to set hint ".node" attribute on plugs
 		typeCheckImports = IfBlock(
 			conditionBlocks=[["T.TYPE_CHECKING",
-			                  ["from .. import " + wpstring.cap(parent),
+			                  [
+				                  #"from .. import " + wpstring.cap(parent),
+				                  #"from . import " + wpstring.cap(parent),
 			                   #"from .. import " + wpstring.cap(nodeType)
+					"from ..author import Catalogue",
+					f"{wpstring.cap(parent)} = Catalogue.{wpstring.cap(parent)}"
 			                   ],
 			                   ]],
+			elseBlock=["\t" + "\n\t".join(realImportLines)]
 		)
 		importLines.append(str(typeCheckImports))
 

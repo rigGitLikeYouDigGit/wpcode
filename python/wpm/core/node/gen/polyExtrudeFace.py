@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-PolyMoveFace = retriever.getNodeCls("PolyMoveFace")
-assert PolyMoveFace
 if T.TYPE_CHECKING:
-	from .. import PolyMoveFace
+	from ..author import Catalogue
+	PolyMoveFace = Catalogue.PolyMoveFace
+else:
+	from .. import retriever
+	PolyMoveFace = retriever.getNodeCls("PolyMoveFace")
+	assert PolyMoveFace
 
 # add node doc
 

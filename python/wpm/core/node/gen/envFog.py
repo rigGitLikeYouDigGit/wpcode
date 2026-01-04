@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-LightFog = retriever.getNodeCls("LightFog")
-assert LightFog
 if T.TYPE_CHECKING:
-	from .. import LightFog
+	from ..author import Catalogue
+	LightFog = Catalogue.LightFog
+else:
+	from .. import retriever
+	LightFog = retriever.getNodeCls("LightFog")
+	assert LightFog
 
 # add node doc
 

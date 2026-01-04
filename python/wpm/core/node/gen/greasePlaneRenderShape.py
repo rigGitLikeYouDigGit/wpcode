@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-Mesh = retriever.getNodeCls("Mesh")
-assert Mesh
 if T.TYPE_CHECKING:
-	from .. import Mesh
+	from ..author import Catalogue
+	Mesh = Catalogue.Mesh
+else:
+	from .. import retriever
+	Mesh = retriever.getNodeCls("Mesh")
+	assert Mesh
 
 # add node doc
 

@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-ProjectionManip = retriever.getNodeCls("ProjectionManip")
-assert ProjectionManip
 if T.TYPE_CHECKING:
-	from .. import ProjectionManip
+	from ..author import Catalogue
+	ProjectionManip = Catalogue.ProjectionManip
+else:
+	from .. import retriever
+	ProjectionManip = retriever.getNodeCls("ProjectionManip")
+	assert ProjectionManip
 
 # add node doc
 

@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-RevolvedPrimitive = retriever.getNodeCls("RevolvedPrimitive")
-assert RevolvedPrimitive
 if T.TYPE_CHECKING:
-	from .. import RevolvedPrimitive
+	from ..author import Catalogue
+	RevolvedPrimitive = Catalogue.RevolvedPrimitive
+else:
+	from .. import retriever
+	RevolvedPrimitive = retriever.getNodeCls("RevolvedPrimitive")
+	assert RevolvedPrimitive
 
 # add node doc
 

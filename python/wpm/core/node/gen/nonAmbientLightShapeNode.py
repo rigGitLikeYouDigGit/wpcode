@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-RenderLight = retriever.getNodeCls("RenderLight")
-assert RenderLight
 if T.TYPE_CHECKING:
-	from .. import RenderLight
+	from ..author import Catalogue
+	RenderLight = Catalogue.RenderLight
+else:
+	from .. import retriever
+	RenderLight = retriever.getNodeCls("RenderLight")
+	assert RenderLight
 
 # add node doc
 

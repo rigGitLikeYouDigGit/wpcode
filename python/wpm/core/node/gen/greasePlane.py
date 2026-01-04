@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-ImagePlane = retriever.getNodeCls("ImagePlane")
-assert ImagePlane
 if T.TYPE_CHECKING:
-	from .. import ImagePlane
+	from ..author import Catalogue
+	ImagePlane = Catalogue.ImagePlane
+else:
+	from .. import retriever
+	ImagePlane = retriever.getNodeCls("ImagePlane")
+	assert ImagePlane
 
 # add node doc
 

@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-ControlPoint = retriever.getNodeCls("ControlPoint")
-assert ControlPoint
 if T.TYPE_CHECKING:
-	from .. import ControlPoint
+	from ..author import Catalogue
+	ControlPoint = Catalogue.ControlPoint
+else:
+	from .. import retriever
+	ControlPoint = retriever.getNodeCls("ControlPoint")
+	assert ControlPoint
 
 # add node doc
 

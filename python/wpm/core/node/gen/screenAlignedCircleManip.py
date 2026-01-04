@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-CircleManip = retriever.getNodeCls("CircleManip")
-assert CircleManip
 if T.TYPE_CHECKING:
-	from .. import CircleManip
+	from ..author import Catalogue
+	CircleManip = Catalogue.CircleManip
+else:
+	from .. import retriever
+	CircleManip = retriever.getNodeCls("CircleManip")
+	assert CircleManip
 
 # add node doc
 

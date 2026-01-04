@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-BoundaryBase = retriever.getNodeCls("BoundaryBase")
-assert BoundaryBase
 if T.TYPE_CHECKING:
-	from .. import BoundaryBase
+	from ..author import Catalogue
+	BoundaryBase = Catalogue.BoundaryBase
+else:
+	from .. import retriever
+	BoundaryBase = retriever.getNodeCls("BoundaryBase")
+	assert BoundaryBase
 
 # add node doc
 

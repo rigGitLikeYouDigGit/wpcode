@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-Shape = retriever.getNodeCls("Shape")
-assert Shape
 if T.TYPE_CHECKING:
-	from .. import Shape
+	from ..author import Catalogue
+	Shape = Catalogue.Shape
+else:
+	from .. import retriever
+	Shape = retriever.getNodeCls("Shape")
+	assert Shape
 
 # add node doc
 

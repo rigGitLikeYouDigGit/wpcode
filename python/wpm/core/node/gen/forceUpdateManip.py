@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-TextButtonManip = retriever.getNodeCls("TextButtonManip")
-assert TextButtonManip
 if T.TYPE_CHECKING:
-	from .. import TextButtonManip
+	from ..author import Catalogue
+	TextButtonManip = Catalogue.TextButtonManip
+else:
+	from .. import retriever
+	TextButtonManip = retriever.getNodeCls("TextButtonManip")
+	assert TextButtonManip
 
 # add node doc
 

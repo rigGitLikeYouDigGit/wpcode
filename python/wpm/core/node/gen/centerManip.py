@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-FreePointManip = retriever.getNodeCls("FreePointManip")
-assert FreePointManip
 if T.TYPE_CHECKING:
-	from .. import FreePointManip
+	from ..author import Catalogue
+	FreePointManip = Catalogue.FreePointManip
+else:
+	from .. import retriever
+	FreePointManip = retriever.getNodeCls("FreePointManip")
+	assert FreePointManip
 
 # add node doc
 

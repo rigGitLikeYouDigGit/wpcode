@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-RotateManip = retriever.getNodeCls("RotateManip")
-assert RotateManip
 if T.TYPE_CHECKING:
-	from .. import RotateManip
+	from ..author import Catalogue
+	RotateManip = Catalogue.RotateManip
+else:
+	from .. import retriever
+	RotateManip = retriever.getNodeCls("RotateManip")
+	assert RotateManip
 
 # add node doc
 

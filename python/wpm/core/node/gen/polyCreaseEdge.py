@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-PolyCrease = retriever.getNodeCls("PolyCrease")
-assert PolyCrease
 if T.TYPE_CHECKING:
-	from .. import PolyCrease
+	from ..author import Catalogue
+	PolyCrease = Catalogue.PolyCrease
+else:
+	from .. import retriever
+	PolyCrease = retriever.getNodeCls("PolyCrease")
+	assert PolyCrease
 
 # add node doc
 

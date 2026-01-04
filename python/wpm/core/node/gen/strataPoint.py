@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-THlocatorShape = retriever.getNodeCls("THlocatorShape")
-assert THlocatorShape
 if T.TYPE_CHECKING:
-	from .. import THlocatorShape
+	from ..author import Catalogue
+	THlocatorShape = Catalogue.THlocatorShape
+else:
+	from .. import retriever
+	THlocatorShape = retriever.getNodeCls("THlocatorShape")
+	assert THlocatorShape
 
 # add node doc
 

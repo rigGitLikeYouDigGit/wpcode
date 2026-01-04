@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-ObjectSet = retriever.getNodeCls("ObjectSet")
-assert ObjectSet
 if T.TYPE_CHECKING:
-	from .. import ObjectSet
+	from ..author import Catalogue
+	ObjectSet = Catalogue.ObjectSet
+else:
+	from .. import retriever
+	ObjectSet = retriever.getNodeCls("ObjectSet")
+	assert ObjectSet
 
 # add node doc
 

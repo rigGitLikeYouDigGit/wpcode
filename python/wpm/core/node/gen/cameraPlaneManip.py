@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-GeometryOnLineManip = retriever.getNodeCls("GeometryOnLineManip")
-assert GeometryOnLineManip
 if T.TYPE_CHECKING:
-	from .. import GeometryOnLineManip
+	from ..author import Catalogue
+	GeometryOnLineManip = Catalogue.GeometryOnLineManip
+else:
+	from .. import retriever
+	GeometryOnLineManip = retriever.getNodeCls("GeometryOnLineManip")
+	assert GeometryOnLineManip
 
 # add node doc
 

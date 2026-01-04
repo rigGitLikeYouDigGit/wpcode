@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-PolyUnite = retriever.getNodeCls("PolyUnite")
-assert PolyUnite
 if T.TYPE_CHECKING:
-	from .. import PolyUnite
+	from ..author import Catalogue
+	PolyUnite = Catalogue.PolyUnite
+else:
+	from .. import retriever
+	PolyUnite = retriever.getNodeCls("PolyUnite")
+	assert PolyUnite
 
 # add node doc
 

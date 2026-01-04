@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-Reflect = retriever.getNodeCls("Reflect")
-assert Reflect
 if T.TYPE_CHECKING:
-	from .. import Reflect
+	from ..author import Catalogue
+	Reflect = Catalogue.Reflect
+else:
+	from .. import retriever
+	Reflect = retriever.getNodeCls("Reflect")
+	assert Reflect
 
 # add node doc
 

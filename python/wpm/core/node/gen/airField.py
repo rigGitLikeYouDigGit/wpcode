@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-Field = retriever.getNodeCls("Field")
-assert Field
 if T.TYPE_CHECKING:
-	from .. import Field
+	from ..author import Catalogue
+	Field = Catalogue.Field
+else:
+	from .. import retriever
+	Field = retriever.getNodeCls("Field")
+	assert Field
 
 # add node doc
 

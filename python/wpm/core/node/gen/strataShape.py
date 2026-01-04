@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-THsurfaceShape = retriever.getNodeCls("THsurfaceShape")
-assert THsurfaceShape
 if T.TYPE_CHECKING:
-	from .. import THsurfaceShape
+	from ..author import Catalogue
+	THsurfaceShape = Catalogue.THsurfaceShape
+else:
+	from .. import retriever
+	THsurfaceShape = retriever.getNodeCls("THsurfaceShape")
+	assert THsurfaceShape
 
 # add node doc
 

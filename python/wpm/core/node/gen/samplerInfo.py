@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-ShadingDependNode = retriever.getNodeCls("ShadingDependNode")
-assert ShadingDependNode
 if T.TYPE_CHECKING:
-	from .. import ShadingDependNode
+	from ..author import Catalogue
+	ShadingDependNode = Catalogue.ShadingDependNode
+else:
+	from .. import retriever
+	ShadingDependNode = retriever.getNodeCls("ShadingDependNode")
+	assert ShadingDependNode
 
 # add node doc
 

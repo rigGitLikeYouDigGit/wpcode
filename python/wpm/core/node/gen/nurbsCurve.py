@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-CurveShape = retriever.getNodeCls("CurveShape")
-assert CurveShape
 if T.TYPE_CHECKING:
-	from .. import CurveShape
+	from ..author import Catalogue
+	CurveShape = Catalogue.CurveShape
+else:
+	from .. import retriever
+	CurveShape = retriever.getNodeCls("CurveShape")
+	assert CurveShape
 
 # add node doc
 

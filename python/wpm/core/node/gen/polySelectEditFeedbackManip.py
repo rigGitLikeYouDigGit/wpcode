@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-PolyToolFeedbackManip = retriever.getNodeCls("PolyToolFeedbackManip")
-assert PolyToolFeedbackManip
 if T.TYPE_CHECKING:
-	from .. import PolyToolFeedbackManip
+	from ..author import Catalogue
+	PolyToolFeedbackManip = Catalogue.PolyToolFeedbackManip
+else:
+	from .. import retriever
+	PolyToolFeedbackManip = retriever.getNodeCls("PolyToolFeedbackManip")
+	assert PolyToolFeedbackManip
 
 # add node doc
 

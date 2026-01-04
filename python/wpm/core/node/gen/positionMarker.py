@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-Locator = retriever.getNodeCls("Locator")
-assert Locator
 if T.TYPE_CHECKING:
-	from .. import Locator
+	from ..author import Catalogue
+	Locator = Catalogue.Locator
+else:
+	from .. import retriever
+	Locator = retriever.getNodeCls("Locator")
+	assert Locator
 
 # add node doc
 

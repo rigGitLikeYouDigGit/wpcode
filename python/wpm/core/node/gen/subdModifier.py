@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-SubdBase = retriever.getNodeCls("SubdBase")
-assert SubdBase
 if T.TYPE_CHECKING:
-	from .. import SubdBase
+	from ..author import Catalogue
+	SubdBase = Catalogue.SubdBase
+else:
+	from .. import retriever
+	SubdBase = retriever.getNodeCls("SubdBase")
+	assert SubdBase
 
 # add node doc
 

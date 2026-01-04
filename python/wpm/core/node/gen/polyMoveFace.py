@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-PolyMoveEdge = retriever.getNodeCls("PolyMoveEdge")
-assert PolyMoveEdge
 if T.TYPE_CHECKING:
-	from .. import PolyMoveEdge
+	from ..author import Catalogue
+	PolyMoveEdge = Catalogue.PolyMoveEdge
+else:
+	from .. import retriever
+	PolyMoveEdge = retriever.getNodeCls("PolyMoveEdge")
+	assert PolyMoveEdge
 
 # add node doc
 

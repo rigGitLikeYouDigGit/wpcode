@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-ScriptManip = retriever.getNodeCls("ScriptManip")
-assert ScriptManip
 if T.TYPE_CHECKING:
-	from .. import ScriptManip
+	from ..author import Catalogue
+	ScriptManip = Catalogue.ScriptManip
+else:
+	from .. import retriever
+	ScriptManip = retriever.getNodeCls("ScriptManip")
+	assert ScriptManip
 
 # add node doc
 

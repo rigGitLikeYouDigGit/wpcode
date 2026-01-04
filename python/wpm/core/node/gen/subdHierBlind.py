@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-BlindDataTemplate = retriever.getNodeCls("BlindDataTemplate")
-assert BlindDataTemplate
 if T.TYPE_CHECKING:
-	from .. import BlindDataTemplate
+	from ..author import Catalogue
+	BlindDataTemplate = Catalogue.BlindDataTemplate
+else:
+	from .. import retriever
+	BlindDataTemplate = retriever.getNodeCls("BlindDataTemplate")
+	assert BlindDataTemplate
 
 # add node doc
 

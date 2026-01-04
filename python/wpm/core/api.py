@@ -83,10 +83,7 @@ def getMFnType(obj: om.MObject) -> T.Type[om.MFnBase]:
 	above"""
 	return getCache().getMFnType(obj)
 
-def getMObject(node)->om.MObject:
-	"""this is specialised for dg nodes -
-	component MObjects will have their own functions anyway if needed
-	"""
+def toMObject(node):
 	if isinstance(node, om.MObject):
 		if node.isNull():
 			raise RuntimeError("object for ", node, " is invalid")
@@ -109,6 +106,19 @@ def getMObject(node)->om.MObject:
 		except:
 			pass
 		raise TypeError("Cannot retrieve MObject from ", node, type(node))
+
+
+def getMObject(node, default=RuntimeError)->om.MObject:
+	"""this is specialised for dg nodes -
+	component MObjects will have their own functions anyway if needed
+	still unsure of interface, errors unless you explicitly say None as default?
+	"""
+	if default is RuntimeError:
+		return toMObject(node)
+	try:
+		return toMObject(node) or om.MObject()
+	except RuntimeError, TypeError:
+		return default
 
 
 def getMDagPath(node)->om.MDagPath:

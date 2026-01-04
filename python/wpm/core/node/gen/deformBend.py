@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-DeformFunc = retriever.getNodeCls("DeformFunc")
-assert DeformFunc
 if T.TYPE_CHECKING:
-	from .. import DeformFunc
+	from ..author import Catalogue
+	DeformFunc = Catalogue.DeformFunc
+else:
+	from .. import retriever
+	DeformFunc = retriever.getNodeCls("DeformFunc")
+	assert DeformFunc
 
 # add node doc
 

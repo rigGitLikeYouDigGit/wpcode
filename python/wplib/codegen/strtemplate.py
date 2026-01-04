@@ -127,7 +127,7 @@ class IfBlock(StringCodeTemplate):
 			f"if {str(cond)}:\n" + textwrap.indent(
 				formatLines(block), "\t") for cond, block in self.conditionBlocks]
 		if self.elseBlock:
-			conditionStrs.append(f"else:\n{str(self.elseBlock[1])}")
+			conditionStrs.append(f"else:\n{str(self.elseBlock[0])}")
 		return "\n".join(conditionStrs)
 
 	# def updateChildDepths(self):

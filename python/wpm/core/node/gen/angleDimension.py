@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-DimensionShape = retriever.getNodeCls("DimensionShape")
-assert DimensionShape
 if T.TYPE_CHECKING:
-	from .. import DimensionShape
+	from ..author import Catalogue
+	DimensionShape = Catalogue.DimensionShape
+else:
+	from .. import retriever
+	DimensionShape = retriever.getNodeCls("DimensionShape")
+	assert DimensionShape
 
 # add node doc
 

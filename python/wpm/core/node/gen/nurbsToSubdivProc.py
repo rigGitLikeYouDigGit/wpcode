@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-NurbsToSubdiv = retriever.getNodeCls("NurbsToSubdiv")
-assert NurbsToSubdiv
 if T.TYPE_CHECKING:
-	from .. import NurbsToSubdiv
+	from ..author import Catalogue
+	NurbsToSubdiv = Catalogue.NurbsToSubdiv
+else:
+	from .. import retriever
+	NurbsToSubdiv = retriever.getNodeCls("NurbsToSubdiv")
+	assert NurbsToSubdiv
 
 # add node doc
 

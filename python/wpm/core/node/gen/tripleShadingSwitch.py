@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-BaseShadingSwitch = retriever.getNodeCls("BaseShadingSwitch")
-assert BaseShadingSwitch
 if T.TYPE_CHECKING:
-	from .. import BaseShadingSwitch
+	from ..author import Catalogue
+	BaseShadingSwitch = Catalogue.BaseShadingSwitch
+else:
+	from .. import retriever
+	BaseShadingSwitch = retriever.getNodeCls("BaseShadingSwitch")
+	assert BaseShadingSwitch
 
 # add node doc
 

@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-TexBaseDeformManip = retriever.getNodeCls("TexBaseDeformManip")
-assert TexBaseDeformManip
 if T.TYPE_CHECKING:
-	from .. import TexBaseDeformManip
+	from ..author import Catalogue
+	TexBaseDeformManip = Catalogue.TexBaseDeformManip
+else:
+	from .. import retriever
+	TexBaseDeformManip = retriever.getNodeCls("TexBaseDeformManip")
+	assert TexBaseDeformManip
 
 # add node doc
 

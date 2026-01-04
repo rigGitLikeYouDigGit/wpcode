@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-Primitive = retriever.getNodeCls("Primitive")
-assert Primitive
 if T.TYPE_CHECKING:
-	from .. import Primitive
+	from ..author import Catalogue
+	Primitive = Catalogue.Primitive
+else:
+	from .. import retriever
+	Primitive = retriever.getNodeCls("Primitive")
+	assert Primitive
 
 # add node doc
 

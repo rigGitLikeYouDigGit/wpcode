@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-Lambert = retriever.getNodeCls("Lambert")
-assert Lambert
 if T.TYPE_CHECKING:
-	from .. import Lambert
+	from ..author import Catalogue
+	Lambert = Catalogue.Lambert
+else:
+	from .. import retriever
+	Lambert = retriever.getNodeCls("Lambert")
+	assert Lambert
 
 # add node doc
 

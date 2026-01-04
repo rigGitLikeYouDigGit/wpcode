@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-EnvFacade = retriever.getNodeCls("EnvFacade")
-assert EnvFacade
 if T.TYPE_CHECKING:
-	from .. import EnvFacade
+	from ..author import Catalogue
+	EnvFacade = Catalogue.EnvFacade
+else:
+	from .. import retriever
+	EnvFacade = retriever.getNodeCls("EnvFacade")
+	assert EnvFacade
 
 # add node doc
 

@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-PolyMoveUV = retriever.getNodeCls("PolyMoveUV")
-assert PolyMoveUV
 if T.TYPE_CHECKING:
-	from .. import PolyMoveUV
+	from ..author import Catalogue
+	PolyMoveUV = Catalogue.PolyMoveUV
+else:
+	from .. import retriever
+	PolyMoveUV = retriever.getNodeCls("PolyMoveUV")
+	assert PolyMoveUV
 
 # add node doc
 

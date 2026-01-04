@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-TranslateManip = retriever.getNodeCls("TranslateManip")
-assert TranslateManip
 if T.TYPE_CHECKING:
-	from .. import TranslateManip
+	from ..author import Catalogue
+	TranslateManip = Catalogue.TranslateManip
+else:
+	from .. import retriever
+	TranslateManip = retriever.getNodeCls("TranslateManip")
+	assert TranslateManip
 
 # add node doc
 

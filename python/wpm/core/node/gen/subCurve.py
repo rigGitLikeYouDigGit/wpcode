@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-CurveRange = retriever.getNodeCls("CurveRange")
-assert CurveRange
 if T.TYPE_CHECKING:
-	from .. import CurveRange
+	from ..author import Catalogue
+	CurveRange = Catalogue.CurveRange
+else:
+	from .. import retriever
+	CurveRange = retriever.getNodeCls("CurveRange")
+	assert CurveRange
 
 # add node doc
 

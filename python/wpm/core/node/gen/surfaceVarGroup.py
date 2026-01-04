@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-BaseGeometryVarGroup = retriever.getNodeCls("BaseGeometryVarGroup")
-assert BaseGeometryVarGroup
 if T.TYPE_CHECKING:
-	from .. import BaseGeometryVarGroup
+	from ..author import Catalogue
+	BaseGeometryVarGroup = Catalogue.BaseGeometryVarGroup
+else:
+	from .. import retriever
+	BaseGeometryVarGroup = retriever.getNodeCls("BaseGeometryVarGroup")
+	assert BaseGeometryVarGroup
 
 # add node doc
 

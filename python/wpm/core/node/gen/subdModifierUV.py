@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-SubdModifierWorld = retriever.getNodeCls("SubdModifierWorld")
-assert SubdModifierWorld
 if T.TYPE_CHECKING:
-	from .. import SubdModifierWorld
+	from ..author import Catalogue
+	SubdModifierWorld = Catalogue.SubdModifierWorld
+else:
+	from .. import retriever
+	SubdModifierWorld = retriever.getNodeCls("SubdModifierWorld")
+	assert SubdModifierWorld
 
 # add node doc
 

@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-CacheBase = retriever.getNodeCls("CacheBase")
-assert CacheBase
 if T.TYPE_CHECKING:
-	from .. import CacheBase
+	from ..author import Catalogue
+	CacheBase = Catalogue.CacheBase
+else:
+	from .. import retriever
+	CacheBase = retriever.getNodeCls("CacheBase")
+	assert CacheBase
 
 # add node doc
 

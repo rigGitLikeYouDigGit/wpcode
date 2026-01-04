@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-PolyBase = retriever.getNodeCls("PolyBase")
-assert PolyBase
 if T.TYPE_CHECKING:
-	from .. import PolyBase
+	from ..author import Catalogue
+	PolyBase = Catalogue.PolyBase
+else:
+	from .. import retriever
+	PolyBase = retriever.getNodeCls("PolyBase")
+	assert PolyBase
 
 # add node doc
 

@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-DynBase = retriever.getNodeCls("DynBase")
-assert DynBase
 if T.TYPE_CHECKING:
-	from .. import DynBase
+	from ..author import Catalogue
+	DynBase = Catalogue.DynBase
+else:
+	from .. import retriever
+	DynBase = retriever.getNodeCls("DynBase")
+	assert DynBase
 
 # add node doc
 

@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-PointEmitter = retriever.getNodeCls("PointEmitter")
-assert PointEmitter
 if T.TYPE_CHECKING:
-	from .. import PointEmitter
+	from ..author import Catalogue
+	PointEmitter = Catalogue.PointEmitter
+else:
+	from .. import retriever
+	PointEmitter = retriever.getNodeCls("PointEmitter")
+	assert PointEmitter
 
 # add node doc
 

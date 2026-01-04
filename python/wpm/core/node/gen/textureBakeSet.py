@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-BakeSet = retriever.getNodeCls("BakeSet")
-assert BakeSet
 if T.TYPE_CHECKING:
-	from .. import BakeSet
+	from ..author import Catalogue
+	BakeSet = Catalogue.BakeSet
+else:
+	from .. import retriever
+	BakeSet = retriever.getNodeCls("BakeSet")
+	assert BakeSet
 
 # add node doc
 

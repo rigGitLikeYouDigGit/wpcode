@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-PointOnCurveManip = retriever.getNodeCls("PointOnCurveManip")
-assert PointOnCurveManip
 if T.TYPE_CHECKING:
-	from .. import PointOnCurveManip
+	from ..author import Catalogue
+	PointOnCurveManip = Catalogue.PointOnCurveManip
+else:
+	from .. import retriever
+	PointOnCurveManip = retriever.getNodeCls("PointOnCurveManip")
+	assert PointOnCurveManip
 
 # add node doc
 

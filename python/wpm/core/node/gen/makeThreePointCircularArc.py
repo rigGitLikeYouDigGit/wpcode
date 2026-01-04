@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-MakeCircularArc = retriever.getNodeCls("MakeCircularArc")
-assert MakeCircularArc
 if T.TYPE_CHECKING:
-	from .. import MakeCircularArc
+	from ..author import Catalogue
+	MakeCircularArc = Catalogue.MakeCircularArc
+else:
+	from .. import retriever
+	MakeCircularArc = retriever.getNodeCls("MakeCircularArc")
+	assert MakeCircularArc
 
 # add node doc
 

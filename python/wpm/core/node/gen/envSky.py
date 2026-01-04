@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-TextureEnv = retriever.getNodeCls("TextureEnv")
-assert TextureEnv
 if T.TYPE_CHECKING:
-	from .. import TextureEnv
+	from ..author import Catalogue
+	TextureEnv = Catalogue.TextureEnv
+else:
+	from .. import retriever
+	TextureEnv = retriever.getNodeCls("TextureEnv")
+	assert TextureEnv
 
 # add node doc
 

@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-Manip2DContainer = retriever.getNodeCls("Manip2DContainer")
-assert Manip2DContainer
 if T.TYPE_CHECKING:
-	from .. import Manip2DContainer
+	from ..author import Catalogue
+	Manip2DContainer = Catalogue.Manip2DContainer
+else:
+	from .. import retriever
+	Manip2DContainer = retriever.getNodeCls("Manip2DContainer")
+	assert Manip2DContainer
 
 # add node doc
 

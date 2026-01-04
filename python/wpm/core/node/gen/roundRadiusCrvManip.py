@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-RoundRadiusManip = retriever.getNodeCls("RoundRadiusManip")
-assert RoundRadiusManip
 if T.TYPE_CHECKING:
-	from .. import RoundRadiusManip
+	from ..author import Catalogue
+	RoundRadiusManip = Catalogue.RoundRadiusManip
+else:
+	from .. import retriever
+	RoundRadiusManip = retriever.getNodeCls("RoundRadiusManip")
+	assert RoundRadiusManip
 
 # add node doc
 

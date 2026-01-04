@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-SimpleSelector = retriever.getNodeCls("SimpleSelector")
-assert SimpleSelector
 if T.TYPE_CHECKING:
-	from .. import SimpleSelector
+	from ..author import Catalogue
+	SimpleSelector = Catalogue.SimpleSelector
+else:
+	from .. import retriever
+	SimpleSelector = retriever.getNodeCls("SimpleSelector")
+	assert SimpleSelector
 
 # add node doc
 

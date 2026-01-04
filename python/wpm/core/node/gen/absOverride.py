@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-ValueOverride = retriever.getNodeCls("ValueOverride")
-assert ValueOverride
 if T.TYPE_CHECKING:
-	from .. import ValueOverride
+	from ..author import Catalogue
+	ValueOverride = Catalogue.ValueOverride
+else:
+	from .. import retriever
+	ValueOverride = retriever.getNodeCls("ValueOverride")
+	assert ValueOverride
 
 # add node doc
 

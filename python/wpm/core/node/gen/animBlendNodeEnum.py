@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-AnimBlendNodeBase = retriever.getNodeCls("AnimBlendNodeBase")
-assert AnimBlendNodeBase
 if T.TYPE_CHECKING:
-	from .. import AnimBlendNodeBase
+	from ..author import Catalogue
+	AnimBlendNodeBase = Catalogue.AnimBlendNodeBase
+else:
+	from .. import retriever
+	AnimBlendNodeBase = retriever.getNodeCls("AnimBlendNodeBase")
+	assert AnimBlendNodeBase
 
 # add node doc
 

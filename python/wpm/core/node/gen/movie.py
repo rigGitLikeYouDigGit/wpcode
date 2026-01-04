@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-File = retriever.getNodeCls("File")
-assert File
 if T.TYPE_CHECKING:
-	from .. import File
+	from ..author import Catalogue
+	File = Catalogue.File
+else:
+	from .. import retriever
+	File = retriever.getNodeCls("File")
+	assert File
 
 # add node doc
 

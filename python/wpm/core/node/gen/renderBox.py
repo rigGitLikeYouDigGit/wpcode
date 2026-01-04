@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-ImplicitBox = retriever.getNodeCls("ImplicitBox")
-assert ImplicitBox
 if T.TYPE_CHECKING:
-	from .. import ImplicitBox
+	from ..author import Catalogue
+	ImplicitBox = Catalogue.ImplicitBox
+else:
+	from .. import retriever
+	ImplicitBox = retriever.getNodeCls("ImplicitBox")
+	assert ImplicitBox
 
 # add node doc
 

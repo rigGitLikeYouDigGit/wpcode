@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-PointLight = retriever.getNodeCls("PointLight")
-assert PointLight
 if T.TYPE_CHECKING:
-	from .. import PointLight
+	from ..author import Catalogue
+	PointLight = Catalogue.PointLight
+else:
+	from .. import retriever
+	PointLight = retriever.getNodeCls("PointLight")
+	assert PointLight
 
 # add node doc
 

@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-PolyModifierManip = retriever.getNodeCls("PolyModifierManip")
-assert PolyModifierManip
 if T.TYPE_CHECKING:
-	from .. import PolyModifierManip
+	from ..author import Catalogue
+	PolyModifierManip = Catalogue.PolyModifierManip
+else:
+	from .. import retriever
+	PolyModifierManip = retriever.getNodeCls("PolyModifierManip")
+	assert PolyModifierManip
 
 # add node doc
 

@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-ChildNode = retriever.getNodeCls("ChildNode")
-assert ChildNode
 if T.TYPE_CHECKING:
-	from .. import ChildNode
+	from ..author import Catalogue
+	ChildNode = Catalogue.ChildNode
+else:
+	from .. import retriever
+	ChildNode = retriever.getNodeCls("ChildNode")
+	assert ChildNode
 
 # add node doc
 

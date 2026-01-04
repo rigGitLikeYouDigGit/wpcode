@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-Constraint = retriever.getNodeCls("Constraint")
-assert Constraint
 if T.TYPE_CHECKING:
-	from .. import Constraint
+	from ..author import Catalogue
+	Constraint = Catalogue.Constraint
+else:
+	from .. import retriever
+	Constraint = retriever.getNodeCls("Constraint")
+	assert Constraint
 
 # add node doc
 

@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-NonExtendedLightShapeNode = retriever.getNodeCls("NonExtendedLightShapeNode")
-assert NonExtendedLightShapeNode
 if T.TYPE_CHECKING:
-	from .. import NonExtendedLightShapeNode
+	from ..author import Catalogue
+	NonExtendedLightShapeNode = Catalogue.NonExtendedLightShapeNode
+else:
+	from .. import retriever
+	NonExtendedLightShapeNode = retriever.getNodeCls("NonExtendedLightShapeNode")
+	assert NonExtendedLightShapeNode
 
 # add node doc
 

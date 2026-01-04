@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-PolyBevel = retriever.getNodeCls("PolyBevel")
-assert PolyBevel
 if T.TYPE_CHECKING:
-	from .. import PolyBevel
+	from ..author import Catalogue
+	PolyBevel = Catalogue.PolyBevel
+else:
+	from .. import retriever
+	PolyBevel = retriever.getNodeCls("PolyBevel")
+	assert PolyBevel
 
 # add node doc
 

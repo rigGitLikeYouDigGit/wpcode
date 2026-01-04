@@ -8,11 +8,13 @@ import numpy as np
 from wpm.core.node.base import om, WN, Plug, PlugDescriptor
 
 # add any extra imports
-from .. import retriever
-BirailSrf = retriever.getNodeCls("BirailSrf")
-assert BirailSrf
 if T.TYPE_CHECKING:
-	from .. import BirailSrf
+	from ..author import Catalogue
+	BirailSrf = Catalogue.BirailSrf
+else:
+	from .. import retriever
+	BirailSrf = retriever.getNodeCls("BirailSrf")
+	assert BirailSrf
 
 # add node doc
 
