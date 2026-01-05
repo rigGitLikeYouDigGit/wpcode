@@ -5,7 +5,7 @@ import traceback, time
 from importlib import reload
 
 import hou
-#from hou import qt, undos
+from hou import qt, undos
 from PySide6 import QtWidgets, QtCore, QtGui
 
 from . import gather, types
@@ -13,55 +13,66 @@ reload(gather)
 reload(types)
 from .gather import mergeNodeStates, TextHDANode
 from .types import ParmNames, CachedFile, loads, dumps
-"""direct functions called by textHDA node"""
+"""direct functions called by textHDA node
+TODO: we duplicate a bit between onDefChanged and onAllowEditingChanged - 
+have some overall sync function to take account of both of them
+
+errors on setting editing allowed to false with node data - locking asset def,
+then trying to set info inside it
+unlock asset each time?
+or just match to definition should be enough
+
+"""
 
 def getMultiFolderChildParm(folderParm:hou.Parm, name:str, folderIndex=0,
                             nParmsPerFolder=3):
 	folderParm.multiParmInstances()
 
+INTERNAL_EVENT_TYPES = [
+	# hou.nodeEventType.ParmTupleChanged,
+	hou.nodeEventType.ChildDeleted,
+	hou.nodeEventType.ChildReordered,
+	hou.nodeEventType.ChildSwitched,
+	#hou.nodeEventType.ChildSelectionChanged,
+	hou.nodeEventType.NetworkBoxCreated,
+	hou.nodeEventType.NetworkBoxChanged,
+	hou.nodeEventType.NetworkBoxDeleted,
+	hou.nodeEventType.StickyNoteCreated,
+	hou.nodeEventType.StickyNoteChanged,
+	hou.nodeEventType.StickyNoteDeleted,
 
-def addNodeInternalCallbacks(node:hou.Node):
-	node.addEventCallback((
-		hou.nodeEventType.ParmTupleChanged,
-		hou.nodeEventType.ChildDeleted,
-		hou.nodeEventType.ChildReordered,
-		hou.nodeEventType.ChildSwitched,
-		hou.nodeEventType.ChildSelectionChanged,
-		hou.nodeEventType.NetworkBoxCreated,
-		hou.nodeEventType.NetworkBoxChanged,
-		hou.nodeEventType.NetworkBoxDeleted,
-		hou.nodeEventType.StickyNoteCreated,
-		hou.nodeEventType.StickyNoteChanged,
-		hou.nodeEventType.StickyNoteDeleted,
+	hou.nodeEventType.IndirectInputCreated,
+	hou.nodeEventType.IndirectInputRewired,
+	hou.nodeEventType.IndirectInputDeleted,
+]
 
-		hou.nodeEventType.IndirectInputCreated,
-		hou.nodeEventType.IndirectInputRewired,
-		hou.nodeEventType.IndirectInputDeleted,
-
-	),
-		# lambda *a, **k : onNodeInternalChanged(node )
-		onNodeInternalChanged
+def addNodeInternalCallbacks(node:hou.OpNode, inputRewired=False,
+                             paramChanged=True,
+                             topNode:hou.OpNode=None):
+	print("addNodeInternalCallbacks:", node)
+	typesToAdd = INTERNAL_EVENT_TYPES
+	if inputRewired:
+		typesToAdd = typesToAdd + [hou.nodeEventType.InputRewired]
+	if paramChanged: # don't set this on top node
+		typesToAdd = typesToAdd + [hou.nodeEventType.ParmTupleChanged]
+	node.addEventCallback(
+		typesToAdd,
+		lambda *args, **kwargs : onNodeInternalChanged(
+			*args,
+		           topNode=topNode or node,
+                   **kwargs)
 	)
+	# for event in INTERNAL_EVENT_TYPES:
+	# 	node.addEventCallback(
+	# 		(event, ),
+	# 		lambda node=node, event=event, atTime=time.time() :
+	# 	onNodeInternalChanged(
+	# 			node, event=event, atTime=atTime)
+	# 	)
 
-def removeNodeInternalCallbacks(node:hou.Node):
-	for i in (
-		hou.nodeEventType.ParmTupleChanged,
-		hou.nodeEventType.ChildDeleted,
-		hou.nodeEventType.ChildReordered,
-		hou.nodeEventType.ChildSwitched,
-		hou.nodeEventType.ChildSelectionChanged,
-		hou.nodeEventType.NetworkBoxCreated,
-		hou.nodeEventType.NetworkBoxChanged,
-		hou.nodeEventType.NetworkBoxDeleted,
-		hou.nodeEventType.StickyNoteCreated,
-		hou.nodeEventType.StickyNoteChanged,
-		hou.nodeEventType.StickyNoteDeleted,
-
-		hou.nodeEventType.IndirectInputCreated,
-		hou.nodeEventType.IndirectInputRewired,
-		hou.nodeEventType.IndirectInputDeleted,
-
-	):
+def removeNodeInternalCallbacks(node:hou.OpNode):
+	print("removeNodeInternalCallbacks:", node)
+	for i in INTERNAL_EVENT_TYPES + [hou.nodeEventType.InputRewired, hou.nodeEventType.ParmTupleChanged] :
 		try:
 			node.removeEventCallback(
 			(i,),
@@ -131,22 +142,45 @@ def onNodeNameChanged(node:hou.Node, *args, **kwargs):
 def onChildNodeCreated(rootTextNode:hou.Node, *args, **kwargs):
 	"""also propagate callback to children contained"""
 
-def onNodeInternalChanged(node:hou.Node, *args, **kwargs):
+def onNodeInternalChanged(
+		node:hou.Node,
+		event_type:hou.nodeEventType,
+		topNode:hou.OpNode,
+		*args, **kwargs):
 	"""callback whenever something internal changes on node
 	check if node live checkbox is ready
 
 	split into 2 stages, pulling and diffing local node, and updating node from parent states -
 	auto update only does local pull
+
+	node is whatever callback is called on; topNode is the top TextHDA to use for deltas
+
 	"""
-	print("node internal changed:", node)
-	# hda = TextHDANode(node)
-	# if hda.isWorking():
-	# 	return
+	print("node internal changed:", topNode, node, event_type, args, kwargs)
+	hda = TextHDANode(topNode)
+	if hda.isWorking():
+		print("working")
+		return
 	# if not node.parm(ParmNames.liveUpdate).eval():
 	# 	return
-	#
-	# with hda.workCtx():
-	# 	pullLocalNodeState(node)
+	if not hou.node(node.path()): # already deleted
+		return
+	if not hou.node(topNode.path()): # already deleted
+		return
+	with hda.workCtx():
+		# if new node created
+		if event_type == hou.nodeEventType.ChildCreated:
+			childNode : hou.OpNode = kwargs["child_node"]
+			print("child node created:", childNode)
+			addNodeInternalCallbacks(childNode, inputRewired=True, topNode=topNode)
+			# childNode.addEventCallback(
+			# 	[hou.nodeEventType.InputRewired] + INTERNAL_EVENT_TYPES,
+			# 	lambda *args, **kwargs: onNodeInternalChanged(
+			# 		*args, topNode=topNode, **kwargs)
+			# )
+		pullLocalNodeState(topNode)
+
+"""nick carver youtube"""
 
 def onNodeOperationErrored(*args, **kwargs):
 	"""automatically press undo after node errors -
@@ -183,20 +217,23 @@ def pullLocalNodeState(node:hou.Node):
 
 	with hda.workCtx() as ctx:
 		# get stored incoming node state
-		storedIncomingState = hda.getCachedParentState()
+		#storedIncomingState = hda.getCachedParentState()
+		storedIncomingState = gather.mergeNodeStates(
+			{}, hda.filteredParentStoredStates()
+		)
 		#print("stored incoming state:")
 		#pprint.pprint(storedIncomingState)
 
 		# get whole state of node in scene
 		wholeNodeState = gather.getFullNodeState(node)
-		#print("wholeNodeState:")
-		#pprint.pprint(wholeNodeState, depth=5)
+		print("wholeNodeState:")
+		pprint.pprint(wholeNodeState, depth=5)
 		# return
 
 		# get current delta
 		leafDelta = gather.diffNodeState(storedIncomingState, wholeNodeState)
-		#print("leaf delta:")
-		#pprint.pprint(leafDelta)
+		print("leaf delta:")
+		pprint.pprint(leafDelta, depth=5)
 		# save on node
 
 		toSave = dumps(leafDelta)  # .replace("\n", "\\n")
@@ -204,7 +241,7 @@ def pullLocalNodeState(node:hou.Node):
 			toSave
 		)
 		print("saved leaf deltas on node")
-		print(toSave)
+		#print(toSave)
 		return leafDelta
 
 
@@ -220,7 +257,7 @@ def refreshParentBasesRegenNode(node:hou.Node, leafDelta:dict=None)->bool:
 
 	if leafDelta is None:
 		leafDelta = hda.nodeLeafStoredState()
-		if hda.parentPaths() and not hda.editingAllowed():
+		if hda.parentDefs() and not hda.editingAllowed():
 			leafDelta = {}
 
 	errored = False
@@ -306,6 +343,10 @@ def onDefFileLineChanged(node:hou.Node, kwargs):
 	ok FINE we test now what happens if you don't pass a full file path
 	here - emulates a scene-bound definition,
 	changing the name of the HDA created.
+
+	if editing not allowed, add this node to bundle of nodes affected
+	by the path def
+	if editing IS allowed, add node to bundles of all parent defs
 	"""
 	print("on defFileLineChanged")
 	hdaNode = TextHDANode(node)
@@ -319,11 +360,15 @@ def onDefFileLineChanged(node:hou.Node, kwargs):
 			# rename current hda def if needed
 			defName = gather.hdaDefNameFromDefFile(
 				newDefStr, edit=hdaNode.editingAllowed())
-			hdaDef, newNode = gather.createLocalTextHDADefinition(
+			hdaDef, node = gather.createLocalTextHDADefinition(
 				node, defName)
-			print("ctx", ctx)
-			print(hdaDef, newNode)
-			ctx.path = newNode.path()
+			hdaNode = TextHDANode(node)
+			ctx.path = node.path()
+
+			if hdaNode.editingAllowed():
+				pass
+			else: # match definition and prevent editing
+				node.matchCurrentDefinition()
 
 		else: # prevent local edits if no def file set
 
@@ -335,7 +380,7 @@ def onDefFileLineChanged(node:hou.Node, kwargs):
 def onSelectDefBtnPressed(node:hou.Node, kwargs):
 	print("selectDef btn pressed")
 
-def onAllowEditingChanged(node:hou.Node, *args, **kwargs):
+def onAllowEditingChanged(node:hou.OpNode, *args, **kwargs):
 	"""create a new embedded hda def
 	and open up node for editing
 
@@ -357,22 +402,29 @@ def onAllowEditingChanged(node:hou.Node, *args, **kwargs):
 		print(hda.editingAllowed(), bool(hda.editingAllowed()))
 		if hda.editingAllowed():
 			print("editing allowed")
-			addNodeInternalCallbacks(node)
+			addNodeInternalCallbacks(node, inputRewired=False,
+			                         paramChanged=False, topNode=node)
+			node.allowEditingOfContents(False)
+			for i in node.allSubChildren(recurse_in_locked_nodes=False):
+				addNodeInternalCallbacks(i, inputRewired=True, topNode=node)
 
 			return
 		else:
 			print("edit not allowed")
 			removeNodeInternalCallbacks(node)
+			for i in node.allSubChildren(recurse_in_locked_nodes=False):
+				removeNodeInternalCallbacks(i)
 			# just freeze local contents
 			if hda.hasIncomingStates():
 				print("incoming states found")
 				hdaDef = hda.getCustomHDADef()
-				node = hdaDef.updateFromNode(node)
+				hdaDef.updateFromNode(node)
 				node.matchCurrentDefinition()
 				refreshParentBasesRegenNode(node)
 
 			else: # nothing in any text params
 				if hda.defFile():
+					node.matchCurrentDefinition()
 					#hda.fullReset(resetParms=False)
 					pass
 				else: # no def file given, fully reset

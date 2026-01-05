@@ -208,12 +208,13 @@ def createNodeFromHeader(rootNode:hou.Node, header:NodeHeader):
 	return newNode
 
 
-def getChildrenConnectionData(parentNode:hou.Node)->list[list[str]]:
+def getChildrenConnectionData(parentNode:hou.OpNode)->list[list[str]]:
 	"""very simple, of form
 	[ 0-myNodeOutputName-myNode , 0-myNodeInputName-myOtherNode ]"""
 	connections = []
+	print("getChildrenConnectionData", parentNode, parentNode.children())
 	for node in parentNode.children():
-		node : hou.Node
+		node : hou.OpNode
 		connectors : tuple[tuple[hou.NodeConnection]] = node.inputConnectors()
 		for i, connector in enumerate(connectors):
 			if not connector: # input not driven
@@ -358,6 +359,23 @@ def getSceneTextHDANodesByDef()->dict[str|Path, list[hou.OpNode]]:
 			result[key] = []
 		result[key].append(i)
 	return result
+
+"""we use a separate node bundle for each def, to check when they need 
+updating?
+nah just build maps on the fly
+"""
+
+def getDefAffectedNodeMap()->dict[str|Path, list[hou.OpNode]]:
+	result = defaultdict(list)
+	for i in allSceneTextHDANodes():
+		textHda = TextHDANode(i)
+		affectingDefs = textHda.parentDefs()
+		if not textHda.editingAllowed():
+			affectingDefs += [textHda.defFile()]
+		for parentDef in affectingDefs:
+			result[parentDef].append(i)
+	return result
+
 
 """generate separate paths from nested patch dict"""
 def deepUpdate(baseData:dict|list, patch:list[tuple[list[str], T.Any]]):
@@ -659,7 +677,11 @@ def diffNodeState(
 				result["parmTemplates"].setdefault(nodePath, {})
 				result["parmTemplates"][nodePath][parmName] = parmScript
 
+	print("connections")
+	print(baseData["connections"])
+	print(wholeNodeState["connections"])
 	comp = set(map(tuple, baseData.get("connections", [])))
+	print("comp", comp)
 	for i in wholeNodeState.get("connections", []):
 		if not tuple(i) in comp:
 			result["connections"].append(i)
@@ -724,19 +746,22 @@ def getRandomStringName()->str:
 	but for now uuid is fine"""
 
 
-_baseHDADef : hou.HDADefinition = None
+#_baseHDADef : hou.HDADefinition = None
 
 def getBaseTextHDADef()->hou.HDADefinition:
 	"""TODO: this only looks at one version,
 	add something that defaults to """
 	print("get base def:")
-	global _baseHDADef
-	if _baseHDADef is None:
-		found = hou.nodeType("Sop/textHDA::1.0")
-		if found is not None:
-			_baseHDADef = found.definition()
-	#raise
-	return _baseHDADef
+	found = hou.nodeType("Sop/textHDA::1.0")
+	if found is not None:
+		found = found.definition()
+	return found
+	# #global _baseHDADef
+	# _baseHDADef = None
+	# if _baseHDADef is None:
+	#
+	# #raise
+	# return _baseHDADef
 
 def getEmbeddedTextHDADefs()->list[tuple[hou.NodeType, hou.HDADefinition]]:
 	results = []
@@ -759,9 +784,12 @@ plus a hda def for each node.
 
 def deleteHDADefIfUnused(hdaDef:hou.HDADefinition):
 	try:
-		if not hdaDef.nodeType().instances():
-			print("deleting unused hda:", hdaDef)
-			hdaDef.destroy()
+		try:
+			if not hdaDef.nodeType().instances():
+				print("deleting unused hda:", hdaDef)
+				hdaDef.destroy()
+		except hou.OperationFailed:
+			return
 	except hou.ObjectWasDeleted: # already cleaned up
 		pass
 
@@ -769,7 +797,7 @@ def createLocalTextHDADefinition(
 		node:hou.OpNode,
 		newId,
 		deleteAssignedHDA=True
-)->tuple[hou.HDADefinition, hou.Node]:
+)->tuple[hou.HDADefinition, hou.OpNode]:
 	"""we just give each node its own hda whenever it's edited away
 	from the raw textHDA baseline.
 
@@ -848,6 +876,10 @@ def createLocalTextHDADefinition(
 	print("new hda def node", node)
 
 	newHDADef : hou.HDADefinition = newNode.type().definition()
+	# 4 slots for inputs and outputs, should be fine for now
+	newHDADef.setMinNumInputs(0)
+	newHDADef.setMaxNumInputs(4)
+	newHDADef.setMaxNumOutputs(4)
 
 	for i in HDA_SECTIONS_TO_COPY:
 		if not i in newHDADef.sections():
@@ -902,6 +934,8 @@ class TextHDAWorkContext:
 			hda.setWorking(True)
 		return self
 	def __exit__(self, exc_type, exc_val, exc_tb):
+		# if self.node() is None:
+		# 	return
 		hda = TextHDANode(self.node())
 		if self.isOuter:
 			hda.setWorking(False)
@@ -921,7 +955,6 @@ class TextHDANode:
 	"""use working state to prevent looping signals
 	when internal processes change attributes"""
 	def setWorking(self, state=True):
-		from .nodefn import addNodeInternalCallbacks, removeNodeInternalCallbacks
 		print("setting working state to", state,self.node)
 		self.node.setUserData("_working", str(int(state)))
 		return
@@ -944,15 +977,8 @@ class TextHDANode:
 
 		return Path(raw) if defIsPath(raw) else raw
 
-	# def hdaDefParm(self) -> hou.Parm:
-	# 	"""return the label for the hda def id"""
-	# 	return self.node.parm(ParmNames.hdaDef)
-	# def hdaDefId(self) -> str:
-	# 	return self.hdaDefParm().evalAsString()
-	# def setHDADefId(self, text: str):
-	# 	self.hdaDefParm().lock(False)
-	# 	self.hdaDefParm().set(text)
-	# 	self.hdaDefParm().lock(True)
+	def allDefsUsed(self)->list[str]:
+		result = [self.defFile()] + self.parentDefs()
 
 	def editingAllowedParm(self)->hou.Parm:
 		return self.node.parm(ParmNames.allowEditing)
@@ -1025,8 +1051,6 @@ class TextHDANode:
 		#self.defFileParm().set("")
 		#self.editingAllowedParm().set(False)
 
-
-
 	nFolderParms = 3
 
 	def nParentEntries(self)->int:
@@ -1045,8 +1069,10 @@ class TextHDANode:
 				parmName + str(i + 1)))
 		return results
 
-	def parentPaths(self)->list[Path]:
-		return [Path(i.eval()) for i in self._parentParms(ParmNames.parentFile)]
+	def parentDefs(self)->list[Path]:
+		strs = [i.evalAsString() for i in self._parentParms(
+			ParmNames.parentFile) if i.evalAsString().strip()]
+		return [Path(i) if defIsPath(i) else i for i in strs]
 
 	def parentBaseDatas(self)->list[ParentBaseData]:
 		filePaths = self._parentParms(ParmNames.parentFile)
@@ -1085,7 +1111,7 @@ class TextHDANode:
 	def reloadParentStates(self):
 		parentStates = []
 		parentParms = self._parentParms(ParmNames.parentNodeDelta)
-		for i, path in enumerate(self.parentPaths()):
+		for i, path in enumerate(self.parentDefs()):
 			if not path.is_file():
 				# nodes can't set warnings on other badges
 				# node.addWarning("Could not find parent file: " + str(i))
