@@ -55,31 +55,33 @@ def addNodeInternalCallbacks(node:hou.OpNode, inputRewired=False,
 		typesToAdd = typesToAdd + [hou.nodeEventType.InputRewired]
 	if paramChanged: # don't set this on top node
 		typesToAdd = typesToAdd + [hou.nodeEventType.ParmTupleChanged]
-	node.addEventCallback(
-		typesToAdd,
-		lambda *args, **kwargs : onNodeInternalChanged(
-			*args,
-		           topNode=topNode or node,
-                   **kwargs)
-	)
-	# for event in INTERNAL_EVENT_TYPES:
-	# 	node.addEventCallback(
-	# 		(event, ),
-	# 		lambda node=node, event=event, atTime=time.time() :
-	# 	onNodeInternalChanged(
-	# 			node, event=event, atTime=atTime)
-	# 	)
+	for i in typesToAdd:
+		node.addEventCallback(
+			(i,),
+			lambda *args, **kwargs : onNodeInternalChanged(
+				*args,
+			           topNode=topNode or node,
+	                   **kwargs)
+		)
 
 def removeNodeInternalCallbacks(node:hou.OpNode):
 	print("removeNodeInternalCallbacks:", node)
 	for i in INTERNAL_EVENT_TYPES + [hou.nodeEventType.InputRewired, hou.nodeEventType.ParmTupleChanged] :
+		# node.removeEventCallback(
+		# 	(i,),
+		# 	# lambda *a, **k : onNodeInternalChanged(node )
+		# 	onNodeInternalChanged
+		# )
 		try:
 			node.removeEventCallback(
 			(i,),
 				# lambda *a, **k : onNodeInternalChanged(node )
 				onNodeInternalChanged
 			)
-		except:
+		except Exception as e:
+			continue
+			print("error removing callback with event:", i)
+			traceback.print_exc()
 			pass
 
 def onNodeCreated(node:hou.OpNode, *args, **kwargs):
@@ -92,9 +94,17 @@ def onNodeCreated(node:hou.OpNode, *args, **kwargs):
 	bundle = gather.getTextHDANodeBundle()
 	bundle.addNode(node)
 
-
 	print("textHda created:", node)
 	print("nodes in bundle:", gather.allSceneTextHDANodes())
+
+def onNodeLoaded(node:hou.OpNode, *args, **kwargs):
+	"""runs when node loaded during opening scene - apparently
+	either this or onNodeCreated runs, never both"""
+	hdaNode = TextHDANode(node)
+	node.setExpressionLanguage(hou.exprLanguage.Python)
+	bundle = gather.getTextHDANodeBundle()
+	bundle.addNode(node)
+	onAllowEditingChanged(node)
 
 """analysing hda section infos:
 nothing in either ExtraFileOptions or InternalFileOptions
@@ -159,7 +169,7 @@ def onNodeInternalChanged(
 	print("node internal changed:", topNode, node, event_type, args, kwargs)
 	hda = TextHDANode(topNode)
 	if hda.isWorking():
-		print("working")
+		print("working, skipping internl")
 		return
 	# if not node.parm(ParmNames.liveUpdate).eval():
 	# 	return
@@ -420,7 +430,7 @@ def onAllowEditingChanged(node:hou.OpNode, *args, **kwargs):
 				hdaDef = hda.getCustomHDADef()
 				hdaDef.updateFromNode(node)
 				node.matchCurrentDefinition()
-				refreshParentBasesRegenNode(node)
+				#refreshParentBasesRegenNode(node)
 
 			else: # nothing in any text params
 				if hda.defFile():
