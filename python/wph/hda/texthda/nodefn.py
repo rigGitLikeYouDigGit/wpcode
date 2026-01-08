@@ -102,6 +102,8 @@ def onNodeLoaded(node:hou.OpNode, *args, **kwargs):
 	either this or onNodeCreated runs, never both"""
 	hdaNode = TextHDANode(node)
 	node.setExpressionLanguage(hou.exprLanguage.Python)
+	if not hdaNode.defFileParm().evalAsString():
+		hdaNode.editingAllowedParm().disable(True)
 	bundle = gather.getTextHDANodeBundle()
 	bundle.addNode(node)
 	onAllowEditingChanged(node)
@@ -157,7 +159,10 @@ def onNodeInternalChanged(
 		event_type:hou.nodeEventType,
 		topNode:hou.OpNode,
 		*args, **kwargs):
-	"""callback whenever something internal changes on node
+	"""
+	this should ONLY fire if node is open for editing
+
+	callback whenever something internal changes on node
 	check if node live checkbox is ready
 
 	split into 2 stages, pulling and diffing local node, and updating node from parent states -
@@ -166,10 +171,10 @@ def onNodeInternalChanged(
 	node is whatever callback is called on; topNode is the top TextHDA to use for deltas
 
 	"""
-	print("node internal changed:", topNode, node, event_type, args, kwargs)
+	#print("node internal changed:", topNode, node, event_type, args, kwargs)
 	hda = TextHDANode(topNode)
 	if hda.isWorking():
-		print("working, skipping internl")
+		print("working, skipping internal", node)
 		return
 	# if not node.parm(ParmNames.liveUpdate).eval():
 	# 	return
@@ -183,12 +188,14 @@ def onNodeInternalChanged(
 			childNode : hou.OpNode = kwargs["child_node"]
 			print("child node created:", childNode)
 			addNodeInternalCallbacks(childNode, inputRewired=True, topNode=topNode)
-			# childNode.addEventCallback(
-			# 	[hou.nodeEventType.InputRewired] + INTERNAL_EVENT_TYPES,
-			# 	lambda *args, **kwargs: onNodeInternalChanged(
-			# 		*args, topNode=topNode, **kwargs)
-			# )
 		pullLocalNodeState(topNode)
+
+		# update other nodes in scene
+		dependencyMap = gather.getDefAffectedNodeMap()
+		for i in dependencyMap[hda.defFile()]:
+			otherTextHda = TextHDANode(i)
+			otherTextHda.syncNodeState()
+
 
 """nick carver youtube"""
 
@@ -224,33 +231,34 @@ def getHDAsDefinedInScene()->list[hou.HDADefinition]:
 
 def pullLocalNodeState(node:hou.Node):
 	hda = TextHDANode(node)
+	if not hda.hdaDef():
+		return {}
 
 	with hda.workCtx() as ctx:
 		# get stored incoming node state
-		#storedIncomingState = hda.getCachedParentState()
 		storedIncomingState = gather.mergeNodeStates(
 			{}, hda.filteredParentStoredStates()
 		)
-		#print("stored incoming state:")
-		#pprint.pprint(storedIncomingState)
+
 
 		# get whole state of node in scene
 		wholeNodeState = gather.getFullNodeState(node)
-		print("wholeNodeState:")
-		pprint.pprint(wholeNodeState, depth=5)
-		# return
+		# print("wholeNodeState:")
+		# pprint.pprint(wholeNodeState, depth=5)
+		# # return
 
 		# get current delta
 		leafDelta = gather.diffNodeState(storedIncomingState, wholeNodeState)
-		print("leaf delta:")
-		pprint.pprint(leafDelta, depth=5)
-		# save on node
+		# print("leaf delta:")
+		# pprint.pprint(leafDelta, depth=5)
+		# # save on node
 
 		toSave = dumps(leafDelta)  # .replace("\n", "\\n")
 		hda.nodeLeafDeltaParm().set(
 			toSave
 		)
-		print("saved leaf deltas on node")
+		gather.setHDASectionDict(hda.hdaDef(), gather.HDA_DELTA_SECTION_NAME, leafDelta)
+		#print("saved leaf deltas on node")
 		#print(toSave)
 		return leafDelta
 
@@ -307,7 +315,14 @@ def onHardResetBtnPressed(node:hou.Node):
 		node.parm(ParmNames.allowEditing).set(False)
 	pass
 
-def onParentDefNameChanged(node:hou.Node, parm:hou.Parm):
+def onLiveUpdateChanged(node:hou.OpNode, *args, **kwargs):
+	pass
+
+def onParentDefNameChanged(node:hou.Node, kwargs):
+	print("parent def name changed:", node, kwargs)
+	hda = TextHDANode(node)
+	hda.reloadParentStates()
+	gather.setNodeToState(node, hda.getCachedParentState())
 	pass
 
 def onParentDefVersionChanged(node:hou.Node, parm:hou.Parm):
@@ -407,6 +422,10 @@ def onAllowEditingChanged(node:hou.OpNode, *args, **kwargs):
 		print("node still working, aborting")
 		return
 
+	try:
+		node.path()
+	except hou.ObjectWasDeleted:
+		return
 	with hda.workCtx():
 		node = hda.node
 		print(hda.editingAllowed(), bool(hda.editingAllowed()))
@@ -446,15 +465,15 @@ def getDefMenuItems(kwargs)->list[str]:
 	need to return list of
 	["value1", "label1", "value2", "label2"]
 	"""
-	print("getDefMenuItems", kwargs)
+	#print("getDefMenuItems", kwargs)
 	hda = TextHDANode(kwargs['node'])
 	parm : hou.Parm = kwargs['parm']
 	result = []
 	# don't list node's own def as available
 	currentDef = hda.defFile()
 
-	sceneDefs = gather.getSceneHDADefs()
-	print("sceneDefs", sceneDefs)
+	sceneDefs = gather.getSceneHDADefNodes()
+	#print("sceneDefs", sceneDefs)
 	if currentDef in sceneDefs:
 		sceneDefs.pop(currentDef)
 	if sceneDefs:
@@ -463,7 +482,7 @@ def getDefMenuItems(kwargs)->list[str]:
 			result.extend([defName, defName])
 
 	fileDefs = gather.availableTextHDADefs()
-	print("fileDefs", fileDefs)
+	#print("fileDefs", fileDefs)
 	if currentDef in fileDefs:
 		sceneDefs.pop(currentDef)
 	if fileDefs:
@@ -533,6 +552,14 @@ def onSaveBtnPressed(node:hou.Node):
 		hda.nodeLeafDeltaParm().eval()
 	)
 
+
+def onClearUserDataBtnPressed(node:hou.Node, *args, **kwargs):
+	"""debug, clear all user data from the given node, in case
+	a node gets stuck thinking it's still working
+	"""
+	node.destroyUserData(
+		"_working", must_exist=False
+	)
 
 def onLeafDownBtnPressed(node:hou.Node):
 	"""push leaf on to end of parent bases"""

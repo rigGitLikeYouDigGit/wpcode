@@ -136,7 +136,7 @@ def availableTextHDADefs()->dict[str, dict[int, Path]]:
 			results[name][version] = i
 	return results
 
-def getSceneHDADefs()->dict[str, list[hou.Node]]:
+def getSceneHDADefNodes()->dict[str, list[hou.Node]]:
 	result = defaultdict(list)
 	nodes = allSceneTextHDANodes()
 	print("nodes", nodes)
@@ -334,47 +334,6 @@ def deepUpdatePath(baseData:dict|list, path:list, value):
 			baseData[index] = value
 			return
 		return deepUpdatePath(baseData[index], path, value)
-
-
-def getTextHDANodeBundle()->hou.NodeBundle:
-	"""return a dumb node bundle to manually add nodes on creation,
-	for more efficient tracking of textHDAs by HDA definition and
-	def file"""
-	if not hou.nodeBundle(TEXT_HDA_BUNDLE_NAME):
-		hou.addNodeBundle(TEXT_HDA_BUNDLE_NAME)
-	return hou.nodeBundle(TEXT_HDA_BUNDLE_NAME)
-
-def allSceneTextHDANodes()->list[hou.OpNode]:
-	return getTextHDANodeBundle().nodes()
-
-def getSceneTextHDANodesByDef()->dict[str|Path, list[hou.OpNode]]:
-	result = {}
-	for i in allSceneTextHDANodes():
-		defStr = i.parm(ParmNames.defFile).evalAsString().strip()
-		if "." in defStr and "/" in defStr:
-			key = Path(defStr)
-		else:
-			key = defStr
-		if not key in result:
-			result[key] = []
-		result[key].append(i)
-	return result
-
-"""we use a separate node bundle for each def, to check when they need 
-updating?
-nah just build maps on the fly
-"""
-
-def getDefAffectedNodeMap()->dict[str|Path, list[hou.OpNode]]:
-	result = defaultdict(list)
-	for i in allSceneTextHDANodes():
-		textHda = TextHDANode(i)
-		affectingDefs = textHda.parentDefs()
-		if not textHda.editingAllowed():
-			affectingDefs += [textHda.defFile()]
-		for parentDef in affectingDefs:
-			result[parentDef].append(i)
-	return result
 
 
 """generate separate paths from nested patch dict"""
@@ -703,22 +662,45 @@ def diffNodeState(
 
 	return result
 
+HDA_DELTA_SECTION_NAME = "textHDALeafDelta"
 
+def getHDASectionDict(hdaDef:hou.HDADefinition, sectionName:str, default={}):
+	"""return stored section in hda as json dict"""
+	if not hdaDef.hasSection(sectionName):
+		hdaDef.addSection(sectionName)
+		hdaDef.sections()[sectionName].setContents(dumps(default))
+	return loads(hdaDef.sections()[sectionName].contents())
+
+def setHDASectionDict(hdaDef:hou.HDADefinition, sectionName:str, data:dict):
+	if not hdaDef.hasSection(sectionName):
+		hdaDef.addSection(sectionName)
+	hdaDef.sections()[sectionName].setContents(dumps(data))
 
 def isTextHDANode(node:hou.Node):
 	return node.type().nameComponents()[2].lower() in ("texthda", )
 
 def setNodeToState(
-		node:hou.Node,
+		node:hou.OpNode,
 		state:dict
 ):
 	"""conform node exactly to the given state - this WILL
 	delete all non-tracked nodes and connections
-	TODO: test if this is faster than going through more carefully item by item
 
-	TODO: check where parent/leaf keys aren't getting passed properly
+	TODO: for this not to explode, we need to remove callbacks during editing
+		BUT to add the callback again, we need to refer to the top-level
+		nodefn function
+		I'm too dumb for this man
 	"""
+	# sorry
+	from .nodefn import addNodeInternalCallbacks, removeNodeInternalCallbacks
+	# sorry
+
 	#print("set node to state", node)
+	wasEditable = node.isEditable()
+	if wasEditable:
+		removeNodeInternalCallbacks(node)
+	else:
+		node.allowEditingOfContents(False)
 	node.deleteItems(node.children())
 	for nodePath, nodeData in state["nodes"].items():
 		createNodeFromHeader(node, nodeData)
@@ -731,7 +713,14 @@ def setNodeToState(
 	setChildrenConnectionData(node, state["connections"])
 	for nodePath, parmVals in state["parmVals"].items():
 		setNodeParamsFromText(node.node(nodePath), parmVals )
-
+	path = node.path()
+	node.type().definition().updateFromNode(node)
+	node : hou.OpNode = hou.node(path)
+	if wasEditable:
+		addNodeInternalCallbacks(node, inputRewired=False,
+		                         paramChanged=False, topNode=node)
+	else:
+		node.matchCurrentDefinition()
 
 # namespace to find texthda nodes declared in file -
 # one per name per active version
@@ -744,6 +733,48 @@ def hdaIsSavedToScene(hdaDef:hou.HDADefinition):
 def getRandomStringName()->str:
 	"""would be cool to have a random string of actual words
 	but for now uuid is fine"""
+
+
+def getTextHDANodeBundle()->hou.NodeBundle:
+	"""return a dumb node bundle to manually add nodes on creation,
+	for more efficient tracking of textHDAs by HDA definition and
+	def file"""
+	if not hou.nodeBundle(TEXT_HDA_BUNDLE_NAME):
+		hou.addNodeBundle(TEXT_HDA_BUNDLE_NAME)
+	return hou.nodeBundle(TEXT_HDA_BUNDLE_NAME)
+
+def allSceneTextHDANodes()->list[hou.OpNode]:
+	return getTextHDANodeBundle().nodes()
+
+def getSceneTextHDANodesByDef()->dict[str|Path, list[hou.OpNode]]:
+	result = {}
+	for i in allSceneTextHDANodes():
+		defStr = i.parm(ParmNames.defFile).evalAsString().strip()
+		if "." in defStr and "/" in defStr:
+			key = Path(defStr)
+		else:
+			key = defStr
+		if not key in result:
+			result[key] = []
+		result[key].append(i)
+	return result
+
+"""we use a separate node bundle for each def, to check when they need 
+updating?
+nah just build maps on the fly
+"""
+
+def getDefAffectedNodeMap()->dict[str|Path, list[hou.OpNode]]:
+	result = defaultdict(list)
+	for i in allSceneTextHDANodes():
+		textHda = TextHDANode(i)
+		affectingDefs = textHda.parentDefs()
+		if not textHda.editingAllowed():
+			affectingDefs += [textHda.defFile()]
+		for parentDef in affectingDefs:
+			result[parentDef].append(i)
+	return result
+
 
 
 #_baseHDADef : hou.HDADefinition = None
@@ -1004,10 +1035,10 @@ class TextHDANode:
 		                      )
 
 	def getCachedParentState(self):
-		print("get cached parent state")
+		#print("get cached parent state")
 		if self._nodeCachedParentState() is None:
 			storedStates = self.parentStoredStates()
-			print("stored states:", storedStates)
+			#print("stored states:", storedStates)
 			self._setNodeCachedParentState(
 				mergeNodeStates({}, storedStates)
 			)
@@ -1031,7 +1062,7 @@ class TextHDANode:
 		definition
 
 		"""
-		print("fullReset:", self.node, resetParms)
+		#print("fullReset:", self.node, resetParms)
 		leafDef = self.hdaDef()
 		masterDef = getBaseTextHDADef()
 		assert masterDef
@@ -1071,7 +1102,7 @@ class TextHDANode:
 
 	def parentDefs(self)->list[Path]:
 		strs = [i.evalAsString() for i in self._parentParms(
-			ParmNames.parentFile) if i.evalAsString().strip()]
+			ParmNames.parentDef) if i.evalAsString().strip()]
 		return [Path(i) if defIsPath(i) else i for i in strs]
 
 	def parentBaseDatas(self)->list[ParentBaseData]:
@@ -1111,16 +1142,31 @@ class TextHDANode:
 	def reloadParentStates(self):
 		parentStates = []
 		parentParms = self._parentParms(ParmNames.parentNodeDelta)
+		sceneHdaMap = getSceneHDADefNodes()
 		for i, path in enumerate(self.parentDefs()):
-			if not path.is_file():
-				# nodes can't set warnings on other badges
-				# node.addWarning("Could not find parent file: " + str(i))
+			if not path:
 				continue
-			pathCachedFileMap = self.node.hdaModule().pathCachedFileMap
-			if path not in pathCachedFileMap:
-				pathCachedFileMap[path] = CachedFile(str(path))
+			if isinstance(path, Path):
+				if not path.is_file():
+					# nodes can't set warnings on other badges
+					# node.addWarning("Could not find parent file: " + str(i))
+					continue
+				pathCachedFileMap = self.node.hdaModule().pathCachedFileMap
+				if path not in pathCachedFileMap:
+					pathCachedFileMap[path] = CachedFile(str(path))
 
-			baseData = pathCachedFileMap[path].readJson()
+				baseData = pathCachedFileMap[path].readJson()
+
+			else:  # def is string, look up in scene
+				hdaDef = sceneHdaMap.get(path)
+				if not hdaDef:
+					continue
+				hdaDef = hdaDef[0].type().definition()
+				baseData = getHDASectionDict(hdaDef,
+				                                HDA_DELTA_SECTION_NAME, {})
+				if not baseData:
+					continue
+
 			parentStates.append(baseData)
 			parentParms[i].set(dumps(baseData))
 
@@ -1129,6 +1175,13 @@ class TextHDANode:
 		)
 		self._setNodeCachedParentState(incomingState)
 		return incomingState
+
+	def syncNodeState(self):
+		"""update node from incoming and leaf data"""
+		incomingState = self.reloadParentStates()
+		leafState = self.nodeLeafStoredState()
+		combinedState = mergeNodeStates(incomingState, leafState)
+		setNodeToState(self.node, combinedState)
 
 	def nodeLeafDeltaParm(self)->hou.Parm:
 		return self.node.parm(ParmNames.localEdits)

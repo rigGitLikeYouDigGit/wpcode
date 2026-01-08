@@ -85,7 +85,8 @@ class ParmNames:
 	# parent folder
 	parentDir = "parentfolder"#
 	# these are all suffixed "#"
-	parentFile = "parentfile"
+	parentDef = "parentdef"
+	parentVersion = "parentversion"
 	parentNodeDelta = "parentnodedelta"
 	parentNodeLocalOverride = "parentnodemanualdelta"
 	recursiveParents = "recursiveparentsbox"
