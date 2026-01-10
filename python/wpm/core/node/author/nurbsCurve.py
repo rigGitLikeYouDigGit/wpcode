@@ -3,7 +3,8 @@ import typing as T
 
 from ..gen.nurbsCurve import NurbsCurve as GenNurbsCurve
 import numpy as np
-from wpm import cmds, om, WN, to, arr
+from wpm import cmds, om, WN, arr
+from wplib.totype import to
 from wplib import log
 
 from wpm.lib import curve

@@ -17,7 +17,8 @@ from dataclasses import dataclass
 from wplib import log, Sentinel
 from wplib.wpstring import sliceFromString
 from wplib.sequence import flatten, isSeq, toSeq, firstOrNone, getFirst
-from wplib.object import TypeNamespace, Broadcaster, ToType, to
+from wplib.object import TypeNamespace, Broadcaster
+from wplib.totype import ToType, to
 from wptree import Tree
 
 from .bases import PlugBase

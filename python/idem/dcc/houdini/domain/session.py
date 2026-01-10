@@ -4,7 +4,8 @@ import pprint
 from wplib import log
 
 
-from wplib import to, toArr
+from wplib import toArr
+from wplib.totype import to
 from idem.dcc.abstract import DCCIdemSession
 from idem.dcc.abstract.command import *
 import hou

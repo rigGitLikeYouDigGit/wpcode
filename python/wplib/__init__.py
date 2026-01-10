@@ -13,11 +13,11 @@ This should depend on nothing else in wp, or any other project.
 import sys
 _sitePackagePath = ""
 if sys.version.startswith("3.7"):
-	_sitePackagePath = "C:\Python37\Lib\site-packages"
+	_sitePackagePath = "C:/Python37/Lib/site-packages"
 if sys.version.startswith("3.9"):
-	_sitePackagePath = "C:\Python39\Lib\site-packages"
+	_sitePackagePath = "C:/Python39/Lib/site-packages"
 elif sys.version.startswith("3.11"):
-	_sitePackagePath = "C:\Python311\Lib\site-packages"
+	_sitePackagePath = "C:/Python311/Lib/site-packages"
 if _sitePackagePath:
 	if not _sitePackagePath in sys.path:
 		sys.path.append(_sitePackagePath)
@@ -37,7 +37,6 @@ def EVAL(x):
 
 from wplib.object import Adaptor, TypeNamespace, Sentinel
 
-from .coerce import coerce
 
 # get root of WP installation if found
 # if you only want to use wplib and not the vfx packages, this can be ignored
@@ -73,6 +72,6 @@ except AssertionError:
 # extra convenience imports
 from .pathable import Pathable
 
-from .object import to
-
 from .maths import toArr, arr
+
+from .totype import to, ToType, coerce

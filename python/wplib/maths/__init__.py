@@ -8,7 +8,9 @@ import numpy as np
 """in future, probably split this off into
 a top-level package wpmaths
 """
-from wplib.object import Adaptor, ToType, to
+from wplib.object import Adaptor
+from wplib.totype import ToType, to
+
 
 def arr(obj, dtype=None, copy=None, **kwargs)->np.ndarray:
 	return to(obj, np.ndarray, dtype=dtype, copy=copy, **kwargs)

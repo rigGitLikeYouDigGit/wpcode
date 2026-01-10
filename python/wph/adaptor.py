@@ -4,8 +4,8 @@ import pprint
 from wplib import log
 
 import numpy as np
-from wplib import to, toArr
-from wplib.object import ToType
+from wplib import toArr
+from wplib.totype import ToType, to
 
 import hou
 

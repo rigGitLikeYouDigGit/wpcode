@@ -8,7 +8,8 @@ from wplib.object import VisitAdaptor
 from wpdex import WpDex
 from wptree import Tree
 from wpui import lib
-from wplib.maths import arr, NPArrayLike, ToType, to
+from wplib.maths import arr, NPArrayLike
+from wplib.totype import ToType, to
 from wplib.object import OverrideProvider
 
 q1DEdge = ToType(

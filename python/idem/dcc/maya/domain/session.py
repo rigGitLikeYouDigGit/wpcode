@@ -7,7 +7,8 @@ from wplib import log
 
 
 
-from wplib import to, toArr
+from wplib import toArr
+from wplib.totype import to
 from wpm import cmds, om, WN
 
 from idem.dcc.abstract import DCCIdemSession

@@ -7,7 +7,8 @@ import numpy as np
 from wplib import log
 
 
-from wplib.maths import NPArrayLike, arr, to, ToType, toArr
+from wplib.maths import NPArrayLike, arr, toArr
+from wplib.totype import ToType, to
 from wpm.core import cmds, om
 import maya.api.OpenMaya as om_
 

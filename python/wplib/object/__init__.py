@@ -1,5 +1,5 @@
 
-from .adaptor import Adaptor, ToType, to
+from .adaptor import Adaptor
 from .attrdict import AttrDict, TDefDict
 
 from .broadcast import Broadcaster
@@ -39,3 +39,4 @@ from .singleton import SingletonDecorator
 from .stringlike import StringLike
 
 from .visitor import DeepVisitor, DeepVisitOp, VisitObjectData, VisitPassParams, Visitable, VisitAdaptor
+from ..totype import ToType, to

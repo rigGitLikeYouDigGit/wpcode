@@ -5,7 +5,8 @@ from wplib import log
 
 from ..gen.addDoubleLinear import AddDoubleLinear as GenAddDoubleLinear
 import numpy as np
-from wpm import cmds, om, WN, to, arr, Plug, PLUG_VAL
+from wpm import cmds, om, WN, arr, Plug, PLUG_VAL
+from wplib.totype import to
 
 
 class AddDoubleLinear(GenAddDoubleLinear):

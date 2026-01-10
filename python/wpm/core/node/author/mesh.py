@@ -3,7 +3,8 @@ import typing as T
 
 from ..gen.mesh import Mesh as GenMesh
 import numpy as np
-from wpm import cmds, om, WN, to, arr
+from wpm import cmds, om, WN, arr
+from wplib.totype import to
 
 if T.TYPE_CHECKING:
 	from ...node.base import Plug

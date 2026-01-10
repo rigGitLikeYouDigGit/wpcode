@@ -3,7 +3,9 @@ import typing as T
 
 from ..gen.transform import Transform as GenTransform
 import numpy as np
-from wpm import cmds, om, WN, to, arr
+from wpm import cmds, om, WN, arr
+from wplib.totype import to
+
 
 class Transform(GenTransform):
 	""" moving nodes around in a more fluid way than walls
