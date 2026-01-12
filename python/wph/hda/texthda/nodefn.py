@@ -11,7 +11,7 @@ from PySide6 import QtWidgets, QtCore, QtGui
 from . import gather, types
 reload(gather)
 reload(types)
-from .gather import mergeNodeStates, TextHDANode
+from .gather import mergeNodeStates, TextHDANode, dbg
 from .types import ParmNames, CachedFile, loads, dumps
 """direct functions called by textHDA node
 TODO: we duplicate a bit between onDefChanged and onAllowEditingChanged - 
@@ -22,7 +22,14 @@ then trying to set info inside it
 unlock asset each time?
 or just match to definition should be enough
 
+
+setting parametres under leaf params is only allowed / preserved when editing 
+allowed, otherwise they're just untracked leaf attributes as with any other
+kind of hda
+
 """
+
+
 
 def getMultiFolderChildParm(folderParm:hou.Parm, name:str, folderIndex=0,
                             nParmsPerFolder=3):
@@ -44,77 +51,183 @@ INTERNAL_EVENT_TYPES = [
 	hou.nodeEventType.IndirectInputCreated,
 	hou.nodeEventType.IndirectInputRewired,
 	hou.nodeEventType.IndirectInputDeleted,
+
+	hou.nodeEventType.SpareParmTemplatesChanged
 ]
 
+class HoudiniCallbackFn:
+	"""using callable objects for easier identification, since
+	we can't otherwise distinguish between 2 callbacks set for the
+	same event type.
+
+	this means you need a 2-step lookup to get the top node and
+	kwargs from this object in the actual function, but we live with it
+	"""
+	def __init__(self, fn, *args, **kwargs):
+		self.fn = fn
+		self.args = args
+		self.kwargs = kwargs
+	def __call__(self, *args, **kwargs):
+		self.fn(*args, callbackObj=self, **kwargs)
+
+def isinstanceReloadSafe(obj, types):
+	""" got that junior drip
+	got that day-4 python dev drip
+	quirked up intern boy with a little swag
+	"""
+	if not isinstance(types, (tuple, list)):
+		types = (types,)
+	return any(type(obj).__name__ in (base.__name__ for base in i.__mro__)
+	           for i in types
+	)
+
+NODE_INTERNAL_CB_NAME = "nodeInternalCallback"
+
+@dbg
 def addNodeInternalCallbacks(node:hou.OpNode, inputRewired=False,
                              paramChanged=True,
                              topNode:hou.OpNode=None):
 	print("addNodeInternalCallbacks:", node)
 	typesToAdd = INTERNAL_EVENT_TYPES
+	cb = HoudiniCallbackFn(
+		onNodeInternalChanged, topNode=topNode,
+		name=NODE_INTERNAL_CB_NAME
+	)
 	if inputRewired:
 		typesToAdd = typesToAdd + [hou.nodeEventType.InputRewired]
 	if paramChanged: # don't set this on top node
 		typesToAdd = typesToAdd + [hou.nodeEventType.ParmTupleChanged]
-	for i in typesToAdd:
-		node.addEventCallback(
-			(i,),
-			lambda *args, **kwargs : onNodeInternalChanged(
-				*args,
-			           topNode=topNode or node,
-	                   **kwargs)
-		)
 
+	node.addEventCallback(
+		tuple(typesToAdd), cb
+	)
+	# for i in typesToAdd:
+	# 	node.addEventCallback(
+	# 		(i,),
+	# 		lambda *args, **kwargs : onNodeInternalChanged(
+	# 			*args,
+	# 		           topNode=topNode or node,
+	#                    **kwargs)
+	# 	)
+
+@dbg
 def removeNodeInternalCallbacks(node:hou.OpNode):
-	print("removeNodeInternalCallbacks:", node)
-	for i in INTERNAL_EVENT_TYPES + [hou.nodeEventType.InputRewired, hou.nodeEventType.ParmTupleChanged] :
-		# node.removeEventCallback(
-		# 	(i,),
-		# 	# lambda *a, **k : onNodeInternalChanged(node )
-		# 	onNodeInternalChanged
-		# )
-		try:
-			node.removeEventCallback(
-			(i,),
-				# lambda *a, **k : onNodeInternalChanged(node )
-				onNodeInternalChanged
-			)
-		except Exception as e:
-			continue
-			print("error removing callback with event:", i)
-			traceback.print_exc()
-			pass
+	#print("removeNodeInternalCallbacks:", node)
+	for eventTypes, cbFn in tuple(node.eventCallbacks()):
+		# print("check", eventTypes, cbFn, isinstanceReloadSafe(cbFn,
+		#                                                 HoudiniCallbackFn))
+		if isinstanceReloadSafe(cbFn, HoudiniCallbackFn) and cbFn.kwargs["name"] == NODE_INTERNAL_CB_NAME:
+			#print("removing callback:", eventTypes, cbFn)
+			node.removeEventCallback(eventTypes, cbFn)
 
+	# print("events after:")
+	# for i in node.eventCallbacks():
+	# 	print(i)
+
+
+PARENT_LEAF_PARAM_CB_NAME = "parentLeafCallback"
+
+@dbg
+def addHDAParamCallbacks(node:hou.OpNode):
+	"""add callback to trigger whenever leaf or overridden params change
+	on this node
+	"""
+	callback = HoudiniCallbackFn(
+		onHDAParentOrLeafParamChanged,
+		name=PARENT_LEAF_PARAM_CB_NAME
+	)
+	cbParmNames = []
+	hda = TextHDANode(node)
+	for leafPt in hda.leafHDAParmTemplates():
+		cbParmNames.append(leafPt.name())
+	# for parentPt in hda.parentHDAParmTemplates():
+	# 	if "PARENT_" in parentPt.name() or "OVERRIDE_" in parentPt.name():
+	# 		continue
+
+	callback.kwargs["cbParmNames"] = cbParmNames
+	node.addParmCallback(
+		callback,
+		tuple(cbParmNames)
+	)
+
+@dbg
+def removeHDAParamCallbacks(node:hou.OpNode):
+	for i in node.eventCallbacks():
+		if isinstanceReloadSafe(i[1], HoudiniCallbackFn):
+			if i[1].kwargs["name"] == PARENT_LEAF_PARAM_CB_NAME:
+				node.removeEventCallback(i[0], i[1])
+
+@dbg
+def syncHDAParamCallback(node:hou.OpNode):
+	"""add callback to trigger whenever leaf or overridden params change
+	on this node
+
+	parent OVERRIDDEN param only acts at node level -
+		if we want further nodes to inherit those overrides, then
+		node has to be made a new def, and those parms moved up to leaf section
+
+	so we actually don't care at all about parent params?
+	"""
+	removeHDAParamCallbacks(node)
+	addHDAParamCallbacks(node)
+
+@dbg
+def onHDAParentOrLeafParamChanged(node,
+                                  callbackObj:HoudiniCallbackFn=None,
+                                  **kwargs):
+	"""runs whenever leaf or parent param in folder changes
+	"""
+
+@dbg
+def onHDAParmTemplateChanged(node:hou.OpNode, *args, callbackObj=None, **kwargs):
+	"""runs whenever a leaf or parent parm template changes -
+	discard IMMEDIATELY unless it concerns leaf"""
+
+
+
+@dbg
 def onNodeCreated(node:hou.OpNode, *args, **kwargs):
 	"""attach callback to node, add it to the
 	main TextHDA node bundle"""
-	hdaNode = TextHDANode(node)
-	node.setExpressionLanguage(hou.exprLanguage.Python)
-	if not hdaNode.defFileParm().evalAsString():
-		hdaNode.editingAllowedParm().disable(True)
+	print("onNodeCreated:", node)
+
 	bundle = gather.getTextHDANodeBundle()
 	bundle.addNode(node)
+	hdaNode = TextHDANode(node)
+	node.setExpressionLanguage(hou.exprLanguage.Python)
+	hdaNode.setWorking(False)
+	with hdaNode.workCtx():
+		if not hdaNode.defFileParm().evalAsString():
+			hdaNode.editingAllowedParm().disable(True)
+		print("textHda created:", node)
+		print("nodes in bundle:", gather.allSceneTextHDANodes())
 
-	print("textHda created:", node)
-	print("nodes in bundle:", gather.allSceneTextHDANodes())
-
+@dbg
 def onNodeLoaded(node:hou.OpNode, *args, **kwargs):
 	"""runs when node loaded during opening scene - apparently
 	either this or onNodeCreated runs, never both"""
-	hdaNode = TextHDANode(node)
-	node.setExpressionLanguage(hou.exprLanguage.Python)
-	if not hdaNode.defFileParm().evalAsString():
-		hdaNode.editingAllowedParm().disable(True)
+	print("onNodeLoaded:", node)
+
 	bundle = gather.getTextHDANodeBundle()
 	bundle.addNode(node)
-	onAllowEditingChanged(node)
+
+	hdaNode = TextHDANode(node)
+	hdaNode.setWorking(False)
+	node.setExpressionLanguage(hou.exprLanguage.Python)
+	with hdaNode.workCtx():
+		if not hdaNode.defFileParm().evalAsString():
+			hdaNode.editingAllowedParm().disable(True)
+
+	#onAllowEditingChanged(node)
 
 """analysing hda section infos:
 nothing in either ExtraFileOptions or InternalFileOptions
 
 """
-
+@dbg
 def onNodeDeleted(node:hou.Node, type:hou.OpNodeType, *args, **kwargs):
 	hdaDef : hou.HDADefinition = type.definition()
+	print("on node deleted:", node, hdaDef)
 	if hdaDef == gather.getBaseTextHDADef():
 		print("is base def, skipping")
 		return
@@ -123,6 +236,7 @@ def onNodeDeleted(node:hou.Node, type:hou.OpNodeType, *args, **kwargs):
 		print("not instances, destroying")
 		hdaDef.destroy()
 
+@dbg
 def onNodeLastDeleted(*args, **kwargs):
 	"""called after the last instance of an HDA definition is deleted from
 	scene; NB this includes DERIVED definitions too.
@@ -138,7 +252,7 @@ def onNodeLastDeleted(*args, **kwargs):
 	print("deleting")
 	hdaDef.destroy()
 
-
+@dbg
 def onNodeNameChanged(node:hou.Node, *args, **kwargs):
 	"""here's a silly(?) idea - since we give every textHDA node its own HDA
 	definition, link the name of the definition
@@ -151,13 +265,21 @@ def onNodeNameChanged(node:hou.Node, *args, **kwargs):
 	else:
 		hda.fullReset(resetParms=False)
 
+@dbg
+def onHdaUpdated(kwargs):
+	"""callback whenever HDA definition is updated
+	"""
+
+
+
 def onChildNodeCreated(rootTextNode:hou.Node, *args, **kwargs):
 	"""also propagate callback to children contained"""
 
+@dbg
 def onNodeInternalChanged(
 		node:hou.Node,
 		event_type:hou.nodeEventType,
-		topNode:hou.OpNode,
+		#topNode:hou.OpNode,
 		*args, **kwargs):
 	"""
 	this should ONLY fire if node is open for editing
@@ -171,13 +293,23 @@ def onNodeInternalChanged(
 	node is whatever callback is called on; topNode is the top TextHDA to use for deltas
 
 	"""
+	cbObj : HoudiniCallbackFn = kwargs["callbackObj"]
+	topNode = cbObj.kwargs["topNode"]
 	#print("node internal changed:", topNode, node, event_type, args, kwargs)
 	hda = TextHDANode(topNode)
 	if hda.isWorking():
 		print("working, skipping internal", node)
 		return
-	# if not node.parm(ParmNames.liveUpdate).eval():
-	# 	return
+
+	# if allowEditing, skip, it's already taken care of in separate callback
+	if event_type == hou.nodeEventType.ParmTupleChanged:
+		# sometimes it can be a parmtuple event with parmtuple given as None
+		if kwargs.get("parm_tuple"):
+			parm_tuple : hou.ParmTuple = kwargs["parm_tuple"]
+			if parm_tuple.name() == ParmNames.allowEditing:
+				return
+		return
+
 	if not hou.node(node.path()): # already deleted
 		return
 	if not hou.node(topNode.path()): # already deleted
@@ -192,12 +324,22 @@ def onNodeInternalChanged(
 
 		# update other nodes in scene
 		dependencyMap = gather.getDefAffectedNodeMap()
+		print("affected node map:")
+		pprint.pprint(dependencyMap)
 		for i in dependencyMap[hda.defFile()]:
+			if i.path() == node.path():
+				continue
 			otherTextHda = TextHDANode(i)
+			print("SYNC DEPENDENT NODE:", i)
 			otherTextHda.syncNodeState()
 
-
-"""nick carver youtube"""
+@dbg
+def sync_node(node:hou.Node, ):
+	"""
+	overall control function whenever any part of node changes -
+	check if we need to switch editing mode, then if node should
+		sync data
+	"""
 
 def onNodeOperationErrored(*args, **kwargs):
 	"""automatically press undo after node errors -
@@ -229,6 +371,7 @@ def getHDAsDefinedInScene()->list[hou.HDADefinition]:
 	"""return list of all scene-bound hdas.
 	baked textHDA hdas are always going to be scene-bound"""
 
+@dbg
 def pullLocalNodeState(node:hou.Node):
 	hda = TextHDANode(node)
 	if not hda.hdaDef():
@@ -262,7 +405,7 @@ def pullLocalNodeState(node:hou.Node):
 		#print(toSave)
 		return leafDelta
 
-
+@dbg
 def refreshParentBasesRegenNode(node:hou.Node, leafDelta:dict=None)->bool:
 	"""sync parent bases, regenerate node data
 	if leafDelta not given, pull from node params
@@ -308,6 +451,7 @@ def refreshParentBasesRegenNode(node:hou.Node, leafDelta:dict=None)->bool:
 def onResetToBasesBtnPressed(node:hou.Node):
 	pass
 
+@dbg
 def onHardResetBtnPressed(node:hou.Node):
 	hdaNode = TextHDANode(node)
 	with hdaNode.workCtx():
@@ -318,6 +462,7 @@ def onHardResetBtnPressed(node:hou.Node):
 def onLiveUpdateChanged(node:hou.OpNode, *args, **kwargs):
 	pass
 
+@dbg
 def onParentDefNameChanged(node:hou.Node, kwargs):
 	print("parent def name changed:", node, kwargs)
 	hda = TextHDANode(node)
@@ -328,7 +473,8 @@ def onParentDefNameChanged(node:hou.Node, kwargs):
 def onParentDefVersionChanged(node:hou.Node, parm:hou.Parm):
 	pass
 
-def onSyncBtnPressed(node:hou.Node):
+@dbg
+def onSyncBtnPressed(node:hou.OpNode):
 	"""sync node:
 	retrieve sources, recombine deltas, reapply local deltas on node,
 	then regenerate node internals
@@ -348,9 +494,12 @@ def onSyncBtnPressed(node:hou.Node):
 	print("SYNC:")
 	print(":")
 	hda = TextHDANode(node)
+	if hda.isWorking():
+		return
 	with hda.workCtx():
-		leafDelta = pullLocalNodeState(node)
-		refreshParentBasesRegenNode(node, leafDelta)
+		hda.syncNodeState()
+		# leafDelta = pullLocalNodeState(node)
+		# refreshParentBasesRegenNode(node, leafDelta)
 
 
 def onClearLeafPressed(node, *args, **kwargs):
@@ -360,7 +509,7 @@ def onClearLeafPressed(node, *args, **kwargs):
 		hda.nodeLeafDeltaParm().set("")
 		refreshParentBasesRegenNode(node)
 
-
+@dbg
 def onDefFileLineChanged(node:hou.Node, kwargs):
 	"""check if file is valid, try and resolve valid one etc
 	set new value on def file line if possible, if not,
@@ -405,6 +554,7 @@ def onDefFileLineChanged(node:hou.Node, kwargs):
 def onSelectDefBtnPressed(node:hou.Node, kwargs):
 	print("selectDef btn pressed")
 
+@dbg
 def onAllowEditingChanged(node:hou.OpNode, *args, **kwargs):
 	"""create a new embedded hda def
 	and open up node for editing
@@ -416,8 +566,7 @@ def onAllowEditingChanged(node:hou.OpNode, *args, **kwargs):
 
 	"""
 	hda = TextHDANode(node)
-	print("on editing changed", hda.editingAllowed(),
-	      bool(hda.editingAllowed()))
+
 	if hda.isWorking():
 		print("node still working, aborting")
 		return
@@ -428,11 +577,13 @@ def onAllowEditingChanged(node:hou.OpNode, *args, **kwargs):
 		return
 	with hda.workCtx():
 		node = hda.node
-		print(hda.editingAllowed(), bool(hda.editingAllowed()))
 		if hda.editingAllowed():
 			print("editing allowed")
-			addNodeInternalCallbacks(node, inputRewired=False,
-			                         paramChanged=False, topNode=node)
+			# addNodeInternalCallbacks(node, inputRewired=False,
+			#                          #paramChanged=False,
+			#                          paramChanged=True,
+			#                          topNode=node)
+			syncHDAParamCallback(hda.node)
 			node.allowEditingOfContents(False)
 			for i in node.allSubChildren(recurse_in_locked_nodes=False):
 				addNodeInternalCallbacks(i, inputRewired=True, topNode=node)
@@ -495,7 +646,7 @@ def getDefMenuItems(kwargs)->list[str]:
 
 
 
-
+@dbg
 def onLeafFilePathChanged(node:hou.Node, parm:hou.Parm, *args, **kwargs):
 	"""try and extract a version from the path, set that on the version menu if not the latest one
 	if allowEditing is not checked, conform node to new path
@@ -525,7 +676,7 @@ def onLeafTextChanged(node:hou.Node, parm:hou.Parm, *args, **kwargs):
 	"""don't necessarily do anything"""
 	pass
 
-
+@dbg
 def onParentFilePathChanged(node:hou.Node, parm:hou.Parm, *args, **kwargs):
 	"""if no leaf data is set, disable editing by default -
 	this is a newly created node being directly set to existing definition"""

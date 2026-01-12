@@ -22,6 +22,20 @@ importlib.reload(types)
 
 from .types import NodeHeader, ParmNames, CachedFile, dumps, loads
 
+_dbgDepth = 0
+def dbg(fn):
+	def wrapper(*args, **kwargs):
+		global _dbgDepth
+		_dbgDepth += 1
+		try:
+			print("|--" * _dbgDepth, fn.__name__, args, kwargs)
+			return fn(*args, **kwargs)
+		finally:
+			_dbgDepth -= 1
+			# globals()["print"] = lambda *a, dbgDepth=_dbgDepth, printFn=globals()["print"],**k : printFn(
+			# 	"\t" *
+			#                                            dbgDepth, *a, **k)
+	return wrapper
 
 """extract node deltas then params - 
 for each node ref, save name and uid to allow both means
@@ -44,6 +58,10 @@ gridBase_v01_textHDA.json
 I really can't explain the mental block I have with writing houdini python
 code, I go in with the best intentions and it immediately turns to 
 sweater spaghetti
+
+for overriding parent attrs, provide 3 params for each - 
+locked SUPER_attr , showing original value always, OVERRIDE_attr checkbox,
+allowing local editing of the actual named attr
 
 """
 
@@ -181,6 +199,7 @@ def getNodeHeader(node:hou.Node, rootNode:hou.Node):
 	                  truncate2Places(node.position()[0]),
 			truncate2Places(node.position()[1])]
 
+@dbg
 def createNodeFromHeader(rootNode:hou.Node, header:NodeHeader):
 	"""create a new node from the given header: path and node type.
 
@@ -390,7 +409,12 @@ def getParmDialogScripts(node:hou.Node)->dict[str]:
 	for p in node.spareParms():
 		p : hou.Parm
 		template = p.parmTemplate()
-		ptg = hou.ParmTemplateGroup([template])
+		try:
+			"""sometimes fails with 'sequence of parm templates cannot 
+			include FolderSetParmTemplates', whole system is insane"""
+			ptg = hou.ParmTemplateGroup([template])
+		except hou.OperationFailed:
+			continue
 		result[p.name()] = makeSafeForJson(ptg.asDialogScript())
 	return result
 
@@ -483,7 +507,7 @@ def iterNodesToTrack(topNode:hou.Node)->list[hou.Node]:
 
 paramsToIgnore = list(ParmNames.__dict__.values())
 
-
+@dbg
 def getFullNodeState(
 		node:hou.Node
 )->dict:
@@ -679,6 +703,7 @@ def setHDASectionDict(hdaDef:hou.HDADefinition, sectionName:str, data:dict):
 def isTextHDANode(node:hou.Node):
 	return node.type().nameComponents()[2].lower() in ("texthda", )
 
+@dbg
 def setNodeToState(
 		node:hou.OpNode,
 		state:dict
@@ -692,13 +717,16 @@ def setNodeToState(
 		I'm too dumb for this man
 	"""
 	# sorry
-	from .nodefn import addNodeInternalCallbacks, removeNodeInternalCallbacks
+	from .nodefn import (addNodeInternalCallbacks,
+	                     removeNodeInternalCallbacks,
+	                     removeHDAParamCallbacks, addHDAParamCallbacks)
 	# sorry
 
 	#print("set node to state", node)
 	wasEditable = node.isEditable()
 	if wasEditable:
-		removeNodeInternalCallbacks(node)
+		#removeNodeInternalCallbacks(node)
+		removeHDAParamCallbacks(node)
 	else:
 		node.allowEditingOfContents(False)
 	node.deleteItems(node.children())
@@ -717,8 +745,9 @@ def setNodeToState(
 	node.type().definition().updateFromNode(node)
 	node : hou.OpNode = hou.node(path)
 	if wasEditable:
-		addNodeInternalCallbacks(node, inputRewired=False,
-		                         paramChanged=False, topNode=node)
+		# addNodeInternalCallbacks(node, inputRewired=False,
+		#                          paramChanged=False, topNode=node)
+		addHDAParamCallbacks(node)
 	else:
 		node.matchCurrentDefinition()
 
@@ -745,7 +774,7 @@ def getTextHDANodeBundle()->hou.NodeBundle:
 
 def allSceneTextHDANodes()->list[hou.OpNode]:
 	return getTextHDANodeBundle().nodes()
-
+@dbg
 def getSceneTextHDANodesByDef()->dict[str|Path, list[hou.OpNode]]:
 	result = {}
 	for i in allSceneTextHDANodes():
@@ -763,15 +792,19 @@ def getSceneTextHDANodesByDef()->dict[str|Path, list[hou.OpNode]]:
 updating?
 nah just build maps on the fly
 """
-
+@dbg
 def getDefAffectedNodeMap()->dict[str|Path, list[hou.OpNode]]:
 	result = defaultdict(list)
 	for i in allSceneTextHDANodes():
 		textHda = TextHDANode(i)
 		affectingDefs = textHda.parentDefs()
 		if not textHda.editingAllowed():
+			if not textHda.defFile():
+				continue
 			affectingDefs += [textHda.defFile()]
 		for parentDef in affectingDefs:
+			if not parentDef:
+				continue
 			result[parentDef].append(i)
 	return result
 
@@ -812,7 +845,7 @@ def getEmbeddedTextHDADefs()->list[tuple[hou.NodeType, hou.HDADefinition]]:
 so we need a separate hda def for each sequence of parent defs,
 plus a hda def for each node.
 """
-
+@dbg
 def deleteHDADefIfUnused(hdaDef:hou.HDADefinition):
 	try:
 		try:
@@ -824,6 +857,7 @@ def deleteHDADefIfUnused(hdaDef:hou.HDADefinition):
 	except hou.ObjectWasDeleted: # already cleaned up
 		pass
 
+@dbg
 def createLocalTextHDADefinition(
 		node:hou.OpNode,
 		newId,
@@ -832,15 +866,9 @@ def createLocalTextHDADefinition(
 	"""we just give each node its own hda whenever it's edited away
 	from the raw textHDA baseline.
 
-
 	in order to save the hdamodule on the new node hda type,
 	we copy the original node and update the new definition
 	from it before deleting it
-
-	or maybe we stop trying to pack all this stuff into a single name,
-	make title descriptive but don't worry about uniqueness - later
-	add more support on the selection side, if subsequent textHDA nodes
-	need to refer to this one
 
 	TODO: if I'm reading the docs right, there's a way to set HDA section
 		contents paths to actual filenames? unsure if that would allow
@@ -947,6 +975,34 @@ def hdaDefNameFromDefFile(defStr:str, edit=False)->str:
 		defStr = defStr + "_EDIT"
 	return defStr + "_TextHDA"
 
+def makePTGForParentParm(
+		pt:hou.ParmTemplate,
+)->hou.ParmTemplateGroup:
+	"""add new ptg to represent single param -
+	- PARENT_parmName is disabled display of exact value on parent class
+	- OVERRIDE_parmName is checkbox to say whether this value is overridden
+	- parmName is the actual parmName.
+
+	how should we handle actually overriding parm names from parents in leaf?
+	- at parent parm gen time, if parm with matching name is found in leaves,
+		just defer to that
+
+	"""
+	ptg = hou.ParmTemplateGroup()
+	leafParmName = pt.name()
+	if "LEAF_" in leafParmName:
+		leafParmName = leafParmName.replace("LEAF_", "")
+	parentPt = pt.clone()
+	parentPt.setName(f"PARENT_{leafParmName}")
+	parentPt.setLabel("Parent value:")
+	overridePt = hou.ToggleParmTemplate(
+		f"OVERRIDE_{leafParmName}", "Override?")
+	ptg.addParmTemplate(pt)
+	ptg.addParmTemplate(overridePt)
+	ptg.addParmTemplate(parentPt)
+	return ptg
+
+
 class TextHDAWorkContext:
 	"""context to only set working state on outermost level
 	need to keep """
@@ -980,11 +1036,12 @@ class TextHDANode:
 	and a temporary hda definition to allow editing
 	"""
 
-	def __init__(self, node:hou.Node):
+	def __init__(self, node:hou.OpNode):
 		self.node = node
 
 	"""use working state to prevent looping signals
 	when internal processes change attributes"""
+	@dbg
 	def setWorking(self, state=True):
 		print("setting working state to", state,self.node)
 		self.node.setUserData("_working", str(int(state)))
@@ -998,6 +1055,32 @@ class TextHDANode:
 	def workCtx(self)->TextHDAWorkContext:
 		ctx = TextHDAWorkContext(self)
 		return ctx
+
+	def lastHash(self)->int:
+		return int(self.node.userData("_lastHash") or -1)
+	def setLastHash(self, v:int):
+		self.node.setUserData("_lastHash", str(v))
+	def getHash(self)->int:
+		"""run over this and all contained nodes and get their hash -
+		use to avoid double-firing event signals
+		"""
+		# this is probably SUPER slow but for now it works
+		data = self.node.asData(
+			nodes_only=True,
+			children=True,
+			editables=True,
+			inputs=True,
+			position=True,
+			flags=True,
+			parms=True,
+			default_parmvalues=False,
+			evaluate_parmvalues=False,
+			parms_as_brief=True,
+			parmtemplates="spare_only",
+			metadata=False,
+			verbose=False
+		)
+		return hash(str(data))
 
 	def defFileParm(self)->hou.Parm:
 		return self.node.parm(ParmNames.defFile)
@@ -1033,7 +1116,7 @@ class TextHDANode:
 	def _setNodeCachedParentState(self, data):
 		self.node.setUserData("cachedParentState", dumps(data)
 		                      )
-
+	@dbg
 	def getCachedParentState(self):
 		#print("get cached parent state")
 		if self._nodeCachedParentState() is None:
@@ -1056,6 +1139,7 @@ class TextHDANode:
 			self.node = newNode
 		return self.hdaDef()
 
+	@dbg
 	def fullReset(self, resetParms=False):
 		"""reset node to base textHDA definition
 		ok FUN FACT, destroy() will absolutely delete the file of an HDA's
@@ -1139,6 +1223,7 @@ class TextHDANode:
 				return True
 		return False
 
+	@dbg
 	def reloadParentStates(self):
 		parentStates = []
 		parentParms = self._parentParms(ParmNames.parentNodeDelta)
@@ -1176,6 +1261,7 @@ class TextHDANode:
 		self._setNodeCachedParentState(incomingState)
 		return incomingState
 
+	@dbg
 	def syncNodeState(self):
 		"""update node from incoming and leaf data"""
 		incomingState = self.reloadParentStates()
@@ -1219,6 +1305,13 @@ class TextHDANode:
 
 	def parentHDAParmTemplates(self)->list[hou.ParmTemplate]:
 		return self.parentHDAParmFolderTemplate().parmTemplates()
+
+	def leafParmTuples(self)->list[hou.ParmTuple]:
+		return self.node.parmTuplesInFolder("Leaf HDA parms")
+
+	def parentParmTuples(self)->list[hou.ParmTuple]:
+		"""unstructured, ungrouped etc"""
+		return self.node.parmTuplesInFolder("Parent HDA parms")
 
 	def statusParm(self)->hou.Parm:
 		return self.node.parm("debuglabel")
