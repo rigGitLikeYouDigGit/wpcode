@@ -140,7 +140,7 @@ def hdaEmbeddedIdDefMap()->dict[str, hou.HDADefinition]:
 		result[i.nodeTypeName().lower()] = i
 	return result
 
-def availableTextHDADefs()->dict[str, dict[int, Path]]:
+def getFileHDADefs()->dict[str, dict[int, Path]]:
 	results = defaultdict(dict)
 	for hdaDir in hdaDefDirs:
 		dirPath = Path(hdaDir)
@@ -418,22 +418,26 @@ def getParmDialogScripts(node:hou.Node)->dict[str]:
 		result[p.name()] = makeSafeForJson(ptg.asDialogScript())
 	return result
 
+@dbg
 def getTextHDAParmDialogScripts(node:hou.Node):
 	"""special-case textHDA root nodes - maybe this isn't
 	necessary, but I don't want the system accidentally
 	erasing itself
 	"""
 	hda = TextHDANode(node)
+	print("leaf pts", hda.leafHDAParmTemplates())
 	# leafPtg = hou.ParmTemplateGroup(hda.leafHDAParmTemplates())
 	# parentPtg = hou.ParmTemplateGroup(hda.parentHDAParmTemplates())
 	result = {
-		"parent" : {i.name() : makeSafeForJson(hou.ParmTemplateGroup([
-			i]).asDialogScript())
-		            for i in hda.parentHDAParmTemplates()},
+		# "parent" : {i.name() : makeSafeForJson(hou.ParmTemplateGroup([
+		# 	i]).asDialogScript())
+		#             for i in hda.parentHDAParmTemplates()},
 		"leaf" : {i.name() : makeSafeForJson(hou.ParmTemplateGroup([
 			i]).asDialogScript())
 		          for i in hda.leafHDAParmTemplates()},
 	}
+	print("texthda dialog scripts:")
+	print(result)
 	return result
 
 def setTextHDAParmDialogScripts(node:hou.Node, data:dict):
@@ -514,32 +518,17 @@ def getFullNodeState(
 	"""get full snapshot of node -
 	prune at included text hda nodes
 	"""
-	print("getFullNodeState")
+	hda = TextHDANode(node)
 	nodes = iterNodesToTrack(node)
 	print("nodes", nodes)
 	# get params to add to the top node
 	baseParmTemplateGroup : hou.ParmTemplateGroup = node.parmTemplateGroup()
 	print("base ptg", baseParmTemplateGroup)
-	#
-	# for i, pt in tuple(
-	# 		enumerate(baseParmTemplateGroup.parmTemplates())):
-	# 	pt : hou.ParmTemplate
-	# 	# remove any parms the hda will always have:
-	# 	if any(s in pt.name() for s in paramsToIgnore):
-	# 		try:
-	# 			baseParmTemplateGroup.remove(pt)
-	# 		except: # may try to remove params after containing folder already removed
-	# 			pass
-	#print("removed ignored parms")
 
-	# parmTemplatesToAdd = {
-	# 	"." : baseParmTemplateGroup.asDialogScript(full_info=True)
-	# }
-	#
-	# parmTemplatesToAdd = {
-	# 	"." :
-	# }
-	#print("pts to add:", parmTemplatesToAdd)
+	# for i, pt in hda.leafHDAParmTemplates():
+	# 	parmTemplatesToAdd = {
+	# 		"." : baseParmTemplateGroup.asDialogScript(full_info=True)
+	# 	}
 	parmTemplatesToAdd = {}
 	for i in ([node] + nodes):
 		if isTextHDANode(i):
@@ -569,6 +558,8 @@ def getFullNodeState(
 		#"parmVals" : {node.relativePathTo(i) : getNodeParamText(i) for i in nodes}
 		"parmVals" : parmVals
 	}
+	print("result:")
+	pprint.pprint(result)
 
 	return result
 
@@ -700,8 +691,12 @@ def setHDASectionDict(hdaDef:hou.HDADefinition, sectionName:str, data:dict):
 		hdaDef.addSection(sectionName)
 	hdaDef.sections()[sectionName].setContents(dumps(data))
 
+@dbg
 def isTextHDANode(node:hou.Node):
-	return node.type().nameComponents()[2].lower() in ("texthda", )
+	"""return true if node is a textHDA root node"""
+	print("name components", node.type().nameComponents())
+	return any(i in node.type().nameComponents()[2].lower()
+	           for i in ("texthda", ))
 
 @dbg
 def setNodeToState(
@@ -788,10 +783,7 @@ def getSceneTextHDANodesByDef()->dict[str|Path, list[hou.OpNode]]:
 		result[key].append(i)
 	return result
 
-"""we use a separate node bundle for each def, to check when they need 
-updating?
-nah just build maps on the fly
-"""
+
 @dbg
 def getDefAffectedNodeMap()->dict[str|Path, list[hou.OpNode]]:
 	result = defaultdict(list)
@@ -1001,6 +993,14 @@ def makePTGForParentParm(
 	ptg.addParmTemplate(overridePt)
 	ptg.addParmTemplate(parentPt)
 	return ptg
+
+def syncHDAParentParms(
+		node:hou.OpNode,
+):
+	""""""
+	hda = TextHDANode(node)
+	for parentDef in hda.parentDefs():
+		hdaDef = getHda
 
 
 class TextHDAWorkContext:
@@ -1265,9 +1265,23 @@ class TextHDANode:
 	def syncNodeState(self):
 		"""update node from incoming and leaf data"""
 		incomingState = self.reloadParentStates()
+		# mark any incoming top-level params as parent
+		incomingState["parmTemplates"]["PARENT"] = incomingState[
+			"parmTemplates"]["LEAF"]
+		incomingState["parmTemplates"].pop("LEAF")
 		leafState = self.nodeLeafStoredState()
 		combinedState = mergeNodeStates(incomingState, leafState)
 		setNodeToState(self.node, combinedState)
+
+	@dbg
+	def gatherSyncNodeState(self):
+		"""fully re-gather and sync node"""
+
+		incomingState = self.reloadParentStates()
+		wholeNodeState = getFullNodeState(self.node)
+		leafState = diffNodeState(incomingState, wholeNodeState)
+		self.nodeLeafDeltaParm().set(dumps(leafState))
+
 
 	def nodeLeafDeltaParm(self)->hou.Parm:
 		return self.node.parm(ParmNames.localEdits)
@@ -1299,6 +1313,11 @@ class TextHDANode:
 
 	def leafHDAParmTemplates(self)->list[hou.ParmTemplate]:
 		return self.leafHDAParmFolderTemplate().parmTemplates()
+	def leafPTGData(self)->str:
+		ptg = hou.ParmTemplateGroup(self.leafHDAParmTemplates())
+		return ptg.asDialogScript(
+			full_info=True
+		)
 
 	def parentHDAParmFolderTemplate(self)->hou.FolderParmTemplate:
 		return self.node.parmTemplateGroup().findFolder(ParmNames.parentHDAParmFolderLABEL)

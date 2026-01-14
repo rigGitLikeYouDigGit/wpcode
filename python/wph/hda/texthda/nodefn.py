@@ -266,9 +266,34 @@ def onNodeNameChanged(node:hou.Node, *args, **kwargs):
 		hda.fullReset(resetParms=False)
 
 @dbg
-def onHdaUpdated(kwargs):
+def onHDAUpdated(kwargs):
 	"""callback whenever HDA definition is updated
+	THIS should be the only time that HDA
+	parmtemplates are ever updated in leaf data -
+	I think this means we have to update ALL node
+	instances in the scene?
 	"""
+	hdaType : hou.SopNodeType = kwargs["type"]
+	instances = hdaType.instances()
+	defStr = ""
+	for i in instances:
+		hdaNode = TextHDANode(i)
+		defStr = hdaNode.defFile()
+		leafParmTemplateStr = hdaNode.leafHDAParmTemplates()
+		leafState = hdaNode.nodeLeafStoredState()
+		leafState["parmTemplates"]["."].setdefault({})["leaf"] = (
+			leafParmTemplateStr)
+		hdaNode.nodeLeafDeltaParm().set(dumps(leafState))
+	"""check through dependent defs to update - we only have to live update 
+	nodes in the actual scene, since building a node from a file will
+	automatically get updates"""
+	dependentNodes = gather.getDefAffectedNodeMap()[defStr]
+	for i in dependentNodes:
+		if i.type() == hdaType:
+			continue
+		hdaNode = TextHDANode(i)
+		hdaNode.syncNodeState()
+
 
 
 
@@ -497,7 +522,7 @@ def onSyncBtnPressed(node:hou.OpNode):
 	if hda.isWorking():
 		return
 	with hda.workCtx():
-		hda.syncNodeState()
+		hda.gatherSyncNodeState()
 		# leafDelta = pullLocalNodeState(node)
 		# refreshParentBasesRegenNode(node, leafDelta)
 
@@ -632,7 +657,7 @@ def getDefMenuItems(kwargs)->list[str]:
 		for defName, nodes in sceneDefs.items():
 			result.extend([defName, defName])
 
-	fileDefs = gather.availableTextHDADefs()
+	fileDefs = gather.getFileHDADefs()
 	#print("fileDefs", fileDefs)
 	if currentDef in fileDefs:
 		sceneDefs.pop(currentDef)
