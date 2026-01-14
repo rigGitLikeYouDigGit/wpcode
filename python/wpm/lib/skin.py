@@ -106,17 +106,17 @@ def setSkinArraySparse(skFn:om.MFnDependencyNode,
 			leafPlug.selectAncestorLogicalIndex(index)
 			leafPlug.setFloat(weightArr[vtx, index])
 
+"""
+treating skinclusters depends on mapping skin influences between different
+nodes - 
+influence here is ANY plug OR STATIC MATRIX affecting a skincluster.
+index is derived from bind matrix array, including if we have any
+missing/static plugs in matrix array
+"""
 
-class SkinIndexMap:
-	"""CHANGE THE NAME to something more expressive -
-	helper mainly to manage skin indices and remapping
-	between local skin groups and the full scene
-
-	TODO:
-	 initialising from weight arrays
-	 maybe abstract object to work with per-element weights
-	 is it worth abstracting this object to manage indices
-	 maybe just put this straight on to the node objects
+class SkinScope:
+	"""Scope manages only influences and index mapping, no direct
+	treatment of weights
 
 	"""
 
@@ -137,7 +137,7 @@ class SkinIndexMap:
 		if no skins specified, use all skins in the scene
 		"""
 
-class SkinIndexGroup:
+class SkinScopeGroup:
 	"""map indices between different skincluster nodes"""
 
 class Skin:
@@ -145,7 +145,7 @@ class Skin:
 	the same transform might drive 2 influences, or an influence could have
 	no sriving transform at all"""
 
-def getSkinCluster(node:EdNode)->EdNode:
+def getSkinCluster(node:WN)->WN:
 	"""get skincluster connected to node,
 	or node if it is a skincluster already"""
 	node = EdNode(node)
@@ -165,8 +165,12 @@ def globalOrderPlugTrees(plugTrees:list[PlugTree])->tuple[PlugTree]:
 	"""return consistent ordering for given plug trees"""
 	return tuple(sorted(tuple(plugTrees)))
 
+def skinNInfluences(skc:WN.SkinCluster)->int:
+	"""return number of influences in skincluster -
+	we derive this from the BIND PRE MATRIX attribute"""
+	return skc.bindPreMatrix_.MPlug.numElements()
 
-def skinIndexInfluencePlugMap(skc:EdNode)->dict[int, PlugTree]:
+def skinIndexInfluenceMap(skc:WN.SkinCluster)->list[om.MPlug | np.ndarray]:
 	""" for local-scale functions we need to know the exact effects
 	on the final skin - that means following all logical array indices properly
 
@@ -174,15 +178,19 @@ def skinIndexInfluencePlugMap(skc:EdNode)->dict[int, PlugTree]:
 	{ local influence logical index : influence plug }
 
 	"""
-	infIndexPlugMap = {}
-	skc = EdNode(skc)
-	matTree = skc("matrix")
-	drivers = matTree.drivers()
-	for driver, driven in drivers.items():
-		infIndexPlugMap[driven.name] = driver
-	return infIndexPlugMap
-
-
+	result = []
+	for i in range(skinNInfluences(skc)):
+		plug : om.MPlug = skc.matrix_.MPlug.elementByPhysicalIndex(i)
+		if plug.isDestination:
+			result.append(plug.source())
+		else:
+			# get matrix object - if null, return identity =
+			# should move this back to core plug logic
+			plugObj = plug.asMObject()
+			if plugObj.isNull:
+				result.append(np.eye(4))
+				continue
+			result.append(np.array(om.MFnMatrixData(plugObj).matrix()))
 
 
 # endregion
@@ -238,7 +246,7 @@ def getSkinArray(skc:EdNode)->np.ndarray:
 # endregion
 
 def getSkinInfluences(skc:EdNode)->tuple[PlugTree]:
-	return tuple(skinIndexInfluencePlugMap(skc).values())
+	return tuple(skinIndexInfluenceMap(skc).values())
 
 def resetSkinCluster(skc:EdNode, influenceList:list[PlugTree]):
 	"""coerce skin to have only the given influences,
@@ -292,7 +300,7 @@ def poolSkinClusters(skcList:list[EdNode]):
 	# gather all influences across all skins
 	allInfluences = set()
 	for skc in skcList:
-		skcIndexInfMap = skinIndexInfluencePlugMap(skc)
+		skcIndexInfMap = skinIndexInfluenceMap(skc)
 		skcIndexInfMaps.append(skcIndexInfMap)
 		allInfluences.update(skcIndexInfMap.values())
 
