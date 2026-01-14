@@ -2,10 +2,15 @@
 State representation: discrete and continuous variables
 """
 
-from typing import Any, Dict, Set, Optional, Union
+from typing import Any, Dict, Set, Optional, Union, Callable
 from dataclasses import dataclass, field
 from enum import Enum
 
+def resolve(v : Callable[[...], Any] | Any, *args, **kwargs) -> Any:
+	"""run this over any slots that could either be dynamic or constant -
+	this won't always be available in less dynamic languages, so for those
+	ALL slots should be specified as lambdas"""
+	return v(*args, **kwargs) if callable(v) else v
 
 class ValueType(Enum):
 	"""Type of a state variable"""
@@ -47,11 +52,11 @@ class ObjectState:
 	"""State of a single object in the world"""
 	id: str
 	object_type: str
-	properties: Set[str] = field(default_factory=set)  # e.g., {"Container", "Portable"}
+	traits: Set[str] = field(default_factory=set)  # e.g., {"Container", "Portable"}
 	attributes: Dict[str, Variable] = field(default_factory=dict)  # e.g., {"location": Variable(...)}
 
 	def has_property(self, prop: str) -> bool:
-		return prop in self.properties
+		return prop in self.traits
 
 	def get_attribute(self, name: str) -> Optional[Variable]:
 		return self.attributes.get(name)
@@ -75,7 +80,7 @@ class State:
 		"""Add an object to the state"""
 		self.objects[obj.id] = obj
 		self.type_object_map.setdefault(obj.object_type, set()).add(obj)
-		for prop in obj.properties:
+		for prop in obj.traits:
 			self.property_type_object_map.setdefault(prop, set()).add(obj)
 
 	def get_object(self, obj_id: str) -> Optional[ObjectState]:

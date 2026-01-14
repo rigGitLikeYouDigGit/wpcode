@@ -20,7 +20,7 @@ def test_simple_movement():
 	agent = ObjectState(
 		id="Agent",
 		object_type="Agent",
-		properties=set(),
+		traits=set(),
 		attributes={
 			"location": Variable("Agent.location", ValueType.DISCRETE, "A")
 		}
@@ -89,7 +89,7 @@ def test_reversible_state():
 	agent = ObjectState(
 		id="Agent",
 		object_type="Agent",
-		properties=set(),
+		traits=set(),
 		attributes={
 			"location": Variable("Agent.location", ValueType.DISCRETE, "A")
 		}
@@ -120,7 +120,7 @@ def test_action_application():
 	agent = ObjectState(
 		id="Agent",
 		object_type="Agent",
-		properties=set(),
+		traits=set(),
 		attributes={
 			"location": Variable("Agent.location", ValueType.DISCRETE, "A")
 		}

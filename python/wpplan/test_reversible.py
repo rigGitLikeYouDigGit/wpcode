@@ -14,7 +14,7 @@ def test_basic_transaction():
 	agent = ObjectState(
 		id="Agent",
 		object_type="Agent",
-		properties=set(),
+		traits=set(),
 		attributes={
 			"location": Variable("Agent.location", ValueType.DISCRETE, "Home"),
 			"carrying": Variable("Agent.carrying", ValueType.DISCRETE, None)
@@ -49,7 +49,7 @@ def test_nested_transactions():
 	agent = ObjectState(
 		id="Agent",
 		object_type="Agent",
-		properties=set(),
+		traits=set(),
 		attributes={
 			"location": Variable("Agent.location", ValueType.DISCRETE, "Home"),
 			"fuel": Variable("Agent.fuel", ValueType.CONTINUOUS, 100.0)
@@ -86,7 +86,7 @@ def test_set_operations():
 	bag = ObjectState(
 		id="Bag",
 		object_type="Bag",
-		properties={"Container"},
+		traits={"Container"},
 		attributes={
 			"contents": Variable("Bag.contents", ValueType.SET, set())
 		}
@@ -124,7 +124,7 @@ def test_dependency_tracking():
 	letter = ObjectState(
 		id="Letter1",
 		object_type="Letter",
-		properties={"Portable"},
+		traits={"Portable"},
 		attributes={
 			"location": Variable("Letter1.location", ValueType.DISCRETE, "Home")
 		}
@@ -134,7 +134,7 @@ def test_dependency_tracking():
 	bag = ObjectState(
 		id="Bag",
 		object_type="Bag",
-		properties={"Container"},
+		traits={"Container"},
 		attributes={
 			"location": Variable("Bag.location", ValueType.DISCRETE, "Home")
 		}
@@ -167,7 +167,7 @@ def test_performance():
 		obj = ObjectState(
 			id=f"Object{i}",
 			object_type="Item",
-			properties={"Portable"},
+			traits={"Portable"},
 			attributes={
 				"location": Variable(f"Object{i}.location", ValueType.DISCRETE, "Home"),
 				"value": Variable(f"Object{i}.value", ValueType.CONTINUOUS, float(i))

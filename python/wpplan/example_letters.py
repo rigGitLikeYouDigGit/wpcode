@@ -22,7 +22,7 @@ def create_letter_world():
 	agent = ObjectState(
 		id="Agent",
 		object_type="Agent",
-		properties=set(),
+		traits=set(),
 		attributes={
 			"location": Variable("Agent.location", ValueType.DISCRETE, "Home"),
 			"carrying": Variable("Agent.carrying", ValueType.DISCRETE, None)
@@ -35,7 +35,7 @@ def create_letter_world():
 		letter = ObjectState(
 			id=f"Letter{i}",
 			object_type="Letter",
-			properties={"Portable"},
+			traits={"Portable"},
 			attributes={
 				"location": Variable(f"Letter{i}.location", ValueType.DISCRETE, "Home")
 			}
@@ -46,7 +46,7 @@ def create_letter_world():
 	bag = ObjectState(
 		id="Bag",
 		object_type="Bag",
-		properties={"Portable", "Container"},
+		traits={"Portable", "Container"},
 		attributes={
 			"location": Variable("Bag.location", ValueType.DISCRETE, "Home"),
 			"contents": Variable("Bag.contents", ValueType.SET, set()),

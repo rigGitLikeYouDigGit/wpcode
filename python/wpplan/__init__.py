@@ -8,12 +8,17 @@ Core components:
 - Agent: Knowledge, beliefs, and planning
 - Planner: Search with leverage/influence heuristics
 
+
 next:
 - add a "gather available actions" step, so agent looks round known objects
 and generates actions available, based on its knowledge
 - consider a way to emulate thought processes of other agents?
 - collate physical movement tasks into something like a navmesh - use as
 prototype for hierarchical grouping, or learning
+- FAILURE for actions based on another predicate - consider how to include
+risk of failure this way into planning - weight the outcome of failure with
+its likelihood? different learned weighting by association with objects more
+likely to fail?
 """
 
 from __future__ import annotations

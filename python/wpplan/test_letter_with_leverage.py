@@ -4,7 +4,15 @@ Letter example with relation-based leverage discovery.
 This demonstrates the core innovation: the planner should discover that
 using the bag is better because moving the bag affects multiple letters
 (high leverage), even though it requires more initial setup steps.
+
+consider traits to describe environments semantically if not physically -
+
+knee-high, waist-high,
+flat-top, thin-wall, opaque, hard?
+
+TODO: refactor to assume object-local var names during solve
 """
+from itertools import product
 
 from wpplan.state import ObjectState, Variable, ValueType
 from wpplan.reversible import ReversibleState
@@ -20,23 +28,95 @@ def create_world():
 	"""Create world with Agent, 3 Letters, and 1 Bag"""
 	state = ReversibleState()
 
-	# Agent
-	agent = ObjectState("Agent", "Agent", set(), {
-		"location": Variable("Agent.location", ValueType.DISCRETE, "Home"),
-		"carrying": Variable("Agent.carrying", ValueType.DISCRETE, None)
+	# Agent is:
+	# an actor (can take its own actions)
+	# mobile (can move and generate GoTo actions) -> inherits from placed (
+	# has a location)
+	# bodied (has a body)
+	agentName = "AgentA"
+	agent = ObjectState(
+		id=agentName,
+		object_type="agent",
+		traits={"Actor", "Motive", "Bodied"},
+		attributes={
+		# expected attributes for Motive schema
+		"location": Variable(f"{agentName}.location", ValueType.DISCRETE, "Home"),
+		"movementCostFn": lambda state, action, src, dst: 10.0 , # should be
+			# saved per object type
+		# expected attributes for Bodied schema
+		"carrying": Variable(f"{agentName}.carrying", ValueType.DISCRETE, None)
 	})
 	state.add_object(agent)
 
+	#TODO: proper object schema-ing, factory functions
+	# is object_type just the exact leaf type of each object? should be
+	def make_letter(obj_id, location):
+		""" a letter (an envelope) is
+		a Prop (maybe a compound type name?)
+			is portable (can be carried) -> inherits from
+			placed (has a location)
+		Sized (has a physical size and weight)
+		Shaped (has a shape wrt other things, eg flat)
+		MadeOf (has a material?)
+		Container (can be opened, can contain other things)
+		Writable (can be written on, up to a limit, can be scratched out)
+
+		"""
+		return ObjectState(
+			id=obj_id,
+			object_type="letter",
+			traits={"Portable", "Physical", "Sized", "Shaped",
+			        "MadeOf", "Container", "Writable"},
+			attributes={
+				# Portable
+				"location": Variable(f"{obj_id}.location",
+				                     ValueType.DISCRETE, location),
+				"heldBy" : Variable(f"{obj_id}.heldBy", ValueType.SET, None),
+					# set because what if people fight over the letter
+				# Sized?
+				"size" : Variable("size", ValueType.DISCRETE, "leaf"),
+				"weight" : Variable("weight", ValueType.DISCRETE,"leaf"),
+				# Shaped
+				"shape" : Variable("shape", ValueType.DISCRETE, "flat"), # no idea, maybe describe sides differently?
+				# MadeOf
+				"material" : Variable("material", ValueType.DISCRETE, "paper"),
+				# Container
+				"open" : Variable("open", ValueType.DISCRETE, False), "openActionT"
+				: None, "closeActionT" : None,
+				"capacity" : Variable("capacity", ValueType.DISCRETE, None),
+				# prefer action conditions instead of predicates below
+				# "willFitFn" : lambda state, obj, item: True,
+				# "canExtractFn" : lambda state, obj, item: True,
+				"contents" : Variable(f"{obj_id}.contents", ValueType.SET,
+				                      None),
+				# Writable
+				"writing" : None # refer to some other writing struct
+				# elsewhere in state
+			}
+		)
+
 	# 3 Letters
 	for i in range(1, 4):
-		letter = ObjectState(f"Letter{i}", "Letter", {"Portable"}, {
-			"location": Variable(f"Letter{i}.location", ValueType.DISCRETE, "Home")
-		})
+		letter = make_letter(f"Letter{i}", "Home")
 		state.add_object(letter)
 
+
 	# Bag
-	bag = ObjectState("Bag", "Bag", {"Portable", "Container"}, {
-		"location": Variable("Bag.location", ValueType.DISCRETE, "Home")
+	bag = ObjectState(
+		id="bag",
+		object_type="Bag",
+		traits={"Portable", "Physical", "Sized", "Shaped",
+			        "MadeOf", "Container"} ,
+		attributes={
+			"location": Variable("Bag.location", ValueType.DISCRETE, "Home"),
+			"heldBy" : Variable("Bag.heldBy", ValueType.SET, set()),
+			"size" : "medium", "weight" : "light",
+			"shape" : "soft", # other things can't be stably put on top
+			"material" : "fabric",
+			"open" : Variable("Bag.open", ValueType.DISCRETE, False),
+			"openActionT" : None, "closeActionT" : None,
+			"capacity" : None,
+			"contents" : Variable("Bag.contents", ValueType.SET, set()),
 	})
 	state.add_object(bag)
 
@@ -44,85 +124,98 @@ def create_world():
 
 
 def create_actions():
-	"""Create action templates that use relations"""
+	"""Create action templates that use relations
+	 below action templates should be inherent based on
+	 traits of objects
+	 """
 	templates = []
 
 	# ===== Movement Actions =====
+	# GoTo action - templated on Motive, source and destination
+	goTo = ActionTemplate(
+		name="GoToT",
+		param_names=["mobile", "src", "dst"] # object and constant
+		# values
+	)
+	goTo.add_precondition(
+		var_path="mobile.location",
+		predicate=lambda loc, action: loc == action.params["src"],
+		description=lambda loc, action: f"At source {action.params["src"]}")
+	goTo.add_effect(
+		var_path="mobile.location",
+		effect_fn=lambda loc, action: action.params["dst"],
+		description=lambda loc, action: f"Moved to dst"
+		                                f" {action.params["dst"]}")
+	# calculate distance between src and dst, which may be different for each
+	# actor
+	goTo.set_cost_function(lambda state, action: state.get_object(
+		action.params["mobile"]).attributes["movementCostFn"](
+			state, action,
+          action.params["src"], action.params["dst"])
+	                       )
+	templates.append(goTo)
 
-	# GoToWork - Just moves agent, relations handle the rest!
-	go_work = ActionTemplate("GoToWork", [])
-	go_work.add_precondition("Agent.location", lambda loc: loc == "Home", "At Home")
-	go_work.add_effect("Agent.location", lambda val, state: "Work", "Move to Work")
-	go_work.set_cost_function(lambda s, p: 10.0)  # Expensive trip
-	templates.append(go_work)
 
-	# GoToHome
-	go_home = ActionTemplate("GoToHome", [])
-	go_home.add_precondition("Agent.location", lambda loc: loc == "Work", "At Work")
-	go_home.add_effect("Agent.location", lambda val, state: "Home", "Move to Home")
-	go_home.set_cost_function(lambda s, p: 10.0)  # Expensive trip
-	templates.append(go_home)
+	####### pickup is inherent to a bodied actor and a prop
+	# don't overconstrain here to look for a free limb to pick up -
+	# whichever limb action is tried on has to be free
+	# manip inherits location from its body, which inherits from its actor?
+	pickupT = ActionTemplate(
+		name=f"PickUpT",
+		param_names=["manip", "portable"]
+	                                )
+	pickupT.add_precondition(
+		"manip.carrying",
+		lambda v, a: v is None,
+	    lambda loc, action: "Hands empty")
+	# TODO:is there a better way to say a condition of equivalence than 2
+	#  separate conditions?
+	pickupT.add_precondition(
+		"manip.location",
+		lambda v, a: v == a.params["portable"].attributes["location"],
+		lambda loc, action: f"At portable {action.params['portable'].id}"
+	)
+	pickupT.add_precondition(
+		"portable.location",
+		lambda v, a: v == a.params["manip"].attributes["location"],
+		lambda loc, action: f"At manip {action.params['manip'].id}"
+	)
 
-	# ===== PickUp Actions (one per object) =====
-
-	for i in range(1, 4):
-		pickup = ActionTemplate(f"PickUpLetter{i}", [])
-		pickup.add_precondition("Agent.carrying", lambda c: c is None, "Hands empty")
-		pickup.add_precondition("Agent.location", lambda loc: loc == "Home", "At Home")
-		pickup.add_precondition(f"Letter{i}.location", lambda loc: loc == "Home", "Letter at Home")
-
-		# Effect: Carry letter and create relation
-		def make_pickup_effect(letter_id):
-			def effect(val, state):
-				# Create carrying relation: Letter follows Agent
-				relation = Relation(
-					RelationType.EQUALS,
-					f"{letter_id}.location",
-					"Agent.location"
-				)
-				state.add_relation(relation)
-
-				# Return new carrying value
-				return letter_id
-			return effect
-
-		pickup.add_effect("Agent.carrying", make_pickup_effect(f"Letter{i}"), f"Pick up Letter{i}")
-		pickup.set_cost_function(lambda s, p: 1.0)
-		templates.append(pickup)
-
-	# PickUpBag
-	pickup_bag = ActionTemplate("PickUpBag", [])
-	pickup_bag.add_precondition("Agent.carrying", lambda c: c is None, "Hands empty")
-	pickup_bag.add_precondition("Agent.location", lambda loc: loc == "Home", "At Home")
-	pickup_bag.add_precondition("Bag.location", lambda loc: loc == "Home", "Bag at Home")
-
-	def pickup_bag_effect(val, state):
-		# Create carrying relation: Bag follows Agent
-		relation = Relation(
-			RelationType.EQUALS,
-			"Bag.location",
-			"Agent.location"
-		)
+	def pickupTEffect( state, action):
+		manip_id=action.params['manip']
+		portable_id=action.params['portable']
+		relation = Relation(RelationType.EQUALS,
+		                    f"{manip_id}.location",
+		                    f"{portable_id}.location")
 		state.add_relation(relation)
+		return action.params['portable'].id
+	pickupT.add_effect(
+		"manip.carrying",
+		pickupTEffect,
+		lambda *_: "Pick up portable"
+	)
+	pickupT.set_cost_function(lambda state, action: 1.0)
+	templates.append(pickupT)
 
-		# Return new carrying value
-		return "Bag"
+	####### putDown template, should be inherent to a bodied actor and a prop
+	# being
+	# carried
+	putdown = ActionTemplate(
+		"PutDownT",
+		param_names=["manip", "portable"]
+	)
+	putdown.add_precondition(
+		"manip.carrying",
+		lambda v, a: v is not None,
+		lambda v, a : "Must be carrying"
+	)
 
-	pickup_bag.add_effect("Agent.carrying", pickup_bag_effect, "Pick up Bag")
-	pickup_bag.set_cost_function(lambda s, p: 1.0)
-	templates.append(pickup_bag)
-
-	# ===== PutDown Action =====
-
-	putdown = ActionTemplate("PutDown", [])
-	putdown.add_precondition("Agent.carrying", lambda c: c is not None, "Must be carrying")
-
-	def putdown_effect(val, state):
-		agent = state.get_object("Agent")
-		if not agent:
+	def putdown_effect(state, action):
+		manip = state.get_object(action.params['manip'])
+		if not manip:
 			return None
 
-		carrying_var = agent.get_attribute("carrying")
+		carrying_var = manip.get_attribute("carrying")
 		if not carrying_var or not carrying_var.value:
 			return None
 
@@ -135,8 +228,110 @@ def create_actions():
 		return None
 
 	putdown.add_effect("Agent.carrying", putdown_effect, "Put down object")
-	putdown.set_cost_function(lambda s, p: 1.0)
+	putdown.set_cost_function(lambda s, p: 0.1)
 	templates.append(putdown)
+
+
+	###### PutIn template
+	# TODO: definitely need multi-input preconditions for equivalence,
+	#   checking everything is in the same place here takes 9
+	#   preconditions
+	putInT = ActionTemplate(f"PutInT",
+	                        ["manip", "portable", "container"]
+	                        )
+	for a, b in product(putInT.param_names, repeat=2):
+		if a == b:
+			continue
+		putInT.add_precondition(
+			f"{a}.location",
+			lambda v, a: v == ,
+			f"{a} == {b}")
+	putInT.add_precondition("manip.location",
+	                        lambda loc: loc == "Home",
+	                       "At Home"
+	                        )
+	putInT.add_precondition("Bag.location", lambda loc: loc == "Home",
+	                       "Bag at Home")
+	putInT.add_precondition("Agent.carrying", lambda c: c == f"Letter{i}",
+	                       f"Carrying Letter{i}")
+
+
+
+	# # ===== PickUp Actions (one per object) =====
+	#
+	# for i in range(1, 4):
+	# 	pickup = ActionTemplate(f"PickUpLetter{i}", [])
+	# 	pickup.add_precondition("Agent.carrying", lambda c: c is None, "Hands empty")
+	# 	pickup.add_precondition("Agent.location", lambda loc: loc == "Home", "At Home")
+	# 	pickup.add_precondition(f"Letter{i}.location", lambda loc: loc == "Home", "Letter at Home")
+	#
+	# 	# Effect: Carry letter and create relation
+	# 	def make_pickup_effect(letter_id):
+	# 		def effect(val, state):
+	# 			# Create carrying relation: Letter follows Agent
+	# 			relation = Relation(
+	# 				RelationType.EQUALS,
+	# 				f"{letter_id}.location",
+	# 				"Agent.location"
+	# 			)
+	# 			state.add_relation(relation)
+	#
+	# 			# Return new carrying value
+	# 			return letter_id
+	# 		return effect
+	#
+	# 	pickup.add_effect("Agent.carrying", make_pickup_effect(f"Letter{i}"), f"Pick up Letter{i}")
+	# 	pickup.set_cost_function(lambda s, p: 1.0)
+	# 	templates.append(pickup)
+	#
+	# # PickUpBag
+	# pickup_bag = ActionTemplate("PickUpBag", [])
+	# pickup_bag.add_precondition("Agent.carrying", lambda c: c is None, "Hands empty")
+	# pickup_bag.add_precondition("Agent.location", lambda loc: loc == "Home", "At Home")
+	# pickup_bag.add_precondition("Bag.location", lambda loc: loc == "Home", "Bag at Home")
+	#
+	# def pickup_bag_effect(val, state):
+	# 	# Create carrying relation: Bag follows Agent
+	# 	relation = Relation(
+	# 		RelationType.EQUALS,
+	# 		"Bag.location",
+	# 		"Agent.location"
+	# 	)
+	# 	state.add_relation(relation)
+	#
+	# 	# Return new carrying value
+	# 	return "Bag"
+	#
+	# pickup_bag.add_effect("Agent.carrying", pickup_bag_effect, "Pick up Bag")
+	# pickup_bag.set_cost_function(lambda s, p: 1.0)
+	# templates.append(pickup_bag)
+	#
+	# # ===== PutDown Action =====
+	#
+	# putdown = ActionTemplate("PutDown", [])
+	# putdown.add_precondition("Agent.carrying", lambda c: c is not None, "Must be carrying")
+	#
+	# def putdown_effect(val, state):
+	# 	agent = state.get_object("Agent")
+	# 	if not agent:
+	# 		return None
+	#
+	# 	carrying_var = agent.get_attribute("carrying")
+	# 	if not carrying_var or not carrying_var.value:
+	# 		return None
+	#
+	# 	carried_id = carrying_var.value
+	#
+	# 	# Remove the carrying relation
+	# 	state.remove_relation(f"{carried_id}.location", "Agent.location")
+	#
+	# 	# Clear carrying
+	# 	return None
+	#
+	# putdown.add_effect("Agent.carrying", putdown_effect, "Put down object")
+	# putdown.set_cost_function(lambda s, p: 1.0)
+	# templates.append(putdown)
+
 
 	# ===== PutIn Actions (one per letter) =====
 

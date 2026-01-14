@@ -173,13 +173,13 @@ class ActionCache:
 			# Check required properties
 			has_required = all(
 				obj.has_property(prop)
-				for prop in requirements.required_properties
+				for prop in requirements.required_traits
 			)
 
 			# Check forbidden properties
 			has_forbidden = any(
 				obj.has_property(prop)
-				for prop in requirements.forbidden_properties
+				for prop in requirements.forbidden_traits
 			)
 
 			if has_required and not has_forbidden:
@@ -289,7 +289,7 @@ def _get_requirements(template: ActionTemplate, param_name: str) -> Tuple[Set, S
 	"""Get (required_properties, forbidden_properties) for a parameter"""
 	for req in template.property_requirements:
 		if req.param_name == param_name:
-			return (set(req.required_properties), set(req.forbidden_properties))
+			return (set(req.required_traits), set(req.forbidden_traits))
 	return (set(), set())
 
 
