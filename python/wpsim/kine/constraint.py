@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Callable, Tuple
 
+import jax
 import jax.numpy as jnp
 import jax_dataclasses as jdc
 
@@ -19,6 +20,9 @@ class ConstraintState:
 	# Optional: measurement-based constraints with internal DOFs
 	measurements: state.MeasurementState | None = None
 	measurementConstraints: MeasurementConstraintBucket | None = None
+
+	# Optional: manifold constraints
+	manifold: ManifoldConstraintBucket | None = None
 
 
 constraintAccumFn = Callable[
@@ -768,3 +772,440 @@ class MeasurementConstraintBucket(ConstraintBucket):
 		)
 
 		return bufs, ms, newBucket
+
+
+@jdc.pytree_dataclass
+class ManifoldConstraintData:
+	"""
+	Batched manifold constraints with padding support.
+
+	Represents a learned manifold of valid poses from K sample configurations.
+	Bodies constrained to this manifold will be pulled toward the nearest valid
+	pose on the manifold surface.
+
+	Padding strategy:
+	- All constraints padded to (kMax, nMax, mMax) for uniform GPU batching
+	- sampleWeights mask ensures padding samples don't affect interpolation
+	- Real samples have weight=1.0, padding samples have weight=0.0
+	"""
+	# Padded sample data
+	validPoses: jnp.ndarray        # (kMax, nMax, 7) - sample poses (quat + pos per body)
+	paramCenters: jnp.ndarray      # (kMax, mMax) - parameter values at samples
+
+	# Sample mask (1=real sample, 0=padding)
+	sampleWeights: jnp.ndarray     # (kMax,) - masks out padding in RBF interpolation
+
+	# Pre-computed bidirectional RBF mappings
+	forwardWeights: jnp.ndarray    # (kMax, nMax*7) - params → pose
+	reverseWeights: jnp.ndarray    # (kMax, mMax) - pose → params
+	poseCenters: jnp.ndarray       # (kMax, nMax*7) - flattened poses for reverse RBF
+
+	# Shape metadata (actual vs padded)
+	nSamples: int                  # actual K before padding
+	nBodies: int                   # actual N before padding
+	nParams: int                   # actual M before padding
+
+	# RBF configuration
+	epsilon: float = 1.0
+	kernelType: str = 'gaussian'
+
+	# Body mapping (padded with -1 for invalid entries)
+	bodyIds: jnp.ndarray = None    # (nMax,) body indices, -1 = padding
+
+
+def createManifoldConstraint(
+	validPoses: jnp.ndarray, # (K, N, 7)
+	paramValues: jnp.ndarray, # (K, M)
+	bodyIds: list[int],
+	kMax: int,  # max samples across all constraints
+	nMax: int,  # max bodies across all constraints
+	mMax: int,  # max params across all constraints
+	epsilon: float = 1.0,
+	kernelType: str = 'gaussian'
+) -> ManifoldConstraintData:
+	"""
+	Create padded manifold constraint with bidirectional RBF interpolation.
+
+	Args:
+		validPoses: (K, N, 7) authored sample poses (K samples, N bodies, quat+pos)
+		paramValues: (K, M) parameter values at each sample
+		bodyIds: list of body indices this constraint applies to
+		kMax: maximum samples across all constraints (for padding)
+		nMax: maximum bodies across all constraints
+		mMax: maximum parameters across all constraints
+		epsilon: RBF shape parameter
+		kernelType: 'gaussian', 'multiquadric', 'inverse_multiquadric', 'thin_plate'
+
+	Returns:
+		ManifoldConstraintData with padded arrays and pre-computed RBF weights
+
+	Example:
+		# 3 samples, 4 bodies (femur, tibia, patella, fibula), 2 params (flexion, rotation)
+		validPoses = jnp.array([...])  # (3, 4, 7)
+		paramValues = jnp.array([[0.0, 0.0], [0.5, 0.0], [1.0, 0.2]])  # (3, 2)
+
+		manifold = createManifoldConstraint(
+			validPoses, paramValues, [femurId, tibiaId, patellaId, fibulaId],
+			kMax=100, nMax=4, mMax=2
+		)
+	"""
+	K, N, _ = validPoses.shape
+	M = paramValues.shape[1]
+
+	# Create sample weights mask (1 for real samples, 0 for padding)
+	sampleWeights = jnp.concatenate([
+		jnp.ones(K, dtype=jnp.float32),
+		jnp.zeros(kMax - K, dtype=jnp.float32)
+	])
+
+	# Pad poses (K → kMax, N → nMax)
+	identityPose = jnp.array([0, 0, 0, 1, 0, 0, 0], dtype=jnp.float32)  # identity quat + zero pos
+	paddedPoses = jnp.pad(
+		validPoses,
+		((0, kMax - K), (0, nMax - N), (0, 0)),
+		mode='constant',
+		constant_values=0
+	)
+	# Set padding poses to identity (safer than zeros for quaternions)
+	if kMax > K or nMax > N:
+		for i in range(K, kMax):
+			for j in range(N, nMax):
+				paddedPoses = paddedPoses.at[i, j].set(identityPose)
+
+	# Pad parameters (K → kMax, M → mMax)
+	paddedParams = jnp.pad(
+		paramValues,
+		((0, kMax - K), (0, mMax - M)),
+		mode='edge'  # duplicate last sample's params for padding
+	)
+
+	# Pad body IDs
+	paddedBodyIds = jnp.pad(
+		jnp.array(bodyIds, dtype=jnp.int32),
+		(0, nMax - N),
+		constant_values=-1  # -1 indicates padding
+	)
+
+	# Flatten poses for RBF (K_max, N_max*7)
+	poseVectors = paddedPoses.reshape(kMax, -1)
+
+	# Solve forward RBF: params → pose (WITH sample weights to mask padding!)
+	forwardWeights = maths.solveRbfWeights(
+		paddedParams,
+		poseVectors,
+		epsilon,
+		kernelType,
+		sampleWeights=sampleWeights
+	)
+
+	# Solve reverse RBF: pose → params (WITH sample weights to mask padding!)
+	reverseWeights = maths.solveRbfWeights(
+		poseVectors,
+		paddedParams,
+		epsilon,
+		kernelType,
+		sampleWeights=sampleWeights
+	)
+
+	return ManifoldConstraintData(
+		validPoses=paddedPoses,
+		paramCenters=paddedParams,
+		sampleWeights=sampleWeights,
+		forwardWeights=forwardWeights,
+		reverseWeights=reverseWeights,
+		poseCenters=poseVectors,
+		nSamples=K,
+		nBodies=N,
+		nParams=M,
+		epsilon=epsilon,
+		kernelType=kernelType,
+		bodyIds=paddedBodyIds
+	)
+
+
+def measureManifoldTarget(
+	manifoldData: ManifoldConstraintData,
+	currentParams: jnp.ndarray # (mMax,)
+) -> jnp.ndarray: # (nMax*7,)
+	"""
+	Evaluate forward RBF: parameters → target pose.
+
+	This is the "measurement function" used in constraints to compute
+	the target pose from current parameter values.
+
+	Args:
+		manifoldData: pre-computed manifold constraint
+		currentParams: (mMax,) current parameter values (padded)
+
+	Returns:
+		targetPose: (nMax*7,) interpolated target pose (flattened)
+	"""
+	targetPose = maths.interpolateRbf(
+		currentParams[None, :],               # (1, mMax)
+		manifoldData.paramCenters,            # (kMax, mMax)
+		manifoldData.forwardWeights,          # (kMax, nMax*7)
+		manifoldData.epsilon,
+		manifoldData.kernelType,
+		sampleWeights=manifoldData.sampleWeights  # mask padding samples
+	)
+
+	# Normalize quaternions in result
+	targetPose = targetPose[0]  # (nMax*7,)
+	nBodies = manifoldData.nBodies
+	for i in range(nBodies):
+		quatStart = i * 7
+		quat = targetPose[quatStart:quatStart+4]
+		quatNorm = maths.quatNormalize(quat)
+		targetPose = targetPose.at[quatStart:quatStart+4].set(quatNorm)
+
+	return targetPose
+
+
+def findNearestParams(
+	manifoldData: ManifoldConstraintData,
+	currentPose: jnp.ndarray # (nMax*7,)
+) -> jnp.ndarray: # (mMax,)
+	"""
+	Evaluate reverse RBF: pose → nearest parameters.
+
+	Used for initialization/warmstart to find which parameters
+	best represent the current body configuration.
+
+	Args:
+		manifoldData: pre-computed manifold constraint
+		currentPose: (nMax*7,) current body poses (flattened)
+
+	Returns:
+		nearestParams: (mMax,) parameters that best reconstruct current pose
+	"""
+	nearestParams = maths.interpolateRbf(
+		currentPose[None, :],                 # (1, nMax*7)
+		manifoldData.poseCenters,             # (kMax, nMax*7)
+		manifoldData.reverseWeights,          # (kMax, mMax)
+		manifoldData.epsilon,
+		manifoldData.kernelType,
+		sampleWeights=manifoldData.sampleWeights  # mask padding samples
+	)
+
+	return nearestParams[0]
+
+
+def measureActualPoses(
+	bodies: state.BodyState,
+	bodyIds: jnp.ndarray # (nMax,)
+) -> jnp.ndarray: # (nMax*7,)
+	"""
+	Extract current poses for all bodies in constraint.
+
+	Args:
+		bodies: full body state
+		bodyIds: (nMax,) body indices, -1 = padding (returns identity pose)
+
+	Returns:
+		poses: (nMax*7,) flattened poses [quat0, pos0, quat1, pos1, ...]
+	"""
+	def extractPose(bodyId):
+		# Handle padding (bodyId = -1)
+		validBody = bodyId >= 0
+
+		# Get pose (or identity for padding)
+		quat = jnp.where(
+			validBody,
+			bodies.orientation[jnp.maximum(bodyId, 0)],
+			jnp.array([0, 0, 0, 1], dtype=bodies.orientation.dtype)
+		)
+		pos = jnp.where(
+			validBody,
+			bodies.position[jnp.maximum(bodyId, 0)],
+			jnp.zeros(3, dtype=bodies.position.dtype)
+		)
+
+		return jnp.concatenate([quat, pos])
+
+	poses = jax.vmap(extractPose)(bodyIds)  # (nMax, 7)
+	return poses.reshape(-1)  # (nMax*7,)
+
+
+@jdc.pytree_dataclass
+class ManifoldConstraintBucket(ConstraintBucket):
+	"""
+	Batched manifold constraints that pull bodies toward learned valid pose manifolds.
+
+	Each manifold constraint in the batch defines a learned surface of valid poses
+	for a subset of bodies, parameterized by internal DOFs. The solver adjusts these
+	internal parameters to minimize the distance from actual body poses to the manifold.
+
+	Shape notation:
+		M = number of manifold constraints in batch
+		kMax = max samples across all manifolds (padded)
+		nMax = max bodies per manifold (padded)
+		mMax = max internal parameters per manifold (padded)
+	"""
+	isActive: jnp.ndarray                     # (M,) bool/int mask
+
+	# Per-constraint manifold data (batched)
+	manifoldData: list[ManifoldConstraintData]  # length M
+
+	# Internal parameters (solver adjusts these)
+	params: jnp.ndarray                       # (M, mMax) current parameter values
+
+	# Constraint strength
+	alpha: jnp.ndarray                        # (M,) compliance / dt^2
+	weight: jnp.ndarray                       # (M,) overall strength multiplier
+
+	# XPBD lambda storage (vector constraint, one per body DOF)
+	lambdaState: XpbdLambdaN                  # (M, nMax*6) - 6 DOF per body (pos+ang)
+
+	@classmethod
+	def accumulate(
+			cls,
+			bs: state.BodyState,
+			bufs: state.BodyDeltaBuffers,
+			bucket: ManifoldConstraintBucket,
+			dt: float
+	) -> tuple[state.BodyDeltaBuffers, ManifoldConstraintBucket]:
+		"""
+		Accumulate manifold constraint corrections.
+
+		For each constraint:
+		1. Evaluate target pose from current parameters via RBF
+		2. Compute residual (target - actual)
+		3. Compute Jacobian w.r.t. body poses
+		4. Apply XPBD correction to body positions/orientations
+
+		Note: Parameters are currently fixed (not adjusted by solver).
+		Future enhancement: add parameter adjustment via reverse RBF gradient.
+		"""
+		del dt
+
+		active = bucket.isActive.astype(jnp.float32)  # (M,)
+		M = active.shape[0]
+
+		# Process each manifold constraint
+		def processConstraint(i):
+			manifold = bucket.manifoldData[i]
+			currentParams = bucket.params[i]  # (mMax,)
+
+			# Get target pose from manifold
+			targetPoseFlat = measureManifoldTarget(manifold, currentParams)  # (nMax*7,)
+
+			# Get actual poses
+			actualPoseFlat = measureActualPoses(bs, manifold.bodyIds)  # (nMax*7,)
+
+			# Compute residual (target - actual) for real bodies only
+			nBodies = manifold.nBodies
+			residual = jnp.zeros(nBodies * 6, dtype=bs.position.dtype)
+
+			# Separate into position and orientation residuals
+			for j in range(nBodies):
+				bodyId = manifold.bodyIds[j]
+
+				# Skip padding
+				isValid = bodyId >= 0
+
+				# Position residual (3 DOF)
+				targetPos = targetPoseFlat[j*7 + 4:j*7 + 7]
+				actualPos = actualPoseFlat[j*7 + 4:j*7 + 7]
+				posResidual = jnp.where(isValid, targetPos - actualPos, 0.0)
+
+				# Orientation residual (3 DOF) - convert quat difference to small angle
+				targetQuat = targetPoseFlat[j*7:j*7 + 4]
+				actualQuat = actualPoseFlat[j*7:j*7 + 4]
+
+				# Quaternion error: q_error = q_target * conj(q_actual)
+				qError = maths.quatMul(targetQuat, maths.quatConj(actualQuat))
+
+				# Convert to small angle (axis * angle/2 stored in vector part)
+				angResidual = jnp.where(isValid, 2.0 * qError[0:3], 0.0)
+
+				residual = residual.at[j*6:j*6+3].set(posResidual)
+				residual = residual.at[j*6+3:j*6+6].set(angResidual)
+
+			return residual, manifold.bodyIds[:nBodies]
+
+		# Vectorized processing would be complex due to variable nBodies
+		# Use scan for efficient sequential processing
+		def scanFn(carry, i):
+			residuals, bodyIdsList = carry
+			residual, bodyIds = processConstraint(i)
+			return (residuals.at[i].set(residual), bodyIdsList.at[i].set(bodyIds)), None
+
+		# Get maximum body count for padding
+		maxBodies = max(m.nBodies for m in bucket.manifoldData)
+
+		# Initialize storage
+		initialResiduals = jnp.zeros((M, maxBodies * 6), dtype=bs.position.dtype)
+		initialBodyIds = jnp.full((M, maxBodies), -1, dtype=jnp.int32)
+
+		(residuals, bodyIdsList), _ = jax.lax.scan(
+			scanFn,
+			(initialResiduals, initialBodyIds),
+			jnp.arange(M)
+		)
+
+		# Apply XPBD correction for each constraint
+		newPosDelta = bufs.posDelta
+		newAngDelta = bufs.angDelta
+		newLambdas = bucket.lambdaState.Lambda
+
+		for i in range(M):
+			if not active[i]:
+				continue
+
+			manifold = bucket.manifoldData[i]
+			nBodies = manifold.nBodies
+			residual = residuals[i, :nBodies*6] * bucket.weight[i]
+
+			# XPBD update per body
+			for j in range(nBodies):
+				bodyId = bodyIdsList[i, j]
+				if bodyId < 0:
+					continue
+
+				# Get body properties
+				invMass = bs.invMass[bodyId]
+				invInertia = bs.invInertiaBody[bodyId]
+				quat = bs.orientation[bodyId]
+
+				# Position constraint (3 DOF)
+				posRes = residual[j*6:j*6+3]
+				lambdaPrevPos = newLambdas[i, j*6:j*6+3]
+
+				wEffPos = invMass + 1e-12
+				deltaLambdaPos = -(posRes + bucket.alpha[i] * lambdaPrevPos) / (wEffPos + bucket.alpha[i])
+				deltaLambdaPos = deltaLambdaPos * active[i]
+
+				newLambdas = newLambdas.at[i, j*6:j*6+3].set(lambdaPrevPos + deltaLambdaPos)
+				newPosDelta = newPosDelta.at[bodyId].add(invMass * deltaLambdaPos)
+
+				# Orientation constraint (3 DOF)
+				angRes = residual[j*6+3:j*6+6]
+				lambdaPrevAng = newLambdas[i, j*6+3:j*6+6]
+
+				# Effective mass for rotation (simplified - assumes small residual)
+				iInvAng = maths.applyInvInertiaWorld(quat, invInertia, angRes)
+				wEffAng = jnp.dot(angRes, iInvAng) + 1e-12
+
+				deltaLambdaAng = -(jnp.sum(angRes * angRes) + bucket.alpha[i] * jnp.sum(lambdaPrevAng * angRes)) / (wEffAng + bucket.alpha[i])
+				deltaLambdaAngVec = deltaLambdaAng * angRes / (jnp.linalg.norm(angRes) + 1e-12)
+				deltaLambdaAngVec = deltaLambdaAngVec * active[i]
+
+				newLambdas = newLambdas.at[i, j*6+3:j*6+6].set(lambdaPrevAng + deltaLambdaAngVec)
+				dTheta = maths.applyInvInertiaWorld(quat, invInertia, deltaLambdaAngVec)
+				newAngDelta = newAngDelta.at[bodyId].add(dTheta)
+
+		newBufs = state.BodyDeltaBuffers(
+			posDelta=newPosDelta,
+			angDelta=newAngDelta
+		)
+
+		newBucket = ManifoldConstraintBucket(
+			isActive=bucket.isActive,
+			manifoldData=bucket.manifoldData,
+			params=bucket.params,
+			alpha=bucket.alpha,
+			weight=bucket.weight,
+			lambdaState=XpbdLambdaN(Lambda=newLambdas)
+		)
+
+		return newBufs, newBucket

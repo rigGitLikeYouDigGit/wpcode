@@ -79,10 +79,19 @@ def solverIterationPlan(
 	bufs, newHingeAxisBucket = cs.hingeAxis.accumulate(
 		bs, bufs, cs.hingeAxis, dtSub
 	)
+
+	# Optional manifold constraints
+	newManifoldBucket = cs.manifold
+	if cs.manifold is not None:
+		bufs, newManifoldBucket = cs.manifold.accumulate(
+			bs, bufs, cs.manifold, dtSub
+		)
+
 	cs = constraint.ConstraintState(
 		settings=cs.settings,
 		point=newPointBucket,
 		hingeAxis=newHingeAxisBucket,
+		manifold=newManifoldBucket,
 	)
 
 	bsOut = applyBuffers(bs, bufs)
