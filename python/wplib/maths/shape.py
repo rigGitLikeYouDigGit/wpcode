@@ -14,6 +14,40 @@ can guarantee subclasses in some places, and some not
 """
 from . import arrT
 
+def indexValueArrsFromTupleList(
+		tupleList:list[tuple[int | float, ...]],
+)->tuple[np.ndarray, np.ndarray]:
+	"""return index arr of N+1 entries, starting at 0
+	and flat value array"""
+	n = len(tupleList)
+	indices = np.empty(n + 1, dtype=int)
+	indices[0] = 0
+
+	# calculate total size and fill indices
+	total_size = 0
+	for i, tup in enumerate(tupleList):
+		total_size += len(tup)
+		indices[i + 1] = total_size
+
+	# pre-allocate values array and fill
+	values = np.empty(total_size, dtype=float)
+	for i, tup in enumerate(tupleList):
+		values[indices[i]:indices[i + 1]] = tup
+
+	return indices, values
+
+def tupleListFromIndexValueArrs(
+		indices:np.ndarray,
+		values:np.ndarray,
+)->list[tuple[int | float, ...]]:
+	"""reconstruct tuple list from index and value arrays"""
+	n = len(indices) - 1
+	result = [()] * n
+	for i in range(n):
+		result[i] = values[indices[i] : indices[i + 1]]
+	return result
+
+
 class _RealisticInfoArray(np.ndarray):
 	"""copied from np docs as reference"""
 
