@@ -40,11 +40,14 @@ MAYA_PY_ROOT = Path(__file__).parent
 from wplib import to, arr
 
 def isThisMaya():
-	try:
-		from maya import cmds
-		return True
-	except (ModuleNotFoundError, ImportError):
-		return False
+	""" check if "maya" is in the executable path """
+	exePath = Path(sys.executable).as_posix().lower()
+	return "maya" in exePath
+	# try:
+	# 	from maya import cmds
+	# 	return True
+	# except (ModuleNotFoundError, ImportError):
+	# 	return False
 
 
 def findKey(namespace, value):
@@ -78,3 +81,13 @@ if isThisMaya():
 
 	# use to denote function arguments to accept either static values or plugs
 	PLUG_VAL = (Plug, object)
+else:
+	# make dummy stand-ins for maya-specific imports
+	cmds = None
+	om = None
+	oma = None
+	omui = None
+	omr = None
+	getCache = None
+	WN = None
+	Plug = None

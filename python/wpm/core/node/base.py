@@ -8,12 +8,12 @@ import typing as T, types
 import ast
 from typing import TypedDict, NamedTuple
 from collections import namedtuple
-
+from dataclasses import dataclass, field
 import numpy as np
 
 # tree libs for core behaviour
-#from wptree import Tree
-from wplib import Sentinel, log, wpstring
+from wptree import Tree
+from wplib import Sentinel, log, wpstring, to, ToType
 from wplib.object import Signal, Adaptor
 from wplib.inheritance import iterSubClasses
 from wplib.object import UnHashableDict, StringLike, SparseList
@@ -30,7 +30,7 @@ from .. import api, plug
 
 from ..plugtree import Plug, PlugDescriptor
 from ..namespace import NamespaceTree, getNamespaceTree
-
+from ... import getMDagPath
 
 # NO TRUE IMPORTS for codegen submodules
 # if T.TYPE_CHECKING:
@@ -126,9 +126,6 @@ class DGDagModifier(om.MDagModifier):
 		self._dgMod.undoIt()
 
 
-
-
-
 # nodes
 
 def filterToMObject(node)->om.MObject:
@@ -186,7 +183,7 @@ class WNMeta(type):
 		raise AttributeError(f"no attribute {item}")
 
 	@classmethod
-	def wrapperClassForNodeType(cls, nodeType: (str, om.MTypeId)) -> T.Type[WN]:
+	def classForNodeType(cls, nodeType: (str, om.MTypeId)) -> T.Type[WN]:
 		"""return a wrapper class for the given node's type
 		if it exists"""
 		nc = om.MNodeClass(nodeType)
@@ -203,7 +200,7 @@ class WNMeta(type):
 			return WN
 
 	@classmethod
-	def wrapperClassForMObject(cls, mobj:om.MObject):
+	def classForMObject(cls, mobj:om.MObject):
 		"""return a wrapper class for the given mobject
 		bit more involved if we don't know the string type
 		"""
@@ -305,7 +302,7 @@ class WNMeta(type):
 			return WNMeta.objMap[mobj]
 
 		# get specialised WNode subclass if it exists
-		wrapCls = WNMeta.wrapperClassForMObject(mobj)
+		wrapCls = WNMeta.classForMObject(mobj)
 		#log("wrapCls", wrapCls)
 
 		# create instance
@@ -365,6 +362,73 @@ class FilterSequence(list):
 		new = self._copy(self)
 		new.extend(i for i in other if not i in thisSet)
 		return new
+
+# T (Template) object for schemas - specialise for init attr values
+@dataclass
+class NodeSchema:
+	"""I would have used getitem on the class for this, but we need
+	kwarg support to hint each node type's attributes.
+	Would be nice to split this out but I can't work out the
+	dependency.
+
+	TODO: do something like relative string paths to set up plug connections
+	"""
+	type : type[WN.DagNode]
+	name : str
+	# # use parentNode to parent result to an external transform
+	# parentNode : (T.Union[str, om.MObject, WN], None) = None
+	kwargs : dict = field(default_factory=dict)
+
+	_branches : list[NodeSchema] = field(default_factory=list, init=False)
+
+	@classmethod
+	def fromLiteral(cls,
+	    literal:
+			dict[str, tuple[NodeSchema, dict]] |
+			tuple[NodeSchema, dict]
+	                )->list[NodeSchema]:
+		""" given dict such as {
+		root : (WN.Transform.T(). {
+			child1 : WN.Mesh.T(),
+			loc : WN.Locator }
+			)
+		}
+		"""
+		schema = None
+		if isinstance(literal, tuple):
+			schema, branches = literal
+			if branches:
+				branchSchemas = cls.fromLiteral(branches)
+				schema._branches = branchSchemas
+			return [schema]
+		elif isinstance(literal, dict):
+			branchSchemas = []
+			for k, v in literal.items():
+				if isinstance(v, type) and issubclass(v, NodeSchema):
+					schema = v.T(name=k)
+				elif isinstance(v, NodeSchema):
+					v.name = k
+				elif isinstance(v, tuple):
+					schema, branches = v
+					schema.name = k
+					if branches:
+						branchSchemas = cls.fromLiteral(branches)
+						schema._branches = branchSchemas
+				else:
+					raise TypeError("Invalid literal for NodeSchema.fromLiteral: " + str(v))
+				assert isinstance(schema, NodeSchema), "Invalid literal for NodeSchema.fromLiteral: " + str(literal)
+				branchSchemas.append(schema)
+			return branchSchemas
+		raise TypeError("Invalid literal for NodeSchema.fromLiteral: " + str(literal))
+
+
+	def build(self, parentTo: (str, om.MObject, WN)=None)->WN.DagNode:
+		"""build node from schema, parented to given parent if any"""
+		childNodes = [i.build() for i in self._branches]
+		node = self.type.buildSchemaNode(self, childNodes)
+		if parentTo is not None:
+			node.setParent(parentTo)
+		return node
 
 
 # i've got no strings, so i have fn
@@ -455,6 +519,23 @@ class WN( # short for WePresentNode
 	def wrapperExistsForNodeType(cls, nodeType:(int, str)):
 		if(isinstance(nodeType, str)):
 			return
+
+	@classmethod
+	def T(cls, name:str="", parentNode=None, **kwargs)->NodeSchema:
+		"""template schema integration - return schema dataclass on this
+		node type, with given name and init kwargs"""
+		return NodeSchema(cls, name, kwargs)
+
+	@classmethod
+	def buildSchemaNode(cls, schema:NodeSchema, childNodes:tuple[WN.DagNode]=())->WN:
+		"""build a node from a schema dataclass -
+		guaranteed to match type
+		"""
+		node = cls.create(schema.name, **schema.kwargs)
+		for i in childNodes:
+			i.setParent(node)
+		return node
+
 	def __init__(self, node:om.MObject, **kwargs):
 		"""init here is never called directly, always filtered to an MObject
 		through metaclass
@@ -472,12 +553,19 @@ class WN( # short for WePresentNode
 		# only used for optimisation, don't rely on it
 		self._liveDataTree = None
 
-	# @property
-	# def MObject(self)->om.MObject:
-	# 	"""return MObject from handle"""
-	# 	return self.object()Handle.object()
-	# 	#return self._mobj
-
+	def _processInitPlugKwargs(self, **kwargs):
+		"""process any kwargs given at init time as plugs to set"""
+		for k, v in kwargs.items():
+			if not isinstance(k, str):
+				continue
+			if not k.endswith("_"):
+				continue
+			plugName = k[:-1]
+			plugObj = self.plug(plugName)
+			if plugObj is None:
+				raise AttributeError(f"No plug named {plugName} on node "
+				                     f"{self.name()} of type {type(self)}")
+			plugObj.set(v)
 
 	def object(self, checkValid=False)->om.MObject:
 		"""same interface as MFnBase"""
@@ -652,7 +740,8 @@ class WN( # short for WePresentNode
 	# WNMeta should delegate to this
 	@classmethod
 	def create(cls,
-	           name:str="", dgMod_:DGDagModifier=None, parent_:nodeArgT=None, **kwargs)->WN:
+	           name:str="", dgMod_:DGDagModifier=None, parent_:nodeArgT=None,
+	           createTf_=True, **kwargs)->WN:
 		"""
 		explicitly create a new node of this type, incrementing name if necessary
 
@@ -662,6 +751,9 @@ class WN( # short for WePresentNode
 		without a deeper "_createInner()" method to actually create the object -
 		will result in some copying of the argument processing here,
 		but I find copying can sometimes be comforting for work code
+
+		if parent not specified, creating a shape node will create a transform
+		with the given name - we still return the actual shape node
 		"""
 		# creating from raw WN class, default to Transform
 		if cls is WN:
@@ -671,6 +763,15 @@ class WN( # short for WePresentNode
 		if parent_ is not None:
 			parent_ = filterToMObject(parent_)
 
+		# check if we need to make a parent transform
+		if issubclass(nodeCls, WN.Shape):
+			if not parent_ or parent_.isNull():
+				if not createTf_: # explicitly set to false
+					raise ValueError("Cannot create shape node without parent transform")
+				parentTf = WN.Transform.create(
+					name=name)
+				parent_ = parentTf.MObject
+				name = parentTf.name() + "Shape"
 
 		opMod = dgMod_ or DGDagModifier()
 		name = name or nodeCls.typeName + str(1)
@@ -682,13 +783,12 @@ class WN( # short for WePresentNode
 		# always execute the modifier for now, too complicated and not useful otherwise
 		opMod.doIt()
 
-		#hdl = cls._validateCreatedMObject(newObj)
 		wrapper = nodeCls(newObj, **kwargs)
+
 		cls._validateCreatedWrapper(newObj, wrapper) # basically sometimes an object can be valid, while its handle isn't?
+
 		wrapper.setName(name)
 		return wrapper
-
-
 
 
 	@classmethod
@@ -715,7 +815,7 @@ class WN( # short for WePresentNode
 		check if the typeId returned by the modifier matches the node type created
 		"""
 
-		wrapperCls = cls.wrapperClassForNodeType(nodeType)
+		wrapperCls = cls.classForNodeType(nodeType)
 
 		opMod = dgMod_ or DGDagModifier()
 		name = name or nodeType + str(1)
@@ -769,6 +869,8 @@ class WN( # short for WePresentNode
 			self.tf().setName(value, exact=True)
 			root, digits = wpstring.trailingDigits(self.tf().name())
 			self.shape().setName(root + "Shape" + digits, exact=True)
+
+
 
 	def address(self)->tuple[str]:
 		"""return sequence of node names up to root """
@@ -1143,4 +1245,71 @@ class WN( # short for WePresentNode
 		"""return all attributes added by this exact node
 		class"""
 
+
+
+# type conversions
+ToType(
+	(om.MObject,),
+	(str, ),
+	lambda obj, t, kwargs : om.MFnDependencyNode(obj).name(),
+	lambda obj, t, kwargs : getMObject(obj)
+)
+ToType(
+	(om.MDagPath,),
+	(str, ),
+	lambda dp, t, kwargs : dp.fullPathName() ,
+	lambda obj, t, kwargs : getMDagPath(obj)
+)
+ToType(
+	(str, om.MDagPath, om.MFnBase,),
+	(om.MObject,),
+	lambda obj, t, kwargs : getMObject(obj),
+)
+ToType(
+	(str, om.MObject, om.MFnBase,),
+	(om.MDagPath,),
+	lambda obj, t, kwargs : getMDagPath(obj),
+)
+ToType(
+	(str, om.MObject, om.MDagPath,),
+	(om.MFnBase,),
+	lambda obj, t, kwargs : getMFn(obj),
+)
+### WN functions
+ToType(
+	(str, om.MObject, om.MDagPath, om.MFnBase,),
+	(WN,),
+	lambda obj, t, kwargs : WN(obj),
+)
+ToType(
+	(WN,),
+(om.MObject,),
+	lambda obj, t, kwargs : obj.object()
+)
+ToType(
+	(WN,),
+	(om.MDagPath,),
+	lambda obj, t, kwargs : obj.dagPath()
+)
+ToType(
+	(WN, ),
+	(om.MFnBase, ),
+	lambda obj, t, kwargs : obj.MFn
+)
+## plugs
+ToType(
+	(str, om.MObject, WN, om.MPlug,),
+	(Plug,),
+	lambda obj, t, kwargs : Plug(obj)
+)
+ToType(
+	(Plug,),
+	(om.MPlug,),
+	lambda obj, t, kwargs : obj.MPlug,
+)
+ToType(
+	(Plug,),
+	(om.MObject,),
+	lambda obj, t, kwargs : obj.MPlug.node()
+)
 

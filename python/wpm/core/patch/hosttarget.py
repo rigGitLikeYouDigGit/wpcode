@@ -26,12 +26,20 @@ def directModuleImport(modulePath:str)->types.ModuleType:
 	spec.loader.exec_module(module)
 	return module
 
-# vanilla maya modules, copied so none of our jank leaks back into maya itself
-baseCmds = importlib.import_module("maya.cmds")
-baseOm = importlib.import_module("maya.api.OpenMaya")
-baseOmr = importlib.import_module("maya.api.OpenMayaRender")
-baseOma = importlib.import_module("maya.api.OpenMayaAnim")
-baseOmui = importlib.import_module("maya.api.OpenMayaUI")
+try:
+	# vanilla maya modules, copied so none of our jank leaks back into maya itself
+	baseCmds = importlib.import_module("maya.cmds")
+	baseOm = importlib.import_module("maya.api.OpenMaya")
+	baseOmr = importlib.import_module("maya.api.OpenMayaRender")
+	baseOma = importlib.import_module("maya.api.OpenMayaAnim")
+	baseOmui = importlib.import_module("maya.api.OpenMayaUI")
+except ModuleNotFoundError:
+	# likely running outside maya - create dummies
+	baseCmds = types.ModuleType("cmds")
+	baseOm = types.ModuleType("OpenMaya")
+	baseOmr = types.ModuleType("OpenMayaRender")
+	baseOma = types.ModuleType("OpenMayaAnim")
+	baseOmui = types.ModuleType("OpenMayaUI")
 
 # wp versions - these can be renamed when imported at higher scope
 # more helpful to be explicit here

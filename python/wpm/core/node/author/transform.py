@@ -3,8 +3,8 @@ import typing as T
 
 from ..gen.transform import Transform as GenTransform
 import numpy as np
-from wpm import cmds, om, WN, arr
-from wplib.totype import to
+from wpm import cmds, om, WN, arr, Plug
+from wplib.totype import to, coerce
 
 
 class Transform(GenTransform):
@@ -27,10 +27,14 @@ class Transform(GenTransform):
 			mat = to(mat, om.MTransformationMatrix)
 			self.MFn.setTransformation(mat)
 			return
-
 		parentMat = om.MFnTransform(self.MFn.parent(0)).transformationMatrix()
 		mat = to(mat, om.MMatrix)
 		self.setLocalMatrix(parentMat.inverse() * mat)
+
+	@coerce
+	def setParentOffsetMatrix(self, mat:om.MMatrix):
+		"""sets offsetParentMatrix to mat"""
+		self.offsetParentMatrix_.setMMatrix(mat)
 
 	def localPos(self)->om.MVector:
 		return self.MFn.translation(om.MSpace.kObject)
@@ -58,6 +62,7 @@ class Transform(GenTransform):
 	def worldOut(self) -> Plug:
 		return self.worldMatrix_[0]
 
+	@coerce
 	def setParentKeepWorld(self, other:WN, updateOffsetParentMat=False):
 		"""reparent keeping worldspace position, setting new local
 		transform attributes on this node

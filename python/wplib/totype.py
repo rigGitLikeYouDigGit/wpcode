@@ -40,8 +40,8 @@ class ToType:
 	pathCache : dict[tuple[type, type], T.Callable[[T.Any], T.Any]] = {}
 
 	def __init__(self,
-				 fromTypes: tuple[type],
-				 toTypes: tuple[type],
+				 fromTypes: tuple[type, ...],
+				 toTypes: tuple[type, ...],
 				 convertFn: T.Callable[[T.Any, T.Type, T.ParamSpecKwargs], T.Any] = baseConvertFn,
 				 backFn:T.Optional[T.Callable[[T.Any, T.Type, T.ParamSpecKwargs], T.Any]]=None
 				 ):
@@ -290,19 +290,16 @@ class coerce(UserDecorator):
 		"""
 		if T.TYPE_CHECKING:
 			return targetFunction
-		log("wrapFunction", targetFunction, decoratorArgsKwargs)
+		#log("wrapFunction", targetFunction, decoratorArgsKwargs)
 
 		# get function annotations
 		anns = targetFunction.__annotations__
-		log("anns", anns)
+		#log("anns", anns)
 
 		# get globals of calling module
 		outerFrame = inspect.currentframe().f_back
 		outerGlobals = dict(outerFrame.f_globals)
 		outerGlobals.update(builtins.__dict__)
-		outerGlobals.pop("copyright")
-		outerGlobals.pop("__doc__")
-		outerGlobals.pop("credits")
 
 		# dict of argument name to target type
 		argNameTypeMap : dict[str, type] = {}
