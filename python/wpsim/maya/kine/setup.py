@@ -10,27 +10,18 @@ from wpsim.kine import builder
 """maya-facing setup functions to build wpsim from maya nodes"""
 
 
-#region body transforms
-class MayaTransformSchema:
-	"""test base class for expected structure
-	under single transform"""
 
-	def __init__(self, tfRoot:WN|str):
-		self.tfRoot : WN.Transform = WN.Transform(tfRoot)
+def getRigidTFSchema(
+		name:str
+)->WN.NodeSchema:
+	"""return schema for rigid body with given name"""
+	return WN.NodeSchema.fromLiteral(
+		{f"{name}_GRP": (WN.T(), {
+			"com": WN.Locator,
+			"mesh": WN.Mesh,
+		})}
+	)
 
-
-
-class WpSimRigidTfSchema(MayaTransformSchema):
-	"""group representing single rigid body"""
-
-	def name(self):
-		return self.tfRoot.name()
-
-	def comLoc(self)->WN.Transform:
-		"""return locator representing body's centre of mass -
-		will have a local offset compared to outer transform
-		"""
-		return self.tfRoot("")
 
 
 class WpSimRigidGroup:

@@ -4,13 +4,6 @@ from __future__ import annotations
 import typing as T
 from wplib.inheritance import SuperClassLookupMap
 
-try:
-	from wplib.totype import nx
-	import networkx as nx
-except ImportError:
-	print('networkx not installed')
-	nx = None
-
 class Adaptor:
 	"""Abstract-abstract class for registering "companion" objects
 	to types, for type-specific behaviour without subclassing.

@@ -117,7 +117,7 @@ def getMObject(node, default=RuntimeError)->om.MObject:
 		return toMObject(node)
 	try:
 		return toMObject(node) or om.MObject()
-	except RuntimeError, TypeError:
+	except (RuntimeError, TypeError):
 		return default
 
 

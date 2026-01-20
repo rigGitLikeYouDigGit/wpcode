@@ -25,12 +25,11 @@ from wpm.constant import GraphTraversal, GraphDirection, GraphLevel, WPM_ROOT_PA
 from ..bases import NodeBase, PlugBase
 from ..callbackowner import CallbackOwner
 from ..patch import cmds, om
-from ..api import getMObject, getMFn, asMFn, getMFnType
+from ..api import getMObject, getMFn, asMFn, getMFnType, getMDagPath
 from .. import api, plug
 
 from ..plugtree import Plug, PlugDescriptor
 from ..namespace import NamespaceTree, getNamespaceTree
-from ... import getMDagPath
 
 # NO TRUE IMPORTS for codegen submodules
 # if T.TYPE_CHECKING:
@@ -520,10 +519,14 @@ class WN( # short for WePresentNode
 		if(isinstance(nodeType, str)):
 			return
 
+	NodeSchema = NodeSchema
+
 	@classmethod
 	def T(cls, name:str="", parentNode=None, **kwargs)->NodeSchema:
 		"""template schema integration - return schema dataclass on this
 		node type, with given name and init kwargs"""
+		if cls == WN: # default to Transform
+			cls = WN.Transform
 		return NodeSchema(cls, name, kwargs)
 
 	@classmethod

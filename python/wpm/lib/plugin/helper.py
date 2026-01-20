@@ -17,7 +17,63 @@ from wpm.constant import WP_PLUGIN_NAMESPACE, PY_PLUGIN_START_ID
 from wpm.lib.plugin.template import PluginNodeTemplate, PluginDrawOverrideTemplate, pluginNodeType
 
 pluginDrawOverrideType = (PluginDrawOverrideTemplate, omr.MPxDrawOverride)
+
 class MayaPluginAid:
+	"""base class designed for C++ plugins, only holding
+	path and name"""
+
+	def __init__(self, name:str,
+	             #studioLocalPluginId:int,
+	             pluginPath:(str, Path),
+	             ):
+		"""
+		:param name: string name of plugin
+
+		:param pluginPath: file path to this plugin's main file -
+			should usually be the same file that initialises a PluginAid object,
+			with separate initializePlugin() and uninitializedPlugin() functions at module level
+
+		:param nodeClasses: tuple of node classes to register with this plugin
+		:param drawOverrideClasses: dict of [ nodeClass : drawOverride for that class ]
+		"""
+		self.name = name
+		self.pluginPath : Path = Path(pluginPath)
+
+
+	def isRegistered(self)->bool:
+		"""check if plugin represented by this object is currently registered in maya"""
+		return cmds.pluginInfo(self.name, q=1, registered=1)
+
+	def isLoaded(self)->bool:
+		"""check if plugin represented by this object is currently loaded in maya"""
+		try:
+			return cmds.pluginInfo(self.name, q=1, loaded=1)
+		except RuntimeError: # if plugin is not registered
+			return False
+
+	def loadPlugin(self, forceReload=True):
+		"""if forceReload, will unload plugin if currently loaded
+		"""
+		if self.isRegistered():
+			if self.isLoaded():
+				if forceReload:
+					self.unloadPlugin()
+
+		# check that file lies on maya plugin path - else add it
+		pluginDirs = os.getenv('MAYA_PLUG_IN_PATH').split(';')
+		if not self.pluginPath in pluginDirs:
+			pluginDirs.append(str(self.pluginPath))
+			os.putenv("MAYA_PLUG_IN_PATH", ';'.join(pluginDirs))
+
+		cmds.loadPlugin(str(self.pluginPath), name=self.name)
+		assert self.isLoaded(), "loading plugin {} did not properly load it in Maya".format((self.name, self.pluginPath, self))
+
+	def unloadPlugin(self):
+		if self.isLoaded():
+			cmds.unloadPlugin(self.name, force=1)
+		assert not self.isLoaded(), "unloading plugin {} did not properly unload it in Maya\n good luck lol".format((self.name, self.pluginPath, self))
+
+class MayaPyPluginAid(MayaPluginAid):
 	"""helper object for defining boilerplate around maya plugins - registering nodes, linking draw overrides, etc
 
 	should be relatively robust to reloading - unloadPlugin() here
@@ -48,6 +104,7 @@ class MayaPluginAid:
 	             nodeClasses: dict[int, type[PluginNodeTemplate]] = {},
 	             drawOverrideClasses: dict[pluginNodeType,
 	                                      pluginDrawOverrideType] = {},
+	             mpxDataClasses : dict[int, type[om.MPxData]] = {},
 	             useOldApi:bool = False
 	             ):
 		"""
@@ -60,12 +117,11 @@ class MayaPluginAid:
 		:param nodeClasses: tuple of node classes to register with this plugin
 		:param drawOverrideClasses: dict of [ nodeClass : drawOverride for that class ]
 		"""
-		self.name = name
-		#self.studioLocalPluginId = studioLocalPluginId
+		super().__init__(name, pluginPath)
 
-		self.pluginPath : Path = Path(pluginPath)
 		self.nodeClasses = dict(nodeClasses)
 		self.drawOverrideClasses = dict(drawOverrideClasses)
+		self.mpxDataClasses = dict(mpxDataClasses)
 
 		self.useOldApi = useOldApi
 
@@ -183,38 +239,6 @@ class MayaPluginAid:
 			nodeTypeId = self.nodeClsTypeId(i)
 			self._mfnPlugin.deregisterNode(nodeTypeId)
 
-	def isRegistered(self)->bool:
-		"""check if plugin represented by this object is currently registered in maya"""
-		return cmds.pluginInfo(self.name, q=1, registered=1)
-
-	def isLoaded(self)->bool:
-		"""check if plugin represented by this object is currently loaded in maya"""
-		try:
-			return cmds.pluginInfo(self.name, q=1, loaded=1)
-		except RuntimeError: # if plugin is not registered
-			return False
-
-	def loadPlugin(self, forceReload=True):
-		"""if forceReload, will unload plugin if currently loaded
-		"""
-		if self.isRegistered():
-			if self.isLoaded():
-				if forceReload:
-					self.unloadPlugin()
-
-		# check that file lies on maya plugin path - else add it
-		pluginDirs = os.getenv('MAYA_PLUG_IN_PATH').split(';')
-		if not self.pluginPath in pluginDirs:
-			pluginDirs.append(str(self.pluginPath))
-			os.putenv("MAYA_PLUG_IN_PATH", ';'.join(pluginDirs))
-
-		cmds.loadPlugin(str(self.pluginPath), name=self.name)
-		assert self.isLoaded(), "loading plugin {} did not properly load it in Maya".format((self.name, self.pluginPath, self))
-
-	def unloadPlugin(self):
-		if self.isLoaded():
-			cmds.unloadPlugin(self.name, force=1)
-		assert not self.isLoaded(), "unloading plugin {} did not properly unload it in Maya\n good luck lol".format((self.name, self.pluginPath, self))
 
 	def testPlugin(self):
 		"""create all nodes, run all node test functions"""
