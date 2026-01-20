@@ -6,8 +6,13 @@
 #include <maya/MFnEnumAttribute.h>
 #include <maya/MFnTypedAttribute.h>
 #include <maya/MFnData.h>
+#include <maya/MFnFloatArrayData.h>
+#include <maya/MFnMatrixArrayData.h>
+#include <maya/MFnMeshData.h>
+#include <maya/MFnVectorArrayData.h>
 #include <maya/MVector.h>
 #include <maya/MPoint.h>
+#include <maya/MFnDependencyNode.h>
 
 #ifdef USE_CUDA
 #include <cuda_runtime.h>
@@ -67,21 +72,28 @@ __global__ void skinDeformKernel(
 
 namespace wp {
 
+// ============================================================================
+// WpSkinCluster Implementation
+// ============================================================================
+
 // Static member initialization
 const MString WpSkinCluster::kNODE_NAME("wpSkinCluster");
-const MTypeId WpSkinCluster::kNODE_ID(0x00090001); // Replace with your ID
+const MTypeId WpSkinCluster::kNODE_ID(0x00090001);
 const MString WpSkinCluster::typeName("wpSkinCluster");
 
 MObject WpSkinCluster::aLinearizedWeights;
+MObject WpSkinCluster::aLinearizedIndices;
 MObject WpSkinCluster::aLinearizedMatrices;
 MObject WpSkinCluster::aLinearizedActiveMatrices;
 MObject WpSkinCluster::aUseGPU;
 MObject WpSkinCluster::aGPUBackend;
 MObject WpSkinCluster::aDebugMode;
+MObject WpSkinCluster::aMaxInfluences;
+MObject WpSkinCluster::aRefMesh;
 
 WpSkinCluster::WpSkinCluster() 
     : m_weightsNeedUpdate(true)
-    , m_matricesNeedUpdate(true)
+    , m_restMatricesNeedUpdate(true)
 #ifdef USE_CUDA
     , d_vertices(nullptr)
     , d_weights(nullptr)
@@ -113,44 +125,58 @@ MStatus WpSkinCluster::initialize() {
     MFnCompoundAttribute cAttr;
     MFnTypedAttribute tAttr;
 
+	aMaxInfluences = nAttr.create("maxInfluences", "maxInfluences",
+        MFnNumericData::kInt, 4, &status);
+	addAttribute(aMaxInfluences);
+
     // Linearized weights array
     aLinearizedWeights = tAttr.create(
-        "linearWeight", "linearWeight",
+        "linearWeight", "linW",
         MFnData::kFloatArray, &status);
     MCHECK(status, "create linearizedWeights");
-    nAttr.setStorable(true);
-    nAttr.setKeyable(false);
+    tAttr.setStorable(true);
+    tAttr.setKeyable(false);
+    tAttr.setHidden(false);
     addAttribute(aLinearizedWeights);
 
     // Linear index array
     aLinearizedIndices = tAttr.create(
-        "linearIndices", "linearIndices",
-        MFnData::kFloatArray, &status);
+        "linearIndices", "linI",
+        MFnData::kIntArray, &status);
     MCHECK(status, "create linearIndices");
-    nAttr.setStorable(true);
-    nAttr.setKeyable(false);
-    addAttribute(aLinearizedWeights);
+    tAttr.setStorable(true);
+    tAttr.setKeyable(false);
+    tAttr.setHidden(false);
+    addAttribute(aLinearizedIndices);
 
-    // Linearized matrices array
+    // Linearized rest matrices array
     aLinearizedMatrices = tAttr.create(
-        "linearRestMatrix", "linearRestMatrix",
-        MFnData::kMatrixArray, &status
-    );
+        "linearRestMatrix", "linRM",
+        MFnData::kFloatArray, &status);
     MCHECK(status, "create linearizedMatrices");
-    mAttr.setStorable(true);
-    mAttr.setKeyable(false);
+    tAttr.setStorable(true);
+    tAttr.setKeyable(false);
+    tAttr.setHidden(false);
     addAttribute(aLinearizedMatrices);
 
-    // linear active matrix array
+    // Linear active matrix array
     aLinearizedActiveMatrices = tAttr.create(
-        "linearActiveMatrix", "linearActiveMatrix",
-        MFnData::kMatrixArray, &status
-    );
+        "linearActiveMatrix", "linAM",
+        MFnData::kFloatArray, &status);
     MCHECK(status, "create linearizedActiveMatrices");
-    mAttr.setStorable(true);
-    mAttr.setKeyable(false);
+    tAttr.setStorable(true);
+    tAttr.setKeyable(false);
+    tAttr.setHidden(false);
     addAttribute(aLinearizedActiveMatrices);
 
+	// ref mesh to save positions (and maybe normals later)
+    aRefMesh = tAttr.create(
+        "refMesh", "refm",
+		MFnData::kMesh, &status);
+	tAttr.setStorable(false);
+	tAttr.setKeyable(false);
+	tAttr.setReadable(false);
+	addAttribute(aRefMesh);
 
     // Use GPU toggle
     aUseGPU = nAttr.create("useGPU", "gpu", MFnNumericData::kBoolean, false, &status);
@@ -162,11 +188,9 @@ MStatus WpSkinCluster::initialize() {
     // GPU backend selection
     aGPUBackend = eAttr.create("gpuBackend", "gpub", 0, &status);
     MCHECK(status, "create gpuBackend");
+    eAttr.addField("Maya OpenCL", 0);
 #ifdef USE_CUDA
-    eAttr.addField("CUDA", 0);
-    eAttr.addField("Maya GPU Deformer", 1);
-#else
-    eAttr.addField("Maya GPU Deformer", 0);
+    eAttr.addField("CUDA", 1);
 #endif
     eAttr.setStorable(true);
     eAttr.setKeyable(true);
@@ -189,6 +213,8 @@ MStatus WpSkinCluster::initialize() {
     attributeAffects(aLinearizedActiveMatrices, outputGeom);
     attributeAffects(aUseGPU, outputGeom);
 
+	attributeAffects(aMaxInfluences, outputGeom);
+
     return MS::kSuccess;
 }
 
@@ -198,13 +224,21 @@ MStatus WpSkinCluster::setDependentsDirty(const MPlug& plugBeingDirtied,
     
     // Mark linearized data as needing update when weights or matrices change
     if (plugBeingDirtied == weightList || 
-        plugBeingDirtied.isChild() && plugBeingDirtied.parent() == weightList) {
+        (plugBeingDirtied.isChild() && plugBeingDirtied.parent() == weightList)) {
         m_weightsNeedUpdate = true;
     }
     
     if (plugBeingDirtied == matrix || plugBeingDirtied == bindPreMatrix) {
-        m_matricesNeedUpdate = true;
+        m_restMatricesNeedUpdate = true;
     }
+
+    if(plugBeingDirtied == aMaxInfluences) {
+        m_weightsNeedUpdate = true;
+	}
+
+    if(plugBeingDirtied == aRefMesh) {
+		m_restPositionsNeedUpdate = true;
+	}
     
     return MPxSkinCluster::setDependentsDirty(plugBeingDirtied, affectedPlugs);
 }
@@ -216,15 +250,38 @@ MStatus WpSkinCluster::deform(MDataBlock& block,
     MStatus status;
     
     // Update linearized data if needed
+	int nMaxInfluences = block.inputValue(aMaxInfluences, &status).asInt();
+
     if (m_weightsNeedUpdate) {
-        updateLinearizedWeights(block);
+        m_linearWeights = updateLinearizedWeights(block, 
+			nMaxInfluences, iter.count()
+            );
         m_weightsNeedUpdate = false;
     }
     
-    if (m_matricesNeedUpdate) {
-        updateLinearizedMatrices(block);
-        m_matricesNeedUpdate = false;
+    if (m_restMatricesNeedUpdate) {
+        m_restMatrices = updateLinearizedMatrices(block, bindPreMatrix);
+        m_restMatricesNeedUpdate = false;
     }
+
+	if (m_restPositionsNeedUpdate) {
+		MFnMesh meshFn(
+            block.inputValue(aRefMesh, &status).data()
+        );
+        if (!meshFn.numVertices()) {
+			meshFn.setObject(block.inputValue(inputGeom, &status).data());
+		}
+		std::vector<float> restPositions(
+            meshFn.numVertices() * 3);
+        std::copy(meshFn.getRawPoints(&status), 
+                  meshFn.getRawPoints(&status) + meshFn.numVertices() * 3,
+			restPositions.data());
+
+		m_restPositionsNeedUpdate = false;
+	}
+
+    /* update active joint matrices every frame*/
+	m_activeMatrices = updateLinearizedMatrices(block, matrix);
     
     // Check if GPU should be used
     bool useGPU = block.inputValue(aUseGPU, &status).asBool();
@@ -251,6 +308,8 @@ MStatus WpSkinCluster::deformCPU(MDataBlock& block,
     if (env == 0.0f) {
         return MS::kSuccess;
     }
+
+	int maxInfs = block.inputValue(aMaxInfluences, &status).asInt();
     
     // Get weight list
     MArrayDataHandle weightListHandle = block.inputArrayValue(weightList, &status);
@@ -342,12 +401,14 @@ MStatus WpSkinCluster::deformGPU(MDataBlock& block,
     MCHECK(status, "get gpuBackend");
     
 #ifdef USE_CUDA
-    if (backend == 0) {
+    if (backend == 1) {
         return deformCUDA(block, iter, mat, multiIndex);
     }
 #endif
     
-    return deformMayaGPU(block, iter, mat, multiIndex);
+    // Maya OpenCL GPU path is handled automatically by MPxGPUDeformer
+    // if registered - fallback to CPU for safety
+    return deformCPU(block, iter, mat, multiIndex);
 }
 
 #ifdef USE_CUDA
@@ -400,7 +461,7 @@ MStatus WpSkinCluster::deformCUDA(MDataBlock& block,
         cudaMalloc(&d_output, vertexBytes);
         
         // Allocate for weights and indices (conservative estimate)
-        size_t weightBytes = numVertices * 8 * sizeof(float); // max 8 influences per vertex
+        size_t weightBytes = numVertices * 8 * sizeof(float);
         cudaMalloc(&d_weights, weightBytes);
         cudaMalloc(&d_influenceIndices, numVertices * 8 * sizeof(int));
         
@@ -423,8 +484,8 @@ MStatus WpSkinCluster::deformCUDA(MDataBlock& block,
                m_linearWeights.size() * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(d_influenceIndices, m_linearInfluenceIndices.data(),
                m_linearInfluenceIndices.size() * sizeof(int), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_matrices, m_linearMatrices.data(),
-               m_linearMatrices.size() * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_matrices, m_restMatrices.data(),
+               m_restMatrices.size() * sizeof(float), cudaMemcpyHostToDevice);
     
     // Launch kernel
     int threadsPerBlock = 256;
@@ -453,53 +514,401 @@ MStatus WpSkinCluster::deformCUDA(MDataBlock& block,
 }
 #endif // USE_CUDA
 
-MStatus WpSkinCluster::deformMayaGPU(MDataBlock& block,
-                                     MItGeometry& iter,
-                                     const MMatrix& mat,
-                                     unsigned int multiIndex) {
-    // Placeholder for Maya's built-in GPU deformer framework
-    // This would use MPxGPUDeformer if needed
-    MGlobal::displayWarning("Maya GPU deformer not yet implemented, falling back to CPU");
-    return deformCPU(block, iter, mat, multiIndex);
-}
-
-MStatus WpSkinCluster::updateLinearizedWeights(MDataBlock& block) {
+MStatus getSkinWeightArrays(
+    MDataBlock& block,
+    unsigned int nVertices,
+    unsigned int maxInfluences,
+    std::vector<float>& outWeights,
+    std::vector<int>& outInfluenceIndices) 
+{
     MStatus status;
-    MArrayDataHandle weightListHandle = block.inputArrayValue(weightList, &status);
-    MCHECK(status, "get weightList for linearization");
-    
-    return linearizeWeights(weightListHandle, m_linearWeights, m_linearInfluenceIndices);
+
+    MArrayDataHandle weightListHandle = block.inputArrayValue(WpSkinCluster::weightList, &status);
+
+    for (int vtx = 0; vtx < nVertices; ++vtx) {
+     
+        MCHECK(status, "get weightList");
+        
+        status = weightListHandle.jumpToElement(vtx);
+        MCHECK(status, "jump to vertex weight element");
+        
+        MDataHandle weightsHandle = weightListHandle.inputValue(&status).child(WpSkinCluster::weights);
+        MCHECK(status, "get weights handle");
+        
+        MArrayDataHandle weightsArray(weightsHandle, &status);
+        MCHECK(status, "get weights array handle");
+        
+        /* very simple for now, smaller influences beyond the max will cause others to be trimmed
+        */
+        float total = 0.0f;
+		unsigned int nEls = std::min(maxInfluences, weightsArray.elementCount());
+        for (unsigned int i = 0; i < nEls; ++i) {
+            outWeights[vtx * maxInfluences + i] = weightsArray.inputValue().asFloat();
+            outInfluenceIndices[vtx * maxInfluences + i] = weightsArray.elementIndex();
+            total += outWeights[vtx * maxInfluences + i];
+            weightsArray.next();
+        }
+        for(unsigned int i = 0; i < nEls; ++i) {
+            outWeights[vtx * maxInfluences + i] /= total;
+		}
+	}
+    return status;
 }
 
-MStatus WpSkinCluster::updateLinearizedMatrices(MDataBlock& block) {
+
+std::vector<float> WpSkinCluster::updateLinearizedWeights(
+    MDataBlock& block,
+	int nMaxInfluences,
+    int nVertices
+    ) {
     MStatus status;
-    MArrayDataHandle matrixHandle = block.inputArrayValue(matrix, &status);
-    MCHECK(status, "get matrix for linearization");
-    
-    return linearizeMatrices(matrixHandle, m_linearMatrices);
+
+    std::vector<float> weights(nVertices * nMaxInfluences);
+    std::vector<int> indices(nVertices * nMaxInfluences);
+	getSkinWeightArrays(block, nVertices, nMaxInfluences, weights, indices);
+    return weights;
+    /*MCHECK(status, "get weightList for linearization");
+    return status;*/
+    /*MArrayDataHandle weightListHandle = block.inputArrayValue(weightList, &status);
+    return linearizeWeights(weightListHandle, m_linearWeights, m_linearInfluenceIndices);*/
 }
 
-MStatus WpSkinCluster::linearizeWeights(const MArrayDataHandle& weightListArray,
-                                        std::vector<float>& outWeights,
-                                        std::vector<int>& outInfluenceIndices) {
-    // Implementation depends on your specific weight storage format
-    // This is a simplified example
-    outWeights.clear();
-    outInfluenceIndices.clear();
+std::vector<float> WpSkinCluster::updateLinearizedMatrices(
+    MDataBlock& block,
+	MObject& matrixAttr
+) {
+    /* unsure if it's worth trimming to float array here*/
+    MStatus status;
+    MMatrixArray& matrixArr = MFnMatrixArrayData(
+        block.inputValue(matrixAttr).data()).array(&status);
+	std::vector<float> result(matrixArr.length() * 16);
+    for (int i = 0; i < matrixArr.length(); ++i) {
+        const MMatrix& mat = matrixArr[i];
+        for(int row = 0; row < 4; ++row) {
+            for(int col = 0; col < 4; ++col) {
+                result[i * 16 + row * 4 + col] = static_cast<float>(mat(row, col));
+            }
+        }
+	}
+    return result;
+}
+
+
+// ============================================================================
+// WpSkinClusterGPUDeformer Implementation (Maya OpenCL)
+// ============================================================================
+
+const char* WpSkinClusterGPUDeformer::getOpenCLKernelCode() {
+    return 
+R"(
+__kernel void wpSkinDeform(
+    unsigned int numVertices,
+    unsigned int maxInfluences,
+    __global float* inputPositions,
+    __global float* outputPositions,
+    __global float* weights,
+    __global int* influenceIndices,
+    __global float* matrices)
+{
+    unsigned int vertexId = get_global_id(0);
+    if (vertexId >= numVertices) return;
     
-    // Store weights in linear format for GPU
-    // Format: [vert0_weight0, vert0_weight1, ..., vert1_weight0, ...]
+    // Read input position
+    float3 inPos = (float3)(
+        inputPositions[vertexId * 3 + 0],
+        inputPositions[vertexId * 3 + 1],
+        inputPositions[vertexId * 3 + 2]
+    );
+    
+    float3 outPos = (float3)(0.0f, 0.0f, 0.0f);
+    float totalWeight = 0.0f;
+    
+    unsigned int weightOffset = vertexId * maxInfluences;
+    
+    // Iterate through influences
+    for (unsigned int i = 0; i < maxInfluences; ++i) {
+        int influenceIdx = influenceIndices[weightOffset + i];
+        if (influenceIdx < 0) break;
+        
+        float weight = weights[weightOffset + i];
+        if (weight < 0.0001f) continue;
+        
+        totalWeight += weight;
+        
+        // Get matrix for this influence (stored row-major, 16 floats)
+        unsigned int matrixOffset = influenceIdx * 16;
+        
+        // Transform vertex by weighted matrix
+        // Matrix is 4x4, but we only need upper 3x4 for point transform
+        float3 transformed;
+        transformed.x = matrices[matrixOffset + 0] * inPos.x +
+                       matrices[matrixOffset + 1] * inPos.y +
+                       matrices[matrixOffset + 2] * inPos.z +
+                       matrices[matrixOffset + 3];
+        transformed.y = matrices[matrixOffset + 4] * inPos.x +
+                       matrices[matrixOffset + 5] * inPos.y +
+                       matrices[matrixOffset + 6] * inPos.z +
+                       matrices[matrixOffset + 7];
+        transformed.z = matrices[matrixOffset + 8] * inPos.x +
+                       matrices[matrixOffset + 9] * inPos.y +
+                       matrices[matrixOffset + 10] * inPos.z +
+                       matrices[matrixOffset + 11];
+        
+        outPos += weight * transformed;
+    }
+    
+    // Normalize if needed
+    if (totalWeight > 0.0f && fabs(totalWeight - 1.0f) > 0.0001f) {
+        outPos /= totalWeight;
+    }
+    
+    // Write output
+    outputPositions[vertexId * 3 + 0] = outPos.x;
+    outputPositions[vertexId * 3 + 1] = outPos.y;
+    outputPositions[vertexId * 3 + 2] = outPos.z;
+}
+)";
+}
+
+WpSkinClusterGPUDeformer::WpSkinClusterGPUDeformer()
+    : fNumVertices(0)
+    , fNumInfluences(0)
+    , fBuffersInitialized(false)
+{
+}
+
+WpSkinClusterGPUDeformer::~WpSkinClusterGPUDeformer() {
+    terminate();
+}
+
+MPxGPUDeformer* WpSkinClusterGPUDeformer::creator() {
+    return new WpSkinClusterGPUDeformer();
+}
+
+
+MGPUDeformerRegistrationInfo* WpSkinClusterGPUDeformer::getGPUDeformerInfo() {
+    static WpSkinGPURegistrationInfo theOne;
+	return &theOne;
+   /* static MGPUDeformerRegistrationInfo* sInfo = nullptr;
+    if (!sInfo) {
+        sInfo = new MGPUDeformerRegistrationInfo(
+            WpSkinCluster::kNODE_ID,
+            WpSkinCluster::kNODE_NAME,
+            creator
+        );
+    }
+    return sInfo;*/
+}
+
+void WpSkinClusterGPUDeformer::terminate() {
+    fKernel.reset();
+    fWeightsBuffer.reset();
+    fIndicesBuffer.reset();
+    fMatricesBuffer.reset();
+    fBuffersInitialized = false;
+    
+    //MOpenCLInfo::releaseOpenCLInfo(fOpenCLInfo);
+    fOpenCLInfo.releaseOpenCLKernel(fKernel);
+	MPxGPUDeformer::terminate();
+}
+
+MStatus WpSkinClusterGPUDeformer::initializeKernel(MOpenCLInfo& openCLInfo) {
+    MStatus status;
+    
+    // Get OpenCL context
+    cl_context clContext = openCLInfo.getOpenCLContext();
+    cl_device_id clDevice = openCLInfo.getOpenCLDeviceId();
+    
+    if (!clContext || !clDevice) {
+        return MS::kFailure;
+    }
+    
+    // Compile kernel
+    const char* kernelSource = getOpenCLKernelCode();
+    size_t sourceLength = strlen(kernelSource);
+    
+    cl_int err;
+    cl_program program = clCreateProgramWithSource(
+        clContext, 1, &kernelSource, &sourceLength, &err);
+    
+    if (err != CL_SUCCESS) {
+        MGlobal::displayError("Failed to create OpenCL program");
+        return MS::kFailure;
+    }
+    
+    err = clBuildProgram(program, 1, &clDevice, nullptr, nullptr, nullptr);
+    if (err != CL_SUCCESS) {
+        // Get build log
+        size_t logSize;
+        clGetProgramBuildInfo(program, clDevice, CL_PROGRAM_BUILD_LOG,
+                             0, nullptr, &logSize);
+        
+        std::vector<char> buildLog(logSize);
+        clGetProgramBuildInfo(program, clDevice, CL_PROGRAM_BUILD_LOG,
+                             logSize, buildLog.data(), nullptr);
+        
+        MGlobal::displayError(MString("OpenCL build failed: ") + buildLog.data());
+        clReleaseProgram(program);
+        return MS::kFailure;
+    }
+    
+    // Create kernel
+    cl_kernel kernel = clCreateKernel(program, "wpSkinDeform", &err);
+    clReleaseProgram(program);
+    
+    if (err != CL_SUCCESS) {
+        MGlobal::displayError("Failed to create OpenCL kernel");
+        return MS::kFailure;
+    }
+    
+    fKernel.attach(kernel);
     
     return MS::kSuccess;
 }
 
-MStatus WpSkinCluster::linearizeMatrices(const MArrayDataHandle& matrixArray,
-                                         std::vector<float>& outMatrices) {
-    outMatrices.clear();
+MStatus WpSkinClusterGPUDeformer::updateGPUBuffers(
+    MDataBlock& block,
+    const WpSkinCluster* cpuNode)
+{
+    if (!cpuNode) return MS::kFailure;
     
-    // Linearize matrices for GPU (row-major float arrays)
+    MStatus status;
+    cl_int err;
+    
+    // Get linearized data from CPU node
+    const std::vector<float>& weights = cpuNode->m_linearWeights;
+    const std::vector<int>& indices = cpuNode->m_linearInfluenceIndices;
+    const std::vector<float>& restMatrices = cpuNode->m_restMatrices;
+    const std::vector<float>& activeMatrices = cpuNode->m_restMatrices;
+    
+    if (weights.empty() || indices.empty() || restMatrices.empty()) {
+        return MS::kFailure;
+    }
+    
+    cl_context clContext = fOpenCLInfo.getOpenCLContext();
+    
+    // Create or update weights buffer
+    size_t weightsSize = weights.size() * sizeof(float);
+    if (!fWeightsBuffer.get() || fWeightsBuffer.getSize() < weightsSize) {
+        cl_mem weightsMem = clCreateBuffer(
+            clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+            weightsSize, (void*)weights.data(), &err);
+        
+        if (err != CL_SUCCESS) return MS::kFailure;
+        fWeightsBuffer.attach(weightsMem);
+    }
+    
+    // Create or update indices buffer
+    size_t indicesSize = indices.size() * sizeof(int);
+    if (!fIndicesBuffer.get() || fIndicesBuffer.getSize() < indicesSize) {
+        cl_mem indicesMem = clCreateBuffer(
+            clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+            indicesSize, (void*)indices.data(), &err);
+        
+        if (err != CL_SUCCESS) return MS::kFailure;
+        fIndicesBuffer.attach(indicesMem);
+    }
+    
+    // Create or update matrices buffer
+    size_t matricesSize = matrices.size() * sizeof(float);
+    if (!fMatricesBuffer.get() || fMatricesBuffer.getSize() < matricesSize) {
+        cl_mem matricesMem = clCreateBuffer(
+            clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+            matricesSize, (void*)matrices.data(), &err);
+        
+        if (err != CL_SUCCESS) return MS::kFailure;
+        fMatricesBuffer.attach(matricesMem);
+    }
+    
+    fBuffersInitialized = true;
     
     return MS::kSuccess;
+}
+
+MPxGPUDeformer::DeformerStatus WpSkinClusterGPUDeformer::evaluate(
+    MDataBlock& block,
+    const MEvaluationNode& evaluationNode,
+    const MPlug& outputPlug,
+    unsigned int numElements,
+    const MAutoCLMem inputBuffer,
+    const MAutoCLEvent inputEvent,
+    MAutoCLMem outputBuffer,
+    MAutoCLEvent& outputEvent)
+{
+    MStatus status;
+    
+    // Get OpenCL info
+    //if (!fOpenCLInfo) {
+    //    //fOpenCLInfo = MOpenCLInfo::getOpenCLInfo();
+    //    fOpenCLInfo = MOpenCLInfo();
+    //    if (!fOpenCLInfo.isValid()) {
+    //        return MPxGPUDeformer::kDeformerFailure;
+    //    }
+    //}
+    fOpenCLInfo = MOpenCLInfo();
+
+
+    // Initialize kernel if needed
+    if (!fKernel.get()) {
+        status = initializeKernel(fOpenCLInfo);
+        if (status != MS::kSuccess) {
+            return MPxGPUDeformer::kDeformerFailure;
+        }
+    }
+    
+    // Get CPU node to access linearized data
+    MFnDependencyNode depNode(evaluationNode.dependencyNode());
+    WpSkinCluster* cpuNode = static_cast<WpSkinCluster*>(depNode.userNode());
+    
+    // Update GPU buffers with latest skinning data
+    status = updateGPUBuffers(block, cpuNode);
+    if (status != MS::kSuccess || !fBuffersInitialized) {
+        return MPxGPUDeformer::kDeformerFailure;
+    }
+    
+    fNumVertices = numElements;
+    
+    // Set kernel arguments
+    cl_int err;
+    unsigned int argIdx = 0;
+    unsigned int maxInfluences = 8; // Match your max influences
+    
+    err  = clSetKernelArg(fKernel.get(), argIdx++, sizeof(cl_uint), &fNumVertices);
+    err |= clSetKernelArg(fKernel.get(), argIdx++, sizeof(cl_uint), &maxInfluences);
+    err |= clSetKernelArg(fKernel.get(), argIdx++, sizeof(cl_mem), inputBuffer.getReadOnlyRef());
+    err |= clSetKernelArg(fKernel.get(), argIdx++, sizeof(cl_mem), outputBuffer.getReadOnlyRef());
+    err |= clSetKernelArg(fKernel.get(), argIdx++, sizeof(cl_mem), fWeightsBuffer.getReadOnlyRef());
+    err |= clSetKernelArg(fKernel.get(), argIdx++, sizeof(cl_mem), fIndicesBuffer.getReadOnlyRef());
+    err |= clSetKernelArg(fKernel.get(), argIdx++, sizeof(cl_mem), fMatricesBuffer.getReadOnlyRef());
+    
+    if (err != CL_SUCCESS) {
+        MGlobal::displayError("Failed to set kernel arguments");
+        return MPxGPUDeformer::kDeformerFailure;
+    }
+    
+    // Execute kernel
+    //cl_command_queue queue = fOpenCLInfo.getCommandQueue();
+    cl_command_queue queue = fOpenCLInfo.getMayaDefaultOpenCLCommandQueue();
+    size_t globalWorkSize = fNumVertices;
+    size_t localWorkSize = 64; // Tune this for your GPU
+    
+    cl_event events[1] = { inputEvent.get() };
+    cl_event outputCLEvent;
+    
+    err = clEnqueueNDRangeKernel(
+        queue, fKernel.get(),
+        1, nullptr, &globalWorkSize, &localWorkSize,
+        inputEvent.get() ? 1 : 0, inputEvent.get() ? events : nullptr,
+        &outputCLEvent);
+    
+    if (err != CL_SUCCESS) {
+        MGlobal::displayError(MString("Failed to execute kernel: ") + err);
+        return MPxGPUDeformer::kDeformerFailure;
+    }
+    
+    outputEvent.attach(outputCLEvent);
+    
+    return MPxGPUDeformer::kDeformerSuccess;
 }
 
 } // namespace wp

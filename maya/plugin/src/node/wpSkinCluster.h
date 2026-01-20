@@ -1,6 +1,10 @@
 #pragma once
 
 #include <maya/MPxSkinCluster.h>
+#include <maya/MPxGPUDeformer.h>
+#include <maya/MGPUDeformerRegistry.h>
+#include <maya/MOpenCLInfo.h>
+#include <maya/MOpenCLAutoPtr.h>
 #include <maya/MTypeId.h>
 #include <maya/MString.h>
 #include <maya/MDataBlock.h>
@@ -26,6 +30,34 @@
 
 namespace wp {
 
+// Forward declaration
+class WpSkinClusterGPUDeformer;
+
+
+class WpSkinGPURegistrationInfo : public MGPUDeformerRegistrationInfo {
+public:
+    WpSkinGPURegistrationInfo() {}
+    ~WpSkinGPURegistrationInfo() override {}
+    MPxGPUDeformer* createGPUDeformer() override
+    {
+        return new WpSkinClusterGPUDeformer();
+    }
+    bool validateNodeInGraph(MDataBlock& block, const MEvaluationNode& evaluationNode,
+        const MPlug& plug, MStringArray* messages) override
+    {
+        //return WpSkinClusterGPUDeformer::validateNodeInGraph(block, evaluationNode, plug, messages);
+        return true;
+    }
+    bool validateNodeValues(MDataBlock& block, const MEvaluationNode& evaluationNode,
+        const MPlug& plug, MStringArray* messages) override
+    {
+        //return WpSkinClusterGPUDeformer::validateNodeValues(block, evaluationNode, plug, messages);
+        return true;
+    }
+};
+
+
+
 class WpSkinCluster : public MPxSkinCluster {
 public:
     WpSkinCluster();
@@ -34,6 +66,7 @@ public:
     // Maya plugin requirements
     static void* creator();
     static MStatus initialize();
+    
     
     // Deformation
     virtual MStatus deform(MDataBlock& block,
@@ -47,17 +80,24 @@ public:
     static const MString typeName;
 
     // Attribute objects
-    static MObject aLinearizedWeights;      // Linearized weight array
-    static MObject aLinearizedIndices;      // Linearized weight index array
-    static MObject aLinearizedMatrices;     // Linearized bind matrix array
-    static MObject aLinearizedActiveMatrices;     // Linearized active matrix array
-    static MObject aUseGPU;                 // Toggle GPU computation
-    static MObject aGPUBackend;             // 0=CUDA, 1=Maya GPU
-    static MObject aDebugMode;              // Debug output toggle
+    static MObject aMaxInfluences;
+    static MObject aLinearizedWeights;
+    static MObject aLinearizedIndices;
+    static MObject aLinearizedMatrices;
+    static MObject aLinearizedActiveMatrices;
+    static MObject aUseGPU;
+    static MObject aGPUBackend;
+    static MObject aDebugMode;
+    static MObject aRefMesh;
 
     // Callbacks
     virtual MStatus setDependentsDirty(const MPlug& plugBeingDirtied,
                                       MPlugArray& affectedPlugs) override;
+
+    //// Accessor for linearized data (used by GPU deformer)
+    //const std::vector<float>& getLinearWeights() const { return m_linearWeights; }
+    //const std::vector<int>& getLinearInfluenceIndices() const { return m_linearInfluenceIndices; }
+    //const std::vector<float>& getLinearMatrices() const { return m_linearMatrices; }
 
 private:
     // CPU deformation
@@ -85,13 +125,19 @@ private:
                          unsigned int multiIndex);
 
     // Weight and matrix management
-    MStatus updateLinearizedWeights(MDataBlock& block);
-    MStatus updateLinearizedMatrices(MDataBlock& block);
-    MStatus linearizeWeights(const MArrayDataHandle& weightListArray,
-                            std::vector<float>& outWeights,
-                            std::vector<int>& outInfluenceIndices);
-    MStatus linearizeMatrices(const MArrayDataHandle& matrixArray,
-                             std::vector<float>& outMatrices);
+    std::vector<float> updateLinearizedWeights(
+        MDataBlock& block,
+        int nMaxInfluences,
+        int nVertices);
+    std::vector<float> updateLinearizedMatrices(
+        MDataBlock& block,
+        MObject& matrixAttr
+    );
+    //MStatus linearizeWeights(const MArrayDataHandle& weightListArray,
+    //                        std::vector<float>& outWeights,
+    //                        std::vector<int>& outInfluenceIndices);
+    //MStatus linearizeMatrices(const MArrayDataHandle& matrixArray,
+    //                         std::vector<float>& outMatrices);
 
     // GPU resource management
 #ifdef USE_CUDA
@@ -110,12 +156,66 @@ private:
 
     // Cache flags
     bool m_weightsNeedUpdate;
-    bool m_matricesNeedUpdate;
+    bool m_restMatricesNeedUpdate;
+	bool m_restPositionsNeedUpdate;
     
     // Cached linearized data
     std::vector<float> m_linearWeights;
     std::vector<int> m_linearInfluenceIndices;
-    std::vector<float> m_linearMatrices;
+    std::vector<float> m_restMatrices;
+    std::vector<float> m_activeMatrices;
+    std::vector<float> m_restPositions;
+
+    friend class WpSkinClusterGPUDeformer;
+};
+
+// ============================================================================
+// GPU Deformer Implementation using Maya's MPxGPUDeformer
+// ============================================================================
+
+class WpSkinClusterGPUDeformer : public MPxGPUDeformer {
+public:
+    static MGPUDeformerRegistrationInfo* getGPUDeformerInfo();
+    static MPxGPUDeformer* creator();
+    
+    WpSkinClusterGPUDeformer();
+    virtual ~WpSkinClusterGPUDeformer();
+
+    // GPU deformer interface
+    virtual MPxGPUDeformer::DeformerStatus evaluate(
+        MDataBlock& block,
+        const MEvaluationNode& evaluationNode,
+        const MPlug& outputPlug,
+        unsigned int numElements,
+        const MAutoCLMem inputBuffer,
+        const MAutoCLEvent inputEvent,
+        MAutoCLMem outputBuffer,
+        MAutoCLEvent& outputEvent) override;
+
+    virtual void terminate() override;
+
+    // OpenCL kernel compilation
+    static const char* getOpenCLKernelCode();
+
+private:
+    // OpenCL resources
+    MOpenCLInfo fOpenCLInfo;
+    MAutoCLKernel fKernel;
+    
+    // GPU buffers for skinning data
+    MAutoCLMem fWeightsBuffer;
+    MAutoCLMem fIndicesBuffer;
+    MAutoCLMem fMatricesBuffer;
+    
+    // Buffer sizes
+    unsigned int fNumVertices;
+    unsigned int fNumInfluences;
+    
+    bool fBuffersInitialized;
+
+    // Helper methods
+    MStatus initializeKernel(MOpenCLInfo& openCLInfo);
+    MStatus updateGPUBuffers(MDataBlock& block, const WpSkinCluster* cpuNode);
 };
 
 } // namespace wp

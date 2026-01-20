@@ -38,7 +38,13 @@ target_precompile_headers(maya_pch INTERFACE
     <maya/MPxCommand.h>
     <maya/MGlobal.h>
     <maya/MFnMesh.h>
+    <maya/MFnNurbsCurve.h>
     <maya/MItMeshVertex.h>
+
+    <maya/MVector.h>
+    <maya/MPoint.h>
+    <maya/MMatrix.h>
+    <maya/MObject.h>
     <maya/MPointArray.h>
 )
  

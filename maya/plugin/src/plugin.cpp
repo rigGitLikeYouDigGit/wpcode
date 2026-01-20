@@ -27,6 +27,8 @@ register all plugins
 
 //#include "mayanode/stratacurvenode.h"
 //#include "mayanode/stratasurfacenode.h"
+#include "node/wpSkinCluster.h"
+#include <maya/MGPUDeformerRegistry.h>
 
 const char* kAUTHOR = "ed";
 const char* kVERSION = "1.0";
@@ -88,6 +90,8 @@ static const MString GLRegistrandId("GLLocatorNodePlugin");
 static const MString sDrawDbClassification("drawdb/geometry/strataShapeNodeOverride");
 static const MString sDrawRegistrantId("strataShapeNodeOverridePlugin");
 
+static const MString sWpSkinGPUDeformerRegistrantId("wpSkinGPUDeformerRegistrantId");
+
 MStatus initializePlugin(MObject obj) {
 
     //DEBUGS("")
@@ -102,6 +106,21 @@ MStatus initializePlugin(MObject obj) {
 
 
     DEBUGS("initialised wpplugin");
+
+    REGISTER_NODE(wp::WpSkinCluster);
+
+    // Register GPU deformer override
+    MStatus status = MGPUDeformerRegistry::registerGPUDeformerCreator(
+        wp::WpSkinCluster::typeName.asChar(),
+        sWpSkinGPUDeformerRegistrantId,
+        wp::WpSkinClusterGPUDeformer::getGPUDeformerInfo()
+    );
+    MGPUDeformerRegistry::addConditionalAttribute(
+        wp::WpSkinCluster::typeName.asChar(),
+        sWpSkinGPUDeformerRegistrantId,
+        wp::WpSkinCluster::aUseGPU
+    );
+
     return s;
 }
 
@@ -112,6 +131,14 @@ MStatus uninitializePlugin(MObject obj) {
     //LOG("uninitialising wpplugin");
 
     MFnPlugin fnPlugin(obj);
+
+    // Deregister GPU deformer first
+    MGPUDeformerRegistry::deregisterGPUDeformerCreator(
+        wp::WpSkinCluster::typeName.asChar(),
+        sWpSkinGPUDeformerRegistrantId
+    );
+
+    DEREGISTER_NODE(wp::WpSkinCluster);
 
     DEBUGS("uninitialised wpplugin");
     return s;
