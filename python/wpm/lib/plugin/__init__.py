@@ -20,6 +20,6 @@ class WpPyPluginAid(MayaPyPluginAid):
 #TODO: refactor this to the WPROOT system
 wpPluginAid = MayaPluginAid(
 	"wpPlugin",
-	"C:/Users/ed/Documents/GitHub/wpcode/maya/plugin/out/build/x64-Debug/wpplugin.mll"
+	"C:/Users/ed/Documents/GitHub/wpcode/maya/plugin/out/build/ninja-debug/wpplugin.mll"
 )
 

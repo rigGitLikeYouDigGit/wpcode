@@ -117,18 +117,31 @@ void* WpSkinCluster::creator() {
     return new WpSkinCluster();
 }
 
+MPxGPUDeformer* WpSkinGPURegistrationInfo::createGPUDeformer()
+{
+    return new WpSkinClusterGPUDeformer();
+}
+
 MStatus WpSkinCluster::initialize() {
     MStatus status;
+    
+    // Call parent class initialize FIRST
+    //status = MPxSkinCluster::initialize();
+    MCHECK(status, "MPxSkinCluster::initialize failed");
+    
     MFnNumericAttribute nAttr;
     MFnMatrixAttribute mAttr;
     MFnEnumAttribute eAttr;
     MFnCompoundAttribute cAttr;
     MFnTypedAttribute tAttr;
+    
+    // Remove this line - it doesn't work for plugin nodes
+    // inheritAttributesFrom("skinCluster");
 
-	aMaxInfluences = nAttr.create("maxInfluences", "maxInfluences",
+    aMaxInfluences = nAttr.create("maxInfluences", "maxInfluences",
         MFnNumericData::kInt, 4, &status);
-	addAttribute(aMaxInfluences);
-
+    addAttribute(aMaxInfluences);
+    
     // Linearized weights array
     aLinearizedWeights = tAttr.create(
         "linearWeight", "linW",
@@ -207,6 +220,8 @@ MStatus WpSkinCluster::initialize() {
     attributeAffects(weightList, outputGeom);
     attributeAffects(matrix, outputGeom);
     attributeAffects(bindPreMatrix, outputGeom);
+    
+    // Your custom attributes
     attributeAffects(aLinearizedWeights, outputGeom);
     attributeAffects(aLinearizedIndices, outputGeom);
     attributeAffects(aLinearizedMatrices, outputGeom);
@@ -788,8 +803,8 @@ MStatus WpSkinClusterGPUDeformer::updateGPUBuffers(
     cl_context clContext = fOpenCLInfo.getOpenCLContext();
     
     // Create or update weights buffer
-    size_t weightsSize = weights.size() * sizeof(float);
-    if (!fWeightsBuffer.get() || fWeightsBuffer.getSize() < weightsSize) {
+    size_t weightsSize = weights.size();
+    if (!fWeightsBuffer.get() || fWeightsBufferSize != weightsSize) {
         cl_mem weightsMem = clCreateBuffer(
             clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
             weightsSize, (void*)weights.data(), &err);
@@ -799,8 +814,8 @@ MStatus WpSkinClusterGPUDeformer::updateGPUBuffers(
     }
     
     // Create or update indices buffer
-    size_t indicesSize = indices.size() * sizeof(int);
-    if (!fIndicesBuffer.get() || fIndicesBuffer.getSize() < indicesSize) {
+    size_t indicesSize = indices.size();
+    if (!fIndicesBuffer.get() || fIndicesBufferSize != indicesSize) {
         cl_mem indicesMem = clCreateBuffer(
             clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
             indicesSize, (void*)indices.data(), &err);
@@ -809,12 +824,12 @@ MStatus WpSkinClusterGPUDeformer::updateGPUBuffers(
         fIndicesBuffer.attach(indicesMem);
     }
     
-    // Create or update matrices buffer
-    size_t matricesSize = matrices.size() * sizeof(float);
-    if (!fMatricesBuffer.get() || fMatricesBuffer.getSize() < matricesSize) {
+    // Create or update active matrices buffer
+    size_t matricesSize = activeMatrices.size();
+    if (!fMatricesBuffer.get() || fMatricesBufferSize < matricesSize) {
         cl_mem matricesMem = clCreateBuffer(
             clContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-            matricesSize, (void*)matrices.data(), &err);
+            matricesSize, (void*)activeMatrices.data(), &err);
         
         if (err != CL_SUCCESS) return MS::kFailure;
         fMatricesBuffer.attach(matricesMem);

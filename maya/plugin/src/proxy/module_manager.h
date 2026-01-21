@@ -1,9 +1,10 @@
 #pragma once
-#include "module_interface.h"
+#include "../interface/module_interface.h"
 #include "file_watcher.h"
 #include <string>
 #include <unordered_map>
 #include <memory>
+#include <vector>
 #include <Windows.h>
 
 class ModuleManager {
@@ -11,8 +12,8 @@ public:
     struct ModuleConfig {
         std::string name;              // Unique identifier
         std::string dll_path;          // Path to DLL (can be relative)
-        bool auto_reload;              // Enable hot reloading
-        void* init_context;            // Context passed to initialize()
+        bool auto_reload = false;      // Enable hot reloading
+        void* init_context = nullptr;  // Context passed to initialize()
     };
 
     ModuleManager();
@@ -47,10 +48,10 @@ private:
         std::string name;
         std::string original_dll_path;
         std::string temp_dll_path;
-        HMODULE dll_handle;
-        ModuleAPI* api;
-        void* init_context;
-        bool auto_reload;
+        HMODULE dll_handle = nullptr;
+        ModuleAPI* api = nullptr;
+        void* init_context = nullptr;
+        bool auto_reload = false;
     };
 
     bool LoadModuleInternal(const std::string& name,

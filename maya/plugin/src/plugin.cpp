@@ -92,6 +92,18 @@ static const MString sDrawRegistrantId("strataShapeNodeOverridePlugin");
 
 static const MString sWpSkinGPUDeformerRegistrantId("wpSkinGPUDeformerRegistrantId");
 
+#define REGISTER_SKINCLUSTER(NODE) \
+    s = fnPlugin.registerNode( \
+        NODE::kNODE_NAME, \
+        NODE::kNODE_ID, \
+        NODE::creator, \
+        NODE::initialize, \
+        MPxNode::kSkinCluster \
+    ); \
+    MCHECK(s, "cannot register skin cluster " + NODE::kNODE_NAME);
+
+
+
 MStatus initializePlugin(MObject obj) {
 
     //DEBUGS("")
@@ -107,7 +119,8 @@ MStatus initializePlugin(MObject obj) {
 
     DEBUGS("initialised wpplugin");
 
-    REGISTER_NODE(wp::WpSkinCluster);
+    // Use the skin cluster macro instead
+    REGISTER_SKINCLUSTER(wp::WpSkinCluster);
 
     // Register GPU deformer override
     MStatus status = MGPUDeformerRegistry::registerGPUDeformerCreator(

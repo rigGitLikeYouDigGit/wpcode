@@ -38,10 +38,7 @@ class WpSkinGPURegistrationInfo : public MGPUDeformerRegistrationInfo {
 public:
     WpSkinGPURegistrationInfo() {}
     ~WpSkinGPURegistrationInfo() override {}
-    MPxGPUDeformer* createGPUDeformer() override
-    {
-        return new WpSkinClusterGPUDeformer();
-    }
+    MPxGPUDeformer* createGPUDeformer() override;
     bool validateNodeInGraph(MDataBlock& block, const MEvaluationNode& evaluationNode,
         const MPlug& plug, MStringArray* messages) override
     {
@@ -197,14 +194,16 @@ public:
     // OpenCL kernel compilation
     static const char* getOpenCLKernelCode();
 
-private:
     // OpenCL resources
     MOpenCLInfo fOpenCLInfo;
     MAutoCLKernel fKernel;
     
     // GPU buffers for skinning data
+	int fWeightsBufferSize;
     MAutoCLMem fWeightsBuffer;
+	int fIndicesBufferSize;
     MAutoCLMem fIndicesBuffer;
+	int fMatricesBufferSize;
     MAutoCLMem fMatricesBuffer;
     
     // Buffer sizes

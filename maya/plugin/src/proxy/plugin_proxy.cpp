@@ -1,24 +1,41 @@
 #include <maya/MFnPlugin.h>
 #include <maya/MPxCommand.h>
 #include <maya/MGlobal.h>
-#include <maya/MTimer.h>
+#include <maya/MAnimControl.h>  // For animation time
 #include <maya/MTimerMessage.h>
-#include "../proxy/module_manager.h"
+#include <maya/MArgList.h>
+#include <chrono>  // For system time
+#include "module_manager.h"
 
 // Global module manager
 static ModuleManager* g_module_manager = nullptr;
 static MCallbackId g_idle_callback = 0;
-static float g_last_time = 0.0f;
+static std::chrono::steady_clock::time_point g_last_time;
 
 // Idle callback for update loop
-void OnIdle(void* clientData) {
+void OnIdle(float elapsedTime, float lastTime, void* clientData) {
     if (!g_module_manager) return;
 
-    float current_time = static_cast<float>(MTimer::getCurrentTime());
-    float delta = current_time - g_last_time;
+    // Use C++ chrono for reliable system time
+    auto current_time = std::chrono::steady_clock::now();
+    auto delta = std::chrono::duration<float>(current_time - g_last_time).count();
     g_last_time = current_time;
 
     g_module_manager->UpdateModules(delta);
+}
+
+// Alternative: Use Maya's animation time (if you need scene time)
+void OnIdleAnimTime(float elapsedTime, float lastTime, void* clientData) {
+    if (!g_module_manager) return;
+    
+    // Get Maya's current animation time
+    MTime currentTime = MAnimControl::currentTime();
+    static MTime lastMayaTime = currentTime;
+    
+    MTime delta = currentTime - lastMayaTime;
+    lastMayaTime = currentTime;
+    
+    g_module_manager->UpdateModules(static_cast<float>(delta.as(MTime::kSeconds)));
 }
 
 // Command to reload a specific module
@@ -80,7 +97,7 @@ public:
     }
 };
 
-MStatus initializePlugin(MObject obj) {
+MStatus initializePluginExample(MObject obj) {
     MFnPlugin plugin(obj, "YourName", "1.0", "Any");
 
     // Create module manager
@@ -95,14 +112,15 @@ MStatus initializePlugin(MObject obj) {
     core_config.name = "Core";
     core_config.dll_path = base_path + "/CoreImpl.dll";
     core_config.auto_reload = true;
-    core_config.init_context = &plugin;
+    //core_config.init_context = &plugin; // for illustration -
+    // pass pointer to any random context data for setup
     g_module_manager->LoadModule(core_config);
 
     ModuleManager::ModuleConfig render_config;
     render_config.name = "Render";
     render_config.dll_path = base_path + "/RenderImpl.dll";
     render_config.auto_reload = true;
-    render_config.init_context = &plugin;
+    //render_config.init_context = &plugin;
     g_module_manager->LoadModule(render_config);
 
     // Start watching for changes
@@ -113,15 +131,15 @@ MStatus initializePlugin(MObject obj) {
     plugin.registerCommand("listModules", ListModulesCmd::creator);
     plugin.registerCommand("callCore", CallCoreCmd::creator);
 
-    // Setup update callback
-    g_last_time = static_cast<float>(MTimer::getCurrentTime());
-    g_idle_callback = MTimerMessage::addTimerCallback(1.0, OnIdle);  // ~once a second
+    // Setup update callback - initialize time
+    g_last_time = std::chrono::steady_clock::now();
+    g_idle_callback = MTimerMessage::addTimerCallback(1.0f, OnIdle);
 
     MGlobal::displayInfo("Hot-reload plugin initialized");
     return MS::kSuccess;
 }
 
-MStatus uninitializePlugin(MObject obj) {
+MStatus uninitializePluginExample(MObject obj) {
     MFnPlugin plugin(obj);
 
     // Remove callback

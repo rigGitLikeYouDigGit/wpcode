@@ -6,6 +6,11 @@ set(CMAKE_MODULE_PATH "C:/Program Files/CMake/share/cmake-3.31/Modules")
 set(EIGEN3_INCLUDE_DIR "C:/Users/ed/Documents/GitHub/eigen-5.0.1")
 project(wpplugin)
 
+# Set C++17 standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 find_package(Maya REQUIRED)
 
 set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/../output/Maya${MAYA_VERSION})
