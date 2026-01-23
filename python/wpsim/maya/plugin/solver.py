@@ -6,7 +6,8 @@ from wplib import log
 from wpm import om, cmds
 from wpm.lib.plugin import PluginNodeTemplate, MayaPyPluginAid, PluginNodeIdData
 
-
+def maya_useNewAPI():
+	pass
 class WpSimRigidSolverNode(om.MPxNode, PluginNodeTemplate):
 	"""
 	constraint for point constraint between two rigid bodies

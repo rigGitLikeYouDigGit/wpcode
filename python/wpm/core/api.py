@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import typing as T
 
+import maya.OpenMaya
 from wplib import sequence, inheritance
 from wplib.object import UserSet
 
@@ -119,6 +120,19 @@ def getMObject(node, default=RuntimeError)->om.MObject:
 		return toMObject(node) or om.MObject()
 	except (RuntimeError, TypeError):
 		return default
+
+def getMObjectOld(node)->maya.OpenMaya.MObject:
+	"""legacy version using api1"""
+	import maya.OpenMaya as om1
+	if isinstance(node, om1.MObject):
+		return node
+	if isinstance(node, str):
+		sel = om1.MSelectionList()
+		sel.add(node)
+		obj = om1.MObject()
+		sel.getDependNode(0, obj)
+		return obj
+	raise TypeError("Cannot retrieve MObject from ", node, type(node))
 
 
 def getMDagPath(node)->om.MDagPath:

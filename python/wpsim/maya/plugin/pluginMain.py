@@ -6,7 +6,8 @@ from wplib import log
 
 from wpsim.maya.plugin import wpSimPlugin
 
-
+def maya_useNewAPI():
+	pass
 def initializePlugin(mobject):
 	wpSimPlugin.initialisePlugin(mobject)
 

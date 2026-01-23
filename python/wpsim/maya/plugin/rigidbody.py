@@ -95,7 +95,7 @@ class WpSimRigidBodyNode(PluginNodeTemplate, om.MPxNode):
 
 		cls.aBodyData = tFn.create(
 			"aBodyData", "aBodyData", WpSimBodyMPxData.kTypeId)
-		cls.aBodyData.writable = False
+		tFn.writable = False
 
 		cls.driverMObjects = [cls.aBodyName, cls.aBodyMatrix, cls.aBodyMesh,
 		                      cls.aBodyActive, cls.aBodyMass,

@@ -109,7 +109,7 @@ class NodeClassRetriever:
 			# the UV prefix casing problem again
 			mod = self.getNodeModule(nodeClsNameUpper)
 		if mod is None: # no class found anywhere
-			log("No generated OR author node class found for " + nodeClsName + ", using base WN type")
+			# log("No generated OR author node class found for " + nodeClsName + ", using base WN type")
 			self.nodeClsCache[nodeClsNameLower] = None
 			return None
 		cls = getattr(mod, nodeClsNameUpper)

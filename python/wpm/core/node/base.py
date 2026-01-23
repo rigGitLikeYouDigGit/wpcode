@@ -153,6 +153,25 @@ def filterToMObject(node)->om.MObject:
 def filterToMPlug():
 	pass
 
+#move this
+fallbackSeq = [
+	om.MFn.kSkinClusterFilter,
+	om.MFn.kGeometryFilt,
+	om.MFn.kLocator,
+	om.MFn.kJoint,
+	om.MFn.kLight,
+	om.MFn.kCamera,
+	om.MFn.kTransform,
+	om.MFn.kShape,
+	om.MFn.kDagNode,
+	om.MFn.kDependencyNode
+]
+
+def _getFallbackNodeMFnType(node:om.MObject):
+	for i in fallbackSeq:
+		if node.hasFn(i):
+			return i
+	return om.MFn.kDependencyNode
 
 def nodeClassNameFromApiStr(apiTypeStr:str)->str:
 	"""return node class from api type string"""
@@ -182,21 +201,27 @@ class WNMeta(type):
 		raise AttributeError(f"no attribute {item}")
 
 	@classmethod
-	def classForNodeType(cls, nodeType: (str, om.MTypeId)) -> T.Type[WN]:
+	def classForNodeType(cls, nodeType: (str, om.MTypeId), bestFit=False) \
+			->type[WN]|None:
 		"""return a wrapper class for the given node's type
-		if it exists"""
+		if it exists
+		if bestFit is True, return closest matching superclass
+		"""
 		nc = om.MNodeClass(nodeType)
 		if nc.typeId.id() == 0:
-			raise TypeError("No known node class matches: " + nodeType)
+			raise TypeError("No known maya node type matches: " + nodeType +
+			                "check spelling and casing")
 		if result := WN.typeIdIntWNClassMap.get(nc.typeId.id()):
 			return result
 		if result := WN.nodeTypeNameWNClassMap.get(nc.typeName):
 			return result
 		# not already cached, go looking with retriever
-		try:
-			return cls.retriever.getNodeCls(nc.typeName)
-		except:
-			return WN
+		found = cls.retriever.getNodeCls(nc.typeName)
+		if found:
+			return found
+
+		return None
+
 
 	@classmethod
 	def classForMObject(cls, mobj:om.MObject):
@@ -795,6 +820,21 @@ class WN( # short for WePresentNode
 
 
 	@classmethod
+	def _createArbitraryNode(cls, nodeType:(str, om.MTypeId), name:str="",
+	                         parent_=None, opMod=None,  **kwargs)->WN:
+		"""create a node of arbitrary type, returning a WN-wrapped node
+		of the correct subclass if it exists
+		"""
+		nc = om.MNodeClass(nodeType)
+		obj = opMod.createNode(
+			nc.typeId,
+			parent_ or om.MObject.kNullObj)
+		wrapperCls = WNMeta.classForMObject(obj)
+
+		return wrapperCls(obj, **kwargs)
+
+
+	@classmethod
 	def createNode(cls,
 	           nodeType:(str, om.MTypeId), name:str="", dgMod_:DGDagModifier=None, parent_:nodeArgT=None, **kwargs)->WN:
 		"""
@@ -817,15 +857,21 @@ class WN( # short for WePresentNode
 
 		check if the typeId returned by the modifier matches the node type created
 		"""
-
-		wrapperCls = cls.classForNodeType(nodeType)
-
 		opMod = dgMod_ or DGDagModifier()
 		name = name or nodeType + str(1)
-
 		if parent_ is not None:
 			parent_ = filterToMObject(parent_)
-		return wrapperCls.create(name, opMod, parent_, **kwargs)
+
+		wrapperCls = cls.classForNodeType(nodeType)
+		if wrapperCls:
+			result = wrapperCls.create(name, opMod, parent_, **kwargs)
+		else:
+			result = cls._createArbitraryNode(
+				nodeType, name, parent_=parent_, opMod=opMod, **kwargs)
+		if dgMod_ is None:
+			opMod.doIt()
+		return result
+
 
 
 
