@@ -1,7 +1,7 @@
 from __future__ import annotations
 #from wplib import log
 
-from wpsim.kine.simrigid import solveFrame
+from wpsim.kine.sim import solveFrame
 from wpsim.kine.state import *
 from wpsim.kine.constraint import *
 from wpsim.maths import *

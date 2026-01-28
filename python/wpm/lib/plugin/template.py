@@ -154,6 +154,7 @@ class PluginNodeTemplate:
 	def addAttributes(cls, *args:(om.MObject, list[om.MObject])):
 		"""add attributes to this node"""
 		for mObj in flatten(args):
+			print("adding attribute", mObj)
 			cls.addAttribute(mObj)
 
 
@@ -255,12 +256,13 @@ class PluginMPxData(om.MPxData):
 	>>>	kTypeId = om.MTypeId(0x00112233)
 
 	"""
+	clsName : str = ""
 	dataClsT : T.Type = None
 	kTypeId : om.MTypeId = None
 
-	def __init__(self):
-		om.MPxData.__init__(self)
-		self._data = None
+	# def __init__(self, data=None):
+	# 	om.MPxData.__init__(self)
+	# 	self._data = data
 
 	def setData(self, data:dataClsT):
 		"""set internal data from given dataclass instance"""

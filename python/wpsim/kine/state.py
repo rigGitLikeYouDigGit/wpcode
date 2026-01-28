@@ -23,6 +23,8 @@ class FrameBoundData:
 	simParamLengths : jnp.ndarray | None # length of each simParam
 	paramSizes : int
 	simParamNames : tuple[str, ...] | None
+	#TEMP, later do proper force field primitives
+	gravity: jnp.ndarray      # (3,)
 
 
 @jdc.pytree_dataclass

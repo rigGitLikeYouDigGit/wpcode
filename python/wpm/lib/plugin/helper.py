@@ -14,7 +14,9 @@ from maya.api import OpenMaya as om, OpenMayaRender as omr
 from maya import cmds
 
 from wpm.constant import WP_PLUGIN_NAMESPACE, PY_PLUGIN_START_ID
-from wpm.lib.plugin.template import PluginNodeTemplate, PluginDrawOverrideTemplate, pluginNodeType
+from wpm.lib.plugin.template import (PluginNodeTemplate,
+                                     PluginDrawOverrideTemplate,
+                                     pluginNodeType, PluginMPxData)
 
 pluginDrawOverrideType = (PluginDrawOverrideTemplate, omr.MPxDrawOverride)
 
@@ -129,9 +131,7 @@ class MayaPyPluginAid(MayaPluginAid):
 
 
 
-	def nodeClsTypeId(self, cls:T.Type[PluginNodeTemplate], nodeId:int)->om.MTypeId:
-
-
+	def nodeClsTypeId(self, nodeId:int)->om.MTypeId:
 		if self.useOldApi:
 			from maya import OpenMaya as omOld
 			return omOld.MTypeId(WP_PLUGIN_NAMESPACE, nodeId)
@@ -140,7 +140,7 @@ class MayaPyPluginAid(MayaPluginAid):
 	def _registerNode(self, cls: T.Type[PluginNodeTemplate],
 	                  localNodeId:int):
 		assert 0 < localNodeId and localNodeId < 256, "node {} must define its own plugin-local id between 0 and 256".format(cls)
-		nodeId = self.nodeClsTypeId(cls, localNodeId)
+		nodeId = self.nodeClsTypeId(localNodeId)
 		try:
 			if cls.kDrawClassification:
 				self._mfnPlugin.registerNode(cls.typeName(), nodeId, lambda: cls(), cls.initialiseNode,
@@ -156,7 +156,7 @@ class MayaPyPluginAid(MayaPluginAid):
 
 	def _deregisterNode(self, cls: T.Type[PluginNodeTemplate]):
 		nodeLocalId = {v:k for k,v in self.nodeClasses.items()}[cls]
-		nodeId = self.nodeClsTypeId(cls, nodeLocalId)
+		nodeId = self.nodeClsTypeId(nodeLocalId)
 		try:
 			self._mfnPlugin.deregisterNode(nodeId)
 		except:
@@ -188,6 +188,23 @@ class MayaPyPluginAid(MayaPluginAid):
 			print("failed to deregister draw override {} for node class {}".format(drawOverrideCls, forNodeCls))
 			traceback.print_exc()
 
+	def _registerData(self, dataCls: T.Type[PluginMPxData],
+	                  localDataId:int):
+		#dataId = self.nodeClsTypeId(localDataId)
+		dataId = dataCls.kTypeId
+		self._mfnPlugin.registerData(
+			dataCls.clsName,
+			dataId,
+			lambda: dataCls(),
+			om.MPxData.kData
+		)
+
+	def _deregisterData(self, dataCls: T.Type[PluginMPxData],
+	                    localDataId:int):
+		dataId = self.nodeClsTypeId(localDataId)
+		#self._mfnPlugin.deregisterData(dataId)
+		self._mfnPlugin.deregisterData(dataCls.kTypeId)
+
 	def initialisePlugin(self, pluginMObject:om.MObject):
 		"""call this from within the initializePlugin() function in your main plugin file.
 		:param pluginMObject: the MObject passed into initializePlugin()
@@ -199,6 +216,10 @@ class MayaPyPluginAid(MayaPluginAid):
 			# assert self.studioLocalPluginId not in self.pluginIdInstanceMap, f"{self} tried to register duplicate local plugin index {self.studioLocalPluginId}\n existing indices: {self.pluginIdInstanceMap} "
 			# self.pluginIdInstanceMap[self.studioLocalPluginId] = self
 
+			# data
+			for localId, dataCls in self.mpxDataClasses.items():
+				self._registerData(dataCls, localId)
+
 			# register nodes
 			for localId, nodeCls in self.nodeClasses.items():
 				self._registerNode(nodeCls, localId)
@@ -206,6 +227,7 @@ class MayaPyPluginAid(MayaPluginAid):
 			# register draw overrides
 			for nodeCls, drawOverrideCls in self.drawOverrideClasses.items():
 				self._registerDrawOverride(drawOverrideCls, forNodeCls=nodeCls)
+
 		except Exception as e:
 			print(f"unable to initialise plugin {self}")
 			traceback.print_exc()
@@ -220,6 +242,9 @@ class MayaPyPluginAid(MayaPluginAid):
 
 		for nodeCls in self.nodeClasses.values():
 			self._deregisterNode(nodeCls)
+
+		for localId, dataCls in self.mpxDataClasses.items():
+			self._deregisterData(dataCls, localId)
 
 	def initialisePluginOldApi(self, pluginMObject:om.MObject):
 		import maya.OpenMaya as omOld

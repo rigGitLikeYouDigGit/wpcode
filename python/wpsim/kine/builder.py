@@ -12,6 +12,8 @@ from wpsim.kine import state, constraint
 
 """author-facing side of the rig - store rich representation, then compile.
 we still need to generate linearised structures as fast as possible
+TODO: unify these data classes with the
+plugin-side data classes 
 """
 
 @dataclass(frozen=True)
@@ -53,17 +55,16 @@ class WeightData:
 	nWeights : int = 4
 
 @dataclass
-class UserMesh:
+class BuilderMesh:
 	"""mesh definition, assume TRI MESH ONLY
 	vertices, points, faces
 	hash used to check if different parts of mesh are dirty,
 	then update only those regions
 	"""
 	name : str
+	parent : str # always held under a body
 	points : jnp.ndarray # (P, 3)
 	indices : jnp.ndarray # (F, 3)
-	pointHash: int = 0
-	indicesHash: int = 0
 	driverIndex : int | None = None
 	weightData : WeightData | None = None
 	com : jnp.ndarray | None = None
@@ -72,21 +73,33 @@ class UserMesh:
 	metaHash : int = 0
 
 
-
 @dataclass
-class UserNurbsCurve:
+class BuilderNurbsCurve:
 	"""nurbs curve definition"""
 	name : str
+	parent : str
 	points : jnp.ndarray # (P, 3)
 	degree : int
 	knots : jnp.ndarray
 	closed : bool = False
 	driverIndex : int | None = None
+	nPoints : int = 0
+	nKnots : int = 0
 	weightData : WeightData | None = None
 
 
 @dataclass
-class Body:
+class BuilderTransform:
+	"""transform definition - use to define aux transforms
+	in space of bodies
+	"""
+	name : str
+	parent : str | None
+	mat : jnp.ndarray # (4,4) rest matrix
+
+
+@dataclass
+class BuilderBody:
 	"""rigid body definition -
 	we assume for the purpose of finding inertia axes, collision etc, each
 	body has
@@ -96,7 +109,14 @@ class Body:
 	name : str
 	restPos : jnp.ndarray
 	restQuat : jnp.ndarray
-	meshName : str
+	meshMap : dict[str, BuilderMesh] = field(default_factory=dict)
+	curveMap : dict[str, BuilderNurbsCurve] = field(default_factory=dict)
+	transformMap : dict[str, BuilderTransform] = field(default_factory=dict)
+	com : jnp.ndarray = jnp.zeros((3,))
+	inertia : jnp.ndarray = jnp.eye(3)
+	mass : float = 1.0,
+	active : int = 1 # 0 disabled, 1 active, 2 static
+	damping : float = 0.0 # linear damping factor
 
 
 
@@ -111,13 +131,14 @@ class SimBuilder:
 
 	"""
 
-	def __init__(self, simName:str):
-		self.simName = simName
-		self.simParams : dict[UserSimParamType, dict[str, jnp.ndarray]] = {}
-		self.measuredFns : dict[UserMeasureFnType, dict[str, jnp.ndarray]] = {}
-		self.constraints : dict[UserConstraintFnType, dict[str, jnp.ndarray]] = {}
-		self.meshes : dict[str, UserMesh] = {}
-		self.weightedMeshes : dict[str, UserMesh] = {}
+	def __init__(self, name:str):
+		self.name = name
+		# self.simParams : dict[UserSimParamType, dict[str, jnp.ndarray]] = {}
+		# self.measuredFns : dict[UserMeasureFnType, dict[str, jnp.ndarray]] = {}
+		# self.constraints : dict[UserConstraintFnType, dict[str, jnp.ndarray]] = {}
+		# self.meshes : dict[str, BuilderMesh] = {}
+		# self.weightedMeshes : dict[str, BuilderMesh] = {}
+		self.builderBodyMap = {} # type: dict[str, BuilderBody]
 
 		# compiled function building blocks
 
@@ -129,32 +150,18 @@ class SimBuilder:
 		self.dynamicData : state.DynamicData = None
 
 
-	def syncMeshes(self, meshes:list[UserMesh]):
-		"""update mesh definitions -
-		for each, check if positions changed, or topo changed
-		any meshes not found in given meshes will be removed
+	def bind(self):
+		"""build all the data structures needed for sim run -
+		mesh buffers, body state buffers, constraint plans etc
+		run once at bind frame to allocate buffers and topology of
+		simulation
 		"""
-		topoChanged = False
-		nameSet = {mesh.name for mesh in meshes}
-		for i, mesh in enumerate(meshes):
-			if mesh.name not in self.meshes:
-				topoChanged = True
-				self.meshes[mesh.name] = mesh
-				continue
+		log(f"Binding sim '{self.name}' with {len(self.builderBodyMap)} bodies")
 
-
-
-
-
-
-
-	def syncBodies(self, bodies:list[Body]):
-		"""update body definitions"""
-		self.bodies = bodies
-
-	def include(self, other:SimBuilder):
-		"""merge other sim into this one
+	def simFrame(self):
+		"""simulate a single frame - run substeps as needed
 		"""
+		log(f"Simulating frame for sim '{self.name}'")
 
 
 if __name__ == '__main__':

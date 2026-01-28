@@ -80,6 +80,8 @@ def solverIterationPlan(
 		bs, bufs, cs.hingeAxis, dtSub
 	)
 
+
+
 	# Optional manifold constraints
 	newManifoldBucket = cs.manifold
 	if cs.manifold is not None:

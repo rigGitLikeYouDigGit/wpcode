@@ -300,6 +300,7 @@ class coerce(UserDecorator):
 		outerFrame = inspect.currentframe().f_back
 		outerGlobals = dict(outerFrame.f_globals)
 		outerGlobals.update(builtins.__dict__)
+		outerGlobals.update(targetFunction.__globals__)
 
 		# dict of argument name to target type
 		argNameTypeMap : dict[str, type] = {}
@@ -309,7 +310,7 @@ class coerce(UserDecorator):
 				# argtypestr is just a string, so we can't catch tuples
 				# has to be eval here to catch tuples of types
 				argType = eval(argTypeStr, outerGlobals)
-			except KeyError:
+			except (NameError, ):
 				raise TypeError(
 					f"Unable to find type name '{argTypeStr}' in calling module's globals:\n{outerGlobals};\nCannot coerce arguments {argName} of function {targetFunction.__name__}"
 				)
