@@ -2,19 +2,19 @@
 from __future__ import annotations
 import typing as T
 
-import json, sys, os, shutil, time
+import sys, os, shutil, time
 from pathlib import Path
 from typing import TypedDict
 from collections import defaultdict
 from dataclasses import dataclass
+import keyword
+import builtins
 
 import orjson
 
 from wplib import wpstring, log
 
 
-#from wpm import WN, om, cmds
-#from wpm.core import getMFn
 
 from wplib.codegen.strtemplate import ClassTemplate, FunctionCallTemplate, FunctionTemplate, TextBlock, argT, argsKwargsT, Literal, Assign, Import, IfBlock, indent, Comment
 #from wptool.codegen import CodeGenProject
@@ -39,6 +39,11 @@ node.t_() -> list[float] # or mvector?
 
 """
 
+"""Maya's now added nodes like 'And', 'Not' etc, so we need
+to avoid overlapping with python keywords and builtins
+"""
+
+reservedWordSet = {*keyword.kwlist, *builtins.__dict__.keys()}
 
 @dataclass
 class AttrData:
@@ -132,6 +137,8 @@ def refPathForNodeType(project:CodeGenProject, nodeType:str):
 	return project.refPath / (nodeType + ".py")
 
 def genPathForNodeType(nodeType:str):
+	if nodeType in reservedWordSet:
+		nodeType = nodeType + "_"
 	return genDir / (nodeType + ".py")
 
 def modifiedPathForNodeType(project:CodeGenProject, nodeType:str):
@@ -193,8 +200,9 @@ def genNodeFileStr(data:NodeData,
 				                  #"from .. import " + wpstring.cap(parent),
 				                  #"from . import " + wpstring.cap(parent),
 			                   #"from .. import " + wpstring.cap(nodeType)
-					"from ..author import Catalogue",
-					f"{wpstring.cap(parent)} = Catalogue.{wpstring.cap(parent)}"
+					#"from ..author import *",
+					f"from ..author import {wpstring.cap(parent)}",
+					# f"{wpstring.cap(parent)} = Catalogue.{wpstring.cap(parent)}"
 			                   ],
 			                   ]],
 			elseBlock=["\t" + "\n\t".join(realImportLines)]
@@ -325,6 +333,7 @@ authorInitTemplatePath = Path(__file__).parent / "__authorInit__.py"
 
 
 def genNodes(#project:CodeGenProject
+		nodeTypes:T.Iterable[str]=None,
 		genDir:Path = Path(__file__).parent.parent / "gen",
 		onlyTransform=False,
 		onlyBase=False,
@@ -334,15 +343,15 @@ def genNodes(#project:CodeGenProject
 	"""generate nodes from json data"""
 
 	startTime = time.time()
-	with open(jsonPath, "r") as f:
-		nodeData = json.load(f)
+	nodeData = orjson.loads(open(jsonPath, "rb").read())
 	readTime = time.time() - startTime
 	print("read time", readTime)
+	# full reset gen dir
+	if nodeTypes is None:
+		resetGenDir()
 	if onlyTransform:
 		# start with venerable transform
-		targetNodes = [
-
-		]
+		targetNodeDatas = []
 
 		# get all the bases of transform
 		nameNBasesMap = {}
@@ -354,31 +363,47 @@ def genNodes(#project:CodeGenProject
 		for base in bases:
 			if base not in nameNBasesMap:
 				continue
-			targetNodes.append(nodeData[nameNBasesMap[base]][base])
-		targetNodes.append(nodeData["4"]["transform"])
+			targetNodeDatas.append(nodeData[nameNBasesMap[base]][base])
+		targetNodeDatas.append(nodeData["4"]["transform"])
 
 	elif onlyBase:
-		targetNodes = []
+		targetNodeDatas = []
 		try:
 			for nBases, nameMap in nodeData.items():
 				for name, data in nameMap.items():
-					targetNodes.append(data)
+					targetNodeDatas.append(data)
 					raise RuntimeError
 		except RuntimeError:
 			pass
 
 	else: # regenerate every single node in maya
-		targetNodes = []
+		targetNodeDatas = []
+		foundTypeNames = set()
 		for nBases, nameMap in nodeData.items():
-			for name, data in nameMap.items():
-				targetNodes.append(data)
+			if nodeTypes is None:
+				for name, data in nameMap.items():
+					targetNodeDatas.append(data)
+
+			else: # filter nodes to update
+				for nodeType in nodeTypes:
+					if nodeType not in nameMap:
+						continue
+					targetNodeDatas.append(nameMap[nodeType])
+					# make sure to add all node bases as well
+					for baseIndex, baseName in enumerate(
+							nameMap[nodeType]["bases"]):
+						if baseName in foundTypeNames:
+							continue
+						targetNodeDatas.append(nodeData[str(baseIndex)][
+							                       baseName])
+						foundTypeNames.add(baseName)
 
 	# map of { node type : all attr names in that node type }
 	# to avoid duplication
 	typeAttrSetMap : dict[str, set[str]] = {}
 
 	genStartTime = time.time()
-	for i in targetNodes:
+	for i in targetNodeDatas:
 
 		#print("generate node", i["typeName"], "bases", i["bases"])
 
@@ -392,7 +417,7 @@ def genNodes(#project:CodeGenProject
 		genPathForNodeType(nodeData.typeName).write_text(nodeFileStr)
 		pass
 	print("generated {} nodes in {}".format(
-		len(targetNodes), time.time() - genStartTime) )
+		len(targetNodeDatas), time.time() - genStartTime) )
 
 	if refreshGenInitFile:
 		# first recreate main generated init file
@@ -403,7 +428,9 @@ def genNodes(#project:CodeGenProject
 		processGenInitFile(
 			authorDir / "__init__.py", authorDir,
 			authorInitTemplatePath,
-			extraImports=[Import(fromModule="..gen", module="Catalogue", alias="GenCatalogue")],
+			extraImports=[
+				Import(fromModule="..gen", module="Catalogue", alias="GenCatalogue"),
+				Import(fromModule="..gen", module="*")],
 			catalogueBases=("GenCatalogue",)
 		)
 
@@ -434,12 +461,19 @@ def processGenInitFile(initFile:Path,
 			continue
 		if refFile.stem == "__init__":
 			continue
+
+		if refFile.stem[:-1] in reservedWordSet:
+			nodeClsName = wpstring.cap(refFile.stem[:-1])
+		else:
+			nodeClsName = wpstring.cap(refFile.stem)
+
 		imports.append(Import(
 			fromModule="." + refFile.stem,
-			module=wpstring.cap(refFile.stem),
+			module=nodeClsName,
 		))
 		assignments.append(Assign(
-			wpstring.cap(refFile.stem), wpstring.cap(refFile.stem)
+			wpstring.cap(refFile.stem),
+			nodeClsName
 		))
 	#log("assignments", assignments)
 	#log("imports", imports)

@@ -8,10 +8,8 @@ from wplib.totype import to, coerce
 from ..gen.dagNode import DagNode as GenDagNode
 
 if T.TYPE_CHECKING:
-	# add any extra imports
-	if T.TYPE_CHECKING:
-		from ..author import Catalogue
-		GenDagNode = Catalogue.DagNode
+	from ..author import Catalogue
+	GenDagNode = Catalogue.DagNode
 
 
 class DagNode(GenDagNode):

@@ -18,8 +18,11 @@ from wptree import Tree
 from wpm import WN, om, cmds
 from wpm.core import getMFn, getMFnType, apiTypeMap, getCache
 
+"""orjson does not output non-string keys, even when explicitly given
+the flag. oh well."""
 
 TARGET_NODE_DATA_PATH = Path(__file__).parent / "nodeData.json"
+PLUGIN_NODE_DATA_PATH = Path(__file__).parent / "pluginNodeData.json"
 
 @dataclass
 class AttrData:
@@ -207,13 +210,25 @@ def getBaseNodeData():
 	)
 
 
-def gatherNodeData(nodeTypes=None, outputPath=None):
+def sortNodeTypesByNBases(nodeTypes:T.Iterable[str])->dict[int, set[str]]:
+	"""sort node types by number of base classes
+	returns a dict mapping number of bases to list of node types
+	"""
+	typeLenSetMap : dict[int, set[str]] = defaultdict(set)
+	for nodeType in nodeTypes:
+		# get node class bases
+		baseClasses = cmds.nodeType(nodeType, isTypeName=1, inherited=1) or []
+		typeLenSetMap[len(baseClasses)].add(nodeType)
+	return typeLenSetMap
+
+
+
+
+def _gatherNodeData(nodeTypes=None):
 	"""gather node data from maya
 	"""
 	# get all node types
-
 	nodeTypes = nodeTypes or cmds.allNodeTypes(includeAbstract=1)
-	outputPath = outputPath or TARGET_NODE_DATA_PATH
 
 	# this adds " (abstract)" to the end of abstract node types :)
 	abstractMap = {x.replace(" (abstract)", ""): " (abstract)" in x for x in nodeTypes}
@@ -224,22 +239,8 @@ def gatherNodeData(nodeTypes=None, outputPath=None):
 	for i in nodeTypes:
 		nodeTypeSet.update(cmds.nodeType(i, isTypeName=1, inherited=1) or ())
 
-	# recover type tree for all nodes, avoid duplication
-	typeLenSetMap : dict[int, set[str]] = defaultdict(set)
-	for nodeType in nodeTypeSet:
-		# get node class bases
-		baseClasses = cmds.nodeType(nodeType, isTypeName=1, inherited=1) or []
-		typeLenSetMap[len(baseClasses)].add(nodeType)
-		# baseClasses = baseClasses[:-1]  # remove the last one, which is the node type itself
-		# # all nodes have "frozen", "message" etc attributes, create a "_BASE_" node type for these
-		# baseClasses.insert(0, "_BASE_")
-		#typeLenSetMap[len(baseClasses)].add(nodeType)
-
-	nodeData : dict[str, dict[str, NodeData] ]= {}
-
-
-	#("getting data for following nodes:")
-	#pprint.pprint(typeLenSetMap, depth=10, sort_dicts=1)
+	typeLenSetMap = sortNodeTypesByNBases(nodeTypeSet)
+	nodeData : dict[str, dict[int, NodeData] ]= {}
 
 	for typeLen, typeSet in sorted(typeLenSetMap.items(), key=lambda x: x[0]):
 		nodeData[str(typeLen)] = {}
@@ -251,17 +252,34 @@ def gatherNodeData(nodeTypes=None, outputPath=None):
 			if nodeType in reportTypes:
 				log("writing data", nodeType)
 				log(data)
-	nodeData["0"] = {"_BASE_" : getBaseNodeData() }
+	nodeData[str(0)] = {"_BASE_" : getBaseNodeData() }
+	return nodeData
 
+def updateDataForNodes(nodeTypes:T.Iterable[str]=None,
+                       outputPath:Path=TARGET_NODE_DATA_PATH
+                       ):
+
+	nodeData = _gatherNodeData(nodeTypes)
+	if outputPath.exists():
+		try:
+			existData = orjson.loads(open(outputPath).read())
+		except orjson.JSONDecodeError:
+			existData = {}
+	else:
+		existData = {}
+	for baseLen, data in nodeData.items():
+		for nodeType, nodeLeafData in data.items():
+			existData.setdefault(baseLen, {})[nodeType] = nodeLeafData
 
 	# write to file
-	with open(outputPath, "w") as f:
+	with open(outputPath, "wb") as f:
 		f.write(
-			orjson.dumps(nodeData, option=orjson.OPT_INDENT_2).decode("utf-8")
+			orjson.dumps(existData,
+			             option=orjson.OPT_INDENT_2 | orjson.OPT_NON_STR_KEYS
+			             )
 		)
-	
 	#log("gather done")
-	return nodeData
+	return existData
 
 """
 script:

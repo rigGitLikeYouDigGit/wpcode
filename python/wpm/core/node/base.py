@@ -544,8 +544,8 @@ class WN( # short for WePresentNode
 		if(isinstance(nodeType, str)):
 			return
 
+	#region schema support
 	NodeSchema = NodeSchema
-
 	@classmethod
 	def T(cls, name:str="", parentNode=None, **kwargs)->NodeSchema:
 		"""template schema integration - return schema dataclass on this
@@ -563,6 +563,15 @@ class WN( # short for WePresentNode
 		for i in childNodes:
 			i.setParent(node)
 		return node
+	#endregion
+
+	@staticmethod
+	def syncWrapperForNodeTypes(nodeTypes:list[str]):
+		WNMeta.retriever.regenNodeClasses([nodeTypes])
+		return [WN.classForNodeType(i) for i in nodeTypes]
+	@staticmethod
+	def syncWrappersForPlugin(pluginName:str):
+		WNMeta.retriever.regenNodeClassesForPlugin(pluginName)
 
 	def __init__(self, node:om.MObject, **kwargs):
 		"""init here is never called directly, always filtered to an MObject
@@ -1097,7 +1106,7 @@ class WN( # short for WePresentNode
 	def shapes(self)->list[WN]:
 		return [WN(i) for i in self._shapeObjects()]
 
-	def shape(self)->WN:
+	def shape(self)->WN.Mesh | WN.NurbsCurve | WN.NurbsSurface:
 		if self.isShape():
 			return self
 		if shapes := self._shapeObjects():

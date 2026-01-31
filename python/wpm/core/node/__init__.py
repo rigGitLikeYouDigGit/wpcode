@@ -5,6 +5,7 @@ import os, shutil, types, importlib, traceback
 from pathlib import Path
 from wplib import log
 
+from importlib import reload
 
 """package for defining custom wrappers around individual maya node types
 
@@ -38,6 +39,7 @@ class NodeClassRetriever:
 	authorDir = Path(__file__).parent / "author"
 
 	def __init__(self):
+		#lowercase node type names, for reasons that made sense at the time
 		self.nodeClsCache : dict[str, type[WN]] = {}
 
 	def getNodeFile(self, nodeClsName:str) -> Path:
@@ -115,6 +117,37 @@ class NodeClassRetriever:
 		cls = getattr(mod, nodeClsNameUpper)
 		self.nodeClsCache[nodeClsNameLower] = cls
 		return cls
+
+	def regenNodeClasses(self, nodeTypes):
+		"""regenerate node class files for the given
+		list of node type names"""
+		from wpm.core.node.codegen.main import generateNodeFiles
+		generateNodeFiles(nodeTypes)
+		# reload modules
+		reload(importlib.import_module(self.genPackage))
+		reload(importlib.import_module(self.authorPackage))
+		for i in nodeTypes:
+			if i.lower() in self.nodeClsCache:
+				del self.nodeClsCache[i.lower()]
+			if i.capitalize() in self.nodeClsCache:
+				del self.nodeClsCache[i.capitalize()]
+		for i in nodeTypes:
+			self.getNodeCls(i)
+
+	def regenNodeClassesForPlugin(self, pluginName:str):
+		"""convenience to regen all node classes for a given plugin"""
+		def getNodeTypesForPlugin(pluginName):
+			from wpm import cmds, om
+			# 1. Ensure the plugin is loaded before querying
+			if not cmds.pluginInfo(pluginName, query=True, loaded=True):
+				cmds.warning(f"Plugin '{pluginName}' is not loaded.")
+				return []
+			# This returns a list of node type names registered by MFnPlugin::registerNode
+			nodeTypes = cmds.pluginInfo(
+				pluginName, query=True, dependNode=True) or []
+			return nodeTypes
+		nodeTypes = getNodeTypesForPlugin(pluginName)
+		self.regenNodeClasses(nodeTypes)
 
 retriever = NodeClassRetriever()
 

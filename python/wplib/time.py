@@ -23,13 +23,19 @@ class TimeBlock:
 		     eg to start/stop timer
 	"""
 
-	def __init__(self):
+	clsPrintFn = print
+
+	def __init__(self, name:str, printFn=None):
+		self.name = name
 		self.start = None
+		self._printFn = printFn or self.clsPrintFn
 	def __enter__(self):
 		self.start = perf_counter()
 		return self
 
 	def __exit__(self, type, value, traceback):
 		self.time = perf_counter() - self.start
+		if type is None:
+			self._printFn(f"completed {self.name} in {self.time:.3f} seconds")
 		# self.readout = f'Time: {self.time:.3f} seconds'
 		# print(self.readout)
