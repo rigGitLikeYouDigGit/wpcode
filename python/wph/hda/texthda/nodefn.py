@@ -279,9 +279,17 @@ def onHDAUpdated(kwargs):
 	for i in instances:
 		hdaNode = TextHDANode(i)
 		defStr = hdaNode.defFile()
-		leafParmTemplateStr = hdaNode.leafHDAParmTemplates()
+		# leafParmTemplates = hdaNode.leafHDAParmTemplates()
+		# leafParmTemplateStr = {
+		# 	i.name() : i. for i in leafParmTemplates
+		# }
+		leafParmTemplateStr = hdaNode.leafPTGData()
 		leafState = hdaNode.nodeLeafStoredState()
-		leafState["parmTemplates"]["."].setdefault({})["leaf"] = (
+		if not leafState:
+			continue
+		print("leaf state")
+		pprint.pprint(leafState)
+		leafState["parmTemplates"].setdefault("LEAF", {})["LEAF"] = (
 			leafParmTemplateStr)
 		hdaNode.nodeLeafDeltaParm().set(dumps(leafState))
 	"""check through dependent defs to update - we only have to live update 
@@ -333,7 +341,8 @@ def onNodeInternalChanged(
 			parm_tuple : hou.ParmTuple = kwargs["parm_tuple"]
 			if parm_tuple.name() == ParmNames.allowEditing:
 				return
-		return
+		if node == topNode:
+			return
 
 	if not hou.node(node.path()): # already deleted
 		return
@@ -345,7 +354,7 @@ def onNodeInternalChanged(
 			childNode : hou.OpNode = kwargs["child_node"]
 			print("child node created:", childNode)
 			addNodeInternalCallbacks(childNode, inputRewired=True, topNode=topNode)
-		pullLocalNodeState(topNode)
+		pullLocalNodeStateAndUpdateDef(topNode)
 
 		# update other nodes in scene
 		dependencyMap = gather.getDefAffectedNodeMap()
@@ -358,13 +367,6 @@ def onNodeInternalChanged(
 			print("SYNC DEPENDENT NODE:", i)
 			otherTextHda.syncNodeState()
 
-@dbg
-def sync_node(node:hou.Node, ):
-	"""
-	overall control function whenever any part of node changes -
-	check if we need to switch editing mode, then if node should
-		sync data
-	"""
 
 def onNodeOperationErrored(*args, **kwargs):
 	"""automatically press undo after node errors -
@@ -397,38 +399,72 @@ def getHDAsDefinedInScene()->list[hou.HDADefinition]:
 	baked textHDA hdas are always going to be scene-bound"""
 
 @dbg
-def pullLocalNodeState(node:hou.Node):
+def pullLocalNodeState(node:hou.Node)->tuple[dict, dict, dict]:
+	"""return
+	(parent incoming state, whole node state, leaf delta)
+	"""
+	hda = TextHDANode(node)
+	# get stored incoming node state
+	storedIncomingState = hda.reloadParentStates()
+
+	# get whole state of node in scene
+	wholeNodeState = gather.getFullNodeState(node)
+	# get current delta
+	leafDelta = gather.diffNodeState(storedIncomingState, wholeNodeState)
+	return storedIncomingState, wholeNodeState, leafDelta
+
+# print("leaf delta:")
+# pprint.pprint(leafDelta, depth=5)
+# # save on node
+
+@dbg
+def pullLocalNodeStateAndUpdateDef(node:hou.Node):
 	hda = TextHDANode(node)
 	if not hda.hdaDef():
 		return {}
 
+	storedIncomingState, wholeNodeState, leafDelta = pullLocalNodeState(node)
+
+	"""move leaf parm templates to parent"""
+
+	mergedState = gather.mergeNodeStates(storedIncomingState)
+	gather.setNodeToState(node, )
+
 	with hda.workCtx() as ctx:
-		# get stored incoming node state
-		storedIncomingState = gather.mergeNodeStates(
-			{}, hda.filteredParentStoredStates()
-		)
+		hda.setNodeLeafDeltaData(leafDelta)
+		gather.updateHDADefSections(hda.hdaDef(),
+		                            wholeNodeState,
+		                            leafDelta,)
 
-
-		# get whole state of node in scene
-		wholeNodeState = gather.getFullNodeState(node)
-		# print("wholeNodeState:")
-		# pprint.pprint(wholeNodeState, depth=5)
-		# # return
-
-		# get current delta
-		leafDelta = gather.diffNodeState(storedIncomingState, wholeNodeState)
-		# print("leaf delta:")
-		# pprint.pprint(leafDelta, depth=5)
-		# # save on node
-
-		toSave = dumps(leafDelta)  # .replace("\n", "\\n")
-		hda.nodeLeafDeltaParm().set(
-			toSave
-		)
-		gather.setHDASectionDict(hda.hdaDef(), gather.HDA_DELTA_SECTION_NAME, leafDelta)
 		#print("saved leaf deltas on node")
 		#print(toSave)
 		return leafDelta
+
+@dbg
+def pushLocalNodeState(node:hou.OpNode):
+	"""why are you writing functions at 4 in the morning
+	because i have lost control of my life
+
+	pull local state, then push out to all dependents active in scene
+	"""
+	hda = TextHDANode(node)
+	#pullLocalNodeStateAndUpdateDef(node)
+	print("affected:")
+	pprint.pprint(gather.getDefAffectedNodeMap())
+	for i in gather.getDefAffectedNodeMap()[hda.defFile()]:
+		print("push to", i, i.type(), i.type().definition() == node.type().definition())
+		if i.type().definition() == node.type().definition():
+			continue
+		hda = TextHDANode(i)
+		hda.syncNodeState()
+
+@dbg
+def pushNodeParamValues(node:hou.Node):
+	"""like above but only update param values"""
+	hda = TextHDANode(node)
+
+
+
 
 @dbg
 def refreshParentBasesRegenNode(node:hou.Node, leafDelta:dict=None)->bool:
@@ -443,7 +479,7 @@ def refreshParentBasesRegenNode(node:hou.Node, leafDelta:dict=None)->bool:
 
 	if leafDelta is None:
 		leafDelta = hda.nodeLeafStoredState()
-		if hda.parentDefs() and not hda.editingAllowed():
+		if hda.parentDefPaths() and not hda.editingAllowed():
 			leafDelta = {}
 
 	errored = False
@@ -515,16 +551,9 @@ def onSyncBtnPressed(node:hou.OpNode):
 	IF EDITING NOT ENABLED:
 		don't touch leaf deltas, but disable them
 	"""
-	print("")
-	print("SYNC:")
-	print(":")
 	hda = TextHDANode(node)
-	if hda.isWorking():
-		return
-	with hda.workCtx():
-		hda.gatherSyncNodeState()
-		# leafDelta = pullLocalNodeState(node)
-		# refreshParentBasesRegenNode(node, leafDelta)
+	pullLocalNodeStateAndUpdateDef(node)
+	pushLocalNodeState(node)
 
 
 def onClearLeafPressed(node, *args, **kwargs):
@@ -604,10 +633,10 @@ def onAllowEditingChanged(node:hou.OpNode, *args, **kwargs):
 		node = hda.node
 		if hda.editingAllowed():
 			print("editing allowed")
-			# addNodeInternalCallbacks(node, inputRewired=False,
-			#                          #paramChanged=False,
-			#                          paramChanged=True,
-			#                          topNode=node)
+			# required so we register nodes being created in hda
+			addNodeInternalCallbacks(node, inputRewired=False,
+			                         paramChanged=False,
+			                         topNode=node)
 			syncHDAParamCallback(hda.node)
 			node.allowEditingOfContents(False)
 			for i in node.allSubChildren(recurse_in_locked_nodes=False):

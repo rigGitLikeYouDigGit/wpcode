@@ -63,6 +63,11 @@ for overriding parent attrs, provide 3 params for each -
 locked SUPER_attr , showing original value always, OVERRIDE_attr checkbox,
 allowing local editing of the actual named attr
 
+
+we use a push model, any node that changes will sync all active children defs
+in the scene - each one saves its leaf AND TOTAL data in HDA sections, so 
+pulling only needs to look at one level
+
 """
 
 # FOR TESTING - supply list of paths to be searched for text HDA definitions
@@ -108,6 +113,586 @@ def regenFromJson(s:str):
 
 def truncate2Places(f:float):
 	return int(f * 100) / 100.0
+
+
+def getNodeHeader(node: hou.Node, rootNode: hou.Node):
+	path = rootNode.relativePathTo(node)
+	if isinstance(node, hou.NetworkBox):
+		return [path, "NETWORK_BOX", "", "", "", 0]
+	typeInfo = node.type()
+	"""
+	Returns a tuple of node type name components that constitute the full node type name. The components in the tuple appear in the following order: scope network type, node type namespace, node type core name, and version.
+
+	# parse the full name into components
+	>>> node_type = hou.nodeType(hou.dopNodeTypeCategory(), 'pyrosolver::2.0')
+	>>> node_type.nameComponents()
+	('', '', 'pyrosolver', '2.0')
+
+	if a node type's version is not the latest, do we assume it matters?
+	or if a node type is not the exact one you get, from an inexact lookup, then it matters.
+
+	Danger to switch silently if someone else publishes a new version of a contained node while you're working on the hda
+	"""
+	scopeType, nodeTypeNS, nodeTypeName, exactVersion = typeInfo.nameComponents()
+
+	# check if this node type is the same you get with a general lookup
+	# defaultType = hou.NodeType(hou.sopNodeTypeCategory(), nodeTypeName )
+	defaultType = hou.nodeType(hou.sopNodeTypeCategory(), nodeTypeName)
+	exactVersionMatters = int(
+		defaultType.nameComponents() != typeInfo.nameComponents())
+
+	# save everything EXCEPT the version at node level
+	return [path, scopeType, nodeTypeNS, nodeTypeName, exactVersion,
+	        exactVersionMatters,
+	        truncate2Places(node.position()[0]),
+	        truncate2Places(node.position()[1])]
+
+
+@dbg
+def createNodeFromHeader(rootNode: hou.Node, header: NodeHeader):
+	"""create a new node from the given header: path and node type.
+
+	Looks like we need to know the version (and if it matters) at node creation,
+	so pack that on the end of this header?"""
+	nodePath, scopeType, nodeTypeNS, nodeTypeName, exactVersion, exactVersionMatters, x, y = header
+	nodeName = nodePath.split("/")[-1]
+	if "/" in nodePath:
+		parentNodePath = "/".join(nodePath.split("/")[:-1])
+	else:
+		parentNodePath = "."
+	parentNode: hou.Node = rootNode.node(parentNodePath)
+
+	if exactVersionMatters:
+		exactVersion = "::".join(
+			filter(None, (nodeTypeNS, nodeTypeName, exactVersion)))
+		print("CREATE EXACT VERSION ", exactVersion, nodeName)
+		newNode = parentNode.createNode(
+			exactVersion, nodeName, exact_type_name=True
+		)
+	else:
+		newNode = parentNode.createNode(
+			nodeTypeName, nodeName
+		)
+	newNode.setPosition(hou.Vector2(x, y))
+	return newNode
+
+
+def getChildrenConnectionData(parentNode: hou.OpNode) -> list[list[str]]:
+	"""very simple, of form
+	[ 0-myNodeOutputName-myNode , 0-myNodeInputName-myOtherNode ]"""
+	connections = []
+	print("getChildrenConnectionData", parentNode, parentNode.children())
+	for node in parentNode.children():
+		node: hou.OpNode
+		connectors: tuple[tuple[hou.NodeConnection]] = node.inputConnectors()
+		for i, connector in enumerate(connectors):
+			if not connector:  # input not driven
+				continue
+			if subnetInput := connector[0].subnetIndirectInput():
+				connections.append(
+					[f"{subnetInput.number()}",
+					 f"{i}-{connector[0].outputName()}-{node.name()}"]
+				)
+			else:
+				connections.append(
+					[f"{connector[0].inputIndex()}-{connector[0].inputName()}-{connector[0].inputNode().name()}",
+					 f"{i}-{connector[0].outputName()}-{node.name()}"]
+				)
+	return connections
+
+
+def setChildrenConnectionData(
+		parentNode: hou.Node, connections: list[list[str]],
+		useNames=True
+):
+	"""very simple, of form
+	[ 0-myNodeOutputName-myNode , 0-myNodeInputName-myOtherNode ]
+
+	TODO: add error checks throughout this to fall back if using names fails
+	"""
+	subnetInputs = parentNode.indirectInputs()
+	for c in connections:
+		dstIndex, dstInName, dstName = c[1].split("-")
+		dstNode: hou.Node = parentNode.node(dstName)
+		if len(c[0].split("-")) == 1:  # subnet input
+			srcItem = subnetInputs[int(c[0])]
+			if useNames:
+				dstNode.setNamedInput(dstInName, srcItem, 0)
+			else:
+				dstNode.setInput(int(dstIndex), srcItem, 0)
+			continue
+
+		srcIndex, srcInName, srcName = c[0].split("-")
+		srcNode = parentNode.node(srcName)
+		if useNames:
+			dstNode.setNamedInput(dstInName, srcNode, srcInName)
+		else:
+			dstNode.setInput(int(dstIndex), srcNode, int(srcIndex))
+
+
+def getConnectionsDiff(
+		baseData: list[list[str]],
+		newData: set[NodeHeader]
+) -> dict[str, list[list[str]]]:
+	"""return a dict of {"add" : [], "del" : [] }
+	"""
+	result = {"add": [], "del": []}
+	for i in baseData:
+		if not i in newData:
+			result["del"].append(i)
+	for i in newData:
+		if not i in baseData:
+			result["add"].append(i)
+	return result
+
+
+def getNodeParamText(node: hou.OpNode, saveDefaults=True) -> dict[str, T.Any]:
+	"""get verbose so we can iterate over dictionary easier when diffing
+	"""
+	result = {}
+	for i in node.parms():
+		i: hou.Parm
+		if not saveDefaults:
+			if i.isAtDefault():
+				continue
+		result[i.name()] = i.asData()
+	return result
+
+
+def setNodeParamsFromText(node: hou.OpNode, data):
+	for parmName, v in data.items():
+		node.parm(parmName).setFromData(v)
+
+
+def getNodeParmValues(node: hou.Node) -> dict[str, T.Any]:
+	""""""
+	return {
+		i.name(): i.eval() for i in node.parms()
+	}
+
+
+def setNodeParmValues(node: hou.Node, data: dict):
+	for k, v in data.items():
+		if not node.parm(k):
+			continue
+		node.parm(k).set(v)
+
+
+"""very quick and dirty deep diff and update system"""
+
+
+def deepUpdatePath(baseData: dict | list, path: list, value):
+	token, path = path[0], path[1:]
+	if isinstance(baseData, dict):
+		if not path:
+			baseData[token] = value
+			return
+		if not token in baseData:
+			baseData[token] = value
+			return
+		deepUpdatePath(baseData, path, value)
+
+	elif isinstance(baseData, list):
+		index = -1
+		if isdigit(token):
+			index = int(token)
+		elif isinstance(token, int):
+			index = token
+		else:
+			print(baseData)
+			print(token, path)
+			raise RuntimeError("invalid list index:", token)
+		if index >= len(baseData):
+			baseData.append(value)
+			return
+		if not path:
+			baseData[index] = value
+			return
+		return deepUpdatePath(baseData[index], path, value)
+
+
+"""generate separate paths from nested patch dict"""
+
+
+def deepUpdate(baseData: dict | list, patch: list[tuple[list[str], T.Any]]):
+	for k, v in patch:
+		deepUpdatePath(baseData, list(k), v)
+
+
+def deepDiffParams(
+		baseData,
+		newData
+) -> Delta:
+	diff = DeepDiff(baseData, newData)
+	return Delta(diff)
+
+
+def applyDeepPatchParams(
+		baseData,
+		patch: Delta
+):
+	return baseData + patch
+
+
+def diffParamsText(
+		baseData: dict,
+		newData: dict,
+		patchData: dict = None
+):
+	""" better to be diffed
+	than to be no-diffed
+	"""
+	if patchData is None:
+		patchData = {}
+
+	# if isinstance(newData, (tuple, list)):
+	# 	if not isinstance(baseData, (tuple, list)):
+	# 		return newData
+	# 	for i,
+	for k, v in newData.items():
+		if not k in baseData:
+			patchData[k] = diffParamsText({}, newData)
+			# patchData[k] = {}
+			# diffParamsText({}, v, patchData[k])
+			continue
+
+
+def getParmDialogScripts(node: hou.Node) -> dict[str]:
+	"""trying to save parm definitions in dialog script to ensure we
+	keep everything -
+	for some reason you can't get that for individual templates.
+
+	So for each parm, make a new template group containing only it,
+	and get that as dialog
+	"""
+	result = {}
+	for p in node.spareParms():
+		p: hou.Parm
+		template = p.parmTemplate()
+		try:
+			"""sometimes fails with 'sequence of parm templates cannot 
+			include FolderSetParmTemplates', whole system is insane"""
+			ptg = hou.ParmTemplateGroup([template])
+		except hou.OperationFailed:
+			continue
+		result[p.name()] = makeSafeForJson(ptg.asDialogScript())
+	return result
+
+
+@dbg
+def getTextHDAParmDialogScripts(node: hou.Node):
+	"""special-case textHDA root nodes - maybe this isn't
+	necessary, but I don't want the system accidentally
+	erasing itself
+	"""
+	hda = TextHDANode(node)
+	print("leaf pts", hda.leafHDAParmTemplates())
+	# leafPtg = hou.ParmTemplateGroup(hda.leafHDAParmTemplates())
+	# parentPtg = hou.ParmTemplateGroup(hda.parentHDAParmTemplates())
+	result = {
+		# "parent" : {i.name() : makeSafeForJson(hou.ParmTemplateGroup([
+		# 	i]).asDialogScript())
+		#             for i in hda.parentHDAParmTemplates()},
+		"LEAF": {i.name(): makeSafeForJson(hou.ParmTemplateGroup([
+			i]).asDialogScript())
+		         for i in hda.leafHDAParmTemplates()},
+	}
+	print("texthda dialog scripts:")
+	print(result)
+	return result
+
+
+def setTextHDAParmDialogScripts(node: hou.OpNode, data: dict):
+	"""remove existing hda parms and reset from given data
+	we modify the current hda definition ptg used by the node.
+
+	also handle setting params under parent vs leaf folders
+
+	data will be dict of {
+		"myHDaName" : {
+			"parmName" : "dialogScript",
+			}
+		}
+	"""
+	# print("text parms")
+	# print(data)
+	hda = TextHDANode(node)
+	defName = hda.defFile()
+	ptg: hou.ParmTemplateGroup = hda.hdaDef().parmTemplateGroup()
+
+	for hdaDefName, paramData in data.items():
+		# assign same-node params to leaf
+		if hdaDefName == defName:
+			leafFolderPT = hda.leafHDAParmFolderTemplate()
+			for k, v in paramData.items():
+				parmPTG = hou.ParmTemplateGroup()
+				parmPTG.setToDialogScript(regenFromJson(v))
+				# pt : hou.ParmTemplate = parmPTG.parmTemplates()[0]
+				pt: hou.ParmTemplate = parmPTG.find(k)
+				leafFolderPT.addParmTemplate(pt)
+			if ptg.findFolder(ParmNames.leafHDAParmFolderLABEL):
+				ptg.replace(ParmNames.leafHDAParmFolderLABEL, leafFolderPT)
+			else:
+				ptg.append(leafFolderPT)
+			continue
+		# assign other-node params to parent
+		parentFolderPT = hda.parentHDAParmFolderTemplate()
+		pts = []
+		for k, v in paramData.items():
+			parmPTG = hou.ParmTemplateGroup()
+			parmPTG.setToDialogScript(regenFromJson(v))
+			# pt : hou.ParmTemplate = parmPTG.parmTemplates()[0]
+			pt: hou.ParmTemplate = parmPTG.find(k)
+			pts.append(pt)
+		defFolderPT = hou.FolderParmTemplate(
+			hdaDefName, hdaDefName, pts)
+		parentFolderPT.addParmTemplate(defFolderPT)
+
+		if ptg.findFolder(hdaDefName):
+			ptg.replace(hdaDefName, parentFolderPT)
+		else:
+			ptg.append(parentFolderPT)
+	return
+
+	hda.hdaDef().setParmTemplateGroup(
+		ptg, rename_conflicting_parms=False, create_backup=False)
+
+	parmNames = {"PARENT": (ParmNames.parentHDAParmFolderLABEL,
+	                        hou.ParmTemplateGroup()),
+	             "LEAF": (ParmNames.leafHDAParmFolderLABEL,
+	                      hou.ParmTemplateGroup())
+	             }
+
+	for cat in ("PARENT", "LEAF"):
+		folderPT: hou.FolderParmTemplate = ptg.findFolder(parmNames[cat][0])
+
+		# print("folderPT", folderPT)
+		ptg.replace(folderPT, folderPT)
+		origFolderPT: hou.FolderParmTemplate = ptg.findFolder(parmNames[cat][0])
+		folderPT.setParmTemplates(())
+		ptg.replace(origFolderPT, folderPT)
+		folderPT: hou.FolderParmTemplate = ptg.findFolder(parmNames[cat][0])
+		origFolderPT: hou.FolderParmTemplate = ptg.findFolder(parmNames[cat][0])
+		for k, v in data.get(cat, {}).items():
+			parmPTG = hou.ParmTemplateGroup()
+			parmPTG.setToDialogScript(regenFromJson(v))
+			# pt : hou.ParmTemplate = parmPTG.parmTemplates()[0]
+			pt: hou.ParmTemplate = parmPTG.find(k)
+
+			folderPT.addParmTemplate(pt)
+
+		ptg.replace(origFolderPT, folderPT)
+
+	# update new folders on node
+	hda.hdaDef().setParmTemplateGroup(
+		ptg, rename_conflicting_parms=False, create_backup=False)
+
+
+def setParmDialogScripts(node: hou.Node, ptgData: dict):
+	masterPtg: hou.ParmTemplateGroup = node.parmTemplateGroup()
+	for parmName, data in ptgData.items():
+		ptg = hou.ParmTemplateGroup()
+		ptg.setToDialogScript(regenFromJson(data))
+		masterPtg.append(ptg.parmTemplates()[0])
+	node.setParmTemplateGroup(masterPtg)
+
+
+def iterNodesToTrack(topNode: hou.Node) -> list[hou.Node]:
+	"""does not return top node"""
+	result = []
+	toIter = list(topNode.children())
+	while toIter:
+		node = toIter.pop(-1)
+		result.append(node)
+		if isTextHDANode(node):
+			continue
+		if node.isInsideLockedHDA():
+			if node.isEditableInsideLockedHDA():
+				toIter.append(node)
+				continue
+		elif node.isLockedHDA():
+			continue
+		toIter.extend(node.children())
+	return result
+
+
+paramsToIgnore = list(ParmNames.__dict__.values())
+
+
+@dbg
+def getFullNodeState(
+		node: hou.Node
+) -> dict:
+	"""get full snapshot of node -
+	prune at included text hda nodes.
+
+	top-level parms saved by hda def name
+	"""
+	hda = TextHDANode(node)
+	nodes = iterNodesToTrack(node)
+	print("nodes", nodes)
+	# get params to add to the top node
+	baseParmTemplateGroup: hou.ParmTemplateGroup = node.parmTemplateGroup()
+	print("base ptg", baseParmTemplateGroup)
+
+	parmVals = {}
+	for i in nodes:
+		parmValData = getNodeParamText(i)
+		if not parmValData:
+			continue
+		parmVals[node.relativePathTo(i)] = parmValData
+
+	parmTemplatesToAdd = {}
+	for i in nodes:
+		if isTextHDANode(i):
+			# don't support adding spare inputs to textHDAs, we
+			# have enough going on
+			continue
+		else:
+			parmDialogData = getParmDialogScripts(i)
+		if not parmDialogData:
+			continue
+		parmTemplatesToAdd[node.relativePathTo(i)] = parmDialogData
+
+	# get top-level parm dialogs
+	parmTemplatesToAdd["."] = hda.inheritedParmTupleMap()
+
+	# node paths are exclusive, so let those override
+	result = {
+		"nodes": {node.relativePathTo(i): getNodeHeader(i, node) for i in
+		          nodes},
+		"parmTemplates": parmTemplatesToAdd,
+		# "connections" : [getChildrenConnectionData(i) for i in [node] + nodes],
+		"connections": getChildrenConnectionData(node),
+		# "parmVals" : {node.relativePathTo(i) : getNodeParamText(i) for i in nodes}
+		"parmVals": parmVals
+	}
+	print("result:")
+	pprint.pprint(result)
+
+	return result
+
+
+"""we don't need sophisticated diffs for nodes, parm templates etc - 
+overriding and adding should be fine, since dangling nodes
+in the network LIKELY won't matter?
+
+make that an option
+
+"""
+
+
+def mergeNodeStates(
+		baseData: dict,
+		states: list[dict]
+):
+	log("mergeNodeStates:",)
+	pprint.pprint(baseData)
+	pprint.pprint(states)
+	baseData.setdefault("nodes", {})
+	baseData.setdefault("parmTemplates", {})
+	baseData.setdefault("connections", [])
+	baseData.setdefault("parmVals", {})
+
+	for state in states:
+
+		baseData["nodes"].update(state.get("nodes", {}))
+		for k, v in state.get("parmTemplates", {}).items():
+			baseData.setdefault(k, {})
+			baseData[k].update(v)
+		baseData["parmTemplates"].update(state.get("parmTemplates", {}))
+		baseData["connections"].extend(state.get("connections", []))
+		for nodePath, parmData in state.get("parmVals", {}).items():
+			if not nodePath in baseData["parmVals"]:
+				baseData["parmVals"][nodePath] = parmData
+				continue
+			baseData["parmVals"][nodePath].update(parmData)
+
+	return baseData
+
+
+def parmValsAreEqual(a, b):
+	"""dumb and stupid for now, make this more complex if needed
+	"""
+	return str(a) == str(b)
+
+
+def diffNodeState(
+		baseData: dict,
+		wholeNodeState: dict
+) -> dict:
+	"""get final dict to put in leaf parm
+	works only as an overkay/override
+	"""
+	result = {
+		"nodes": {},
+		"parmTemplates": {},
+		"connections": [],
+		"parmVals": {}
+	}
+	# ensure baseData has all the needed keys set up
+	for k, v in result.items():
+		baseData.setdefault(k, v)
+	print("diffNodeState:")
+
+	print(baseData["nodes"])
+	print(wholeNodeState["nodes"])
+	# print("base:")
+	# pprint.pprint(baseData)
+	# print("whole state:")
+	# pprint.pprint(wholeNodeState)
+
+	for nodePath, nodeData in wholeNodeState.get("nodes", {}).items():
+		"""override node creation if leaf node is not found,
+		or if it has a different type/version compared to base"""
+		if not nodePath in baseData["nodes"]:
+			result["nodes"][nodePath] = nodeData
+			continue
+		# check that version and name are identical
+		if not all(nodeV == baseV
+		           for nodeV, baseV in zip(
+			nodeData[:6], baseData["nodes"][nodePath][:6])):
+			result["nodes"][nodePath] = nodeData
+
+	print("diff nodes:")
+	print(result["nodes"].keys())
+	for nodePath, parmData in wholeNodeState.get("parmTemplates", {}).items():
+		if not nodePath in baseData["parmTemplates"]:
+			result["parmTemplates"][nodePath] = parmData
+			continue
+		for parmName, parmScript in parmData.items():
+			if str(parmScript) != str(
+					baseData["parmTemplates"][nodePath].get(parmName, "")):
+				result["parmTemplates"].setdefault(nodePath, {})
+				result["parmTemplates"][nodePath][parmName] = parmScript
+
+	print("connections")
+	print(baseData["connections"])
+	print(wholeNodeState["connections"])
+	comp = set(map(tuple, baseData.get("connections", [])))
+	print("comp", comp)
+	for i in wholeNodeState.get("connections", []):
+		if not tuple(i) in comp:
+			result["connections"].append(i)
+
+	for nodePath, parmData in wholeNodeState.get("parmVals", {}).items():
+		if not nodePath in baseData["parmVals"]:  # new node
+			result["parmVals"][nodePath] = parmData
+			continue
+		for parmName, parmVal in parmData.items():
+			if not parmName in baseData["parmVals"][nodePath]:  # new parm
+				result["parmVals"].setdefault(nodePath, {})
+				result["parmVals"][nodePath][parmName] = parmVal
+				continue
+			if not parmValsAreEqual(
+					baseData["parmVals"][nodePath][parmName],
+					parmVal):  # save if not equal
+				result["parmVals"].setdefault(nodePath, {})
+				result["parmVals"][nodePath][parmName] = parmVal
+
+	return result
+
+
 
 def getNameVersionFromFileName(s:str)->(str, int):
 	"""for a file named
@@ -169,518 +754,21 @@ def getSceneHDADefNodes()->dict[str, list[hou.Node]]:
 		result[hdaNode.defFile()].append(node)
 	return result
 
-def getNodeHeader(node:hou.Node, rootNode:hou.Node):
-	path = rootNode.relativePathTo(node)
-	if isinstance(node, hou.NetworkBox):
-		return [path, "NETWORK_BOX", "", "", "", 0]
-	typeInfo = node.type()
-	"""
-	Returns a tuple of node type name components that constitute the full node type name. The components in the tuple appear in the following order: scope network type, node type namespace, node type core name, and version.
 
-	# parse the full name into components
-	>>> node_type = hou.nodeType(hou.dopNodeTypeCategory(), 'pyrosolver::2.0')
-	>>> node_type.nameComponents()
-	('', '', 'pyrosolver', '2.0')
-	
-	if a node type's version is not the latest, do we assume it matters?
-	or if a node type is not the exact one you get, from an inexact lookup, then it matters.
-	
-	Danger to switch silently if someone else publishes a new version of a contained node while you're working on the hda
-	"""
-	scopeType, nodeTypeNS, nodeTypeName, exactVersion = typeInfo.nameComponents()
-
-	# check if this node type is the same you get with a general lookup
-	#defaultType = hou.NodeType(hou.sopNodeTypeCategory(), nodeTypeName )
-	defaultType = hou.nodeType(hou.sopNodeTypeCategory(), nodeTypeName )
-	exactVersionMatters = int(defaultType.nameComponents() != typeInfo.nameComponents())
-
-	# save everything EXCEPT the version at node level
-	return [path, scopeType, nodeTypeNS, nodeTypeName, exactVersion, exactVersionMatters,
-	                  truncate2Places(node.position()[0]),
-			truncate2Places(node.position()[1])]
-
-@dbg
-def createNodeFromHeader(rootNode:hou.Node, header:NodeHeader):
-	"""create a new node from the given header: path and node type.
-
-	Looks like we need to know the version (and if it matters) at node creation,
-	so pack that on the end of this header?"""
-	nodePath, scopeType, nodeTypeNS, nodeTypeName, exactVersion, exactVersionMatters, x, y = header
-	nodeName = nodePath.split("/")[-1]
-	if "/" in nodePath:
-		parentNodePath = "/".join(nodePath.split("/")[:-1])
-	else:
-		parentNodePath = "."
-	parentNode : hou.Node = rootNode.node(parentNodePath)
-
-	if exactVersionMatters:
-		exactVersion = "::".join(filter(None, (nodeTypeNS, nodeTypeName, exactVersion)))
-		print("CREATE EXACT VERSION ", exactVersion, nodeName)
-		newNode = parentNode.createNode(
-			exactVersion, nodeName, exact_type_name=True
-		)
-	else:
-		newNode = parentNode.createNode(
-			nodeTypeName, nodeName
-		)
-	newNode.setPosition(hou.Vector2(x, y))
-	return newNode
-
-
-def getChildrenConnectionData(parentNode:hou.OpNode)->list[list[str]]:
-	"""very simple, of form
-	[ 0-myNodeOutputName-myNode , 0-myNodeInputName-myOtherNode ]"""
-	connections = []
-	print("getChildrenConnectionData", parentNode, parentNode.children())
-	for node in parentNode.children():
-		node : hou.OpNode
-		connectors : tuple[tuple[hou.NodeConnection]] = node.inputConnectors()
-		for i, connector in enumerate(connectors):
-			if not connector: # input not driven
-				continue
-			if subnetInput := connector[0].subnetIndirectInput():
-				connections.append(
-					[f"{subnetInput.number()}",
-					 f"{i}-{connector[0].outputName()}-{node.name()}"]
-				)
-			else:
-				connections.append(
-					[f"{connector[0].inputIndex()}-{connector[0].inputName()}-{connector[0].inputNode().name()}",
-					 f"{i}-{connector[0].outputName()}-{node.name()}"]
-				)
-	return connections
-
-def setChildrenConnectionData(
-		parentNode:hou.Node, connections:list[list[str]],
-		useNames=True
-):
-	"""very simple, of form
-	[ 0-myNodeOutputName-myNode , 0-myNodeInputName-myOtherNode ]
-
-	TODO: add error checks throughout this to fall back if using names fails
-	"""
-	subnetInputs = parentNode.indirectInputs()
-	for c in connections:
-		dstIndex, dstInName, dstName = c[1].split("-")
-		dstNode : hou.Node = parentNode.node(dstName)
-		if len(c[0].split("-")) == 1: # subnet input
-			srcItem = subnetInputs[int(c[0])]
-			if useNames:
-				dstNode.setNamedInput(dstInName, srcItem, 0)
-			else:
-				dstNode.setInput(int(dstIndex), srcItem, 0)
-			continue
-
-		srcIndex, srcInName, srcName = c[0].split("-")
-		srcNode = parentNode.node(srcName)
-		if useNames:
-			dstNode.setNamedInput(dstInName, srcNode, srcInName)
-		else:
-			dstNode.setInput(int(dstIndex), srcNode, int(srcIndex))
-
-def getConnectionsDiff(
-		baseData:list[list[str]],
-		newData:set[NodeHeader]
-)->dict[str, list[list[str]]]:
-	"""return a dict of {"add" : [], "del" : [] }
-	"""
-	result = {"add" : [], "del" : []}
-	for i in baseData:
-		if not i in newData:
-			result["del"].append(i)
-	for i in newData:
-		if not i in baseData:
-			result["add"].append(i)
-	return result
-
-
-def getNodeParamText(node:hou.OpNode, saveDefaults=True)->dict[str, T.Any]:
-	"""get verbose so we can iterate over dictionary easier when diffing
-	but no way to
-	"""
-	result = {}
-	for i in node.parms():
-		i : hou.Parm
-		if not saveDefaults:
-			if i.isAtDefault():
-				continue
-		result[i.name()] = i.asData()
-	return result
-
-def setNodeParamsFromText(node:hou.OpNode, data):
-	for parmName, v in data.items():
-		node.parm(parmName).setFromData(v)
-
-def getNodeParmValues(node:hou.Node)->dict[str, T.Any]:
-	""""""
-	return {
-		i.name() : i.eval() for i in node.parms()
-	}
-
-def setNodeParmValues(node:hou.Node, data:dict):
-	for k, v in data.items():
-		if not node.parm(k):
-			continue
-		node.parm(k).set(v)
-
-"""very quick and dirty deep diff and update system"""
-
-def deepUpdatePath(baseData:dict|list, path:list, value):
-	token, path = path[0], path[1:]
-	if isinstance(baseData, dict):
-		if not path:
-			baseData[token] = value
-			return
-		if not token in baseData:
-			baseData[token] = value
-			return
-		deepUpdatePath(baseData, path, value)
-
-	elif isinstance(baseData, list):
-		index = -1
-		if isdigit(token):
-			index = int(token)
-		elif isinstance(token, int):
-			index = token
-		else:
-			print(baseData)
-			print(token, path)
-			raise RuntimeError("invalid list index:", token)
-		if index >= len(baseData):
-			baseData.append(value)
-			return
-		if not path:
-			baseData[index] = value
-			return
-		return deepUpdatePath(baseData[index], path, value)
-
-
-"""generate separate paths from nested patch dict"""
-def deepUpdate(baseData:dict|list, patch:list[tuple[list[str], T.Any]]):
-	for k, v in patch:
-		deepUpdatePath(baseData, list(k), v)
-
-
-def deepDiffParams(
-		baseData,
-		newData
-)->Delta:
-	diff = DeepDiff(baseData, newData)
-	return Delta(diff)
-
-def applyDeepPatchParams(
-		baseData,
-		patch:Delta
-):
-	return baseData + patch
-
-def diffParamsText(
-		baseData:dict,
-		newData:dict,
-		patchData:dict=None
-):
-	""" better to be diffed
-	than to be no-diffed
-	"""
-	if patchData is None:
-		patchData = {}
-
-	# if isinstance(newData, (tuple, list)):
-	# 	if not isinstance(baseData, (tuple, list)):
-	# 		return newData
-	# 	for i,
-	for k, v in newData.items():
-		if not k in baseData:
-			patchData[k] = diffParamsText({}, newData)
-			# patchData[k] = {}
-			# diffParamsText({}, v, patchData[k])
-			continue
-
-
-def getParmDialogScripts(node:hou.Node)->dict[str]:
-	"""trying to save parm definitions in dialog script to ensure we
-	keep everything -
-	for some reason you can't get that for individual templates.
-
-	So for each parm, make a new template group containing only it,
-	and get that as dialog
-	"""
-	result = {}
-	for p in node.spareParms():
-		p : hou.Parm
-		template = p.parmTemplate()
-		try:
-			"""sometimes fails with 'sequence of parm templates cannot 
-			include FolderSetParmTemplates', whole system is insane"""
-			ptg = hou.ParmTemplateGroup([template])
-		except hou.OperationFailed:
-			continue
-		result[p.name()] = makeSafeForJson(ptg.asDialogScript())
-	return result
-
-@dbg
-def getTextHDAParmDialogScripts(node:hou.Node):
-	"""special-case textHDA root nodes - maybe this isn't
-	necessary, but I don't want the system accidentally
-	erasing itself
-	"""
-	hda = TextHDANode(node)
-	print("leaf pts", hda.leafHDAParmTemplates())
-	# leafPtg = hou.ParmTemplateGroup(hda.leafHDAParmTemplates())
-	# parentPtg = hou.ParmTemplateGroup(hda.parentHDAParmTemplates())
-	result = {
-		# "parent" : {i.name() : makeSafeForJson(hou.ParmTemplateGroup([
-		# 	i]).asDialogScript())
-		#             for i in hda.parentHDAParmTemplates()},
-		"leaf" : {i.name() : makeSafeForJson(hou.ParmTemplateGroup([
-			i]).asDialogScript())
-		          for i in hda.leafHDAParmTemplates()},
-	}
-	print("texthda dialog scripts:")
-	print(result)
-	return result
-
-def setTextHDAParmDialogScripts(node:hou.Node, data:dict):
-	"""remove existing hda parms and reset from given data
-	we modify the current hda definition ptg used by the node
-	"""
-	# print("text parms")
-	# print(data)
-	hda = TextHDANode(node)
-	ptg : hou.ParmTemplateGroup = hda.hdaDef().parmTemplateGroup()
-
-	parmNames = {"parent" : (ParmNames.parentHDAParmFolderLABEL, hou.ParmTemplateGroup()),
-	             "leaf" : (ParmNames.leafHDAParmFolderLABEL, hou.ParmTemplateGroup())
-	             }
-
-	for cat in ("parent", "leaf"):
-		folderPT: hou.FolderParmTemplate = ptg.findFolder(parmNames[cat][0])
-
-		#print("folderPT", folderPT)
-		ptg.replace(folderPT, folderPT)
-		origFolderPT: hou.FolderParmTemplate = ptg.findFolder(parmNames[cat][0])
-		folderPT.setParmTemplates(())
-		ptg.replace(origFolderPT, folderPT)
-		folderPT: hou.FolderParmTemplate = ptg.findFolder(parmNames[cat][0])
-		origFolderPT: hou.FolderParmTemplate = ptg.findFolder(parmNames[cat][0])
-		for k, v in data.get(cat, {}).items():
-
-			parmPTG = hou.ParmTemplateGroup()
-			parmPTG.setToDialogScript( regenFromJson(v) )
-			#pt : hou.ParmTemplate = parmPTG.parmTemplates()[0]
-			pt : hou.ParmTemplate = parmPTG.find(k)
-
-			folderPT.addParmTemplate(pt)
-
-		ptg.replace(origFolderPT, folderPT)
-
-	# update new folders on node
-	hda.hdaDef().setParmTemplateGroup(
-		ptg, rename_conflicting_parms=False, create_backup=False)
-
-
-
-
-
-def setParmDialogScripts(node:hou.Node, ptgData:dict):
-	masterPtg : hou.ParmTemplateGroup = node.parmTemplateGroup()
-	for parmName, data in ptgData.items():
-		ptg = hou.ParmTemplateGroup()
-		ptg.setToDialogScript(regenFromJson(data))
-		masterPtg.append(ptg.parmTemplates()[0])
-	node.setParmTemplateGroup(masterPtg)
-
-
-def iterNodesToTrack(topNode:hou.Node)->list[hou.Node]:
-	"""does not return top node"""
-	result = []
-	toIter = list(topNode.children())
-	while toIter:
-		node = toIter.pop(-1)
-		result.append(node)
-		if isTextHDANode(node):
-			continue
-		if node.isInsideLockedHDA():
-			if node.isEditableInsideLockedHDA():
-				toIter.append(node)
-				continue
-		elif node.isLockedHDA():
-			continue
-		toIter.extend(node.children())
-	return result
-
-paramsToIgnore = list(ParmNames.__dict__.values())
-
-@dbg
-def getFullNodeState(
-		node:hou.Node
-)->dict:
-	"""get full snapshot of node -
-	prune at included text hda nodes
-	"""
-	hda = TextHDANode(node)
-	nodes = iterNodesToTrack(node)
-	print("nodes", nodes)
-	# get params to add to the top node
-	baseParmTemplateGroup : hou.ParmTemplateGroup = node.parmTemplateGroup()
-	print("base ptg", baseParmTemplateGroup)
-
-	# for i, pt in hda.leafHDAParmTemplates():
-	# 	parmTemplatesToAdd = {
-	# 		"." : baseParmTemplateGroup.asDialogScript(full_info=True)
-	# 	}
-	parmTemplatesToAdd = {}
-	for i in ([node] + nodes):
-		if isTextHDANode(i):
-			parmDialogData = getTextHDAParmDialogScripts(i)
-		else:
-			parmDialogData = getParmDialogScripts(i)
-		if not parmDialogData:
-			continue
-		parmTemplatesToAdd[node.relativePathTo(i)] = parmDialogData
-
-	#print("pts to add:")
-	#pprint.pprint(parmTemplatesToAdd)
-
-	parmVals = {}
-	for i in nodes:
-		parmValData = getNodeParamText(i)
-		if not parmValData:
-			continue
-		parmVals[node.relativePathTo(i)] = parmValData
-
-	# node paths are exclusive, so let those override
-	result = {
-		"nodes" : {node.relativePathTo(i) : getNodeHeader(i, node) for i in nodes},
-		"parmTemplates" : parmTemplatesToAdd,
-		#"connections" : [getChildrenConnectionData(i) for i in [node] + nodes],
-		"connections" : getChildrenConnectionData(node),
-		#"parmVals" : {node.relativePathTo(i) : getNodeParamText(i) for i in nodes}
-		"parmVals" : parmVals
-	}
-	print("result:")
-	pprint.pprint(result)
-
-	return result
-
-"""we don't need sophisticated diffs for nodes, parm templates etc - 
-overriding and adding should be fine, since dangling nodes
-in the network LIKELY won't matter?
-
-make that an option
-
-"""
-
-def mergeNodeStates(
-		baseData:dict,
-		states:list[dict]
-):
-
-	baseData.setdefault("nodes", {})
-	baseData.setdefault("parmTemplates", {})
-	baseData.setdefault("connections", [])
-	baseData.setdefault("parmVals", {})
-
-	for state in states:
-
-		baseData["nodes"].update(state.get("nodes", {}))
-		for k, v in state.get("parmTemplates", {}).items():
-			baseData.setdefault(k, {})
-			baseData[k].update(v)
-		baseData["parmTemplates"].update(state.get("parmTemplates", {}))
-		baseData["connections"].extend(state.get("connections", []))
-		for nodePath, parmData in state.get("parmVals", {}).items():
-			if not nodePath in baseData["parmVals"]:
-				baseData["parmVals"][nodePath] = parmData
-				continue
-			baseData["parmVals"][nodePath].update(parmData )
-
-	return baseData
-
-def parmValsAreEqual(a, b):
-	"""dumb and stupid for now, make this more complex if needed
-	"""
-	return str(a) == str(b)
-
-def diffNodeState(
-		baseData:dict,
-		wholeNodeState:dict
-)->dict:
-	"""get final dict to put in leaf parm
-	works only as an overkay/override
-	"""
-	result = {
-		"nodes" : {},
-		"parmTemplates" : {},
-		"connections" : [],
-		"parmVals" : {}
-	}
-	# ensure baseData has all the needed keys set up
-	for k, v in result.items():
-		baseData.setdefault(k, v)
-	print("diffNodeState:")
-
-	print(baseData["nodes"])
-	print(wholeNodeState["nodes"])
-	#print("base:")
-	#pprint.pprint(baseData)
-	#print("whole state:")
-	#pprint.pprint(wholeNodeState)
-
-
-	for nodePath, nodeData in wholeNodeState.get("nodes", {}).items():
-		"""override node creation if leaf node is not found,
-		or if it has a different type/version compared to base"""
-		if not nodePath in baseData["nodes"]:
-			result["nodes"][nodePath] = nodeData
-			continue
-		# check that version and name are identical
-		if not all(nodeV == baseV
-		           for nodeV, baseV in zip(
-			nodeData[:6], baseData["nodes"][nodePath][:6])):
-			result["nodes"][nodePath] = nodeData
-
-	print("diff nodes:")
-	print(result["nodes"].keys())
-	for nodePath, parmData in wholeNodeState.get("parmTemplates", {}).items():
-		if not nodePath in baseData["parmTemplates"]:
-			result["parmTemplates"][nodePath] = parmData
-			continue
-		for parmName, parmScript in parmData.items():
-			if str(parmScript) != str(baseData["parmTemplates"][nodePath].get(parmName, "")):
-				result["parmTemplates"].setdefault(nodePath, {})
-				result["parmTemplates"][nodePath][parmName] = parmScript
-
-	print("connections")
-	print(baseData["connections"])
-	print(wholeNodeState["connections"])
-	comp = set(map(tuple, baseData.get("connections", [])))
-	print("comp", comp)
-	for i in wholeNodeState.get("connections", []):
-		if not tuple(i) in comp:
-			result["connections"].append(i)
-
-	for nodePath, parmData in wholeNodeState.get("parmVals", {}).items():
-		if not nodePath in baseData["parmVals"]: # new node
-			result["parmVals"][nodePath] = parmData
-			continue
-		for parmName, parmVal in parmData.items():
-			if not parmName in baseData["parmVals"][nodePath]: # new parm
-				result["parmVals"].setdefault(nodePath, {})
-				result["parmVals"][nodePath][parmName] = parmVal
-				continue
-			if not parmValsAreEqual(
-					baseData["parmVals"][nodePath][parmName],
-					parmVal): # save if not equal
-				result["parmVals"].setdefault(nodePath, {})
-				result["parmVals"][nodePath][parmName] = parmVal
-
-	return result
+def getHDADefFromPath(path:Path|str)->hou.HDADefinition|None:
+	"""retrieve either a file or scene HDA def"""
+	if Path(path).is_file():
+		return hou.hda.definitionsInFile(str(path))[0]
+	if result := hdaEmbeddedIdDefMap().get(path):
+		return result
+	return None
 
 HDA_DELTA_SECTION_NAME = "textHDALeafDelta"
+HDA_FULL_SECTION_NAME = "textHDAFullState"
 
 def getHDASectionDict(hdaDef:hou.HDADefinition, sectionName:str, default={}):
 	"""return stored section in hda as json dict"""
+	log("getHDASectionDict", hdaDef, sectionName, hdaDef.sections().keys())
 	if not hdaDef.hasSection(sectionName):
 		hdaDef.addSection(sectionName)
 		hdaDef.sections()[sectionName].setContents(dumps(default))
@@ -690,6 +778,27 @@ def setHDASectionDict(hdaDef:hou.HDADefinition, sectionName:str, data:dict):
 	if not hdaDef.hasSection(sectionName):
 		hdaDef.addSection(sectionName)
 	hdaDef.sections()[sectionName].setContents(dumps(data))
+
+def getDefParentLeafData(
+		hdaDef: hou.HDADefinition
+) -> tuple[dict, dict]:
+	"""if hda has parent sections, return them as dicts,
+	otherwise run the full retrieval.
+	we assume that node and def data are equivalent
+	"""
+
+
+
+# def getNodeParentLeafData(
+# 		node: hou.OpNode
+# ) -> tuple[dict, dict]:
+# 	"""if node has parent sections, return them as dicts,
+# 	otherwise run the full retrieval
+# 	"""
+# 	hda = TextHDANode(node)
+# 	for i in hda.parentDefPaths():
+# 		parentNode =
+
 
 @dbg
 def isTextHDANode(node:hou.Node):
@@ -717,7 +826,7 @@ def setNodeToState(
 	                     removeHDAParamCallbacks, addHDAParamCallbacks)
 	# sorry
 
-	#print("set node to state", node)
+	print("set node to state", node)
 	wasEditable = node.isEditable()
 	if wasEditable:
 		#removeNodeInternalCallbacks(node)
@@ -729,12 +838,15 @@ def setNodeToState(
 		createNodeFromHeader(node, nodeData)
 	for nodePath, ptgData in state["parmTemplates"].items():
 		setNode = node.node(nodePath)
-		if isTextHDANode(setNode):
+		#if isTextHDANode(setNode):
+		if nodePath == ".":
 			setTextHDAParmDialogScripts(setNode, ptgData)
 		else:
 			setParmDialogScripts(node.node(nodePath), ptgData)
 	setChildrenConnectionData(node, state["connections"])
 	for nodePath, parmVals in state["parmVals"].items():
+		assert node.node(nodePath), (f"Node path {nodePath} not already built "
+		                             f"before setting parms")
 		setNodeParamsFromText(node.node(nodePath), parmVals )
 	path = node.path()
 	node.type().definition().updateFromNode(node)
@@ -789,7 +901,7 @@ def getDefAffectedNodeMap()->dict[str|Path, list[hou.OpNode]]:
 	result = defaultdict(list)
 	for i in allSceneTextHDANodes():
 		textHda = TextHDANode(i)
-		affectingDefs = textHda.parentDefs()
+		affectingDefs = textHda.parentDefPaths()
 		if not textHda.editingAllowed():
 			if not textHda.defFile():
 				continue
@@ -994,13 +1106,36 @@ def makePTGForParentParm(
 	ptg.addParmTemplate(parentPt)
 	return ptg
 
-def syncHDAParentParms(
-		node:hou.OpNode,
-):
-	""""""
+# def syncHDAParentParms(
+# 		node:hou.OpNode,
+# ):
+# 	""""""
+# 	hda = TextHDANode(node)
+# 	for parentDef in hda.parentDefs():
+# 		hdaDef = getHda
+
+def getLeafDatasByParent(node:hou.OpNode)->dict[str, dict]:
+	"""for each def in node's history,
+	return that def's leaf state. stupid basic for now"""
 	hda = TextHDANode(node)
-	for parentDef in hda.parentDefs():
-		hdaDef = getHda
+	for i in hda.parentDefPaths():
+		hdaDef = getHDADefFromPath(i)
+		if hdaDef is None:
+			continue
+		leafData = getHDASectionDict(
+			hdaDef, HDA_FULL_SECTION_NAME, default={}
+		)
+		yield i, leafData
+
+def updateHDADefSections(
+		hdaDef:hou.HDADefinition,
+		wholeNodeState:dict,
+		leafDelta:dict,
+):
+	setHDASectionDict(hdaDef, HDA_DELTA_SECTION_NAME,
+	                         leafDelta)
+	setHDASectionDict(hdaDef, HDA_FULL_SECTION_NAME,
+	                         wholeNodeState)
 
 
 class TextHDAWorkContext:
@@ -1092,16 +1227,12 @@ class TextHDANode:
 		return Path(raw) if defIsPath(raw) else raw
 
 	def allDefsUsed(self)->list[str]:
-		result = [self.defFile()] + self.parentDefs()
+		result = [self.defFile()] + self.parentDefPaths()
 
 	def editingAllowedParm(self)->hou.Parm:
 		return self.node.parm(ParmNames.allowEditing)
 	def editingAllowed(self)->bool:
 		return self.editingAllowedParm().eval()
-
-	def setLeafEditsLocked(self, state=True):
-		"""mute any leaf-level edits, reset to incoming,
-		but keep leaf delta parm data locked"""
 
 	def isBaselineTextHDA(self)->bool:
 		return self.editingAllowed() or self.parentStoredStates()
@@ -1129,6 +1260,155 @@ class TextHDANode:
 
 	def hdaDef(self)->hou.HDADefinition:
 		return self.node.type().definition()
+
+	def nodeLeafDeltaParm(self)->hou.Parm:
+		return self.node.parm(ParmNames.localEdits)
+	def nodeLeafDeltaData(self)->dict:
+		"""
+		return local edited state stored in this node's params
+		"""
+		parmS = self.nodeLeafDeltaParm().evalAsString().lstrip().rstrip()
+		if not parmS:
+			return {}
+		try:
+			data = loads(parmS)
+		except Exception as e:
+			print("could not load local node edits, "
+			      "check that the data is valid json")
+			print(e)
+			return {}
+		return data
+	def setNodeLeafDeltaData(self, data:dict):
+		"""
+		store local edited state in this node's params
+		"""
+		parmS = dumps(data)
+		self.nodeLeafDeltaParm().set(parmS)
+
+	def nodeLeafStoredState(self)->dict:
+		"""
+		return local edited state stored in this node's params
+		"""
+		parmS = self.node.parm(ParmNames.localEdits).evalAsString().lstrip().rstrip()
+		if not parmS:
+			return {}
+		try:
+			data = loads(parmS)
+		except Exception as e:
+			print("could not load local node edits, "
+			      "check that the data is valid json")
+			print(e)
+			return {}
+		return data
+
+	def nodeLeafPath(self)->Path:
+		s = self.node.parm(ParmNames.defFile).eval()
+		if not s:
+			return None
+		return Path(s)
+
+	def leafHDAParmFolderTemplate(self)->hou.FolderParmTemplate:
+		return self.node.parmTemplateGroup().findFolder(ParmNames.leafHDAParmFolderLABEL)
+
+	def leafHDAParmTemplates(self)->list[hou.ParmTemplate]:
+		return self.leafHDAParmFolderTemplate().parmTemplates()
+	def leafPTGData(self)->str:
+		ptg = hou.ParmTemplateGroup(self.leafHDAParmTemplates())
+		return ptg.asDialogScript(
+			full_info=True
+		)
+
+	def parentHDAParmFolderTemplate(self)->hou.FolderParmTemplate:
+		return self.node.parmTemplateGroup().findFolder(ParmNames.parentHDAParmFolderLABEL)
+
+	def parentHDAParmTemplates(self)->list[hou.ParmTemplate]:
+		return self.parentHDAParmFolderTemplate().parmTemplates()
+
+	def leafParmTuples(self)->list[hou.ParmTuple]:
+		return self.node.parmTuplesInFolder("Leaf HDA parms")
+
+	def parentParmTuples(self)->list[hou.ParmTuple]:
+		"""unstructured, ungrouped etc"""
+		return self.node.parmTuplesInFolder("Parent HDA parms")
+
+	def inheritedParmTupleMap(self)->dict[dict[str, hou.ParmTuple]]:
+		"""map of inherited parm tuples by source def name"""
+		result = {}
+		for pt in self.parentParmTuples():
+			# holds folder for each parent def
+			defFolderName = pt.description()
+			try:
+				leafPTs = self.node.parmTuplesInFolder(defFolderName)
+			except hou.OperationFailed: # not a folder
+				continue
+			result[defFolderName] = {}
+			for leafPT in leafPTs:
+				result[defFolderName][leafPT.name()] = leafPT
+
+		result[str(self.defFile())] = {}
+		for leafPT in self.leafParmTuples():
+			result[str(self.defFile())][leafPT.name()] = leafPT
+		return result
+
+	def inheritedParmTemplateMap(self)->dict[dict[str, hou.ParmTuple]]:
+		"""map of inherited parm tuples by source def name"""
+		result = {}
+		parentTemplate: hou.FolderParmTemplate = self.node.parmTemplateGroup(
+			).findFolder(ParmNames.parentHDAParmFolderLABEL)
+		for pt in self.parentParmTuples():
+			# holds folder for each parent def
+			defFolderName = pt.description()
+			folderPT : list[hou.FolderParmTemplate] = [ i for i in
+			                                      parentTemplate.parmTemplates()
+				if i.label() == defFolderName]
+			if not folderPT:
+				print("no folder pt found for", defFolderName)
+				continue
+			# just get dialog script
+			ptg = hou.ParmTemplateGroup(folderPT)
+			result[defFolderName] = ptg.asDialogScript()
+			continue
+			# do per-parm later if needed
+
+
+			leafPTs = folderPT[0].parmTemplates()
+
+			result[defFolderName] = {}
+			for leafPT in leafPTs:
+
+				result[defFolderName][leafPT.name()] = leafPT
+
+		leafPT = self.node.parmTemplateGroup().findFolder(
+			ParmNames.leafHDAParmFolderLABEL)
+		ptg = hou.ParmTemplateGroup(leafPT)
+		result[str(self.defFile())] = ptg.asDialogScript()
+		return result
+
+		for leafPT in self.leafParmTuples():
+			result[str(self.defFile())][leafPT.name()] = leafPT
+		return result
+
+	def statusParm(self)->hou.Parm:
+		return self.node.parm("debuglabel")
+	def setStatusMsg(self, msg:str):
+		self.statusParm().set(msg)
+
+	""" try to get some handle on nightmare of this system's state"""
+	def syncEditingAllowed(self):
+		"""check if editing checkbox should be enabled:
+		- if the current node has a def
+		"""
+
+		if self.defFile():
+			self.editingAllowedParm().disable(False) # not disabled
+		else:
+			self.editingAllowedParm().disable(True) # yes disabled
+
+	# mutating functions
+	def setLeafEditsLocked(self, state=True):
+		"""mute any leaf-level edits, reset to incoming,
+		but keep leaf delta parm data locked"""
+
 	def getCustomHDADef(self)->hou.HDADefinition:
 		"""create def if node doesn't already have one, then return it
 
@@ -1184,10 +1464,18 @@ class TextHDANode:
 				parmName + str(i + 1)))
 		return results
 
-	def parentDefs(self)->list[Path]:
+	def parentDefPaths(self)->list[Path|str]:
 		strs = [i.evalAsString() for i in self._parentParms(
 			ParmNames.parentDef) if i.evalAsString().strip()]
 		return [Path(i) if defIsPath(i) else i for i in strs]
+
+	def parentDefs(self)->list[hou.HDADefinition]:
+		result = []
+		for i in self.parentDefPaths():
+			hdaDef = getHDADefFromPath(i)
+			if hdaDef is not None:
+				result.append(hdaDef)
+		return result
 
 	def parentBaseDatas(self)->list[ParentBaseData]:
 		filePaths = self._parentParms(ParmNames.parentFile)
@@ -1227,8 +1515,9 @@ class TextHDANode:
 	def reloadParentStates(self):
 		parentStates = []
 		parentParms = self._parentParms(ParmNames.parentNodeDelta)
+		log("PARENT DEFS:", self.parentDefPaths())
 		sceneHdaMap = getSceneHDADefNodes()
-		for i, path in enumerate(self.parentDefs()):
+		for i, path in enumerate(self.parentDefPaths()):
 			if not path:
 				continue
 			if isinstance(path, Path):
@@ -1244,11 +1533,17 @@ class TextHDANode:
 
 			else:  # def is string, look up in scene
 				hdaDef = sceneHdaMap.get(path)
+				log("hdaDef for", path, "is", hdaDef)
 				if not hdaDef:
 					continue
 				hdaDef = hdaDef[0].type().definition()
-				baseData = getHDASectionDict(hdaDef,
-				                                HDA_DELTA_SECTION_NAME, {})
+				baseData = getHDASectionDict(
+					hdaDef,
+					#HDA_DELTA_SECTION_NAME,
+					HDA_FULL_SECTION_NAME,
+					{}
+				)
+				log("loaded base data for", path, "is", baseData)
 				if not baseData:
 					continue
 
@@ -1262,15 +1557,23 @@ class TextHDANode:
 		return incomingState
 
 	@dbg
-	def syncNodeState(self):
+	def syncOnlyNodeParmTemplates(self):
+		incomingState = self.reloadParentStates()
+
+
+	@dbg
+	def syncNodeState(self, paramValuesOnly=False):
 		"""update node from incoming and leaf data"""
 		incomingState = self.reloadParentStates()
-		# mark any incoming top-level params as parent
-		incomingState["parmTemplates"]["PARENT"] = incomingState[
-			"parmTemplates"]["LEAF"]
-		incomingState["parmTemplates"].pop("LEAF")
+		if "LEAF" in incomingState["parmTemplates"]:
+			# mark any incoming top-level params as parent
+			if not "PARENT" in incomingState["parmTemplates"]:
+				incomingState["parmTemplates"]["PARENT"] = {}
+			incomingState["parmTemplates"]["PARENT"].update(
+				incomingState["parmTemplates"]["LEAF"])
+			incomingState["parmTemplates"].pop("LEAF")
 		leafState = self.nodeLeafStoredState()
-		combinedState = mergeNodeStates(incomingState, leafState)
+		combinedState = mergeNodeStates(incomingState, [leafState])
 		setNodeToState(self.node, combinedState)
 
 	@dbg
@@ -1283,56 +1586,4 @@ class TextHDANode:
 		self.nodeLeafDeltaParm().set(dumps(leafState))
 
 
-	def nodeLeafDeltaParm(self)->hou.Parm:
-		return self.node.parm(ParmNames.localEdits)
 
-	def nodeLeafStoredState(self)->dict:
-		"""
-		return local edited state stored in this node's params
-		"""
-		parmS = self.node.parm(ParmNames.localEdits).evalAsString().lstrip().rstrip()
-		if not parmS:
-			return {}
-		try:
-			data = loads(parmS)
-		except Exception as e:
-			print("could not load local node edits, "
-			      "check that the data is valid json")
-			print(e)
-			return {}
-		return data
-
-	def nodeLeafPath(self)->Path:
-		s = self.node.parm(ParmNames.defFile).eval()
-		if not s:
-			return None
-		return Path(s)
-
-	def leafHDAParmFolderTemplate(self)->hou.FolderParmTemplate:
-		return self.node.parmTemplateGroup().findFolder(ParmNames.leafHDAParmFolderLABEL)
-
-	def leafHDAParmTemplates(self)->list[hou.ParmTemplate]:
-		return self.leafHDAParmFolderTemplate().parmTemplates()
-	def leafPTGData(self)->str:
-		ptg = hou.ParmTemplateGroup(self.leafHDAParmTemplates())
-		return ptg.asDialogScript(
-			full_info=True
-		)
-
-	def parentHDAParmFolderTemplate(self)->hou.FolderParmTemplate:
-		return self.node.parmTemplateGroup().findFolder(ParmNames.parentHDAParmFolderLABEL)
-
-	def parentHDAParmTemplates(self)->list[hou.ParmTemplate]:
-		return self.parentHDAParmFolderTemplate().parmTemplates()
-
-	def leafParmTuples(self)->list[hou.ParmTuple]:
-		return self.node.parmTuplesInFolder("Leaf HDA parms")
-
-	def parentParmTuples(self)->list[hou.ParmTuple]:
-		"""unstructured, ungrouped etc"""
-		return self.node.parmTuplesInFolder("Parent HDA parms")
-
-	def statusParm(self)->hou.Parm:
-		return self.node.parm("debuglabel")
-	def setStatusMsg(self, msg:str):
-		self.statusParm().set(msg)
