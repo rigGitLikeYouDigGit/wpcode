@@ -418,7 +418,7 @@ def pullLocalNodeState(node:hou.Node)->tuple[dict, dict, dict]:
 # # save on node
 
 @dbg
-def pullLocalNodeStateAndUpdateDef(node:hou.Node):
+def pullLocalNodeStateAndUpdateDef(node:hou.OpNode):
 	hda = TextHDANode(node)
 	if not hda.hdaDef():
 		return {}
@@ -427,8 +427,8 @@ def pullLocalNodeStateAndUpdateDef(node:hou.Node):
 
 	"""move leaf parm templates to parent"""
 
-	mergedState = gather.mergeNodeStates(storedIncomingState)
-	gather.setNodeToState(node, )
+	mergedState = gather.mergeNodeStates(storedIncomingState, [leafDelta])
+	gather.setNodeToState(node, mergedState )
 
 	with hda.workCtx() as ctx:
 		hda.setNodeLeafDeltaData(leafDelta)

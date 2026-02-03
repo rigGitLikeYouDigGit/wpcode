@@ -401,7 +401,7 @@ def getTextHDAParmDialogScripts(node: hou.Node):
 	print(result)
 	return result
 
-
+@dbg
 def setTextHDAParmDialogScripts(node: hou.OpNode, data: dict):
 	"""remove existing hda parms and reset from given data
 	we modify the current hda definition ptg used by the node.
@@ -414,8 +414,8 @@ def setTextHDAParmDialogScripts(node: hou.OpNode, data: dict):
 			}
 		}
 	"""
-	# print("text parms")
-	# print(data)
+	print("text parms")
+	pprint.pprint(data)
 	hda = TextHDANode(node)
 	defName = hda.defFile()
 	ptg: hou.ParmTemplateGroup = hda.hdaDef().parmTemplateGroup()
@@ -521,7 +521,7 @@ paramsToIgnore = list(ParmNames.__dict__.values())
 
 @dbg
 def getFullNodeState(
-		node: hou.Node
+		node: hou.OpNode
 ) -> dict:
 	"""get full snapshot of node -
 	prune at included text hda nodes.
@@ -555,7 +555,7 @@ def getFullNodeState(
 		parmTemplatesToAdd[node.relativePathTo(i)] = parmDialogData
 
 	# get top-level parm dialogs
-	parmTemplatesToAdd["."] = hda.inheritedParmTupleMap()
+	parmTemplatesToAdd["."] = hda.inheritedParmDialogScriptMap()
 
 	# node paths are exclusive, so let those override
 	result = {
@@ -1138,6 +1138,11 @@ def updateHDADefSections(
 	                         wholeNodeState)
 
 
+def parmTemplateDialogScript(pt:hou.ParmTemplate)->str:
+	"""return dialog script for given parm template"""
+	ptg = hou.ParmTemplateGroup([pt])
+	return makeSafeForJson(ptg.asDialogScript())
+
 class TextHDAWorkContext:
 	"""context to only set working state on outermost level
 	need to keep """
@@ -1327,65 +1332,50 @@ class TextHDANode:
 	def leafParmTuples(self)->list[hou.ParmTuple]:
 		return self.node.parmTuplesInFolder("Leaf HDA parms")
 
-	def parentParmTuples(self)->list[hou.ParmTuple]:
-		"""unstructured, ungrouped etc"""
-		return self.node.parmTuplesInFolder("Parent HDA parms")
-
 	def inheritedParmTupleMap(self)->dict[dict[str, hou.ParmTuple]]:
 		"""map of inherited parm tuples by source def name"""
-		result = {}
-		for pt in self.parentParmTuples():
-			# holds folder for each parent def
-			defFolderName = pt.description()
-			try:
-				leafPTs = self.node.parmTuplesInFolder(defFolderName)
-			except hou.OperationFailed: # not a folder
+		result = defaultdict(dict)
+		for pt in self.node.parmTuples():
+			containing = pt.containingFolders()
+			if not containing:
 				continue
-			result[defFolderName] = {}
-			for leafPT in leafPTs:
-				result[defFolderName][leafPT.name()] = leafPT
-
-		result[str(self.defFile())] = {}
-		for leafPT in self.leafParmTuples():
-			result[str(self.defFile())][leafPT.name()] = leafPT
+			if containing[0] == ParmNames.leafHDAParmFolderLABEL:
+				result[str(self.defFile())][pt.name()] = pt
+				continue
+			if len(containing) != 2:
+				continue
+			# holds folder for each parent def
+			parentDefName = containing[-1]
+			result[parentDefName][pt.name()] = pt
 		return result
 
-	def inheritedParmTemplateMap(self)->dict[dict[str, hou.ParmTuple]]:
-		"""map of inherited parm tuples by source def name"""
-		result = {}
-		parentTemplate: hou.FolderParmTemplate = self.node.parmTemplateGroup(
-			).findFolder(ParmNames.parentHDAParmFolderLABEL)
-		for pt in self.parentParmTuples():
-			# holds folder for each parent def
-			defFolderName = pt.description()
-			folderPT : list[hou.FolderParmTemplate] = [ i for i in
-			                                      parentTemplate.parmTemplates()
-				if i.label() == defFolderName]
-			if not folderPT:
-				print("no folder pt found for", defFolderName)
+	def parentParmTuples(self)->list[hou.ParmTuple]:
+		"""unstructured, ungrouped etc"""
+		result = []
+		for k, v in self.inheritedParmTupleMap().items():
+			if k == str(self.defFile()):
 				continue
-			# just get dialog script
-			ptg = hou.ParmTemplateGroup(folderPT)
-			result[defFolderName] = ptg.asDialogScript()
-			continue
-			# do per-parm later if needed
-
-
-			leafPTs = folderPT[0].parmTemplates()
-
-			result[defFolderName] = {}
-			for leafPT in leafPTs:
-
-				result[defFolderName][leafPT.name()] = leafPT
-
-		leafPT = self.node.parmTemplateGroup().findFolder(
-			ParmNames.leafHDAParmFolderLABEL)
-		ptg = hou.ParmTemplateGroup(leafPT)
-		result[str(self.defFile())] = ptg.asDialogScript()
+			result.extend(v.values())
 		return result
 
-		for leafPT in self.leafParmTuples():
-			result[str(self.defFile())][leafPT.name()] = leafPT
+	def inheritedParmTemplateMap(self)->dict[dict[str, hou.ParmTemplate]]:
+		"""map of inherited parm tuples by source def name
+		we save each parm separately so that we can split up for override
+
+		{ def name : { parm name : parm template } }
+		"""
+		result = defaultdict(dict)
+		for k, v in self.inheritedParmTupleMap().items():
+			for ptName, pt in v.items():
+				result[k][ptName] = pt.parmTemplate()
+		return result
+
+	def inheritedParmDialogScriptMap(self)->dict[dict[str, str]]:
+		result = defaultdict(dict)
+		for k, v in self.inheritedParmTupleMap().items():
+			for ptName, pt in v.items():
+				ptemplate : hou.ParmTemplate = pt.parmTemplate()
+				result[k][ptName] = parmTemplateDialogScript(ptemplate)
 		return result
 
 	def statusParm(self)->hou.Parm:
