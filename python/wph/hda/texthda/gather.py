@@ -401,6 +401,16 @@ def getTextHDAParmDialogScripts(node: hou.Node):
 	print(result)
 	return result
 
+def copyFolderPT(folderPT: hou.FolderParmTemplate) -> hou.FolderParmTemplate:
+	return hou.FolderParmTemplate(
+		folderPT.name(), folderPT.label(),
+		(),
+		folderPT.folderType(),
+		tags=folderPT.tags(),
+		conditionals=folderPT.conditionals(),
+		tab_conditionals=folderPT.tabConditionals()
+	)
+
 @dbg
 def setTextHDAParmDialogScripts(node: hou.OpNode, data: dict):
 	"""remove existing hda parms and reset from given data
@@ -420,7 +430,40 @@ def setTextHDAParmDialogScripts(node: hou.OpNode, data: dict):
 	defName = hda.defFile()
 	ptg: hou.ParmTemplateGroup = hda.hdaDef().parmTemplateGroup()
 
+	leafFolderPT = hda.leafHDAParmFolderTemplate()
+	parentFolderPT = hda.parentHDAParmFolderTemplate()
+
+	if not defName:
+		if leafFolderPT:
+			newLeafFolderPT = copyFolderPT(leafFolderPT)
+			ptg.replace(defName, newLeafFolderPT)
+			# for i in leafFolderPT.parmTemplates():
+			# 	ptg.remove(i)
+
+	newParentFolderPT = copyFolderPT(parentFolderPT)
+	ptg.replace(parentFolderPT.name(), newParentFolderPT)
+	# for i in parentFolderPT.parmTemplates():
+	# 	if isinstance(i, hou.FolderParmTemplate):
+	# 		newParentFolderPT = copyFolderPT(i)
+	# 		ptg.appendToFolder(parent)
+	# 	ptg.remove(i)
+
+	# check any duplicate names still in ptg
+	print("AFTER CLEAR PTG:")
+	for i in ptg.parmTemplates():
+		if isinstance(i, hou.FolderParmTemplate):
+			for i in i.parmTemplates():
+				if isinstance(i, hou.FolderParmTemplate):
+					for i in i.parmTemplates():
+						print(i.name(), i.label())
+					continue
+				print(i.name(), i.label())
+			continue
+		print(i.name(), i.label())
+
 	for hdaDefName, paramData in data.items():
+		# remove leaf section if no def name
+
 		# assign same-node params to leaf
 		if hdaDefName == defName:
 			leafFolderPT = hda.leafHDAParmFolderTemplate()
@@ -429,34 +472,53 @@ def setTextHDAParmDialogScripts(node: hou.OpNode, data: dict):
 				parmPTG.setToDialogScript(regenFromJson(v))
 				# pt : hou.ParmTemplate = parmPTG.parmTemplates()[0]
 				pt: hou.ParmTemplate = parmPTG.find(k)
-				leafFolderPT.addParmTemplate(pt)
-			if ptg.findFolder(ParmNames.leafHDAParmFolderLABEL):
-				ptg.replace(ParmNames.leafHDAParmFolderLABEL, leafFolderPT)
-			else:
-				ptg.append(leafFolderPT)
+				ptg.appendToFolder(ParmNames.leafHDAParmFolderLABEL, pt)
+				#leafFolderPT.addParmTemplate(pt)
+			# if ptg.findFolder(ParmNames.leafHDAParmFolderLABEL):
+			# 	ptg.replace(ParmNames.leafHDAParmFolder, leafFolderPT)
+			# else:
+			# 	ptg.append(leafFolderPT)
 			continue
 		# assign other-node params to parent
-		parentFolderPT = hda.parentHDAParmFolderTemplate()
+		# first create top-level folders under main parent, then append to them?
+
+		defFolderPT = ptg.findFolder(hdaDefName)
+		if not defFolderPT:
+			defFolderPT = hou.FolderParmTemplate(
+				hdaDefName, hdaDefName, ())
+			ptg.appendToFolder(parentFolderPT, defFolderPT)
+		for i in defFolderPT.parmTemplates():
+			ptg.remove(i)
+
 		pts = []
 		for k, v in paramData.items():
 			parmPTG = hou.ParmTemplateGroup()
 			parmPTG.setToDialogScript(regenFromJson(v))
 			# pt : hou.ParmTemplate = parmPTG.parmTemplates()[0]
 			pt: hou.ParmTemplate = parmPTG.find(k)
-			pts.append(pt)
-		defFolderPT = hou.FolderParmTemplate(
-			hdaDefName, hdaDefName, pts)
-		parentFolderPT.addParmTemplate(defFolderPT)
-
-		if ptg.findFolder(hdaDefName):
-			ptg.replace(hdaDefName, parentFolderPT)
-		else:
-			ptg.append(parentFolderPT)
-	return
-
+			ptg.appendToFolder(defFolderPT, pt)
+			#pts.append(pt)
+		#
+		# parentFolderPT.addParmTemplate(defFolderPT)
+		#
+		# if ptg.findFolder(defFolderPT.label()):
+		# 	ptg.remove(hdaDefName.label())
+	#ptg.replace(parentFolderPT.name(), parentFolderPT)
+	print()
+	print("BEFORE SET PTG")
+	for i in ptg.parmTemplates():
+		if isinstance(i, hou.FolderParmTemplate):
+			for i in i.parmTemplates():
+				if isinstance(i, hou.FolderParmTemplate):
+					for i in i.parmTemplates():
+						print(i.name(), i.label())
+					continue
+				print(i.name(), i.label())
+			continue
+		print(i.name(), i.label())
 	hda.hdaDef().setParmTemplateGroup(
 		ptg, rename_conflicting_parms=False, create_backup=False)
-
+	return
 	parmNames = {"PARENT": (ParmNames.parentHDAParmFolderLABEL,
 	                        hou.ParmTemplateGroup()),
 	             "LEAF": (ParmNames.leafHDAParmFolderLABEL,
@@ -568,7 +630,7 @@ def getFullNodeState(
 		"parmVals": parmVals
 	}
 	print("result:")
-	pprint.pprint(result)
+	pprint.pprint(result, width=2000)
 
 	return result
 
@@ -581,7 +643,7 @@ make that an option
 
 """
 
-
+@dbg
 def mergeNodeStates(
 		baseData: dict,
 		states: list[dict]
@@ -608,6 +670,8 @@ def mergeNodeStates(
 				continue
 			baseData["parmVals"][nodePath].update(parmData)
 
+	print("result:")
+	pprint.pprint(baseData)
 	return baseData
 
 
@@ -1340,6 +1404,8 @@ class TextHDANode:
 			if not containing:
 				continue
 			if containing[0] == ParmNames.leafHDAParmFolderLABEL:
+				if not self.defFile():
+					continue
 				result[str(self.defFile())][pt.name()] = pt
 				continue
 			if len(containing) != 2:
@@ -1533,7 +1599,8 @@ class TextHDANode:
 					HDA_FULL_SECTION_NAME,
 					{}
 				)
-				log("loaded base data for", path, "is", baseData)
+				log("loaded base data for", path, "is:")
+				pprint.pprint(baseData)
 				if not baseData:
 					continue
 

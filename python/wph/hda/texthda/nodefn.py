@@ -8,6 +8,9 @@ import hou
 from hou import qt, undos
 from PySide6 import QtWidgets, QtCore, QtGui
 
+from wptool.debug import Tracer
+dbg = lambda fn : Tracer.trace(fn, whitelist=["wph.hda.texthda"])
+dbg = lambda fn: fn  # disable tracing
 from . import gather, types
 reload(gather)
 reload(types)
@@ -701,7 +704,7 @@ def getDefMenuItems(kwargs)->list[str]:
 
 
 @dbg
-def onLeafFilePathChanged(node:hou.Node, parm:hou.Parm, *args, **kwargs):
+def onLeafFilePathChanged(node:hou.OpNode, parm:hou.Parm, *args, **kwargs):
 	"""try and extract a version from the path, set that on the version menu if not the latest one
 	if allowEditing is not checked, conform node to new path
 	"""
@@ -731,7 +734,7 @@ def onLeafTextChanged(node:hou.Node, parm:hou.Parm, *args, **kwargs):
 	pass
 
 @dbg
-def onParentFilePathChanged(node:hou.Node, parm:hou.Parm, *args, **kwargs):
+def onParentFilePathChanged(node:hou.OpNode, parm:hou.Parm, *args, **kwargs):
 	"""if no leaf data is set, disable editing by default -
 	this is a newly created node being directly set to existing definition"""
 	hda = TextHDANode(node)
@@ -740,13 +743,13 @@ def onParentFilePathChanged(node:hou.Node, parm:hou.Parm, *args, **kwargs):
 		node.parm(ParmNames.allowEditing).set(False)
 	pass
 
-def onParentTextChanged(node:hou.Node, parm:hou.Parm):
+def onParentTextChanged(node:hou.OpNode, parm:hou.Parm):
 	"""editing a parent's text by hand isn't allowed, this function
 	won't do anything"""
 	pass
 
 
-def onSaveBtnPressed(node:hou.Node):
+def onSaveBtnPressed(node:hou.OpNode):
 	"""write current node delta to target file -
 	"""
 	hda = TextHDANode(node)
@@ -757,8 +760,25 @@ def onSaveBtnPressed(node:hou.Node):
 		hda.nodeLeafDeltaParm().eval()
 	)
 
+def onSaveAsNewDefBtnPressed(node:hou.OpNode):
+	"""write current node delta to target file -
+	"""
 
-def onClearUserDataBtnPressed(node:hou.Node, *args, **kwargs):
+def onSaveToParentDefBtnPressed(node:hou.OpNode):
+	"""write current node delta to target file -
+	"""
+	hda = TextHDANode(node)
+	if not hda.hdaDef():
+		print("No HDA definition to save to")
+		return
+	pullLocalNodeStateAndUpdateDef(node)
+
+def onSaveParentVersionBtnPressed(node:hou.OpNode):
+	"""write current node delta to target file -
+	"""
+
+
+def onClearUserDataBtnPressed(node:hou.OpNode, *args, **kwargs):
 	"""debug, clear all user data from the given node, in case
 	a node gets stuck thinking it's still working
 	"""
@@ -766,11 +786,11 @@ def onClearUserDataBtnPressed(node:hou.Node, *args, **kwargs):
 		"_working", must_exist=False
 	)
 
-def onLeafDownBtnPressed(node:hou.Node):
+def onLeafDownBtnPressed(node:hou.OpNode):
 	"""push leaf on to end of parent bases"""
 
 
-def onLeafUpBtnPressed(node: hou.Node):
+def onLeafUpBtnPressed(node: hou.OpNode):
 	"""pull first parent base up to leaf for editing"""
 
 
