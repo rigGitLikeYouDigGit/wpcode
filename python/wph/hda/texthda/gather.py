@@ -433,15 +433,23 @@ def setTextHDAParmDialogScripts(node: hou.OpNode, data: dict):
 	leafFolderPT = hda.leafHDAParmFolderTemplate()
 	parentFolderPT = hda.parentHDAParmFolderTemplate()
 
-	if not defName:
-		if leafFolderPT:
-			newLeafFolderPT = copyFolderPT(leafFolderPT)
-			ptg.replace(defName, newLeafFolderPT)
+
+	#ptg.remove(leafFolderPT)
+
+	newLeafFolderPT = copyFolderPT(leafFolderPT)
+	ptg.replace(leafFolderPT, newLeafFolderPT)
+	#
+	# if not defName:
+	# 	if leafFolderPT:
+
+			#ptg.replace(defName, newLeafFolderPT)
 			# for i in leafFolderPT.parmTemplates():
 			# 	ptg.remove(i)
+			#ptg.remove(newLeafFolderPT)
 
 	newParentFolderPT = copyFolderPT(parentFolderPT)
-	ptg.replace(parentFolderPT.name(), newParentFolderPT)
+	ptg.replace(parentFolderPT, newParentFolderPT)
+	parentFolderPT = ptg.findFolder(ParmNames.parentHDAParmFolderLABEL)
 	# for i in parentFolderPT.parmTemplates():
 	# 	if isinstance(i, hou.FolderParmTemplate):
 	# 		newParentFolderPT = copyFolderPT(i)
@@ -466,13 +474,14 @@ def setTextHDAParmDialogScripts(node: hou.OpNode, data: dict):
 
 		# assign same-node params to leaf
 		if hdaDefName == defName:
-			leafFolderPT = hda.leafHDAParmFolderTemplate()
+			#leafFolderPT = hda.leafHDAParmFolderTemplate()
 			for k, v in paramData.items():
 				parmPTG = hou.ParmTemplateGroup()
 				parmPTG.setToDialogScript(regenFromJson(v))
 				# pt : hou.ParmTemplate = parmPTG.parmTemplates()[0]
 				pt: hou.ParmTemplate = parmPTG.find(k)
-				ptg.appendToFolder(ParmNames.leafHDAParmFolderLABEL, pt)
+				#ptg.appendToFolder(ParmNames.leafHDAParmFolderLABEL, pt)
+				ptg.appendToFolder(newLeafFolderPT, pt)
 				#leafFolderPT.addParmTemplate(pt)
 			# if ptg.findFolder(ParmNames.leafHDAParmFolderLABEL):
 			# 	ptg.replace(ParmNames.leafHDAParmFolder, leafFolderPT)
@@ -481,14 +490,17 @@ def setTextHDAParmDialogScripts(node: hou.OpNode, data: dict):
 			continue
 		# assign other-node params to parent
 		# first create top-level folders under main parent, then append to them?
-
-		defFolderPT = ptg.findFolder(hdaDefName)
-		if not defFolderPT:
-			defFolderPT = hou.FolderParmTemplate(
-				hdaDefName, hdaDefName, ())
-			ptg.appendToFolder(parentFolderPT, defFolderPT)
-		for i in defFolderPT.parmTemplates():
-			ptg.remove(i)
+		defFolderPT = hou.FolderParmTemplate(
+			hdaDefName, hdaDefName, ())
+		ptg.appendToFolder(parentFolderPT, defFolderPT)
+		#defFolderPT = ptg.findFolder(hdaDefName)
+		assert defFolderPT
+		# defFolderPT = ptg.findFolder(hdaDefName)
+		# if not defFolderPT:
+		#
+		# 	ptg.appendToFolder(parentFolderPT, defFolderPT)
+		# for i in defFolderPT.parmTemplates():
+		# 	ptg.remove(i)
 
 		pts = []
 		for k, v in paramData.items():
@@ -499,7 +511,7 @@ def setTextHDAParmDialogScripts(node: hou.OpNode, data: dict):
 			ptg.appendToFolder(defFolderPT, pt)
 			#pts.append(pt)
 		#
-		# parentFolderPT.addParmTemplate(defFolderPT)
+		#parentFolderPT.addParmTemplate(defFolderPT)
 		#
 		# if ptg.findFolder(defFolderPT.label()):
 		# 	ptg.remove(hdaDefName.label())
