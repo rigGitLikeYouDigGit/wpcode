@@ -55,6 +55,8 @@ TEXT_HDA_BUNDLE_NAME = "textHDA_bundle_nodes"
 
 HDA_SECTIONS_TO_COPY = [
 	"OnCreated",
+	"OnLoaded",
+	"OnUpdated",
 	"PythonModule",
 	#"OnDeleted",
 	"PostLastDelete"
@@ -492,7 +494,7 @@ def getFullNodeState(
 		"parmVals": parmVals
 	}
 	print("result:")
-	pprint.pprint(result)
+	#pprint.pprint(result)
 
 	return result
 
@@ -554,10 +556,10 @@ def diffNodeState(
 	# ensure baseData has all the needed keys set up
 	for k, v in result.items():
 		baseData.setdefault(k, v)
-	print("diffNodeState:")
-
-	print(baseData["nodes"])
-	print(wholeNodeState["nodes"])
+	# print("diffNodeState:")
+	#
+	# print(baseData["nodes"])
+	# print(wholeNodeState["nodes"])
 	# print("base:")
 	# pprint.pprint(baseData)
 	# print("whole state:")
@@ -575,8 +577,8 @@ def diffNodeState(
 			nodeData[:6], baseData["nodes"][nodePath][:6])):
 			result["nodes"][nodePath] = nodeData
 
-	print("diff nodes:")
-	print(result["nodes"].keys())
+	# print("diff nodes:")
+	# print(result["nodes"].keys())
 	for nodePath, parmData in wholeNodeState.get("parmTemplates", {}).items():
 		if not nodePath in baseData["parmTemplates"]:
 			result["parmTemplates"][nodePath] = parmData
@@ -587,11 +589,11 @@ def diffNodeState(
 				result["parmTemplates"].setdefault(nodePath, {})
 				result["parmTemplates"][nodePath][parmName] = parmScript
 
-	print("connections")
-	print(baseData["connections"])
-	print(wholeNodeState["connections"])
+	# print("connections")
+	# print(baseData["connections"])
+	# print(wholeNodeState["connections"])
 	comp = set(map(tuple, baseData.get("connections", [])))
-	print("comp", comp)
+	# print("comp", comp)
 	for i in wholeNodeState.get("connections", []):
 		if not tuple(i) in comp:
 			result["connections"].append(i)

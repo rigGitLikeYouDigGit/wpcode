@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import datetime
 import pprint
 import traceback, time
 
@@ -7,6 +9,12 @@ from importlib import reload
 import hou
 from hou import qt, undos
 from PySide6 import QtWidgets, QtCore, QtGui
+
+import os
+import debugpy
+# hython = os.path.join(r"C:\Program Files\Side Effects Software\Houdini 21.0.559", "bin", "hython")
+# debugpy.configure(python=hython)
+
 
 from wptool.debug import Tracer
 dbg = lambda fn : Tracer.trace(fn, whitelist=["wph.hda.texthda"])
@@ -70,7 +78,10 @@ class HoudiniCallbackFn:
 		self.fn = fn
 		self.args = args
 		self.kwargs = kwargs
+		self.silent = False
 	def __call__(self, *args, **kwargs):
+		if self.silent:
+			return
 		self.fn(*args, callbackObj=self, **kwargs)
 
 def isinstanceReloadSafe(obj, types):
@@ -90,7 +101,7 @@ NODE_INTERNAL_CB_NAME = "nodeInternalCallback"
 def addNodeInternalCallbacks(node:hou.OpNode, inputRewired=False,
                              paramChanged=True,
                              topNode:hou.OpNode=None):
-	print("addNodeInternalCallbacks:", node)
+	#print("addNodeInternalCallbacks:", node)
 	typesToAdd = INTERNAL_EVENT_TYPES
 	cb = HoudiniCallbackFn(
 		onNodeInternalChanged, topNode=topNode,
@@ -127,6 +138,23 @@ def removeNodeInternalCallbacks(node:hou.OpNode):
 	# for i in node.eventCallbacks():
 	# 	print(i)
 
+def setSilenceCallbacks(node:hou.OpNode, state=True):
+	for eventTypes, cbFn in tuple(node.eventCallbacks()):
+		if isinstanceReloadSafe(cbFn, HoudiniCallbackFn) and cbFn.kwargs[
+			"name"] == NODE_INTERNAL_CB_NAME:
+			cbFn.silent = state
+
+class SilentCbCtx:
+	def __init__(self, node:hou.OpNode):
+		self.path = node.path()
+	def __enter__(self):
+		node = hou.node(self.path)
+		if node:
+			setSilenceCallbacks(node, True)
+	def __exit__(self, exc_type, exc_val, exc_tb):
+		node = hou.node(self.path)
+		if node:
+			setSilenceCallbacks(node, False)
 
 PARENT_LEAF_PARAM_CB_NAME = "parentLeafCallback"
 
@@ -191,8 +219,10 @@ def onHDAParmTemplateChanged(node:hou.OpNode, *args, callbackObj=None, **kwargs)
 @dbg
 def onNodeCreated(node:hou.OpNode, *args, **kwargs):
 	"""attach callback to node, add it to the
-	main TextHDA node bundle"""
-	print("onNodeCreated:", node)
+	main TextHDA node bundle
+	this runs when you explicitly create a node, not
+	when file is loaded"""
+	#print("onNodeCreated:", node)
 
 	bundle = gather.getTextHDANodeBundle()
 	bundle.addNode(node)
@@ -202,14 +232,16 @@ def onNodeCreated(node:hou.OpNode, *args, **kwargs):
 	with hdaNode.workCtx():
 		if not hdaNode.defFileParm().evalAsString():
 			hdaNode.editingAllowedParm().disable(True)
-		print("textHda created:", node)
-		print("nodes in bundle:", gather.allSceneTextHDANodes())
+		#print("textHda created:", node)
+		#print("nodes in bundle:", gather.allSceneTextHDANodes())
+	# set up internal callbacks if editing allowed
+	#onAllowEditingChanged(node)
 
 @dbg
 def onNodeLoaded(node:hou.OpNode, *args, **kwargs):
 	"""runs when node loaded during opening scene - apparently
 	either this or onNodeCreated runs, never both"""
-	print("onNodeLoaded:", node)
+	#print("onNodeLoaded:", node)
 
 	bundle = gather.getTextHDANodeBundle()
 	bundle.addNode(node)
@@ -221,7 +253,7 @@ def onNodeLoaded(node:hou.OpNode, *args, **kwargs):
 		if not hdaNode.defFileParm().evalAsString():
 			hdaNode.editingAllowedParm().disable(True)
 
-	#onAllowEditingChanged(node)
+	onAllowEditingChanged(node)
 
 """analysing hda section infos:
 nothing in either ExtraFileOptions or InternalFileOptions
@@ -230,7 +262,7 @@ nothing in either ExtraFileOptions or InternalFileOptions
 @dbg
 def onNodeDeleted(node:hou.Node, type:hou.OpNodeType, *args, **kwargs):
 	hdaDef : hou.HDADefinition = type.definition()
-	print("on node deleted:", node, hdaDef)
+	#print("on node deleted:", node, hdaDef)
 	if hdaDef == gather.getBaseTextHDADef():
 		print("is base def, skipping")
 		return
@@ -248,7 +280,7 @@ def onNodeLastDeleted(*args, **kwargs):
 	"""
 	nodeType : hou.NodeType = kwargs["type"]
 	hdaDef : hou.HDADefinition = nodeType.definition()
-	print("on node last deleted:", hdaDef)
+	#print("on node last deleted:", hdaDef)
 	if hdaDef == gather.getBaseTextHDADef():
 		print("is base def, skipping")
 		return
@@ -268,6 +300,17 @@ def onNodeNameChanged(node:hou.Node, *args, **kwargs):
 	else:
 		hda.fullReset(resetParms=False)
 
+
+def _getHDADefWorkingStatus(defFile:str)->bool:
+	return getattr(hou, "_texthdaWorkingStatus", {}
+	               ).get(defFile, False)
+
+def _setHDADefWorkingStatus(defFile:str, status:bool):
+	if not hasattr(hou, "_texthdaWorkingStatus"):
+		setattr(hou, "_texthdaWorkingStatus", {})
+	getattr(hou, "_texthdaWorkingStatus")[defFile] = status
+
+
 @dbg
 def onHDAUpdated(kwargs):
 	"""callback whenever HDA definition is updated
@@ -276,35 +319,62 @@ def onHDAUpdated(kwargs):
 	I think this means we have to update ALL node
 	instances in the scene?
 	"""
+
+	# get def file first
+	defStr = ""
 	hdaType : hou.SopNodeType = kwargs["type"]
 	instances = hdaType.instances()
-	defStr = ""
 	for i in instances:
-		hdaNode = TextHDANode(i)
-		defStr = hdaNode.defFile()
-		# leafParmTemplates = hdaNode.leafHDAParmTemplates()
-		# leafParmTemplateStr = {
-		# 	i.name() : i. for i in leafParmTemplates
-		# }
-		leafParmTemplateStr = hdaNode.leafPTGData()
-		leafState = hdaNode.nodeLeafStoredState()
-		if not leafState:
-			continue
-		print("leaf state")
-		pprint.pprint(leafState)
-		leafState["parmTemplates"].setdefault("LEAF", {})["LEAF"] = (
-			leafParmTemplateStr)
-		hdaNode.nodeLeafDeltaParm().set(dumps(leafState))
-	"""check through dependent defs to update - we only have to live update 
-	nodes in the actual scene, since building a node from a file will
-	automatically get updates"""
-	dependentNodes = gather.getDefAffectedNodeMap()[defStr]
-	for i in dependentNodes:
-		if i.type() == hdaType:
-			continue
-		hdaNode = TextHDANode(i)
-		hdaNode.syncNodeState()
+		try:
+			hdaNode = TextHDANode(i)
+			defStr = hdaNode.defFile()
+			if defStr:
+				break
+		except:
+			print("failed to get HDA def from instance", i)
 
+			continue
+	if not defStr:
+		print("no def file found on any instance, skipping")
+		return
+	#print("instances", instances)
+
+	if _getHDADefWorkingStatus(defStr):
+		#print("def file", defStr, "is currently working, skipping update")
+		return
+
+	try:
+		_setHDADefWorkingStatus(defStr, True)
+
+		for i in instances:
+			#print("instance", i, i.parms())
+			hdaNode = TextHDANode(i)
+			defStr = hdaNode.defFile()
+			# leafParmTemplates = hdaNode.leafHDAParmTemplates()
+			# leafParmTemplateStr = {
+			# 	i.name() : i. for i in leafParmTemplates
+			# }
+			leafParmTemplateStr = hdaNode.leafPTGData()
+			leafState = hdaNode.nodeLeafStoredState()
+			if not leafState:
+				continue
+			#print("leaf state")
+			#pprint.pprint(leafState)
+			leafState["parmTemplates"].setdefault("LEAF", {})["LEAF"] = (
+				leafParmTemplateStr)
+			hdaNode.nodeLeafDeltaParm().set(dumps(leafState))
+		"""check through dependent defs to update - we only have to live update 
+		nodes in the actual scene, since building a node from a file will
+		automatically get updates"""
+		assert defStr
+		dependentNodes = gather.getDefAffectedNodeMap()[defStr]
+		for i in dependentNodes:
+			if i.type() == hdaType:
+				continue
+			hdaNode = TextHDANode(i)
+			hdaNode.syncNodeState()
+	finally:
+		_setHDADefWorkingStatus(defStr, False)
 
 
 
@@ -328,15 +398,36 @@ def onNodeInternalChanged(
 
 	node is whatever callback is called on; topNode is the top TextHDA to use for deltas
 
+	creating nodes gives a triple trigger on ChildSwitched, we don't get any
+	ChildCreated at all
+
+	it looks like some sop nodes with tools attached change the selection round
+	during creation, so ChildSwitched just gets blasted - gonna just live
+	with it for now
+
+	TODO: logic around comparing times
 	"""
+	import pydevd_pycharm
+	pydevd_pycharm.settrace('localhost', port=5678, stdout_to_server=True,
+	                        stderr_to_server=True)
 	cbObj : HoudiniCallbackFn = kwargs["callbackObj"]
 	topNode = cbObj.kwargs["topNode"]
+	modTime = topNode.modificationTime()
+	thisTime = datetime.datetime.now()
+	delta = thisTime - modTime
+	delta.microseconds < 100:
+
+
+
+	# debugpy.listen(5678)
+	# debugpy.wait_for_client()
+
 	#print("node internal changed:", topNode, node, event_type, args, kwargs)
 	hda = TextHDANode(topNode)
 	if hda.isWorking():
 		print("working, skipping internal", node)
 		return
-
+	#return
 	# if allowEditing, skip, it's already taken care of in separate callback
 	if event_type == hou.nodeEventType.ParmTupleChanged:
 		# sometimes it can be a parmtuple event with parmtuple given as None
@@ -346,29 +437,49 @@ def onNodeInternalChanged(
 				return
 		if node == topNode:
 			return
-
+	#return
 	if not hou.node(node.path()): # already deleted
 		return
 	if not hou.node(topNode.path()): # already deleted
 		return
-	with hda.workCtx():
+	with SilentCbCtx(topNode):
+		#with hda.workCtx():
 		# if new node created
 		if event_type == hou.nodeEventType.ChildCreated:
 			childNode : hou.OpNode = kwargs["child_node"]
-			print("child node created:", childNode)
+			#print("child node created:", childNode)
 			addNodeInternalCallbacks(childNode, inputRewired=True, topNode=topNode)
-		pullLocalNodeStateAndUpdateDef(topNode)
+		#pullLocalNodeStateAndUpdateDef(topNode, syncNode=False)
+
+		storedIncomingState, wholeNodeState, leafDelta = pullLocalNodeState(
+			topNode)
+		mergedState = gather.mergeNodeStates(storedIncomingState,
+		                                     [leafDelta])
+		#gather.setNodeToState(node, mergedState)
+
+		hda = TextHDANode(topNode)
+		#with hda.workCtx() as ctx:
+
+		hda.setNodeLeafDeltaData(leafDelta)
+		gather.updateHDADefSections(hda.hdaDef(),
+		                            wholeNodeState,
+		                            leafDelta, )
+
+		# print("saved leaf deltas on node")
+		# print(toSave)
+		#return leafDelta
 
 		# update other nodes in scene
 		dependencyMap = gather.getDefAffectedNodeMap()
-		print("affected node map:")
-		pprint.pprint(dependencyMap)
+		#print("affected node map:")
+		#pprint.pprint(dependencyMap)
 		for i in dependencyMap[hda.defFile()]:
-			if i.path() == node.path():
+			if i.path() == topNode.path():
 				continue
 			otherTextHda = TextHDANode(i)
-			print("SYNC DEPENDENT NODE:", i)
-			otherTextHda.syncNodeState()
+			#print("SYNC DEPENDENT NODE:", i)
+			with SilentCbCtx(i):
+				otherTextHda.syncNodeState()
 
 
 def onNodeOperationErrored(*args, **kwargs):
@@ -414,6 +525,18 @@ def pullLocalNodeState(node:hou.Node)->tuple[dict, dict, dict]:
 	wholeNodeState = gather.getFullNodeState(node)
 	# get current delta
 	leafDelta = gather.diffNodeState(storedIncomingState, wholeNodeState)
+	# remove parent parm definitions from leaf state
+	for k, v in tuple(leafDelta["parmTemplates"].get(".", {}).items()):
+		if k == hda.defFile():
+			continue
+		leafDelta["parmTemplates"]["."].pop(k, None)
+	# print("stored incoming state:")
+	# pprint.pprint(storedIncomingState, depth=5)
+	# print("whole node state:")
+	# pprint.pprint(wholeNodeState, depth=5)
+	# print("leaf delta:")
+	# pprint.pprint(leafDelta, depth=5)
+	#raise
 	return storedIncomingState, wholeNodeState, leafDelta
 
 # print("leaf delta:")
@@ -421,7 +544,7 @@ def pullLocalNodeState(node:hou.Node)->tuple[dict, dict, dict]:
 # # save on node
 
 @dbg
-def pullLocalNodeStateAndUpdateDef(node:hou.OpNode):
+def pullLocalNodeStateAndUpdateDef(node:hou.OpNode, syncNode=True)->dict:
 	hda = TextHDANode(node)
 	if not hda.hdaDef():
 		return {}
@@ -431,7 +554,8 @@ def pullLocalNodeStateAndUpdateDef(node:hou.OpNode):
 	"""move leaf parm templates to parent"""
 
 	mergedState = gather.mergeNodeStates(storedIncomingState, [leafDelta])
-	gather.setNodeToState(node, mergedState )
+	if syncNode:
+		gather.setNodeToState(node, mergedState )
 
 	with hda.workCtx() as ctx:
 		hda.setNodeLeafDeltaData(leafDelta)

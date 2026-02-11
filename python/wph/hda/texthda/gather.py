@@ -86,6 +86,8 @@ TEXT_HDA_BUNDLE_NAME = "textHDA_bundle_nodes"
 
 HDA_SECTIONS_TO_COPY = [
 	"OnCreated",
+	"OnLoaded",
+	"OnUpdated",
 	"PythonModule",
 	#"OnDeleted",
 	"PostLastDelete"
@@ -424,8 +426,8 @@ def setTextHDAParmDialogScripts(node: hou.OpNode, data: dict):
 			}
 		}
 	"""
-	print("text parms")
-	pprint.pprint(data)
+	# print("text parms")
+	# pprint.pprint(data)
 	hda = TextHDANode(node)
 	defName = hda.defFile()
 	ptg: hou.ParmTemplateGroup = hda.hdaDef().parmTemplateGroup()
@@ -457,17 +459,17 @@ def setTextHDAParmDialogScripts(node: hou.OpNode, data: dict):
 	# 	ptg.remove(i)
 
 	# check any duplicate names still in ptg
-	print("AFTER CLEAR PTG:")
-	for i in ptg.parmTemplates():
-		if isinstance(i, hou.FolderParmTemplate):
-			for i in i.parmTemplates():
-				if isinstance(i, hou.FolderParmTemplate):
-					for i in i.parmTemplates():
-						print(i.name(), i.label())
-					continue
-				print(i.name(), i.label())
-			continue
-		print(i.name(), i.label())
+	# print("AFTER CLEAR PTG:")
+	# for i in ptg.parmTemplates():
+	# 	if isinstance(i, hou.FolderParmTemplate):
+	# 		for i in i.parmTemplates():
+	# 			if isinstance(i, hou.FolderParmTemplate):
+	# 				for i in i.parmTemplates():
+	# 					print(i.name(), i.label())
+	# 				continue
+	# 			print(i.name(), i.label())
+	# 		continue
+	# 	print(i.name(), i.label())
 
 	for hdaDefName, paramData in data.items():
 		# remove leaf section if no def name
@@ -516,18 +518,18 @@ def setTextHDAParmDialogScripts(node: hou.OpNode, data: dict):
 		# if ptg.findFolder(defFolderPT.label()):
 		# 	ptg.remove(hdaDefName.label())
 	#ptg.replace(parentFolderPT.name(), parentFolderPT)
-	print()
-	print("BEFORE SET PTG")
-	for i in ptg.parmTemplates():
-		if isinstance(i, hou.FolderParmTemplate):
-			for i in i.parmTemplates():
-				if isinstance(i, hou.FolderParmTemplate):
-					for i in i.parmTemplates():
-						print(i.name(), i.label())
-					continue
-				print(i.name(), i.label())
-			continue
-		print(i.name(), i.label())
+	# print()
+	# print("BEFORE SET PTG")
+	# for i in ptg.parmTemplates():
+	# 	if isinstance(i, hou.FolderParmTemplate):
+	# 		for i in i.parmTemplates():
+	# 			if isinstance(i, hou.FolderParmTemplate):
+	# 				for i in i.parmTemplates():
+	# 					print(i.name(), i.label())
+	# 				continue
+	# 			print(i.name(), i.label())
+	# 		continue
+	# 	print(i.name(), i.label())
 	hda.hdaDef().setParmTemplateGroup(
 		ptg, rename_conflicting_parms=False, create_backup=False)
 	return
@@ -641,8 +643,8 @@ def getFullNodeState(
 		# "parmVals" : {node.relativePathTo(i) : getNodeParamText(i) for i in nodes}
 		"parmVals": parmVals
 	}
-	print("result:")
-	pprint.pprint(result, width=2000)
+	# print("result:")
+	# pprint.pprint(result, width=2000)
 
 	return result
 
@@ -660,9 +662,9 @@ def mergeNodeStates(
 		baseData: dict,
 		states: list[dict]
 ):
-	log("mergeNodeStates:",)
-	pprint.pprint(baseData)
-	pprint.pprint(states)
+	# log("mergeNodeStates:",)
+	# pprint.pprint(baseData)
+	# pprint.pprint(states)
 	baseData.setdefault("nodes", {})
 	baseData.setdefault("parmTemplates", {})
 	baseData.setdefault("connections", [])
@@ -682,8 +684,8 @@ def mergeNodeStates(
 				continue
 			baseData["parmVals"][nodePath].update(parmData)
 
-	print("result:")
-	pprint.pprint(baseData)
+	# print("result:")
+	# pprint.pprint(baseData)
 	return baseData
 
 
@@ -709,10 +711,10 @@ def diffNodeState(
 	# ensure baseData has all the needed keys set up
 	for k, v in result.items():
 		baseData.setdefault(k, v)
-	print("diffNodeState:")
-
-	print(baseData["nodes"])
-	print(wholeNodeState["nodes"])
+	# print("diffNodeState:")
+	#
+	# print(baseData["nodes"])
+	# print(wholeNodeState["nodes"])
 	# print("base:")
 	# pprint.pprint(baseData)
 	# print("whole state:")
@@ -730,8 +732,8 @@ def diffNodeState(
 			nodeData[:6], baseData["nodes"][nodePath][:6])):
 			result["nodes"][nodePath] = nodeData
 
-	print("diff nodes:")
-	print(result["nodes"].keys())
+	# print("diff nodes:")
+	# print(result["nodes"].keys())
 	for nodePath, parmData in wholeNodeState.get("parmTemplates", {}).items():
 		if not nodePath in baseData["parmTemplates"]:
 			result["parmTemplates"][nodePath] = parmData
@@ -742,11 +744,11 @@ def diffNodeState(
 				result["parmTemplates"].setdefault(nodePath, {})
 				result["parmTemplates"][nodePath][parmName] = parmScript
 
-	print("connections")
-	print(baseData["connections"])
-	print(wholeNodeState["connections"])
+	# print("connections")
+	# print(baseData["connections"])
+	# print(wholeNodeState["connections"])
 	comp = set(map(tuple, baseData.get("connections", [])))
-	print("comp", comp)
+	# print("comp", comp)
 	for i in wholeNodeState.get("connections", []):
 		if not tuple(i) in comp:
 			result["connections"].append(i)
@@ -818,7 +820,7 @@ def getFileHDADefs()->dict[str, dict[int, Path]]:
 def getSceneHDADefNodes()->dict[str, list[hou.Node]]:
 	result = defaultdict(list)
 	nodes = allSceneTextHDANodes()
-	print("nodes", nodes)
+	#print("nodes", nodes)
 
 	for node in allSceneTextHDANodes():
 		hdaNode = TextHDANode(node)
@@ -902,7 +904,7 @@ def setNodeToState(
 	                     removeHDAParamCallbacks, addHDAParamCallbacks)
 	# sorry
 
-	print("set node to state", node)
+	#print("set node to state", node)
 	wasEditable = node.isEditable()
 	if wasEditable:
 		#removeNodeInternalCallbacks(node)
@@ -995,7 +997,7 @@ def getDefAffectedNodeMap()->dict[str|Path, list[hou.OpNode]]:
 def getBaseTextHDADef()->hou.HDADefinition:
 	"""TODO: this only looks at one version,
 	add something that defaults to """
-	print("get base def:")
+	#print("get base def:")
 	found = hou.nodeType("Sop/textHDA::1.0")
 	if found is not None:
 		found = found.definition()
@@ -1090,18 +1092,18 @@ def createLocalTextHDADefinition(
 	# 	"OnCreated"]
 	node.setName(newId)
 	nodePath = node.path()
-	print(" before change to subnet")
+	#print(" before change to subnet")
 	node = node.changeNodeType(
 		"subnet", keep_name=True, keep_parms=True,
 		keep_network_contents=True, force_change_on_node_type_match=True
 	)
-	print(" after change to subnet")
+	#print(" after change to subnet")
 
 	# node = newNode
 	hdaNode = TextHDANode(node)
 	# need to re-get node from houdini object model
 	node : hou.OpNode = hou.node(nodePath)
-	print("new subnet node", node)
+	#print("new subnet node", node)
 	# createDigitalAsset seems to always take the node's actual name
 	newNode = node.createDigitalAsset(
 		name=newId,
@@ -1112,7 +1114,7 @@ def createLocalTextHDADefinition(
 
 	# and again
 	node = hou.node(nodePath)
-	print("new hda def node", node)
+	#print("new hda def node", node)
 
 	newHDADef : hou.HDADefinition = newNode.type().definition()
 	# 4 slots for inputs and outputs, should be fine for now
@@ -1128,8 +1130,8 @@ def createLocalTextHDADefinition(
 		newHDADef.sections()[key].setContents(baseHMSections[i].contents())
 
 	newHDADef.setParmTemplateGroup(masterPTG, create_backup=False)
-	print("set orig parm data on node:", node)
-	print(" orig parm data", origParmData)
+	# print("set orig parm data on node:", node)
+	# print(" orig parm data", origParmData)
 	setNodeParmValues(node, origParmData)
 	newHDADef.save("Embedded", create_backup=False)
 
@@ -1138,7 +1140,7 @@ def createLocalTextHDADefinition(
 			deleteHDADefIfUnused(origDef)
 	# restore base name
 	newNode.setName(origName)
-	print("completed type change")
+	#print("completed type change")
 
 	return newHDADef, node
 
@@ -1259,7 +1261,7 @@ class TextHDANode:
 	when internal processes change attributes"""
 	@dbg
 	def setWorking(self, state=True):
-		print("setting working state to", state,self.node)
+		#print("setting working state to", state,self.node)
 		self.node.setUserData("_working", str(int(state)))
 		return
 		if state:
@@ -1301,6 +1303,8 @@ class TextHDANode:
 	def defFileParm(self)->hou.Parm:
 		return self.node.parm(ParmNames.defFile)
 	def defFile(self)->Path|str:
+		assert self.hdaDef()
+		assert self.defFileParm()
 		raw = self.defFileParm().evalAsString().strip()
 		if not raw:
 			return None
@@ -1652,6 +1656,12 @@ class TextHDANode:
 		incomingState = self.reloadParentStates()
 		wholeNodeState = getFullNodeState(self.node)
 		leafState = diffNodeState(incomingState, wholeNodeState)
+		# remove parent parm definitions from leaf state
+		for k, v in tuple(leafState["parmTemplates"].get(".", {}).items()):
+			if k == self.defFile():
+				continue
+			leafState["parmTemplates"]["."].pop(k, None)
+
 		self.nodeLeafDeltaParm().set(dumps(leafState))
 
 
