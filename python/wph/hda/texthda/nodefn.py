@@ -2,16 +2,14 @@ from __future__ import annotations
 
 import datetime
 import pprint
-import traceback, time
+import traceback
 
 from importlib import reload
 
 import hou
-from hou import qt, undos
-from PySide6 import QtWidgets, QtCore, QtGui
+from hou import undos
+from PySide6 import QtCore
 
-import os
-import debugpy
 # hython = os.path.join(r"C:\Program Files\Side Effects Software\Houdini 21.0.559", "bin", "hython")
 # debugpy.configure(python=hython)
 
@@ -22,8 +20,9 @@ dbg = lambda fn: fn  # disable tracing
 from . import gather, types
 reload(gather)
 reload(types)
-from .gather import mergeNodeStates, TextHDANode, dbg
-from .types import ParmNames, CachedFile, loads, dumps
+from .gather import mergeNodeStates, TextHDANode, dbg, _getHDADefWorkingStatus, \
+	_setHDADefWorkingStatus
+from .types import ParmNames, loads, dumps
 """direct functions called by textHDA node
 TODO: we duplicate a bit between onDefChanged and onAllowEditingChanged - 
 have some overall sync function to take account of both of them
@@ -138,11 +137,20 @@ def removeNodeInternalCallbacks(node:hou.OpNode):
 	# for i in node.eventCallbacks():
 	# 	print(i)
 
+def nodeCbFns(node:hou.OpNode)->dict[
+	tuple[hou.nodeEventType], HoudiniCallbackFn]:
+	return {
+		eventTypes : cbFn for eventTypes, cbFn in tuple(node.eventCallbacks())
+		if isinstanceReloadSafe(cbFn, HoudiniCallbackFn)
+	}
+
 def setSilenceCallbacks(node:hou.OpNode, state=True):
-	for eventTypes, cbFn in tuple(node.eventCallbacks()):
-		if isinstanceReloadSafe(cbFn, HoudiniCallbackFn) and cbFn.kwargs[
-			"name"] == NODE_INTERNAL_CB_NAME:
-			cbFn.silent = state
+	for k, cbFn in nodeCbFns(node).items():
+		cbFn.silent = state
+	# for eventTypes, cbFn in tuple(node.eventCallbacks()):
+	# 	if isinstanceReloadSafe(cbFn, HoudiniCallbackFn) and cbFn.kwargs[
+	# 		"name"] == NODE_INTERNAL_CB_NAME:
+	# 		cbFn.silent = state
 
 class SilentCbCtx:
 	def __init__(self, node:hou.OpNode):
@@ -253,7 +261,8 @@ def onNodeLoaded(node:hou.OpNode, *args, **kwargs):
 		if not hdaNode.defFileParm().evalAsString():
 			hdaNode.editingAllowedParm().disable(True)
 
-	onAllowEditingChanged(node)
+	if hdaNode.editingAllowed():
+		onAllowEditingChanged(node)
 
 """analysing hda section infos:
 nothing in either ExtraFileOptions or InternalFileOptions
@@ -301,16 +310,6 @@ def onNodeNameChanged(node:hou.Node, *args, **kwargs):
 		hda.fullReset(resetParms=False)
 
 
-def _getHDADefWorkingStatus(defFile:str)->bool:
-	return getattr(hou, "_texthdaWorkingStatus", {}
-	               ).get(defFile, False)
-
-def _setHDADefWorkingStatus(defFile:str, status:bool):
-	if not hasattr(hou, "_texthdaWorkingStatus"):
-		setattr(hou, "_texthdaWorkingStatus", {})
-	getattr(hou, "_texthdaWorkingStatus")[defFile] = status
-
-
 @dbg
 def onHDAUpdated(kwargs):
 	"""callback whenever HDA definition is updated
@@ -323,6 +322,11 @@ def onHDAUpdated(kwargs):
 	# get def file first
 	defStr = ""
 	hdaType : hou.SopNodeType = kwargs["type"]
+
+	if _getHDADefWorkingStatus(hdaType.name()):
+		#print("def file", defStr, "is currently working, skipping update")
+		return
+
 	instances = hdaType.instances()
 	for i in instances:
 		try:
@@ -339,12 +343,10 @@ def onHDAUpdated(kwargs):
 		return
 	#print("instances", instances)
 
-	if _getHDADefWorkingStatus(defStr):
-		#print("def file", defStr, "is currently working, skipping update")
-		return
+	gather.connectDebug()
 
 	try:
-		_setHDADefWorkingStatus(defStr, True)
+		_setHDADefWorkingStatus(hdaType.name(), True)
 
 		for i in instances:
 			#print("instance", i, i.parms())
@@ -370,11 +372,12 @@ def onHDAUpdated(kwargs):
 		dependentNodes = gather.getDefAffectedNodeMap()[defStr]
 		for i in dependentNodes:
 			if i.type() == hdaType:
+				i.matchCurrentDefinition()
 				continue
 			hdaNode = TextHDANode(i)
 			hdaNode.syncNodeState()
 	finally:
-		_setHDADefWorkingStatus(defStr, False)
+		_setHDADefWorkingStatus(hdaType.name(), False)
 
 
 
@@ -406,16 +409,23 @@ def onNodeInternalChanged(
 	with it for now
 
 	TODO: logic around comparing times
+	TODO: childSwitched triggers every time you select something good grief
+		but we NEED it because no proper creation signal gets called
+
 	"""
-	import pydevd_pycharm
-	pydevd_pycharm.settrace('localhost', port=5678, stdout_to_server=True,
-	                        stderr_to_server=True)
+	from wph.hda.texthda import nodefn
+	reload(nodefn)
+	locals().update(nodefn.__dict__)
+	# import pydevd_pycharm
+	# pydevd_pycharm.settrace('localhost', port=5678, stdout_to_server=True,
+	#                         stderr_to_server=True)
+
 	cbObj : HoudiniCallbackFn = kwargs["callbackObj"]
 	topNode = cbObj.kwargs["topNode"]
 	modTime = topNode.modificationTime()
 	thisTime = datetime.datetime.now()
-	delta = thisTime - modTime
-	delta.microseconds < 100:
+	# delta = thisTime - modTime
+	# delta.microseconds < 100:
 
 
 
@@ -445,41 +455,51 @@ def onNodeInternalChanged(
 	with SilentCbCtx(topNode):
 		#with hda.workCtx():
 		# if new node created
-		if event_type == hou.nodeEventType.ChildCreated:
-			childNode : hou.OpNode = kwargs["child_node"]
-			#print("child node created:", childNode)
-			addNodeInternalCallbacks(childNode, inputRewired=True, topNode=topNode)
+		if "child_node" in kwargs:
+			if not nodeCbFns(kwargs["child_node"]):
+				addNodeInternalCallbacks(kwargs["child_node"],
+				                         inputRewired=True,
+				                         topNode=topNode)
+
 		#pullLocalNodeStateAndUpdateDef(topNode, syncNode=False)
 
 		storedIncomingState, wholeNodeState, leafDelta = pullLocalNodeState(
 			topNode)
-		mergedState = gather.mergeNodeStates(storedIncomingState,
-		                                     [leafDelta])
+		# mergedState = gather.mergeNodeStates(storedIncomingState,
+		#                                      [leafDelta])
 		#gather.setNodeToState(node, mergedState)
 
 		hda = TextHDANode(topNode)
 		#with hda.workCtx() as ctx:
 
 		hda.setNodeLeafDeltaData(leafDelta)
+		if hda.hdaDef() == gather.getBaseTextHDADef():
+			return
+		gather._setHDADefWorkingStatus(hda.hdaDef().nodeTypeName(), True)
 		gather.updateHDADefSections(hda.hdaDef(),
 		                            wholeNodeState,
 		                            leafDelta, )
+		gather._setHDADefWorkingStatus(hda.hdaDef().nodeTypeName(), False)
+		hda.hdaDef().updateFromNode(topNode)
+
 
 		# print("saved leaf deltas on node")
 		# print(toSave)
 		#return leafDelta
 
-		# update other nodes in scene
-		dependencyMap = gather.getDefAffectedNodeMap()
-		#print("affected node map:")
-		#pprint.pprint(dependencyMap)
-		for i in dependencyMap[hda.defFile()]:
-			if i.path() == topNode.path():
-				continue
-			otherTextHda = TextHDANode(i)
-			#print("SYNC DEPENDENT NODE:", i)
-			with SilentCbCtx(i):
-				otherTextHda.syncNodeState()
+		# if hda.liveUpdateParm().eval():
+		# 	# update other nodes in scene
+		# 	dependencyMap = gather.getDefAffectedNodeMap()
+		# 	#print("affected node map:")
+		# 	#pprint.pprint(dependencyMap)
+		#
+		# 	for i in dependencyMap[hda.defFile()]:
+		# 		if i.path() == topNode.path():
+		# 			continue
+		# 		otherTextHda = TextHDANode(i)
+		# 		#print("SYNC DEPENDENT NODE:", i)
+		# 		with SilentCbCtx(i):
+		# 			otherTextHda.syncNodeState()
 
 
 def onNodeOperationErrored(*args, **kwargs):

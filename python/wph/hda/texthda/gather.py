@@ -37,6 +37,15 @@ def dbg(fn):
 			#                                            dbgDepth, *a, **k)
 	return wrapper
 
+def connectDebug():
+	try:
+		import pydevd_pycharm
+		pydevd_pycharm.settrace('localhost', port=5678, stdout_to_server=True,
+		                        stderr_to_server=True)
+	except:
+		traceback.print_exc()
+		pass
+
 """extract node deltas then params - 
 for each node ref, save name and uid to allow both means
 
@@ -981,8 +990,6 @@ def getDefAffectedNodeMap()->dict[str|Path, list[hou.OpNode]]:
 		textHda = TextHDANode(i)
 		affectingDefs = textHda.parentDefPaths()
 		if not textHda.editingAllowed():
-			if not textHda.defFile():
-				continue
 			affectingDefs += [textHda.defFile()]
 		for parentDef in affectingDefs:
 			if not parentDef:
@@ -1210,8 +1217,13 @@ def updateHDADefSections(
 		wholeNodeState:dict,
 		leafDelta:dict,
 ):
+	""" avoid double-triggering hda def callback"""
+	#try:
+	_setHDADefWorkingStatus(hdaDef.nodeTypeName(), True)
 	setHDASectionDict(hdaDef, HDA_DELTA_SECTION_NAME,
 	                         leafDelta)
+	# finally:
+	# 	_setHDADefWorkingStatus(hdaDef.nodeTypeName(), False)
 	setHDASectionDict(hdaDef, HDA_FULL_SECTION_NAME,
 	                         wholeNodeState)
 
@@ -1318,6 +1330,9 @@ class TextHDANode:
 		return self.node.parm(ParmNames.allowEditing)
 	def editingAllowed(self)->bool:
 		return self.editingAllowedParm().eval()
+
+	def liveUpdateParm(self)->hou.Parm:
+		return self.node.parm(ParmNames.liveUpdate)
 
 	def isBaselineTextHDA(self)->bool:
 		return self.editingAllowed() or self.parentStoredStates()
@@ -1522,6 +1537,8 @@ class TextHDANode:
 
 	def nParentEntries(self)->int:
 		parentFolder: hou.Parm = self.node.parm("parentfolder")
+		if not parentFolder: # happens as sxene is loading and before parms are created
+			return 0
 		return len(parentFolder.multiParmInstances()) // self.nFolderParms
 
 	def _parentParms(self, parmName:str)->list[hou.Parm]:
@@ -1587,7 +1604,7 @@ class TextHDANode:
 	def reloadParentStates(self):
 		parentStates = []
 		parentParms = self._parentParms(ParmNames.parentNodeDelta)
-		log("PARENT DEFS:", self.parentDefPaths())
+		#log("PARENT DEFS:", self.parentDefPaths())
 		sceneHdaMap = getSceneHDADefNodes()
 		for i, path in enumerate(self.parentDefPaths()):
 			if not path:
@@ -1605,7 +1622,7 @@ class TextHDANode:
 
 			else:  # def is string, look up in scene
 				hdaDef = sceneHdaMap.get(path)
-				log("hdaDef for", path, "is", hdaDef)
+				#log("hdaDef for", path, "is", hdaDef)
 				if not hdaDef:
 					continue
 				hdaDef = hdaDef[0].type().definition()
@@ -1615,8 +1632,8 @@ class TextHDANode:
 					HDA_FULL_SECTION_NAME,
 					{}
 				)
-				log("loaded base data for", path, "is:")
-				pprint.pprint(baseData)
+				# log("loaded base data for", path, "is:")
+				# pprint.pprint(baseData)
 				if not baseData:
 					continue
 
@@ -1637,17 +1654,32 @@ class TextHDANode:
 	@dbg
 	def syncNodeState(self, paramValuesOnly=False):
 		"""update node from incoming and leaf data"""
-		incomingState = self.reloadParentStates()
-		if "LEAF" in incomingState["parmTemplates"]:
-			# mark any incoming top-level params as parent
-			if not "PARENT" in incomingState["parmTemplates"]:
-				incomingState["parmTemplates"]["PARENT"] = {}
-			incomingState["parmTemplates"]["PARENT"].update(
-				incomingState["parmTemplates"]["LEAF"])
-			incomingState["parmTemplates"].pop("LEAF")
-		leafState = self.nodeLeafStoredState()
-		combinedState = mergeNodeStates(incomingState, [leafState])
-		setNodeToState(self.node, combinedState)
+		storedIncomingState = self.reloadParentStates()
+
+		# get whole state of node in scene
+		wholeNodeState = getFullNodeState(self.node)
+		# get current delta
+		leafDelta = diffNodeState(storedIncomingState, wholeNodeState)
+		# remove parent parm definitions from leaf state
+		for k, v in tuple(leafDelta["parmTemplates"].get(".", {}).items()):
+			if k == self.defFile():
+				continue
+			leafDelta["parmTemplates"]["."].pop(k, None)
+
+		"""move leaf parm templates to parent"""
+
+		mergedState = mergeNodeStates(storedIncomingState, [leafDelta])
+		setNodeToState(self.node, mergedState)
+		# if "LEAF" in incomingState["parmTemplates"]:
+		# 	# mark any incoming top-level params as parent
+		# 	if not "PARENT" in incomingState["parmTemplates"]:
+		# 		incomingState["parmTemplates"]["PARENT"] = {}
+		# 	incomingState["parmTemplates"]["PARENT"].update(
+		# 		incomingState["parmTemplates"]["LEAF"])
+		# 	incomingState["parmTemplates"].pop("LEAF")
+		# leafState = self.nodeLeafStoredState()
+		# combinedState = mergeNodeStates(incomingState, [leafState])
+		# setNodeToState(self.node, combinedState)
 
 	@dbg
 	def gatherSyncNodeState(self):
@@ -1665,4 +1697,12 @@ class TextHDANode:
 		self.nodeLeafDeltaParm().set(dumps(leafState))
 
 
+def _getHDADefWorkingStatus(defFile:str)->bool:
+	return getattr(hou, "_texthdaWorkingStatus", {}
+	               ).get(defFile, False)
 
+
+def _setHDADefWorkingStatus(defFile:str, status:bool):
+	if not hasattr(hou, "_texthdaWorkingStatus"):
+		setattr(hou, "_texthdaWorkingStatus", {})
+	getattr(hou, "_texthdaWorkingStatus")[defFile] = status
