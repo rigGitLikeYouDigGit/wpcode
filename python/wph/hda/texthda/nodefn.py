@@ -37,6 +37,25 @@ setting parametres under leaf params is only allowed / preserved when editing
 allowed, otherwise they're just untracked leaf attributes as with any other
 kind of hda
 
+TODO: separate HDA defs for every permutation of parent params and def - 
+trust the HDAUpdated event to propagate changes when a parent is saved
+
+OK HARD TRUTH:
+
+the only time a primary def is declared on a node, is when that node is 
+literally defining from it
+
+want to instantiate a def? put it in parent
+want to multiple-inherit from a def? put it in parent
+
+
+# NO: sharing top def still works - we add option whether to pull only
+# leaf state, and we have button to insert all def parents at top of
+# existing hierarchy.
+# also add diagnostic if a parent is redundant, or forms part of a cycle
+
+
+
 """
 
 
@@ -273,11 +292,11 @@ def onNodeDeleted(node:hou.Node, type:hou.OpNodeType, *args, **kwargs):
 	hdaDef : hou.HDADefinition = type.definition()
 	#print("on node deleted:", node, hdaDef)
 	if hdaDef == gather.getBaseTextHDADef():
-		print("is base def, skipping")
+		#print("is base def, skipping")
 		return
 	# get instances
 	if not type.instances():
-		print("not instances, destroying")
+		#print("not instances, destroying")
 		hdaDef.destroy()
 
 @dbg
@@ -291,9 +310,9 @@ def onNodeLastDeleted(*args, **kwargs):
 	hdaDef : hou.HDADefinition = nodeType.definition()
 	#print("on node last deleted:", hdaDef)
 	if hdaDef == gather.getBaseTextHDADef():
-		print("is base def, skipping")
+		#print("is base def, skipping")
 		return
-	print("deleting")
+	#print("deleting")
 	hdaDef.destroy()
 
 @dbg
@@ -339,11 +358,11 @@ def onHDAUpdated(kwargs):
 
 			continue
 	if not defStr:
-		print("no def file found on any instance, skipping")
+		#print("no def file found on any instance, skipping")
 		return
 	#print("instances", instances)
 
-	gather.connectDebug()
+	#gather.connectDebug()
 
 	try:
 		_setHDADefWorkingStatus(hdaType.name(), True)
@@ -413,12 +432,11 @@ def onNodeInternalChanged(
 		but we NEED it because no proper creation signal gets called
 
 	"""
-	from wph.hda.texthda import nodefn
-	reload(nodefn)
-	locals().update(nodefn.__dict__)
-	# import pydevd_pycharm
-	# pydevd_pycharm.settrace('localhost', port=5678, stdout_to_server=True,
-	#                         stderr_to_server=True)
+	# from wph.hda.texthda import nodefn
+	# reload(nodefn)
+	# locals().update(nodefn.__dict__)
+
+	#gather.connectDebug()
 
 	cbObj : HoudiniCallbackFn = kwargs["callbackObj"]
 	topNode = cbObj.kwargs["topNode"]
@@ -435,7 +453,7 @@ def onNodeInternalChanged(
 	#print("node internal changed:", topNode, node, event_type, args, kwargs)
 	hda = TextHDANode(topNode)
 	if hda.isWorking():
-		print("working, skipping internal", node)
+		#print("working, skipping internal", node)
 		return
 	#return
 	# if allowEditing, skip, it's already taken care of in separate callback
@@ -474,6 +492,9 @@ def onNodeInternalChanged(
 
 		hda.setNodeLeafDeltaData(leafDelta)
 		if hda.hdaDef() == gather.getBaseTextHDADef():
+			return
+
+		if not hda.liveUpdateParm().eval():
 			return
 		gather._setHDADefWorkingStatus(hda.hdaDef().nodeTypeName(), True)
 		gather.updateHDADefSections(hda.hdaDef(),
@@ -596,10 +617,11 @@ def pushLocalNodeState(node:hou.OpNode):
 	"""
 	hda = TextHDANode(node)
 	#pullLocalNodeStateAndUpdateDef(node)
-	print("affected:")
-	pprint.pprint(gather.getDefAffectedNodeMap())
+	# print("affected:")
+	# pprint.pprint(gather.getDefAffectedNodeMap())
 	for i in gather.getDefAffectedNodeMap()[hda.defFile()]:
-		print("push to", i, i.type(), i.type().definition() == node.type().definition())
+		#print("push to", i, i.type(), i.type().definition() == node.type(
+		# ).definition())
 		if i.type().definition() == node.type().definition():
 			continue
 		hda = TextHDANode(i)
@@ -652,7 +674,7 @@ def refreshParentBasesRegenNode(node:hou.Node, leafDelta:dict=None)->bool:
 	except Exception as e:
 		traceback.print_exc()
 		errored = True
-		print("ERRORED")
+		#print("ERRORED")
 		onNodeOperationErrored(node)
 	return errored
 
@@ -668,13 +690,47 @@ def onHardResetBtnPressed(node:hou.Node):
 	pass
 
 def onLiveUpdateChanged(node:hou.OpNode, *args, **kwargs):
+	hda = TextHDANode(node)
+	if hda.liveUpdateParm().eval():
+		hda.hdaDef().updateFromNode(node)
 	pass
 
 @dbg
 def onParentDefNameChanged(node:hou.Node, kwargs):
-	print("parent def name changed:", node, kwargs)
+	"""update def name"""
+	#print("parent def name changed:", node, kwargs)
+	#gather.connectDebug()
 	hda = TextHDANode(node)
-	hda.reloadParentStates()
+
+	if hda.defFile(): # node is a def source, need to preserve leaf deltas and reapply on new def
+		oldParentState, leafState = gather.getDefParentLeafData(hda.hdaDef())
+		# get whole state of node in scene
+		wholeNodeState = gather.getFullNodeState(node)
+		# get current delta
+		leafDelta = gather.diffNodeState(oldParentState, wholeNodeState)
+		newParentState = hda.reloadParentStates()
+		newNodeState = gather.mergeNodeStates(newParentState, [leafDelta])
+		gather.setNodeToState(node, newNodeState)
+		return
+
+	# check if node is a base texthda - if so, assign it a new def
+	if hda.hdaDef() == gather.getBaseTextHDADef():
+		newDefName = hda.getDerivedHDADefName()
+		newDef, node = gather.createLocalTextHDADefinition(
+			node, newDefName, deleteAssignedHDA=False )
+		hda = TextHDANode(node)
+
+	parentState = hda.reloadParentStates()
+	gather.setNodeToState(node, parentState)
+	return node
+	storedIncomingState = hda.reloadParentStates()
+
+	# get whole state of node in scene
+	wholeNodeState = gather.getFullNodeState(node)
+	# get current delta
+	leafDelta = gather.diffNodeState(storedIncomingState, wholeNodeState)
+	# remove parent parm definitions from leaf states
+	leafState = gather.getFullNodeState(node)
 	gather.setNodeToState(node, hda.getCachedParentState())
 	pass
 
@@ -723,10 +779,10 @@ def onDefFileLineChanged(node:hou.Node, kwargs):
 	by the path def
 	if editing IS allowed, add node to bundles of all parent defs
 	"""
-	print("on defFileLineChanged")
+	#print("on defFileLineChanged")
 	hdaNode = TextHDANode(node)
 	if hdaNode.isWorking():
-		print("node", node, "still working")
+		#print("node", node, "still working")
 		return
 	with hdaNode.workCtx() as ctx:
 		newDefStr = hdaNode.defFileParm().evalAsString().strip()
@@ -753,7 +809,8 @@ def onDefFileLineChanged(node:hou.Node, kwargs):
 	pass
 
 def onSelectDefBtnPressed(node:hou.Node, kwargs):
-	print("selectDef btn pressed")
+	#print("selectDef btn pressed")
+	pass
 
 @dbg
 def onAllowEditingChanged(node:hou.OpNode, *args, **kwargs):
@@ -769,7 +826,7 @@ def onAllowEditingChanged(node:hou.OpNode, *args, **kwargs):
 	hda = TextHDANode(node)
 
 	if hda.isWorking():
-		print("node still working, aborting")
+		#print("node still working, aborting")
 		return
 
 	try:
@@ -779,7 +836,7 @@ def onAllowEditingChanged(node:hou.OpNode, *args, **kwargs):
 	with hda.workCtx():
 		node = hda.node
 		if hda.editingAllowed():
-			print("editing allowed")
+			#print("editing allowed")
 			# required so we register nodes being created in hda
 			addNodeInternalCallbacks(node, inputRewired=False,
 			                         paramChanged=False,
@@ -791,13 +848,13 @@ def onAllowEditingChanged(node:hou.OpNode, *args, **kwargs):
 
 			return
 		else:
-			print("edit not allowed")
+			#print("edit not allowed")
 			removeNodeInternalCallbacks(node)
 			for i in node.allSubChildren(recurse_in_locked_nodes=False):
 				removeNodeInternalCallbacks(i)
 			# just freeze local contents
 			if hda.hasIncomingStates():
-				print("incoming states found")
+				#print("incoming states found")
 				hdaDef = hda.getCustomHDADef()
 				hdaDef.updateFromNode(node)
 				node.matchCurrentDefinition()
@@ -893,16 +950,35 @@ def onParentTextChanged(node:hou.OpNode, parm:hou.Parm):
 	pass
 
 
-def onSaveBtnPressed(node:hou.OpNode):
+def onSaveBtnPressed(node:hou.OpNode, **kwargs):
 	"""write current node delta to target file -
 	"""
+	#gather.connectDebug()
 	hda = TextHDANode(node)
 	if not hda.nodeLeafPath():
 		node.addError("No leaf path to save local deltas")
 		return
-	hda.nodeLeafPath().write_text(
-		hda.nodeLeafDeltaParm().eval()
-	)
+	with SilentCbCtx(node):
+		storedIncomingState, wholeNodeState, leafDelta = pullLocalNodeState(
+			node)
+		# mergedState = gather.mergeNodeStates(storedIncomingState,
+		#                                      [leafDelta])
+		#gather.setNodeToState(node, mergedState)
+
+		hda = TextHDANode(node)
+		#with hda.workCtx() as ctx:
+
+		hda.setNodeLeafDeltaData(leafDelta)
+		if hda.hdaDef() == gather.getBaseTextHDADef():
+			return
+
+		gather._setHDADefWorkingStatus(hda.hdaDef().nodeTypeName(), True)
+		gather.updateHDADefSections(hda.hdaDef(),
+		                            wholeNodeState,
+		                            leafDelta, )
+		gather._setHDADefWorkingStatus(hda.hdaDef().nodeTypeName(), False)
+		hda.hdaDef().updateFromNode(node)
+
 
 def onSaveAsNewDefBtnPressed(node:hou.OpNode):
 	"""write current node delta to target file -

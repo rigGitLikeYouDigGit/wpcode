@@ -5,15 +5,16 @@ import types, typing as T
 import pprint
 from pathlib import Path
 
-import copy, json, importlib
+import copy, json, importlib, uuid
 from collections import defaultdict
 from typing import NamedTuple, TypedDict
+from importlib import reload
 from uuid import uuid4
 from orjson import loads
 
 from wplib import log
 
-from deepdiff import DeepDiff, Delta
+from deepdiff import DeepDiff, DeepHash, Delta
 
 import hou
 
@@ -28,7 +29,7 @@ def dbg(fn):
 		global _dbgDepth
 		_dbgDepth += 1
 		try:
-			print("|--" * _dbgDepth, fn.__name__, args, kwargs)
+			#print("|--" * _dbgDepth, fn.__name__, args, kwargs)
 			return fn(*args, **kwargs)
 		finally:
 			_dbgDepth -= 1
@@ -40,10 +41,13 @@ def dbg(fn):
 def connectDebug():
 	try:
 		import pydevd_pycharm
+		reload(pydevd_pycharm)
 		pydevd_pycharm.settrace('localhost', port=5678, stdout_to_server=True,
 		                        stderr_to_server=True)
 	except:
-		traceback.print_exc()
+		import pydevd_pycharm
+		del pydevd_pycharm
+		#traceback.print_exc()
 		pass
 
 """extract node deltas then params - 
@@ -176,7 +180,7 @@ def createNodeFromHeader(rootNode: hou.Node, header: NodeHeader):
 	if exactVersionMatters:
 		exactVersion = "::".join(
 			filter(None, (nodeTypeNS, nodeTypeName, exactVersion)))
-		print("CREATE EXACT VERSION ", exactVersion, nodeName)
+		#print("CREATE EXACT VERSION ", exactVersion, nodeName)
 		newNode = parentNode.createNode(
 			exactVersion, nodeName, exact_type_name=True
 		)
@@ -192,7 +196,7 @@ def getChildrenConnectionData(parentNode: hou.OpNode) -> list[list[str]]:
 	"""very simple, of form
 	[ 0-myNodeOutputName-myNode , 0-myNodeInputName-myOtherNode ]"""
 	connections = []
-	print("getChildrenConnectionData", parentNode, parentNode.children())
+	#print("getChildrenConnectionData", parentNode, parentNode.children())
 	for node in parentNode.children():
 		node: hou.OpNode
 		connectors: tuple[tuple[hou.NodeConnection]] = node.inputConnectors()
@@ -257,7 +261,7 @@ def getConnectionsDiff(
 	return result
 
 
-def getNodeParamText(node: hou.OpNode, saveDefaults=True) -> dict[str, T.Any]:
+def getNodeParamText(node: hou.OpNode, saveDefaults=False) -> dict[str, T.Any]:
 	"""get verbose so we can iterate over dictionary easier when diffing
 	"""
 	result = {}
@@ -310,8 +314,8 @@ def deepUpdatePath(baseData: dict | list, path: list, value):
 		elif isinstance(token, int):
 			index = token
 		else:
-			print(baseData)
-			print(token, path)
+			#print(baseData)
+			#print(token, path)
 			raise RuntimeError("invalid list index:", token)
 		if index >= len(baseData):
 			baseData.append(value)
@@ -397,7 +401,7 @@ def getTextHDAParmDialogScripts(node: hou.Node):
 	erasing itself
 	"""
 	hda = TextHDANode(node)
-	print("leaf pts", hda.leafHDAParmTemplates())
+	#print("leaf pts", hda.leafHDAParmTemplates())
 	# leafPtg = hou.ParmTemplateGroup(hda.leafHDAParmTemplates())
 	# parentPtg = hou.ParmTemplateGroup(hda.parentHDAParmTemplates())
 	result = {
@@ -408,8 +412,8 @@ def getTextHDAParmDialogScripts(node: hou.Node):
 			i]).asDialogScript())
 		         for i in hda.leafHDAParmTemplates()},
 	}
-	print("texthda dialog scripts:")
-	print(result)
+	#print("texthda dialog scripts:")
+	#print(result)
 	return result
 
 def copyFolderPT(folderPT: hou.FolderParmTemplate) -> hou.FolderParmTemplate:
@@ -615,10 +619,10 @@ def getFullNodeState(
 	"""
 	hda = TextHDANode(node)
 	nodes = iterNodesToTrack(node)
-	print("nodes", nodes)
+	#print("nodes", nodes)
 	# get params to add to the top node
 	baseParmTemplateGroup: hou.ParmTemplateGroup = node.parmTemplateGroup()
-	print("base ptg", baseParmTemplateGroup)
+	#print("base ptg", baseParmTemplateGroup)
 
 	parmVals = {}
 	for i in nodes:
@@ -855,7 +859,7 @@ HDA_FULL_SECTION_NAME = "textHDAFullState"
 
 def getHDASectionDict(hdaDef:hou.HDADefinition, sectionName:str, default={}):
 	"""return stored section in hda as json dict"""
-	log("getHDASectionDict", hdaDef, sectionName, hdaDef.sections().keys())
+	# log("getHDASectionDict", hdaDef, sectionName, hdaDef.sections().keys())
 	if not hdaDef.hasSection(sectionName):
 		hdaDef.addSection(sectionName)
 		hdaDef.sections()[sectionName].setContents(dumps(default))
@@ -873,6 +877,8 @@ def getDefParentLeafData(
 	otherwise run the full retrieval.
 	we assume that node and def data are equivalent
 	"""
+	return getHDASectionDict(hdaDef, HDA_FULL_SECTION_NAME, {}),\
+		getHDASectionDict(hdaDef, HDA_DELTA_SECTION_NAME, {})
 
 
 
@@ -890,7 +896,7 @@ def getDefParentLeafData(
 @dbg
 def isTextHDANode(node:hou.Node):
 	"""return true if node is a textHDA root node"""
-	print("name components", node.type().nameComponents())
+	#print("name components", node.type().nameComponents())
 	return any(i in node.type().nameComponents()[2].lower()
 	           for i in ("texthda", ))
 
@@ -912,6 +918,16 @@ def setNodeToState(
 	                     removeNodeInternalCallbacks,
 	                     removeHDAParamCallbacks, addHDAParamCallbacks)
 	# sorry
+
+	# check that node uses a custom def - if not, create a new one
+	hda = TextHDANode(node)
+	if hda.hdaDef() == getBaseTextHDADef():
+		#print("creating new hda def for node", node)
+		node.allowEditingOfContents(True)
+		bespokeHdaName = hda.getDerivedHDADefName()
+		newDef, node = createLocalTextHDADefinition(
+			node, newId=bespokeHdaName, deleteAssignedHDA=False
+		                                            )
 
 	#print("set node to state", node)
 	wasEditable = node.isEditable()
@@ -956,6 +972,7 @@ def hdaIsSavedToScene(hdaDef:hou.HDADefinition):
 def getRandomStringName()->str:
 	"""would be cool to have a random string of actual words
 	but for now uuid is fine"""
+	return uuid.uuid4().hex[:8]
 
 
 def getTextHDANodeBundle()->hou.NodeBundle:
@@ -987,6 +1004,9 @@ def getSceneTextHDANodesByDef()->dict[str|Path, list[hou.OpNode]]:
 def getDefAffectedNodeMap()->dict[str|Path, list[hou.OpNode]]:
 	result = defaultdict(list)
 	for i in allSceneTextHDANodes():
+		if not nodeIsValidTextHDA(i):
+			#print(i, "IS NOT VALID TEXT HDA NODE, skipping")
+			continue
 		textHda = TextHDANode(i)
 		affectingDefs = textHda.parentDefPaths()
 		if not textHda.editingAllowed():
@@ -998,6 +1018,13 @@ def getDefAffectedNodeMap()->dict[str|Path, list[hou.OpNode]]:
 	return result
 
 
+def nodeIsValidTextHDA(node:hou.Node):
+	node = hou.node(node.path())
+	if not node:
+		return False
+	if not node.parm(ParmNames.defFile):
+		return False
+	return True
 
 #_baseHDADef : hou.HDADefinition = None
 
@@ -1039,12 +1066,17 @@ def deleteHDADefIfUnused(hdaDef:hou.HDADefinition):
 	try:
 		try:
 			if not hdaDef.nodeType().instances():
-				print("deleting unused hda:", hdaDef)
+				#print("deleting unused hda:", hdaDef)
 				hdaDef.destroy()
 		except hou.OperationFailed:
 			return
 	except hou.ObjectWasDeleted: # already cleaned up
 		pass
+
+def getTempNodeDefName(baseName:str)->str:
+	"""include main def and any parent defs to get name for leaf
+	permutation"""
+	return f"{baseName}_TEMP_{getRandomStringName()}"
 
 @dbg
 def createLocalTextHDADefinition(
@@ -1219,7 +1251,7 @@ def updateHDADefSections(
 ):
 	""" avoid double-triggering hda def callback"""
 	#try:
-	_setHDADefWorkingStatus(hdaDef.nodeTypeName(), True)
+	#_setHDADefWorkingStatus(hdaDef.nodeTypeName(), True)
 	setHDASectionDict(hdaDef, HDA_DELTA_SECTION_NAME,
 	                         leafDelta)
 	# finally:
@@ -1373,9 +1405,9 @@ class TextHDANode:
 		try:
 			data = loads(parmS)
 		except Exception as e:
-			print("could not load local node edits, "
-			      "check that the data is valid json")
-			print(e)
+			#print("could not load local node edits, "
+			 #     "check that the data is valid json")
+			#print(e)
 			return {}
 		return data
 	def setNodeLeafDeltaData(self, data:dict):
@@ -1395,9 +1427,9 @@ class TextHDANode:
 		try:
 			data = loads(parmS)
 		except Exception as e:
-			print("could not load local node edits, "
-			      "check that the data is valid json")
-			print(e)
+			# print("could not load local node edits, "
+			#       "check that the data is valid json")
+			# print(e)
 			return {}
 		return data
 
@@ -1480,6 +1512,14 @@ class TextHDANode:
 	def setStatusMsg(self, msg:str):
 		self.statusParm().set(msg)
 
+	def getDerivedHDADefName(self)->str:
+		"""derive a name for the current node's hda def based on its parents"""
+		name = "textHDA"
+		if self.defFile():
+			name += "_" + str(Path(self.defFile()).stem)
+		for i, pDef in enumerate(self.parentDefPaths()):
+			name += "_" + str(Path(pDef).stem)
+		return name
 	""" try to get some handle on nightmare of this system's state"""
 	def syncEditingAllowed(self):
 		"""check if editing checkbox should be enabled:
@@ -1518,7 +1558,8 @@ class TextHDANode:
 		masterDef = getBaseTextHDADef()
 		assert masterDef
 		if leafDef == masterDef:
-			print("hda def is already master")
+			#print("hda def is already master")
+			pass
 		else:
 			newNode = self.node.changeNodeType(
 				masterDef.nodeTypeName(),
@@ -1653,13 +1694,27 @@ class TextHDANode:
 
 	@dbg
 	def syncNodeState(self, paramValuesOnly=False):
-		"""update node from incoming and leaf data"""
+		"""update node from incoming and leaf data
+		IF node has a def, preserve its leaf state
+		otherwise don't
+
+		attribute entries alone aren't enough to create a node from leaf data
+
+		for def nodes, don't take current node state, look at last saved leaf state on hda
+		otherwise all parametres on nodes that have changed in parent will
+		read as leaf deltas
+		"""
 		storedIncomingState = self.reloadParentStates()
+		if not self.defFile():
+			setNodeToState(self.node, storedIncomingState)
+			return
+		parentData, leafDelta = getDefParentLeafData(self.hdaDef())
+
 
 		# get whole state of node in scene
-		wholeNodeState = getFullNodeState(self.node)
-		# get current delta
-		leafDelta = diffNodeState(storedIncomingState, wholeNodeState)
+		# wholeNodeState = getFullNodeState(self.node)
+		# # get current delta
+		# leafDelta = diffNodeState(storedIncomingState, wholeNodeState)
 		# remove parent parm definitions from leaf state
 		for k, v in tuple(leafDelta["parmTemplates"].get(".", {}).items()):
 			if k == self.defFile():
@@ -1667,19 +1722,8 @@ class TextHDANode:
 			leafDelta["parmTemplates"]["."].pop(k, None)
 
 		"""move leaf parm templates to parent"""
-
 		mergedState = mergeNodeStates(storedIncomingState, [leafDelta])
 		setNodeToState(self.node, mergedState)
-		# if "LEAF" in incomingState["parmTemplates"]:
-		# 	# mark any incoming top-level params as parent
-		# 	if not "PARENT" in incomingState["parmTemplates"]:
-		# 		incomingState["parmTemplates"]["PARENT"] = {}
-		# 	incomingState["parmTemplates"]["PARENT"].update(
-		# 		incomingState["parmTemplates"]["LEAF"])
-		# 	incomingState["parmTemplates"].pop("LEAF")
-		# leafState = self.nodeLeafStoredState()
-		# combinedState = mergeNodeStates(incomingState, [leafState])
-		# setNodeToState(self.node, combinedState)
 
 	@dbg
 	def gatherSyncNodeState(self):

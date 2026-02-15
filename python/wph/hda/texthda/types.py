@@ -66,6 +66,9 @@ class ParmNames:
 	nameLabel = "namelabel"
 	versionLabel = "versionlabel"
 
+	inheritDefParents = "inheritdefparents"
+	pullDefParentsBtn = "pulldefparentsbtn"
+
 
 	syncBtn = "syncbtn"
 
