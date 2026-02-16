@@ -26,8 +26,8 @@ class ConstraintState:
 
 
 constraintAccumFn = Callable[
-	[state.BodyState, state.BodyDeltaBuffers, ConstraintState, float],
-	Tuple[state.BodyDeltaBuffers, ConstraintState]
+	[state.SubstepBoundData, state.DynamicData, ConstraintState, float],
+	Tuple[state.DynamicData, ConstraintState]
 ]
 
 """attempt more customisation here - 
@@ -40,7 +40,7 @@ don't forget nurbs constraints, surface constraints etc
 """
 
 constraintAlphaMapFn = Callable[
-	[state.BodyState,
+	[state.SubstepBoundData,
 	 ConstraintState,
 	 int,  # constraint type index
 	 int,  # constraint index
@@ -106,10 +106,10 @@ class ConstraintBucket:
 	@classmethod
 	def accumulate(
 			cls,
-			bs: state.BodyState, bufs: state.BodyDeltaBuffers,
+			bs: state.SubstepBoundData, bufs: state.DynamicData,
 			#cs: ConstraintState,
 			bucket: PointConstraintBucket, dt: float) -> tuple[
-		state.BodyDeltaBuffers, ConstraintState]:
+		state.DynamicData, ConstraintState]:
 		"""accumulate also has to replace the right bucket in
 		new ConstraintState
 		"""
@@ -137,10 +137,10 @@ class PointConstraintBucket(ConstraintBucket):
 	@classmethod
 	def accumulate(
 			cls,
-			bs: state.BodyState, bufs: state.BodyDeltaBuffers,
+			bs: state.SubstepBoundData, bufs: state.DynamicData,
 			#cs: ConstraintState,
 			bucket:PointConstraintBucket, dt: float) -> tuple[
-		state.BodyDeltaBuffers, #ConstraintState
+		state.DynamicData, #ConstraintState
 		PointConstraintBucket
 	]:
 		"""
@@ -269,7 +269,7 @@ class PointConstraintBucket(ConstraintBucket):
 		angDelta = angDelta.at[aIdx].add(dThetaA)
 		angDelta = angDelta.at[bIdx].add(dThetaB)
 
-		newBufs = state.BodyDeltaBuffers(posDelta=posDelta, angDelta=angDelta)
+		newBufs = state.DynamicData(posDelta=posDelta, angDelta=angDelta)
 
 		newBucket = PointConstraintBucket(
 			isActive=bucket.isActive,
@@ -324,9 +324,9 @@ class HingeJointConstraintBucket(ConstraintBucket):
 	@classmethod
 	def accumulate(
 			cls,
-			bs: state.BodyState, bufs: state.BodyDeltaBuffers,
+			bs: state.SubstepBoundData, bufs: state.DynamicData,
 			bucket: HingeJointConstraintBucket, dt: float) -> tuple[
-		state.BodyDeltaBuffers, HingeJointConstraintBucket]:
+		state.DynamicData, HingeJointConstraintBucket]:
 		"""
 			XPBD 2-DOF hinge-axis alignment accumulation.
 
@@ -474,7 +474,7 @@ class HingeJointConstraintBucket(ConstraintBucket):
 		angDelta = angDelta.at[aIdx].add(dThetaSwingA + dThetaTwistA)
 		angDelta = angDelta.at[bIdx].add(dThetaSwingB + dThetaTwistB)
 
-		newBufs = state.BodyDeltaBuffers(
+		newBufs = state.DynamicData(
 			posDelta=bufs.posDelta,
 			angDelta=angDelta
 		)
@@ -536,9 +536,9 @@ class OrientationDriveConstraintBucket:
 	@classmethod
 	def accumulate(
 			cls,
-			bs: state.BodyState, bufs: state.BodyDeltaBuffers,
+			bs: state.SubstepBoundData, bufs: state.DynamicData,
 			bucket: OrientationDriveConstraintBucket, dt: float) -> tuple[
-		state.BodyDeltaBuffers, OrientationDriveConstraintBucket]:
+		state.DynamicData, OrientationDriveConstraintBucket]:
 		"""
 		XPBD orientation drive using unwrapped SO(3) joint coordinates.
 		"""
@@ -619,7 +619,7 @@ class OrientationDriveConstraintBucket:
 		angDelta = angDelta.at[aIdx].add(tauA)
 		angDelta = angDelta.at[bIdx].add(tauB)
 
-		newBufs = state.bodyDeltaBuffers(
+		newBufs = state.DynamicData(
 			posDelta=bufs.posDelta,
 			angDelta=angDelta
 		)
@@ -686,12 +686,12 @@ class MeasurementConstraintBucket(ConstraintBucket):
 	@classmethod
 	def accumulate(
 			cls,
-			bs: state.BodyState,
-			bufs: state.BodyDeltaBuffers,
+			bs: state.SubstepBoundData,
+			bufs: state.DynamicData,
 			ms: state.MeasurementState,
 			bucket: MeasurementConstraintBucket,
 			dt: float) -> tuple[
-		state.BodyDeltaBuffers,
+		state.DynamicData,
 		state.MeasurementState,
 		MeasurementConstraintBucket
 	]:
@@ -991,7 +991,7 @@ def findNearestParams(
 
 
 def measureActualPoses(
-	bodies: state.BodyState,
+	bodies: state.SubstepBoundData,
 	bodyIds: jnp.ndarray # (nMax,)
 ) -> jnp.ndarray: # (nMax*7,)
 	"""
@@ -1059,11 +1059,11 @@ class ManifoldConstraintBucket(ConstraintBucket):
 	@classmethod
 	def accumulate(
 			cls,
-			bs: state.BodyState,
-			bufs: state.BodyDeltaBuffers,
+			bs: state.SubstepBoundData,
+			bufs: state.DynamicData,
 			bucket: ManifoldConstraintBucket,
 			dt: float
-	) -> tuple[state.BodyDeltaBuffers, ManifoldConstraintBucket]:
+	) -> tuple[state.DynamicData, ManifoldConstraintBucket]:
 		"""
 		Accumulate manifold constraint corrections.
 
@@ -1194,7 +1194,7 @@ class ManifoldConstraintBucket(ConstraintBucket):
 				dTheta = maths.applyInvInertiaWorld(quat, invInertia, deltaLambdaAngVec)
 				newAngDelta = newAngDelta.at[bodyId].add(dTheta)
 
-		newBufs = state.BodyDeltaBuffers(
+		newBufs = state.DynamicData(
 			posDelta=newPosDelta,
 			angDelta=newAngDelta
 		)

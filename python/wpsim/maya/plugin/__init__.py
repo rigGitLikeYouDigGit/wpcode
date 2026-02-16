@@ -6,8 +6,9 @@ from importlib import reload
 from wpm.lib.plugin import PluginNodeTemplate, MayaPyPluginAid
 
 
-from wpsim.maya.plugin import rigidbody
+from wpsim.maya.plugin import rigidbody, forcefield
 reload(rigidbody)
+reload(forcefield)
 #from wpsim.maya.plugin.rigidbody import WpSimRigidBodyNode, WpSimBodyMPxData
 
 
@@ -21,10 +22,15 @@ wpSimPlugin = MayaPyPluginAid(
 	pluginPath="C:/Users/ed/Documents/GitHub/wpcode/python/wpsim/maya/plugin"
 	           "/pluginMain.py",
 	nodeClasses={
-		1 : rigidbody.WpSimRigidBodyNode
+		1 : rigidbody.WpSimRigidBodyNode,
+		2 : forcefield.WpSimForceFieldNode,
+	},
+	drawOverrideClasses={
+		forcefield.WpSimForceFieldNode: forcefield.WpSimForceFieldDrawOverride
 	},
 	mpxDataClasses={
-		34 : rigidbody.WpSimBodyMPxData
+		34 : rigidbody.WpSimBodyMPxData,
+		35 : forcefield.WpSimForceFieldMPxData,
 	}
 
 )

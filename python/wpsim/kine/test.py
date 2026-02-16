@@ -12,14 +12,14 @@ def makeIdentityQuat(n: int, dtype=jnp.float32) -> jnp.ndarray:
 	return q.at[:, 3].set(1.0)
 
 
-def makeTestStatePointConstraint() -> tuple[BodyState, ConstraintState,
+def makeTestStatePointConstraint() -> tuple[SubstepBoundData, ConstraintState,
 ConstraintPlan]:
 	# Two bodies
 	n = 2
 	dtype = jnp.float32
 
 	# Body 0 at origin, Body 1 offset in x
-	bs = BodyState(
+	bs = SubstepBoundData(
 		position=jnp.array([[0.0, 0.0, 0.0],
 							[1.0, 0.0, 0.0]], dtype),
 		orientation=makeIdentityQuat(n, dtype),
@@ -28,6 +28,8 @@ ConstraintPlan]:
 		invMass=jnp.array([0.0, 1.0], dtype),			# body 0 kinematic, body 1 dynamic
 		invInertiaBody=jnp.array([[0.0, 0.0, 0.0],		# kinematic
 								  [1.0, 1.0, 1.0]], dtype),
+		force=jnp.zeros((n, 3), dtype),
+		torque=jnp.zeros((n, 3), dtype),
 	)
 
 	# One point constraint between body 0 and body 1:
@@ -75,7 +77,7 @@ ConstraintPlan]:
 	return bs, cs, plan
 
 
-def pointError(bs: BodyState, cs: ConstraintState) -> jnp.ndarray:
+def pointError(bs: SubstepBoundData, cs: ConstraintState) -> jnp.ndarray:
 	# Computes ||pB - pA|| for the first point constraint
 	iA = cs.point.bodyA[0]
 	iB = cs.point.bodyB[0]
@@ -104,7 +106,8 @@ def runPointConstraintSmokeTest():
 
 
 
-def makeTestStateHingeAxisOnly() -> tuple[bodyState, constraintState, constraintPlan]:
+def makeTestStateHingeAxisOnly() -> tuple[
+	SubstepBoundData, ConstraintState, ConstraintPlan]:
 	n = 2
 	dtype = jnp.float32
 
@@ -113,7 +116,7 @@ def makeTestStateHingeAxisOnly() -> tuple[bodyState, constraintState, constraint
 	qRot = makeQuatFromAxisAngle(jnp.array([0.0, 0.0, 1.0], dtype), jnp.pi * 0.5)
 	q0 = q0.at[1].set(qRot)
 
-	bs = BodyState(
+	bs = SubstepBoundData(
 		position=jnp.zeros((n, 3), dtype),
 		orientation=q0,
 		linearVelocity=jnp.zeros((n, 3), dtype),
@@ -121,6 +124,8 @@ def makeTestStateHingeAxisOnly() -> tuple[bodyState, constraintState, constraint
 		invMass=jnp.array([0.0, 1.0], dtype),
 		invInertiaBody=jnp.array([[0.0, 0.0, 0.0],
 								  [1.0, 1.0, 1.0]], dtype),
+		force=jnp.zeros((n, 3), dtype),
+		torque=jnp.zeros((n, 3), dtype),
 	)
 
 	# No point constraints
@@ -161,7 +166,7 @@ def makeTestStateHingeAxisOnly() -> tuple[bodyState, constraintState, constraint
 	)
 	return bs, cs, plan
 
-def hingeAxisDot(bs: bodyState, cs: constraintState) -> jnp.ndarray:
+def hingeAxisDot(bs: SubstepBoundData, cs: ConstraintState) -> jnp.ndarray:
 	iA = cs.hingeAxis.bodyA[0]
 	iB = cs.hingeAxis.bodyB[0]
 	aW = quatRotate(bs.orientation[iA][None, :], cs.hingeAxis.localHingeAxisA)[0]

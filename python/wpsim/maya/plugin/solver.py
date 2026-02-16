@@ -97,6 +97,18 @@ class WpSimRigidSolverNode(PluginNodeTemplate, om.MPxNode):
 		cls.aGravity = nFn.create("gravity", "gravity",
 		                          om.MFnNumericData.k3Float, 0.0, -9.81, 0.0)
 
+		"""for later use as a linkage designer - pass in target paths
+		for named transforms to link to bodies - 
+		inputs will be values of named parametres, and target paths
+		for given transforms to match
+		"""
+		cls.aTargetPath = cFn.create("targetPath", "targetPath")
+		cFn.array = True
+		cFn.usesArrayDataBuilder = True
+		cls.aTargetPathName = tFn.create("targetPathName", "targetPathName", om.MFnData.kString)
+		cls.aTargetPathCurve = tFn.create("targetPathCurve", "targetPathCurve", om.MFnData.kNurbsCurve)
+
+
 		# output body data - use name lookup to match input bodies
 		cls.aOut = cFn.create("out", "out")
 		cFn.array = True

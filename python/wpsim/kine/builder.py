@@ -16,13 +16,7 @@ TODO: unify these data classes with the
 plugin-side data classes 
 """
 
-@dataclass(frozen=True)
-class UserSimParamType:
-	"""arbitrary simulation parameter -
-	realistically typenames will just be Float, Vec3 or something
-	"""
-	typeName : str
-	size : int = 1 # number of floats
+jnp.ndarray.__hash__ = lambda self: hash(self.tobytes())
 
 @dataclass(frozen=True)
 class UserMeasureFnType:
@@ -72,6 +66,42 @@ class BuilderMesh:
 	mass : float | None = None
 	metaHash : int = 0
 
+@dataclass
+class BuilderSimParam:
+	"""simulation parameter definition -
+	sim params are global to the sim, and can be
+	used in constraints etc
+	"""
+	name : str
+	length : int # 1, 4, or 16
+	defaultValue : jnp.ndarray
+
+@dataclass
+class BuilderRamp:
+	"""ramp definition - used to define parameter ramps over time.
+	we sample each ramp at 32 points equally spaced over 0-1 time
+	"""
+	name : str
+	points : jnp.ndarray # (32, ) float32
+
+@dataclass
+class BuilderMultiRamps:
+	"""ramp definition - used to define parameter ramps over time.
+	we sample each ramp at 32 points equally spaced over 0-1 time
+	"""
+	ramps : list[BuilderRamp]
+
+@dataclass
+class BuilderForceField:
+	"""force field definition - global to sim,
+	applied to all bodies
+	TODO: add falloff, noise, turbulence etc"""
+	name : str
+	shapeType : int # e.g. 'sphere', 'box', 'infinite'
+	radius : float
+	height : float
+	halfExtents : jnp.ndarray # (3, )
+
 
 @dataclass
 class BuilderNurbsCurve:
@@ -109,11 +139,11 @@ class BuilderBody:
 	name : str
 	restPos : jnp.ndarray
 	restQuat : jnp.ndarray
+	com: jnp.ndarray
+	inertia: jnp.ndarray
 	meshMap : dict[str, BuilderMesh] = field(default_factory=dict)
 	curveMap : dict[str, BuilderNurbsCurve] = field(default_factory=dict)
 	transformMap : dict[str, BuilderTransform] = field(default_factory=dict)
-	com : jnp.ndarray = jnp.zeros((3,))
-	inertia : jnp.ndarray = jnp.eye(3)
 	mass : float = 1.0,
 	active : int = 1 # 0 disabled, 1 active, 2 static
 	damping : float = 0.0 # linear damping factor

@@ -1,8 +1,9 @@
 from __future__ import annotations
+import typing as T
 import jax
 from jax import numpy as jnp
-from wpsim import maths
-from wpsim.kine import state, constraint
+from wpsim import maths, spatial
+from wpsim.kine import state, constraint, collision
 from wpsim.maths import quatMul, quatNormalize
 
 """ main meat
@@ -23,21 +24,23 @@ aligned to PRINCIPAL AXES. this will mean live-recomputing of rest frames
 when assigning or editing meshes
 """
 
-def applyBuffers(bs: state.BodyState, bufs: state.BodyDeltaBuffers) -> (
-		state.BodyState):
+def applyBuffers(bs: state.SubstepBoundData, bufs: state.DynamicData) -> (
+		state.SubstepBoundData):
 	newPos = bs.position + bufs.posDelta
 	newOri = maths.applySmallAngleToQuat(bs.orientation, bufs.angDelta)
 
-	return state.BodyState(
+	return state.SubstepBoundData(
 		position=newPos,
 		orientation=newOri,
 		linearVelocity=bs.linearVelocity,
 		angularVelocity=bs.angularVelocity,
 		invMass=bs.invMass,
 		invInertiaBody=bs.invInertiaBody,
+		force=bs.force,
+		torque=bs.torque,
 	)
 
-def integrateBodies(bs: state.BodyState, dt: float) -> state.BodyState:
+def integrateBodies(bs: state.SubstepBoundData, dt: float) -> state.SubstepBoundData:
 	"""basic euler - position + vel*dt
 	"""
 	newPosition = bs.position + dt * bs.linearVelocity
@@ -47,26 +50,95 @@ def integrateBodies(bs: state.BodyState, dt: float) -> state.BodyState:
 	qdot = 0.5 * quatMul(omegaQuat, bs.orientation)
 	newOrientation = quatNormalize(bs.orientation + dt * qdot)
 
-	return state.BodyState(
+	return state.SubstepBoundData(
 		position=newPosition,
 		orientation=newOrientation,
 		linearVelocity=bs.linearVelocity,
 		angularVelocity=bs.angularVelocity,
 		invMass=bs.invMass,
 		invInertiaBody=bs.invInertiaBody,
+		force=bs.force,
+		torque=bs.torque,
+	)
+
+def applyExternalForces(
+		bs: state.SubstepBoundData,
+		dt: float
+) -> state.SubstepBoundData:
+	linearVelocity = bs.linearVelocity + dt * bs.force * bs.invMass[:, None]
+	angularAccel = maths.applyInvInertiaWorld(
+		bs.orientation, bs.invInertiaBody, bs.torque
+	)
+	angularVelocity = bs.angularVelocity + dt * angularAccel
+
+	return state.SubstepBoundData(
+		position=bs.position,
+		orientation=bs.orientation,
+		linearVelocity=linearVelocity,
+		angularVelocity=angularVelocity,
+		invMass=bs.invMass,
+		invInertiaBody=bs.invInertiaBody,
+		force=bs.force,
+		torque=bs.torque,
+	)
+
+def applyCollisionForces(
+		bs: state.SubstepBoundData,
+		collisionData: collision.CollisionQueryData | None,
+		collisionSettings: collision.CollisionSettings | None,
+		collisionConfig: spatial.SpatialConfig | None,
+		collisionStrategy: spatial.SpatialStrategy | None,
+		collisionFn: T.Callable,
+		dt: float
+) -> state.SubstepBoundData:
+	if (
+			collisionData is None
+			or collisionSettings is None
+			or collisionConfig is None
+			or collisionStrategy is None
+	):
+		return bs
+	if collisionData.queryLocalPoints.shape[0] == 0:
+		return bs
+	if collisionData.surfaceTris.shape[0] == 0:
+		return bs
+
+	contacts = collision.buildContactsFromSpatial(
+		bs,
+		collisionData,
+		collisionConfig,
+		collisionStrategy,
+	)
+	force, torque = collisionFn(bs, contacts, collisionSettings, dt)
+
+	linearVelocity = bs.linearVelocity + dt * force * bs.invMass[:, None]
+	angularAccel = maths.applyInvInertiaWorld(
+		bs.orientation, bs.invInertiaBody, torque
+	)
+	angularVelocity = bs.angularVelocity + dt * angularAccel
+
+	return state.SubstepBoundData(
+		position=bs.position,
+		orientation=bs.orientation,
+		linearVelocity=linearVelocity,
+		angularVelocity=angularVelocity,
+		invMass=bs.invMass,
+		invInertiaBody=bs.invInertiaBody,
+		force=bs.force,
+		torque=bs.torque,
 	)
 
 
 def solverIterationPlan(
-		bs: state.BodyState,
+		bs: state.SubstepBoundData,
 		cs: constraint.ConstraintState,
 		dtSub: float,
 		plan: constraint.ConstraintPlan) -> tuple[
-	state.BodyState, constraint.ConstraintState]:
+	state.SubstepBoundData, constraint.ConstraintState]:
 	"""solve sequence of constraint types given in plan
 	"""
 	n = bs.position.shape[0]
-	bufs = state.BodyDeltaBuffers.makeZero(n, bs.position.dtype)
+	bufs = state.DynamicData.makeZero(n, bs.position.dtype)
 
 	# Apply all accumulators in the plan (static tuple => unrolled at trace time)
 	# for accumulateFn in plan.accumulators:
@@ -99,23 +171,25 @@ def solverIterationPlan(
 	bsOut = applyBuffers(bs, bufs)
 
 	# normalize once per iteration
-	bsOut = state.BodyState(
+	bsOut = state.SubstepBoundData(
 		position=bsOut.position,
 		orientation=quatNormalize(bsOut.orientation),
 		linearVelocity=bsOut.linearVelocity,
 		angularVelocity=bsOut.angularVelocity,
 		invMass=bsOut.invMass,
 		invInertiaBody=bsOut.invInertiaBody,
+		force=bsOut.force,
+		torque=bsOut.torque,
 	)
 
 	return bsOut, cs
 
 def solveSubstep(
-		bs: state.BodyState,
+		bs: state.SubstepBoundData,
 		cs: constraint.ConstraintState,
 		dt: float,
 		plan: constraint.ConstraintPlan
-) -> tuple[state.BodyState, constraint.ConstraintState]:
+) -> tuple[state.SubstepBoundData, constraint.ConstraintState]:
 	def iterBody(i, carry):
 		curBs, curCs = carry
 		return solverIterationPlan(curBs, curCs, dt, plan)
@@ -123,26 +197,45 @@ def solveSubstep(
 	bsOut, csOut = jax.lax.fori_loop(0, cs.settings.iterationCount, iterBody, (bs, cs))
 
 	# keep quaternions normalized to prevent drift
-	bsOut = state.BodyState(
+	bsOut = state.SubstepBoundData(
 		position=bsOut.position,
 		orientation=quatNormalize(bsOut.orientation),
 		linearVelocity=bsOut.linearVelocity,
 		angularVelocity=bsOut.angularVelocity,
 		invMass=bsOut.invMass,
 		invInertiaBody=bsOut.invInertiaBody,
+		force=bsOut.force,
+		torque=bsOut.torque,
 	)
 	return bsOut, csOut
 
 
 def solveFrame(
-		bs: state.BodyState,
+		bs: state.SubstepBoundData,
 		cs: constraint.ConstraintState,
-		plan: constraint.ConstraintPlan
-               ) -> tuple[state.BodyState, constraint.ConstraintState]:
+		plan: constraint.ConstraintPlan,
+		collisionData: collision.CollisionQueryData | None = None,
+		collisionSettings: collision.CollisionSettings | None = None,
+		collisionConfig: spatial.SpatialConfig | None = None,
+		collisionStrategy: spatial.SpatialStrategy | None = None,
+		collisionFn: T.Callable = collision.smoothCollisionForce,
+	) -> tuple[state.SubstepBoundData, constraint.ConstraintState]:
 	substepDt = cs.settings.dt / cs.settings.substepCount
 
 	def substepBody(s, carry):
 		curBs, curCs = carry
+
+		curBs = applyExternalForces(curBs, substepDt)
+
+		curBs = applyCollisionForces(
+			curBs,
+			collisionData,
+			collisionSettings,
+			collisionConfig,
+			collisionStrategy,
+			collisionFn,
+			substepDt,
+		)
 
 		# dynamic integration stub (optional; you can switch off for quasi-static)
 		curBs = integrateBodies(curBs, substepDt)

@@ -21,19 +21,8 @@ from wpsim.kine.builder import (BuilderBody, BuilderMesh,
 
 """we don't unpack / process geo data until solver node 
 to cut down transfer time"""
-# @dataclass(frozen=True)
-# class BodyData:
-# 	name:str
-# 	matrix:om.MMatrix
-# 	mesh:om.MObject
-# 	active:int # 0=disabled, 1=active, 2=static
-# 	mass:float
-# 	damping:float
-# 	index:int
-# 	auxTf:list[tuple[str, om.MMatrix]]
-# 	auxCurve:list[tuple[str, om.MObject]]
-# 	com : om.MMatrix # doubles as inertial tensor for now
-
+def maya_useNewAPI():
+    pass
 class WpSimBodyMPxData(PluginMPxData):
 	"""Body Data MPxData for WpSim Maya Plugin
 	"""
@@ -211,7 +200,7 @@ class WpSimRigidBodyNode(PluginNodeTemplate, om.MPxNode):
 		)
 
 		data = WpSimBodyMPxData()
-		data.setData(datacls)
+		data.setDataCls(datacls)
 		pData.outputValue(self.aBodyData).setMPxData(data)
 		pData.outputValue(self.aCom).setMMatrix(comMat)
 

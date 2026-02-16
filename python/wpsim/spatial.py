@@ -28,7 +28,7 @@ class SpatialGridData:
 	uniqueHashes: jnp.ndarray      # (tableSize,) unique occupied hashes
 
 
-@dataclass(frozen=True)
+@jdc.pytree_dataclass
 class SpatialConfig:
 	"""Configuration for spatial hash construction"""
 	cellSize: float
@@ -94,56 +94,60 @@ def projectPointToTriangle(
 	ac = c - a
 	ap = p - a
 
-	# Compute components of the barycentric coordinates
 	d1 = jnp.dot(ab, ap)
 	d2 = jnp.dot(ac, ap)
-
-	# Region 1: Vertex A
 	isVertA = (d1 <= 0.0) & (d2 <= 0.0)
 
-	# Region 2: Vertex B
 	bp = p - b
 	d3 = jnp.dot(ab, bp)
 	d4 = jnp.dot(ac, bp)
 	isVertB = (d3 >= 0.0) & (d4 <= d3)
 
-	# Region 3: Edge AB
-	v = d1 * d4 - d3 * d2
-	isEdgeAb = (d1 >= 0.0) & (d3 <= 0.0) & (v <= 0.0)
-	tAb = d1 / (d1 - d3)
+	vc = d1 * d4 - d3 * d2
+	isEdgeAb = (vc <= 0.0) & (d1 >= 0.0) & (d3 <= 0.0)
+	denomAb = d1 - d3
+	tAb = jnp.where(denomAb != 0.0, d1 / denomAb, 0.0)
+	closestAb = a + tAb * ab
 
-	# Region 4: Vertex C
 	cp = p - c
 	d5 = jnp.dot(ab, cp)
 	d6 = jnp.dot(ac, cp)
 	isVertC = (d6 >= 0.0) & (d5 <= d6)
 
-	# Region 5: Edge AC
-	w = d3 * d2 - d1 * d4
-	isEdgeAc = (d2 >= 0.0) & (d6 <= 0.0) & (w <= 0.0)
-	tAc = d2 / (d2 - d6)
+	vb = d5 * d2 - d1 * d6
+	isEdgeAc = (vb <= 0.0) & (d2 >= 0.0) & (d6 <= 0.0)
+	denomAc = d2 - d6
+	tAc = jnp.where(denomAc != 0.0, d2 / denomAc, 0.0)
+	closestAc = a + tAc * ac
 
-	# Region 6: Edge BC
-	isEdgeBc = ((d4 - d3) >= 0.0) & ((d5 - d6) >= 0.0) & (
-				(d1 * d6 - d5 * d2) <= 0.0)
-	tBc = (d4 - d3) / ((d4 - d3) + (d5 - d6))
+	va = d3 * d6 - d5 * d4
+	isEdgeBc = (va <= 0.0) & ((d4 - d3) >= 0.0) & ((d5 - d6) >= 0.0)
+	denomBc = (d4 - d3) + (d5 - d6)
+	tBc = jnp.where(denomBc != 0.0, (d4 - d3) / denomBc, 0.0)
+	closestBc = b + tBc * (c - b)
 
-	# Region 7: Face Interior (Barycentric)
-	denom = 1.0 / (v + w + (d1 * d6 - d5 * d2))
-	vBar = v * denom
-	wBar = w * denom
+	denom = va + vb + vc
+	denom = jnp.where(denom != 0.0, 1.0 / denom, 0.0)
+	vBar = vb * denom
+	wBar = vc * denom
+	closestInterior = a + vBar * ab + wBar * ac
+
 	isInterior = ~isVertA & ~isVertB & ~isEdgeAb & ~isVertC & ~isEdgeAc & ~isEdgeBc
 
-	# Select the closest point based on the region
-	closestPoint = jnp.zeros(3)
+	closestPoint = jnp.zeros_like(a)
 	closestPoint = jnp.where(isVertA, a, closestPoint)
-	closestPoint = jnp.where(isVertB, b, closestPoint)
-	closestPoint = jnp.where(isEdgeAb, a + tAb * ab, closestPoint)
-	closestPoint = jnp.where(isVertC, c, closestPoint)
-	closestPoint = jnp.where(isEdgeAc, a + tAc * ac, closestPoint)
-	closestPoint = jnp.where(isEdgeBc, b + tBc * (c - b), closestPoint)
-	closestPoint = jnp.where(isInterior, a + vBar * ab + wBar * ac,
-	                         closestPoint)
+	mask = ~isVertA
+	closestPoint = jnp.where(mask & isVertB, b, closestPoint)
+	mask = mask & ~isVertB
+	closestPoint = jnp.where(mask & isEdgeAb, closestAb, closestPoint)
+	mask = mask & ~isEdgeAb
+	closestPoint = jnp.where(mask & isVertC, c, closestPoint)
+	mask = mask & ~isVertC
+	closestPoint = jnp.where(mask & isEdgeAc, closestAc, closestPoint)
+	mask = mask & ~isEdgeAc
+	closestPoint = jnp.where(mask & isEdgeBc, closestBc, closestPoint)
+	mask = mask & ~isEdgeBc
+	closestPoint = jnp.where(mask & isInterior, closestInterior, closestPoint)
 
 	distSq = jnp.sum(jnp.square(p - closestPoint))
 	return closestPoint, distSq
@@ -452,7 +456,7 @@ def querySpatialNearestWithNeighborhood(
 	return finalResult
 
 
-@jax.vmap
+@partial(jax.vmap, in_axes=(0, None, None, None))
 def querySpatialNearest(
 	queryPoint: jnp.ndarray, # (3,)
 	gridData: SpatialGridData,
@@ -510,6 +514,7 @@ class BVHData:
 	leftChild: jnp.ndarray        # (N-1,) left child (<0 = leaf: -(idx+1))
 	rightChild: jnp.ndarray       # (N-1,) right child
 	numLeaves: int                # N
+	rootIndex: int                # root internal node index
 
 
 def computeTriangleAABBs(surfaceTris: jnp.ndarray) -> jnp.ndarray:
@@ -548,8 +553,6 @@ def buildLBVH(surfaceTris: jnp.ndarray) -> BVHData:
 	"""
 	Build Linear BVH using Morton codes.
 
-	Simplified implementation using top-down median splits for JAX compatibility.
-
 	Args:
 		surfaceTris: (N, 3, 3) triangle vertex positions
 
@@ -572,28 +575,141 @@ def buildLBVH(surfaceTris: jnp.ndarray) -> BVHData:
 
 	sortIdx = jnp.argsort(mortonCodes)
 	sortedAABBs = leafAABBs[sortIdx]
+	sortedMorton = mortonCodes[sortIdx]
 
-	# 3. Build tree structure (simplified for JAX)
-	# Full Karras algorithm requires complex dynamic tree construction
-	# For now, use placeholder structure
-	maxInternalNodes = max(N - 1, 1)
-
-	# Create placeholder structure
-	# Proper implementation would use iterative radix tree construction
-	leftChildren = jnp.zeros(maxInternalNodes, dtype=jnp.int32)
-	rightChildren = jnp.zeros(maxInternalNodes, dtype=jnp.int32)
-	internalAABBs = jnp.zeros((maxInternalNodes, 2, 3), dtype=surfaceTris.dtype)
-
-	# Simple binary splits for now (not optimal, but functional)
-	# Root (node 0) splits at midpoint
 	if N > 1:
-		mid = N // 2
-		leftChildren = leftChildren.at[0].set(-(0 + 1))  # left leaf
-		rightChildren = rightChildren.at[0].set(-(mid + 1))  # right leaf
+		internalCount = N - 1
+		internalIndices = jnp.arange(internalCount, dtype=jnp.int32)
 
-		# Compute root AABB
-		rootAABB = mergeAABBs(sortedAABBs[0], sortedAABBs[N-1])
-		internalAABBs = internalAABBs.at[0].set(rootAABB)
+		def commonPrefixLength(i: int, j: int) -> jnp.ndarray:
+			inRange = (j >= 0) & (j < N)
+
+			def computePrefix(_):
+				codeI = sortedMorton[i]
+				codeJ = sortedMorton[j]
+				codeDiff = jnp.bitwise_xor(codeI, codeJ)
+				sameCode = codeDiff == 0
+				prefixCode = jax.lax.clz(codeDiff)
+				idxDiff = jnp.bitwise_xor(jnp.uint32(i), jnp.uint32(j))
+				prefixIdx = jax.lax.clz(idxDiff) + jnp.uint32(32)
+				return jnp.where(sameCode, prefixIdx, prefixCode).astype(jnp.int32)
+
+			return jax.lax.cond(inRange, computePrefix, lambda _: jnp.int32(-1), operand=None)
+
+		def findRange(i: int) -> tuple[jnp.ndarray, jnp.ndarray]:
+			deltaNext = commonPrefixLength(i, i + 1)
+			deltaPrev = commonPrefixLength(i, i - 1)
+			direction = jnp.where(deltaNext > deltaPrev, 1, -1)
+			deltaMin = commonPrefixLength(i, i - direction)
+
+			def condExp(l):
+				return commonPrefixLength(i, i + l * direction) > deltaMin
+
+			def bodyExp(l):
+				return l * 2
+
+			lMax = jax.lax.while_loop(condExp, bodyExp, jnp.int32(2))
+
+			def condBin(state):
+				t, _ = state
+				return t > 0
+
+			def bodyBin(state):
+				t, l = state
+				idx = i + (l + t) * direction
+				use = commonPrefixLength(i, idx) > deltaMin
+				l = jnp.where(use, l + t, l)
+				t = t // 2
+				return t, l
+
+			tFinal, lFinal = jax.lax.while_loop(
+				condBin,
+				bodyBin,
+				(lMax // 2, jnp.int32(0))
+			)
+			j = i + lFinal * direction
+			first = jnp.minimum(i, j)
+			last = jnp.maximum(i, j)
+			return first, last
+
+		def findSplit(first: int, last: int) -> jnp.ndarray:
+			commonPrefix = commonPrefixLength(first, last)
+			split = first
+			step = last - first
+
+			def condSplit(state):
+				step, _ = state
+				return step > 1
+
+			def bodySplit(state):
+				step, split = state
+				step = (step + 1) // 2
+				newSplit = split + step
+				use = (newSplit < last) & (commonPrefixLength(first, newSplit) > commonPrefix)
+				split = jnp.where(use, newSplit, split)
+				return step, split
+
+			_, finalSplit = jax.lax.while_loop(
+				condSplit,
+				bodySplit,
+				(step, split)
+			)
+			return finalSplit
+
+		@jax.vmap
+		def buildNode(i: jnp.ndarray):
+			first, last = findRange(i)
+			split = findSplit(first, last)
+
+			leftChild = jnp.where(split == first, -(split + 1), split)
+			rightChild = jnp.where(split + 1 == last, -(split + 2), split + 1)
+
+			return first, last, leftChild.astype(jnp.int32), rightChild.astype(jnp.int32)
+
+		nodeFirst, nodeLast, leftChildren, rightChildren = buildNode(internalIndices)
+
+		rootMask = (nodeFirst == 0) & (nodeLast == (N - 1))
+		rootIndex = jnp.argmax(rootMask.astype(jnp.int32))
+
+		leafMins = sortedAABBs[:, 0]
+		leafMaxs = sortedAABBs[:, 1]
+
+		numLevels = max(1, int(N).bit_length())
+		minLevels = [leafMins]
+		maxLevels = [leafMaxs]
+
+		for level in range(1, numLevels):
+			step = 1 << (level - 1)
+			leftMin = minLevels[level - 1]
+			rightMin = jnp.concatenate([leftMin[step:], leftMin[-step:]], axis=0)
+			minLevels.append(jnp.minimum(leftMin, rightMin))
+
+			leftMax = maxLevels[level - 1]
+			rightMax = jnp.concatenate([leftMax[step:], leftMax[-step:]], axis=0)
+			maxLevels.append(jnp.maximum(leftMax, rightMax))
+
+		minTable = jnp.stack(minLevels, axis=0)
+		maxTable = jnp.stack(maxLevels, axis=0)
+
+		rangeLength = nodeLast - nodeFirst + 1
+		levelIndex = (jnp.int32(31) - jax.lax.clz(rangeLength.astype(jnp.uint32))).astype(jnp.int32)
+		levelOffset = jnp.left_shift(jnp.int32(1), levelIndex)
+		leftIndex = nodeFirst
+		rightIndex = nodeLast - levelOffset + 1
+
+		leftMin = minTable[levelIndex, leftIndex]
+		rightMin = minTable[levelIndex, rightIndex]
+		leftMax = maxTable[levelIndex, leftIndex]
+		rightMax = maxTable[levelIndex, rightIndex]
+
+		internalMins = jnp.minimum(leftMin, rightMin)
+		internalMaxs = jnp.maximum(leftMax, rightMax)
+		internalAABBs = jnp.stack([internalMins, internalMaxs], axis=1)
+	else:
+		leftChildren = jnp.zeros((0,), dtype=jnp.int32)
+		rightChildren = jnp.zeros((0,), dtype=jnp.int32)
+		internalAABBs = jnp.zeros((0, 2, 3), dtype=surfaceTris.dtype)
+		rootIndex = jnp.int32(0)
 
 	return BVHData(
 		leafAABBs=sortedAABBs,
@@ -601,7 +717,8 @@ def buildLBVH(surfaceTris: jnp.ndarray) -> BVHData:
 		internalAABBs=internalAABBs,
 		leftChild=leftChildren,
 		rightChild=rightChildren,
-		numLeaves=N
+		numLeaves=N,
+		rootIndex=rootIndex
 	)
 
 
@@ -649,8 +766,7 @@ def queryBVHSingle(
 	"""
 	N = bvh.numLeaves
 
-	# Edge case: single triangle
-	if N == 1:
+	def singleCase(_):
 		tri = surfaceTris[bvh.leafTriIndices[0]]
 		closestPt, distSq = projectPointToTriangle(queryPoint, tri[0], tri[1], tri[2])
 		return NearestResult(
@@ -659,100 +775,103 @@ def queryBVHSingle(
 			bestTriIdx=bvh.leafTriIndices[0]
 		)
 
-	# Initialize traversal state
-	initBestDistSq = jnp.array(1e10)
-	initBestPoint = queryPoint
-	initBestTriIdx = jnp.array(-1, dtype=jnp.int32)
+	def multiCase(_):
+		# Initialize traversal state
+		initBestDistSq = jnp.array(1e10)
+		initBestPoint = queryPoint
+		initBestTriIdx = jnp.array(-1, dtype=jnp.int32)
 
-	# Stack-based traversal
-	initStack = jnp.full(maxDepth, -1, dtype=jnp.int32)
-	initStack = initStack.at[0].set(0)  # Start at root (internal node 0)
-	initStackPtr = 0
+		# Stack-based traversal
+		initStack = jnp.full(maxDepth, -1, dtype=jnp.int32)
+		initStack = initStack.at[0].set(bvh.rootIndex)  # Start at root
+		initStackPtr = 0
 
-	def traversalLoop(carry):
-		bestDistSq, bestPoint, bestTriIdx, stack, stackPtr = carry
+		def traversalLoop(carry):
+			bestDistSq, bestPoint, bestTriIdx, stack, stackPtr = carry
 
-		# Pop from stack
-		nodeIdx = stack[stackPtr]
-		stackPtr = stackPtr - 1
+			# Pop from stack
+			nodeIdx = stack[stackPtr]
+			stackPtr = stackPtr - 1
 
-		# Determine if internal or leaf node (negative = leaf)
-		isLeaf = nodeIdx < 0
+			# Determine if internal or leaf node (negative = leaf)
+			isLeaf = nodeIdx < 0
 
-		def processLeaf():
-			leafIdx = -nodeIdx - 1
-			sortedIdx = bvh.leafTriIndices[leafIdx]
-			tri = surfaceTris[sortedIdx]
+			def processLeaf():
+				leafIdx = -nodeIdx - 1
+				sortedIdx = bvh.leafTriIndices[leafIdx]
+				tri = surfaceTris[sortedIdx]
 
-			closestPt, distSq = projectPointToTriangle(
-				queryPoint, tri[0], tri[1], tri[2]
-			)
-
-			isBetter = distSq < bestDistSq
-
-			newBestDistSq = jnp.where(isBetter, distSq, bestDistSq)
-			newBestPoint = jnp.where(isBetter, closestPt, bestPoint)
-			newBestTriIdx = jnp.where(isBetter, sortedIdx, bestTriIdx)
-
-			return newBestDistSq, newBestPoint, newBestTriIdx, stack, stackPtr
-
-		def processInternal():
-			internalIdx = nodeIdx
-
-			leftChild = bvh.leftChild[internalIdx]
-			rightChild = bvh.rightChild[internalIdx]
-
-			# Get child AABBs
-			def getAABB(childIdx):
-				return jax.lax.cond(
-					childIdx < 0,
-					lambda: bvh.leafAABBs[-childIdx - 1],
-					lambda: bvh.internalAABBs[childIdx]
+				closestPt, distSq = projectPointToTriangle(
+					queryPoint, tri[0], tri[1], tri[2]
 				)
 
-			leftAABB = getAABB(leftChild)
-			rightAABB = getAABB(rightChild)
+				isBetter = distSq < bestDistSq
 
-			# Test AABB intersection
-			currentMaxDist = jnp.sqrt(bestDistSq)
-			leftIntersects = testPointAABBIntersection(queryPoint, leftAABB, currentMaxDist)
-			rightIntersects = testPointAABBIntersection(queryPoint, rightAABB, currentMaxDist)
+				newBestDistSq = jnp.where(isBetter, distSq, bestDistSq)
+				newBestPoint = jnp.where(isBetter, closestPt, bestPoint)
+				newBestTriIdx = jnp.where(isBetter, sortedIdx, bestTriIdx)
 
-			# Push children onto stack if they intersect
-			newStack = stack
-			newStackPtr = stackPtr
+				return newBestDistSq, newBestPoint, newBestTriIdx, stack, stackPtr
 
-			newStack = jnp.where(leftIntersects, newStack.at[newStackPtr + 1].set(leftChild), newStack)
-			newStackPtr = jnp.where(leftIntersects, newStackPtr + 1, newStackPtr)
+			def processInternal():
+				internalIdx = nodeIdx
 
-			newStack = jnp.where(rightIntersects, newStack.at[newStackPtr + 1].set(rightChild), newStack)
-			newStackPtr = jnp.where(rightIntersects, newStackPtr + 1, newStackPtr)
+				leftChild = bvh.leftChild[internalIdx]
+				rightChild = bvh.rightChild[internalIdx]
 
-			return bestDistSq, bestPoint, bestTriIdx, newStack, newStackPtr
+				# Get child AABBs
+				def getAABB(childIdx):
+					return jax.lax.cond(
+						childIdx < 0,
+						lambda: bvh.leafAABBs[-childIdx - 1],
+						lambda: bvh.internalAABBs[childIdx]
+					)
 
-		# Process node based on type
-		return jax.lax.cond(isLeaf, processLeaf, processInternal)
+				leftAABB = getAABB(leftChild)
+				rightAABB = getAABB(rightChild)
 
-	# Run traversal loop until stack is empty
-	def condFn(carry):
-		_, _, _, _, stackPtr = carry
-		return stackPtr >= 0
+				# Test AABB intersection
+				currentMaxDist = jnp.sqrt(bestDistSq)
+				leftIntersects = testPointAABBIntersection(queryPoint, leftAABB, currentMaxDist)
+				rightIntersects = testPointAABBIntersection(queryPoint, rightAABB, currentMaxDist)
 
-	finalBestDistSq, finalBestPoint, finalBestTriIdx, _, _ = jax.lax.while_loop(
-		condFn,
-		traversalLoop,
-		(initBestDistSq, initBestPoint, initBestTriIdx, initStack, initStackPtr)
-	)
+				# Push children onto stack if they intersect
+				newStack = stack
+				newStackPtr = stackPtr
 
-	return NearestResult(
-		bestDistSq=finalBestDistSq,
-		bestPoint=finalBestPoint,
-		bestTriIdx=finalBestTriIdx
-	)
+				newStack = jnp.where(leftIntersects, newStack.at[newStackPtr + 1].set(leftChild), newStack)
+				newStackPtr = jnp.where(leftIntersects, newStackPtr + 1, newStackPtr)
+
+				newStack = jnp.where(rightIntersects, newStack.at[newStackPtr + 1].set(rightChild), newStack)
+				newStackPtr = jnp.where(rightIntersects, newStackPtr + 1, newStackPtr)
+
+				return bestDistSq, bestPoint, bestTriIdx, newStack, newStackPtr
+
+			# Process node based on type
+			return jax.lax.cond(isLeaf, processLeaf, processInternal)
+
+		# Run traversal loop until stack is empty
+		def condFn(carry):
+			_, _, _, _, stackPtr = carry
+			return stackPtr >= 0
+
+		finalBestDistSq, finalBestPoint, finalBestTriIdx, _, _ = jax.lax.while_loop(
+			condFn,
+			traversalLoop,
+			(initBestDistSq, initBestPoint, initBestTriIdx, initStack, initStackPtr)
+		)
+
+		return NearestResult(
+			bestDistSq=finalBestDistSq,
+			bestPoint=finalBestPoint,
+			bestTriIdx=finalBestTriIdx
+		)
+
+	return jax.lax.cond(N == 1, singleCase, multiCase, operand=None)
 
 
-@jax.vmap
-def queryBVH(
+@partial(jax.vmap, in_axes=(0, None, None, None))
+def queryBVHVmapped(
 	queryPoint: jnp.ndarray, # (3,)
 	bvh: BVHData,
 	surfaceTris: jnp.ndarray, # (N, 3, 3)
@@ -771,6 +890,27 @@ def queryBVH(
 		NearestResult (vectorized over input)
 	"""
 	return queryBVHSingle(queryPoint, bvh, surfaceTris, maxDepth)
+
+
+def queryBVH(
+	queryPoint: jnp.ndarray, # (3,)
+	bvh: BVHData,
+	surfaceTris: jnp.ndarray, # (N, 3, 3)
+	maxDepth: int = 64
+) -> NearestResult:
+	"""
+	Vectorized BVH query for multiple points.
+
+	Args:
+		queryPoint: (3,)
+		bvh: BVHData
+		surfaceTris: (N, 3, 3)
+		maxDepth: max tree depth
+
+	Returns:
+		NearestResult (vectorized over input)
+	"""
+	return queryBVHVmapped(queryPoint, bvh, surfaceTris, maxDepth)
 
 
 

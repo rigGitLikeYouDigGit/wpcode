@@ -46,6 +46,10 @@ class SubstepBoundData:
 	invMass: jnp.ndarray            # (N,)
 	invInertiaBody: jnp.ndarray    # (N, 3)  diagonal inertia in body frame
 
+	# forces
+	force: jnp.ndarray             # (N, 3)
+	torque: jnp.ndarray            # (N, 3)
+
 @jdc.pytree_dataclass
 class DynamicData:
 	"""dynamic state scatter-add built over the course of a substep
@@ -166,21 +170,21 @@ class DerivedState:
 
 @jdc.pytree_dataclass
 class RampBuffers:
-	"""single flattened storage for all ramp mappings used in sim?
-	dubious but we'll try it
-	TODO: find a general way of retrieving named values from sim state
-		statically - consider each constraint having a default kwarg
-		of 'name' when compiled  """
-	points : jnp.ndarray # all points in all ramps, (N, 2)
-	indices: jnp.ndarray # (nRamps + 1) , start at 0
-	pointModes: jnp.ndarray #
-	indicesModes: jnp.ndarray
-	nameIndexMap : dict[str, int]
+	"""uniformly sampled remap ramps for JAX-friendly lookup"""
+	samples: jnp.ndarray # (nRamps, sampleCount)
+	sampleCount: int # normally 32
+	nameIndexMap: dict[str, int]
 
-	def start(self, rampId:int)->int:
-		return self.indices[rampId]
-	def end(self, rampId:int)->int:
-		return self.indices[rampId + 1]
+	def sample(self, rampId: int, u: jnp.ndarray) -> jnp.ndarray:
+		uClamped = jnp.clip(u, 0.0, 1.0)
+		maxIndex = jnp.array(self.sampleCount - 1, dtype=jnp.int32)
+		scaled = uClamped * maxIndex.astype(uClamped.dtype)
+		index0 = jnp.floor(scaled).astype(jnp.int32)
+		index1 = jnp.minimum(index0 + 1, maxIndex)
+		t = scaled - index0.astype(scaled.dtype)
+		value0 = self.samples[rampId, index0]
+		value1 = self.samples[rampId, index1]
+		return (1.0 - t) * value0 + t * value1
 
 
 
@@ -206,23 +210,21 @@ class SimFrame:
 
 @jdc.pytree_dataclass
 class MeshBuffers:
-	"""Struct-of-arrays storage for polygon meshes.
-    All meshes packed into single flat arrays with indirection.
-    Note: Multiple bodies can reference the same mesh (instancing),
-    or a single body can own multiple meshes.
-    """
+	"""Struct-of-arrays storage for triangle meshes.
+	All meshes packed into single flat arrays with indirection.
+	Note: Multiple bodies can reference the same mesh (instancing),
+	or a single body can own multiple meshes.
+	"""
 	# Flattened point data for all meshes
 	points: jnp.ndarray  # (totalPoints, 3)
 
-	# Flattened face vertex indices for all meshes
+	# Flattened triangle vertex indices for all meshes
 	# Indices are relative to each mesh's point range
-	faceVertices: jnp.ndarray  # (totalFaceVerts,) int32 - flattened
+	triIndices: jnp.ndarray  # (totalTris, 3) int32
 
 	# Indirection arrays
 	pointIndices: jnp.ndarray  # (nMeshes + 1,) - cumulative point offsets, start at 0
-	faceVertIndices: jnp.ndarray  # (nMeshes + 1,) - cumulative face-vertex offsets
-	faceCounts: jnp.ndarray  # (totalFaces,) - vertices per face (3 for tri, 4 for quad)
-	faceIndices: jnp.ndarray  # (nMeshes + 1,) - cumulative face count offsets
+	triOffsets: jnp.ndarray  # (nMeshes + 1,) - cumulative triangle offsets
 
 	# Optional per-point attributes
 	normals: jnp.ndarray | None  # (totalPoints, 3)
@@ -230,8 +232,8 @@ class MeshBuffers:
 	uvs: jnp.ndarray | None  # (totalPoints, 2)
 	colors: jnp.ndarray | None  # (totalPoints, 3) or (totalPoints, 4)
 
-	# Optional per-face attributes
-	faceNormals: jnp.ndarray | None  # (totalFaces, 3)
+	# Optional per-triangle attributes
+	triNormals: jnp.ndarray | None  # (totalTris, 3)
 
 	def pointStart(self, meshId: int) -> int:
 		return self.pointIndices[meshId]
@@ -239,17 +241,11 @@ class MeshBuffers:
 	def pointEnd(self, meshId: int) -> int:
 		return self.pointIndices[meshId + 1]
 
-	def faceStart(self, meshId: int) -> int:
-		return self.faceIndices[meshId]
+	def triStart(self, meshId: int) -> int:
+		return self.triOffsets[meshId]
 
-	def faceEnd(self, meshId: int) -> int:
-		return self.faceIndices[meshId + 1]
-
-	def faceVertStart(self, meshId: int) -> int:
-		return self.faceVertIndices[meshId]
-
-	def faceVertEnd(self, meshId: int) -> int:
-		return self.faceVertIndices[meshId + 1]
+	def triEnd(self, meshId: int) -> int:
+		return self.triOffsets[meshId + 1]
 
 
 @jdc.pytree_dataclass

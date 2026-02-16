@@ -20,9 +20,18 @@ def getRigidTFSchema(
 			"com": WN.Locator,
 			"mesh": WN.Mesh,
 		})}
-	)
+	)[0]
 
+class SchemaBacked:
+	"""base class for things built from schemas"""
 
+	@classmethod
+	def getSchema(cls)->WN.NodeSchema:
+		"""return schema for this class"""
+		raise NotImplementedError
+
+	def __init__(self, root):
+		self.root = root
 
 class WpSimRigidGroup:
 	"""simple system for now -
@@ -50,3 +59,18 @@ class WpSimRigidGroup:
 		tf = WN.Transform(self.rootNodeName())
 		comLoc = WN.Locator(f"{self.name}_com_LOC").tf()
 		comLoc.setParentKeepWorld(tf)
+		mesh = WN(cmds.polyCube()[0])
+		mesh.setParentKeepWorld(tf)
+		tf.translateY_.set(5.0)
+		tf.rotateZ_.set(30)
+
+		# make body
+		body = WN.cn("wpSimRigidBody", f"{self.name}_RBody")
+		body.matrix_ = tf.worldOut
+		body.mesh_ = mesh.shape().outMesh_
+
+		comLoc.translate_ = body.com_
+
+def test():
+	WN.syncWrappersForPlugin("wpSim")
+
