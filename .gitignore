@@ -373,3 +373,5 @@ maya/plugin/strata/src/lib.h~RF5a0f938.TMP
 /maya/plugin/.vs
 /maya/plugin/CMakeFiles
 /maya/plugin/plugin/x64/Debug/plugin.tlog
+python/wpm/core/node/_codegen/*
+python/wpm/core/node/gen/*
