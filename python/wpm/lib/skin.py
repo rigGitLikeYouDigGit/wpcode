@@ -3,6 +3,9 @@ from __future__ import annotations
 import typing as T
 import numpy as np
 from scipy.sparse import dok_array, csc_array
+
+from wplib.object import IndexScope, IndexScopeGroup
+
 from wpm import cmds, om, WN
 
 """skins are super powerful to work with in code, but 
@@ -10,6 +13,9 @@ making it robust to a big scene is tough
 
 check for empty matrix indices, check empty weights,
 static bind matrices vs live, etc
+
+for now we assume an empty active matrix plug is wrong and should be
+defragmented
 """
 
 
@@ -113,6 +119,8 @@ influence here is ANY plug OR STATIC MATRIX affecting a skincluster.
 index is derived from bind matrix array, including if we have any
 missing/static plugs in matrix array
 """
+
+
 
 class SkinScope:
 	"""Scope manages only influences and index mapping, no direct

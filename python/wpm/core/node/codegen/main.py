@@ -19,5 +19,6 @@ def generateNodeFiles(nodeTypeNames:T.List[str]):
 	                  )
 
 if __name__ == '__main__':
+	regenMayaNodeFiles()
 	pass
 

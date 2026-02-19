@@ -178,8 +178,6 @@ function string[] groupsfromprim( int geo; int primnum){
     }
     return result;
 }
-
-
 function string[] groupsfrompoint( int geo; int ptnum){
     string pointgrps[] = detailintrinsic( geo, "pointgroups");
     string result[] = {};
@@ -191,7 +189,50 @@ function string[] groupsfrompoint( int geo; int ptnum){
     return result;
 }
 
+function string[] groupsfromedge( int geo; int pta; int ptb){
+    // return all groups containing target prim
+    string grps[] = detailintrinsic( geo, "edgegroups");
+    string result[] = {};
+    foreach( string grp; grps){
+        if( inedgegroup(geo, grp, pta, ptb)){
+            append(result, grp);
+        }
+    }
+    return result;
+}
 
+#define COPY_GRP_FN(_T)\
+function void copy_Tgroups(int geoa; string pattern; int ela; int geob; int[] elsb){\
+    /* copy all groups from ela to each in elsb */\
+    foreach(string grp; groupsfrom_T(geo, ela)){\
+        if(!match(pattern, grp)){\
+            continue;\
+        }\
+        foreach(int elb; elsb){\
+            set_Tgroup(geob, grp, elb, 1);\
+        }\
+    }\
+}
+
+COPY_GRP_FN(point)
+COPY_GRP_FN(prim)
+
+function void copyedgegroups(
+    int geoa; string pattern; 
+    int[] ptas; 
+    int geob; int[] elsb){
+    /* copy all groups from ela to each in elsb */
+    foreach(string grp; groupsfromedge(geo, ptsa[0], ptsa[1])){
+        if(!match(pattern, grp)){
+            continue;
+        }
+        for(int i = 0; i < len(ptsb) / 2; i++){
+            setedgegroup(geob, grp, 
+                ptsb[i * 2], ptsb[i * 2 + 1], 
+                1);
+        }
+    }
+}
 
 
 #define GROUP_H

@@ -91,7 +91,8 @@ int ingestaabb(int geo; int pr; string atout; string groupprefix; string vat){
 		vector otherv = prim(geo, vat, otherprim);
 		int otherdir = dirint(otherv);
 		int dirints[] = sort(array(dir, otherdir));
-		string grpname = "e" + DIRTOKENS[dirints[0]] + DIRTOKENS[dirints[1]];
+		string grpname = "e" + itoa(dirints[0]) + itoa(dirints[1]) 
+			+ DIRTOKENS[dirints[0]] + DIRTOKENS[dirints[1]];
 		setedgegroup(0, grpname, hedge_srcpoint(0, h), hedge_dstpoint(0, h), 1);
 		h = hedge_next(0, h);
 	}while(h != primhedge(0, pr));

@@ -21,6 +21,8 @@ from .excepthook import ExceptHookManager
 
 from .hashable import HashableMixin, UnHashableDict, UnHashableSet, HashFunctions, toHash
 
+from .indexscope import IndexScope, IndexScopeGroup
+
 from .metamagicdelegator import ClassMagicMethodMixin
 from .multiobject import MultiObject
 

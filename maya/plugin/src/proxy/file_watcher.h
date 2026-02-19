@@ -54,3 +54,7 @@ private:
     std::atomic<bool> should_stop;
     HANDLE change_event;  // For signaling thread to check new watches
 };
+
+
+
+
