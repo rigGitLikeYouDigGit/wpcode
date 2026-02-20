@@ -151,9 +151,12 @@ class NodeClassRetriever:
 
 retriever = NodeClassRetriever()
 
-from .base import WN, WNMeta as _WNMeta
+try:
+	from .base import WN, WNMeta as _WNMeta
+	_WNMeta.retriever = retriever
+except (ImportError, AttributeError) as e:
+	print("can't import from base, likely running in pure python")
 
-_WNMeta.retriever = retriever
 
 if __name__ == '__main__':
 

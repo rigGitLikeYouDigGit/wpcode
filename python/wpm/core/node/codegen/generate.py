@@ -425,12 +425,16 @@ def genNodes(#project:CodeGenProject
 		                   genInitTemplatePath)
 
 		# import gen catalogue to author dir init file
-		processGenInitFile(
-			authorDir / "__init__.py", authorDir,
+		processAuthorInitFile(
+			authorDir / "__init__.py",
+			authorDir,
+			genDir,
+			#genDir,
 			authorInitTemplatePath,
 			extraImports=[
 				Import(fromModule="..gen", module="Catalogue", alias="GenCatalogue"),
-				Import(fromModule="..gen", module="*")],
+				#Import(fromModule="..gen", module="*")
+			],
 			catalogueBases=("GenCatalogue",)
 		)
 
@@ -494,6 +498,93 @@ def processGenInitFile(initFile:Path,
 		TYPE_CHECK_BLOCK=typeCondition)
 	initFile.write_text(initFileText)
 
+
+
+def processAuthorInitFile(initFile:Path,
+                       gatherDir:Path,
+                          genDir:Path,
+                       initFileTemplate:Path,
+                       extraImports:list[Import]=(),
+                       catalogueBases=(),
+                       # author node
+                       ):
+	"""write out any extra imports in __init__.py files
+	and populate assignments to Catalogue class -
+	init files don't import any real classes to avoid cycles
+
+	we now generate a type checking import block and a
+	type-check-time alternate Catalogue class
+
+	janky args for different behaviour in author vs gen
+	"""
+	#log("processGenInitFile ", initFile)
+	initFileText = initFileTemplate.read_text()
+
+	# get all imports
+	imports = extraImports or []
+	assignments = []
+
+	genImports = {}
+	for refFile in genDir.iterdir():
+		if refFile.suffix != ".py":
+			continue
+		if refFile.stem == "__init__":
+			continue
+
+
+		if refFile.stem[:-1] in reservedWordSet:
+			nodeClsName = wpstring.cap(refFile.stem[:-1])
+		else:
+			nodeClsName = wpstring.cap(refFile.stem)
+		genImports[nodeClsName] = Import(
+			fromModule="..gen",
+			module=nodeClsName,
+		)
+
+
+	for refFile in gatherDir.iterdir():
+		if refFile.suffix != ".py":
+			continue
+		if refFile.stem == "__init__":
+			continue
+
+		if refFile.stem[:-1] in reservedWordSet:
+			nodeClsName = wpstring.cap(refFile.stem[:-1])
+		else:
+			nodeClsName = wpstring.cap(refFile.stem)
+
+		# remove from gen imports if it's also in author
+		genImports.pop(nodeClsName, None)
+
+		imports.append(Import(
+			fromModule="." + refFile.stem,
+			module=nodeClsName,
+		))
+		assignments.append(Assign(
+			wpstring.cap(refFile.stem),
+			nodeClsName
+		))
+	#log("assignments", assignments)
+	#log("imports", imports)
+
+	catalogueClassDef = ClassTemplate(
+		className="Catalogue",
+		#classBaseClasses=("T.Protocol",),
+		classBaseClasses=catalogueBases,
+		classLines=assignments,
+	)
+
+	typeCondition = IfBlock(
+		[["T.TYPE_CHECKING",
+		  list(genImports.values()) +
+		  imports +
+		  [catalogueClassDef]]]
+	)
+
+
+	initFileText = initFileText.format(
+		TYPE_CHECK_BLOCK=typeCondition)
+	initFile.write_text(initFileText)
 
 def resetGenDir():
 

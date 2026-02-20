@@ -65,7 +65,7 @@ add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
 
 # IMPORTANT: Use target_include_directories instead of include_directories
 target_include_directories(${PROJECT_NAME} PRIVATE
-    "C:/Users/ed/Documents/GitHub/wpcode/maya/plugin/src"
+    "src"
     ${MAYA_INCLUDE_DIR}
     ${EIGEN3_INCLUDE_DIR}
 )

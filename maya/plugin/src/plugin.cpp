@@ -29,6 +29,8 @@ register all plugins
 //#include "mayanode/stratasurfacenode.h"
 #include "node/wpSkinCluster.h"
 #include <maya/MGPUDeformerRegistry.h>
+#include "cmd/wpSkinClusterCmd.h"
+#include "node/expSet.h"
 
 const char* kAUTHOR = "ed";
 const char* kVERSION = "1.0";
@@ -122,6 +124,24 @@ MStatus initializePlugin(MObject obj) {
     // Use the skin cluster macro instead
     REGISTER_SKINCLUSTER(wp::WpSkinCluster);
 
+    REGISTER_NODE_TYPE(wp::ExpSet, MPxNode::kObjectSet);
+
+    // Register command
+    s = fnPlugin.registerCommand(
+        WpSkinClusterCmd::kCmdName,
+        WpSkinClusterCmd::creator,
+        WpSkinClusterCmd::newSyntax
+    );
+    MCHECK(s, "register wpSkin command");
+    
+    // Create MEL alias
+    MGlobal::executeCommand(
+        "if (!`exists skinCluster_original`) {"
+        "    rename skinCluster skinCluster_original;"
+        "    alias skinCluster wpSkin;"
+        "}"
+    );
+    
     // Register GPU deformer override
     MStatus status = MGPUDeformerRegistry::registerGPUDeformerCreator(
         wp::WpSkinCluster::typeName.asChar(),
@@ -152,6 +172,7 @@ MStatus uninitializePlugin(MObject obj) {
     );
 
     DEREGISTER_NODE(wp::WpSkinCluster);
+    DEREGISTER_NODE(wp::ExpSet)
 
     DEBUGS("uninitialised wpplugin");
     return s;

@@ -4,33 +4,38 @@ import types, typing as T
 
 import sys
 
+_canImport = False
+try:
+	# import wrapped maya modules
+	from .patch import cmds, om, omr, oma, omui
+	_canImport = True
+except (ImportError, AttributeError) as e:
+	print("error importing maya modules - may not be running maya")
 
-# import wrapped maya modules
-
-from .patch import cmds, om, omr, oma, omui
-
-from .api import (
-	MObjectRegister, apiTypeMap, apiTypeCodeMap, apiCodeNameMap, apiTypeDataMap,
-	mfnDataConstantTypeMap,
-	getMFn, asMFn, getCache, getMObject, getMDagPath, getMFnType, toMFnDag, toMFnDep, toMFnMesh,
-	toMFnCurve, toMFnSurface, toMFnTransform,
-	isDag, isShape, isTransform,
-	classConstantValueToNameMap,
-	MObjectSet, listMObjects)
+if _canImport:
+	from .api import (
+		MObjectRegister, apiTypeMap, apiTypeCodeMap, apiCodeNameMap, apiTypeDataMap,
+		mfnDataConstantTypeMap,
+		getMFn, asMFn, getCache, getMObject, getMDagPath, getMFnType, toMFnDag, toMFnDep, toMFnMesh,
+		toMFnCurve, toMFnSurface, toMFnTransform,
+		isDag, isShape, isTransform,
+		classConstantValueToNameMap,
+		MObjectSet, listMObjects)
 
 
-from .node import (
-	WN
-)
-#from . import WN
+	from .node import (
+		WN
+	)
+	#from . import WN
 
-from .plugtree import Plug
+	from .plugtree import Plug
 
-from .scene import getSceneGlobals, setupGlobals
-from wpm.core.callbackowner import CallbackOwner
+	from .scene import getSceneGlobals, setupGlobals
+	from wpm.core.callbackowner import CallbackOwner
 
-from . import plug
-from .plug import getMPlug, use
+	from . import plug
+	from .plug import getMPlug, use
+
 
 """
 

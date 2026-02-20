@@ -96,7 +96,6 @@ public:
     //const std::vector<int>& getLinearInfluenceIndices() const { return m_linearInfluenceIndices; }
     //const std::vector<float>& getLinearMatrices() const { return m_linearMatrices; }
 
-private:
     // CPU deformation
     MStatus deformCPU(MDataBlock& block,
                      MItGeometry& iter,

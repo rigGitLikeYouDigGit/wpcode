@@ -74,4 +74,6 @@ class Transform(GenTransform):
 		worldMat = self.worldMatrix()
 		self.setParentKeepLocal(other)
 		self.setWorldMatrix(worldMat)
-		self.name()
+
+
+
