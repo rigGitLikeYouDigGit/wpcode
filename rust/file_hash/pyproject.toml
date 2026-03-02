@@ -1,0 +1,56 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "file_hash"
+version = "0.1.0"
+description = "High-performance concurrent chunked SHA-256 file hashing"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+authors = [
+    { name = "ed" },
+]
+keywords = ["sha256", "hashing", "file", "checksum", "parallel"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Filesystems",
+    "Topic :: Security :: Cryptography",
+]
+
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-benchmark>=4.0",
+]
+
+[project.scripts]
+file-hasher = "file_hash:_cli"
+
+[tool.maturin]
+# Rust source builds both the native extension and the CLI binary
+features = ["python"]
+# Python source root — maturin will include this alongside the compiled .so/.pyd
+python-source = "python"
+# Name of the native module (must match #[pymodule] name in Rust)
+module-name = "file_hash._native"
+# Build in release mode by default
+profile = "release"
+# Build the CLI binary as well and include it in the wheel
+bindings = "pyo3"
+# Strip debug symbols for smaller wheels
+strip = true
+# Compatibility — target manylinux for Linux wheels
+compatibility = "manylinux2014"
+dependencies = ["cffi"]
