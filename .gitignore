@@ -376,3 +376,5 @@ maya/plugin/strata/src/lib.h~RF5a0f938.TMP
 python/wpm/core/node/_codegen/*
 python/wpm/core/node/gen/*
 pystubs/*
+rust/**/*.exe
+rust/**/target/**/*
