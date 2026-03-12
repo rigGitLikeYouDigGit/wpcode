@@ -26,7 +26,7 @@ class ConstraintState:
 
 
 constraintAccumFn = Callable[
-	[state.SubstepBoundData, state.DynamicData, ConstraintState, float],
+	[state.BodyState, state.DynamicData, ConstraintState, float],
 	Tuple[state.DynamicData, ConstraintState]
 ]
 
@@ -40,7 +40,7 @@ don't forget nurbs constraints, surface constraints etc
 """
 
 constraintAlphaMapFn = Callable[
-	[state.SubstepBoundData,
+	[state.BodyState,
 	 ConstraintState,
 	 int,  # constraint type index
 	 int,  # constraint index
@@ -74,39 +74,15 @@ class ConstraintSolveSettings:
 
 
 @jdc.pytree_dataclass
-class XpbdLambda1:
-	"""
-	Lambda storage for constraints with a single scalar residual.
-	full dataclasses here may not be necessary, I think they get
-	compiled out by jax anyway
-	"""
-	Lambda: jnp.ndarray  # (M,)
-
-
-@jdc.pytree_dataclass
-class XpbdLambdaN:
-	"""
-	Lambda storage for constraints with small vector residuals (e.g. 2-3 DOF).
-	MaxDof is fixed per bucket.
-	"""
-	Lambda: jnp.ndarray  # (M, MaxDof)
-
-@jdc.pytree_dataclass
-class XpbdLambda2:
-	lambdaValue: jnp.ndarray	# (m, 2)
-
-@jdc.pytree_dataclass
-class XpbdLambda3:
-	lambdaValue: jnp.ndarray	# (m, 3)
-
-@jdc.pytree_dataclass
 class ConstraintBucket:
-	pass
+	# could possibly combine these
+	isActive: jnp.ndarray		# (m,) bool/int mask
+	weight: jnp.ndarray			# (m,) float32
 
 	@classmethod
 	def accumulate(
 			cls,
-			bs: state.SubstepBoundData, bufs: state.DynamicData,
+			bs: state.BodyState, bufs: state.DynamicData,
 			#cs: ConstraintState,
 			bucket: PointConstraintBucket, dt: float) -> tuple[
 		state.DynamicData, ConstraintState]:
@@ -115,13 +91,42 @@ class ConstraintBucket:
 		"""
 		raise NotImplementedError
 
+	@classmethod
+	def fieldNames(cls)->tuple[str,...]:
+		"""return field names as tuple of strings, for builder to use as keys"""
+		return tuple(cls.__dataclass_fields__.keys())
+
+	@classmethod
+	def fieldSizeMap(cls) -> dict[str, int]:
+		"""return dict of
+		expected lengths of param fields -
+		used by builder to check valid """
+		return {
+			"isActive": 1,
+			"weight": 1,
+		}
+
+	@classmethod
+	def bodyParams(cls)->tuple[str, ...]:
+		"""return names of fields that map to bodies instead of params"""
+		return ()
+
+	@classmethod
+	def fromSingleConstraintDatas(cls, datas:list):
+		kwargs = {}
+		for i, fieldName in enumerate(cls.fieldNames()):
+			fieldData = [data[i] for data in datas]
+			#stack along leading axis
+			fieldData = jnp.stack(fieldData, axis=0)
+			kwargs[fieldName] = fieldData
+		return cls(**kwargs)
+
 @jdc.pytree_dataclass
 class PointConstraintBucket(ConstraintBucket):
 	"""
 	3-DOF point-to-point constraint between two bodies:
 		worldPoint(bodyA, localAnchorA) == worldPoint(bodyB, localAnchorB)
 	"""
-	isActive: jnp.ndarray		# (m,) bool/int mask
 
 	bodyA: jnp.ndarray			# (m,) int32
 	bodyB: jnp.ndarray			# (m,) int32
@@ -130,14 +135,29 @@ class PointConstraintBucket(ConstraintBucket):
 	localPointB: jnp.ndarray	# (m, 3) float32
 
 	alpha: jnp.ndarray		# (m,) float32
-	weight: jnp.ndarray			# (m,) float32
 
-	lambdaState: XpbdLambda3	# lambdaState.lambdaValue: (m, 3)
+	lambdaState: jnp.ndarray	# lambdaState.lambdaValue: (m, 3)
+
+	@classmethod
+	def fieldSizeMap(cls) -> dict[str, int]:
+		return {
+			**super().fieldSizeMap(),
+			"bodyA": 1,
+			"bodyB": 1,
+			"localPointA": 3,
+			"localPointB": 3,
+			"alpha": 1,
+			"lambdaState": 3, # not supplied
+		}
+
+	@classmethod
+	def bodyParams(cls) ->tuple[str, ...]:
+		return ("bodyA", "bodyB")
 
 	@classmethod
 	def accumulate(
 			cls,
-			bs: state.SubstepBoundData, bufs: state.DynamicData,
+			bs: state.BodyState, bufs: state.DynamicData,
 			#cs: ConstraintState,
 			bucket:PointConstraintBucket, dt: float) -> tuple[
 		state.DynamicData, #ConstraintState
@@ -279,7 +299,7 @@ class PointConstraintBucket(ConstraintBucket):
 			localPointB=bucket.localPointB,
 			alpha=bucket.alpha,
 			weight=bucket.weight,
-			lambdaState=XpbdLambda3(lambdaValue=lambdaNew),
+			lambdaState=lambdaNew,
 		)
 		# newState = ConstraintState(
 		#
@@ -319,12 +339,12 @@ class HingeJointConstraintBucket(ConstraintBucket):
 	alphaTwist: jnp.ndarray			# (m,)
 	weight: jnp.ndarray				# (m,)
 
-	lambdaState: XpbdLambda3
+	lambdaState: jnp.ndarray # lambdaState.lambdaValue: (m, 3) - first 2 are swing, last is twist
 
 	@classmethod
 	def accumulate(
 			cls,
-			bs: state.SubstepBoundData, bufs: state.DynamicData,
+			bs: state.BodyState, bufs: state.DynamicData,
 			bucket: HingeJointConstraintBucket, dt: float) -> tuple[
 		state.DynamicData, HingeJointConstraintBucket]:
 		"""
@@ -496,7 +516,7 @@ class HingeJointConstraintBucket(ConstraintBucket):
 			alphaSwing=bucket.alphaSwing,
 			alphaTwist=bucket.alphaTwist,
 			weight=bucket.weight,
-			lambdaState=XpbdLambda3(lambdaValue=newLambda),
+			lambdaState=newLambda,
 		)
 
 		return newBufs, newBucket
@@ -531,12 +551,12 @@ class OrientationDriveConstraintBucket:
 	alpha: jnp.ndarray  # (m,)
 	weight: jnp.ndarray  # (m,)
 
-	lambdaState: XpbdLambda3
+	lambdaState: jnp.ndarray # lambdaState.lambdaValue: (m,3) in joint space
 
 	@classmethod
 	def accumulate(
 			cls,
-			bs: state.SubstepBoundData, bufs: state.DynamicData,
+			bs: state.BodyState, bufs: state.DynamicData,
 			bucket: OrientationDriveConstraintBucket, dt: float) -> tuple[
 		state.DynamicData, OrientationDriveConstraintBucket]:
 		"""
@@ -634,7 +654,7 @@ class OrientationDriveConstraintBucket:
 			targetRotation=bucket.targetRotation,
 			alpha=bucket.alpha,
 			weight=bucket.weight,
-			lambdaState=XpbdLambda3(lambdaValue=lambdaNew),
+			lambdaState=lambdaNew,
 		)
 
 		return newBufs, newBucket
@@ -681,12 +701,12 @@ class MeasurementConstraintBucket(ConstraintBucket):
 	metricWeights: jnp.ndarray | None  # (m, maxDim) - diagonal metric
 
 	# XPBD lambda accumulator (dimension matches maxDim)
-	lambdaState: XpbdLambdaN         # lambdaState.Lambda: (m, maxDim)
+	lambdaState: jnp.ndarray         # lambdaState.Lambda: (m, maxDim)
 
 	@classmethod
 	def accumulate(
 			cls,
-			bs: state.SubstepBoundData,
+			bs: state.BodyState,
 			bufs: state.DynamicData,
 			ms: state.MeasurementState,
 			bucket: MeasurementConstraintBucket,
@@ -768,7 +788,7 @@ class MeasurementConstraintBucket(ConstraintBucket):
 			alpha=bucket.alpha,
 			weight=bucket.weight,
 			metricWeights=bucket.metricWeights,
-			lambdaState=XpbdLambdaN(Lambda=lambdaNew),
+			lambdaState=lambdaNew,
 		)
 
 		return bufs, ms, newBucket
@@ -991,7 +1011,7 @@ def findNearestParams(
 
 
 def measureActualPoses(
-	bodies: state.SubstepBoundData,
+	bodies: state.BodyState,
 	bodyIds: jnp.ndarray # (nMax,)
 ) -> jnp.ndarray: # (nMax*7,)
 	"""
@@ -1054,12 +1074,12 @@ class ManifoldConstraintBucket(ConstraintBucket):
 	weight: jnp.ndarray                       # (M,) overall strength multiplier
 
 	# XPBD lambda storage (vector constraint, one per body DOF)
-	lambdaState: XpbdLambdaN                  # (M, nMax*6) - 6 DOF per body (pos+ang)
+	lambdaState: jnp.ndarray                  # (M, nMax*6) - 6 DOF per body (pos+ang)
 
 	@classmethod
 	def accumulate(
 			cls,
-			bs: state.SubstepBoundData,
+			bs: state.BodyState,
 			bufs: state.DynamicData,
 			bucket: ManifoldConstraintBucket,
 			dt: float

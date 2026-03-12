@@ -14,7 +14,7 @@ from wpsim.kine.collision.common import (
 
 
 def collisionForce(
-		bs: state.SubstepBoundData,
+		bs: state.BodyState,
 		contacts: CollisionContacts,
 		settings: CollisionSettings,
 		dt: float

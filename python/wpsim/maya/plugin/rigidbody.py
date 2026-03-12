@@ -13,16 +13,16 @@ from jax import numpy as jnp
 
 from wpm import om, cmds
 from wpm.lib.plugin import (PluginNodeTemplate, MayaPyPluginAid,
-                            PluginNodeIdData)
+							PluginNodeIdData)
 from wpm.lib.plugin.template import PluginMPxData
 from wpsim.maya.plugin import lib
 from wpsim.kine.builder import (BuilderBody, BuilderMesh,
-                                BuilderTransform, BuilderNurbsCurve)
+								BuilderTransform, BuilderNurbsCurve)
 
 """we don't unpack / process geo data until solver node 
 to cut down transfer time"""
 def maya_useNewAPI():
-    pass
+	pass
 class WpSimBodyMPxData(PluginMPxData):
 	"""Body Data MPxData for WpSim Maya Plugin
 	"""
@@ -53,7 +53,7 @@ class WpSimRigidBodyNode(PluginNodeTemplate, om.MPxNode):
 		eFn = om.MFnEnumAttribute()
 		# leave blank to just use name of node
 		cls.aBodyName = tFn.create("name", "name",
-		                    om.MFnData.kString)
+							om.MFnData.kString)
 		# worldspace initial matrix
 		cls.aBodyMatrix = mFn.create("matrix", "matrix" )
 		# combined collision and mass mesh
@@ -69,11 +69,11 @@ class WpSimRigidBodyNode(PluginNodeTemplate, om.MPxNode):
 		eFn.default = 1
 
 		cls.aBodyMass = nFn.create("mass", "mass", om.MFnNumericData.kDouble,
-		                           1.0)
+								   1.0)
 		nFn.setMin(0.0)
 		cls.aBodyDamping = nFn.create("damping", "damping",
-		                              om.MFnNumericData.kDouble,
-		                              0.0)
+									  om.MFnNumericData.kDouble,
+									  0.0)
 		nFn.setMin(0.0)
 
 		# aux geo
@@ -81,7 +81,7 @@ class WpSimRigidBodyNode(PluginNodeTemplate, om.MPxNode):
 		cFn.array = True
 		cFn.usesArrayDataBuilder = True
 		cls.auxBodyTfName = tFn.create("auxTfName", "auxTfName",
-		                               om.MFnData.kString)
+									   om.MFnData.kString)
 		# local space matrix
 		cls.auxBodyMatrix = mFn.create("auxTfMatrix", "auxTfMatrix")
 		cFn.addChild(cls.auxBodyTfName)
@@ -91,9 +91,9 @@ class WpSimRigidBodyNode(PluginNodeTemplate, om.MPxNode):
 		cFn.array = True
 		cFn.usesArrayDataBuilder = True
 		cls.auxBodyCurveName = tFn.create("auxCurveName", "auxCurveName",
-		                                  om.MFnData.kString)
+										  om.MFnData.kString)
 		cls.auxBodyCurveData = tFn.create("auxCurveData", "auxCurveData",
-		                                  om.MFnData.kNurbsCurve)
+										  om.MFnData.kNurbsCurve)
 		cFn.addChild(cls.auxBodyCurveName)
 		cFn.addChild(cls.auxBodyCurveData)
 
@@ -171,7 +171,7 @@ class WpSimRigidBodyNode(PluginNodeTemplate, om.MPxNode):
 			tfName = elemPlug.child(self.auxBodyTfName).asString()
 			mat = jnp.array(elemPlug.child(self.auxBodyMatrix).asMatrix())
 			transformMap[tfName] = BuilderTransform(f"{name}_tf_{tfName}",
-			                                name, mat)
+											name, mat)
 
 		auxCurveMap = {}
 		for i in range(pData.inputValue(self.auxBodyCurve).numElements()):

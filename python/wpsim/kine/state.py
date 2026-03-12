@@ -7,7 +7,8 @@ from dataclasses import dataclass
 from jax import numpy as jnp
 import jax_dataclasses as jdc
 
-
+if T.TYPE_CHECKING:
+	jdc.pytree_dataclass = dataclass
 
 @jdc.pytree_dataclass
 class SimStaticData:
@@ -28,7 +29,7 @@ class FrameBoundData:
 
 
 @jdc.pytree_dataclass
-class SubstepBoundData:
+class BodyState:
 	"""
 	Data static over the course of a substep.
 	Dynamic per-frame state for all rigid bodies.
@@ -49,6 +50,7 @@ class SubstepBoundData:
 	# forces
 	force: jnp.ndarray             # (N, 3)
 	torque: jnp.ndarray            # (N, 3)
+	damping : jnp.ndarray           # (N, 6) linear and angular damping
 
 @jdc.pytree_dataclass
 class DynamicData:
@@ -186,27 +188,20 @@ class RampBuffers:
 		value1 = self.samples[rampId, index1]
 		return (1.0 - t) * value0 + t * value1
 
+def chunkIndexForOffset(self, offsets: jnp.ndarray, offset: int) -> int:
+	"""Helper to find chunk index for a given offset using binary search."""
+	# offsets is shape (n + 1,) with cumulative offsets
+	# We want to find i such that offsets[i] <= offset < offsets[i + 1]
+	return (jnp.searchsorted(offsets, offset, side='right') - 1).ravel()[0]
 
 
 @jdc.pytree_dataclass
-class SimFrame:
+class TransformBuffers:
+	"""Struct-of-arrays storage for body transforms.
+	All transforms packed into single flat arrays with indirection.
 	"""
-	Complete state of sim at single frame
-	"""
-	frameData : FrameBoundData
-	metadata: BodyMetadata
-
-	# Optional, depending on pipeline
-	derived: DerivedState | None
-
-	# Global time info
-	startT: float
-	dt: float
-	index: int
-
-
-
-
+	matrices: jnp.ndarray  # (totalTFs, 4, 4)
+	offsets: jnp.ndarray  # (nBodies + 1,) - cumulative TF offsets, start at 0
 
 @jdc.pytree_dataclass
 class MeshBuffers:
@@ -223,7 +218,7 @@ class MeshBuffers:
 	triIndices: jnp.ndarray  # (totalTris, 3) int32
 
 	# Indirection arrays
-	pointIndices: jnp.ndarray  # (nMeshes + 1,) - cumulative point offsets, start at 0
+	pointOffsets: jnp.ndarray  # (nMeshes + 1,) - cumulative point offsets, start at 0
 	triOffsets: jnp.ndarray  # (nMeshes + 1,) - cumulative triangle offsets
 
 	# Optional per-point attributes
@@ -236,16 +231,18 @@ class MeshBuffers:
 	triNormals: jnp.ndarray | None  # (totalTris, 3)
 
 	def pointStart(self, meshId: int) -> int:
-		return self.pointIndices[meshId]
+		return self.pointOffsets[meshId]
 
 	def pointEnd(self, meshId: int) -> int:
-		return self.pointIndices[meshId + 1]
+		return self.pointOffsets[meshId + 1]
 
 	def triStart(self, meshId: int) -> int:
 		return self.triOffsets[meshId]
 
 	def triEnd(self, meshId: int) -> int:
 		return self.triOffsets[meshId + 1]
+
+
 
 
 @jdc.pytree_dataclass
@@ -347,6 +344,7 @@ class GeometryBuffers:
 	"""Top-level geometry storage with typed buffers.
     Bodies reference geometry via (type, index) pairs in BodyMetadata.
     """
+	tfs : TransformBuffers | None
 	meshes: MeshBuffers | None
 	curves: NurbsCurveBuffers | None
 	surfaces: NurbsSurfaceBuffers | None
@@ -361,11 +359,6 @@ class BodyMetadata:
 	Indirect references and flags.
 	Not expected to be touched every solver iteration.
 	"""
-	# Indirection into geometry buffers
-	shapeIndex: jnp.ndarray     # (N,) index into shape/geometry tables - legacy, might deprecate
-
-	# Optional flags
-	isDynamic: jnp.ndarray      # (N,) bool or int mask
 
 	# Optional rest/bind information (for rigs)
 	restPosition: jnp.ndarray | None     # (N, 3) or None
@@ -378,12 +371,20 @@ class BodyMetadata:
 	geometryRefs: jnp.ndarray    # (N, 6) int16
 
 	# Index constants for geometryRefs array
-	GEOM_MESH_COUNT = 0
-	GEOM_MESH_START = 1
-	GEOM_CURVE_COUNT = 2
-	GEOM_CURVE_START = 3
-	GEOM_SURFACE_COUNT = 4
-	GEOM_SURFACE_START = 5
+	GEOM_TF_COUNT = 0
+	GEOM_TF_START = 1
+	GEOM_MESH_COUNT = 1
+	GEOM_MESH_START = 2
+	GEOM_CURVE_COUNT = 3
+	GEOM_CURVE_START = 4
+	# GEOM_SURFACE_COUNT = 4
+	# GEOM_SURFACE_START = 5
+
+	def getTfRange(self, bodyId: int) -> tuple[int, int]:
+		"""Returns (start, end) indices into TransformBuffers, or (-1, -1) if no TFs"""
+		count = self.geometryRefs[bodyId, self.GEOM_TF_COUNT]
+		start = self.geometryRefs[bodyId, self.GEOM_TF_START]
+		return (start, start + count) if count > 0 else (-1, -1)
 
 	def getMeshRange(self, bodyId: int) -> tuple[int, int]:
 		"""Returns (start, end) indices into MeshBuffers, or (-1, -1) if no meshes"""

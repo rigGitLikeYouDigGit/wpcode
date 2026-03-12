@@ -7,7 +7,7 @@ from dataclasses import dataclass, is_dataclass, fields
 import jax_dataclasses as jdc
 
 from wpsim.kine.constraint import ConstraintState
-from wpsim.kine.state import SubstepBoundData, SimStaticData
+from wpsim.kine.state import BodyState, SimStaticData
 from wpsim.trace import CompileContext, RuntimeContext, LowerRefOpFn
 
 
@@ -186,7 +186,7 @@ class MeasureFn:
 
 	@classmethod
 	def measure(cls,
-	            bs: SubstepBoundData,
+	            bs: BodyState,
 	            cs: ConstraintState,
 	            ss:SimStaticData,
 	            struct: MeasureFn,

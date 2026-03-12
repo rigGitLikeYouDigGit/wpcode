@@ -26,15 +26,8 @@ jit-compiling the function?'
 
 and from that, this monstrosity:
 
-basically we do a python version of the C preprocessor, embedded within
-any python function - 
-in order to do that without ast stuff (which I still think could have
-worked),
 we all but reimplement the tracing stuff that JAX does to freeze a python 
 call into a full dag graph.
-
-
-next qs: rigid nurbs curve, then fully soft-skinned tri mesh
 
 each other piece of geo to be stored flat with header data:
 [ geo type, n total entries in array, # common to every type 
@@ -43,13 +36,23 @@ each other piece of geo to be stored flat with header data:
 	nPoints * 3 of floats, # coords
 	nDriversPerPoint # if 1, rigid driven by single body
 	# if more, followed by ( nPoints * nDriversPerPoint ) of point weights 
+	
+
+2 passes:
+	- code inspection / replacement through ast to substitute function calls 
+	with 
+	augmented compile-time hooks
+	- code folding into dag to replace cached values, using Ref() object tracing
+
+TODO: once working, integrate this into wpexp, the replace vs wrap idea
+has some legs
 """
 
 def compileCodeToFunction(
 		code: str,
 		fnGlobals:dict={
-			"jax": jax,
-			"jnp": jnp,
+			# "jax": jax,
+			# "jnp": jnp,
 		},
 		topFnName="generated"
 ):
@@ -90,6 +93,99 @@ def compileCodeToFunction(
 		raise TypeError(f"`{topFnName}` is not callable")
 
 	return fn
+
+def inline(fn:T.Callable):
+	"""explicit decorator to effectively inline further functions,
+	continuing tracing process through them"""
+	fn._traceThrough = True
+	return fn
+
+def inlineFunction(fn, cctx, args, kwargs):
+	# Substitute args into symbolic scope
+	def boundFn():
+		return fn(*args, **kwargs)
+
+	rootRef = boundFn()   # build DAG for function body
+	return rootRef
+
+
+def wrapFunctionRefCall(fn, cctx, *args, **kwargs):
+	"""
+	hooked up by AST processing above:
+	only recursively follow through functions explicitly decorated
+	with @inline - defaulting to tracing through everything gets
+	dodgy if something somewhere happens to call open() or print() for
+	example.
+	should be fine to run over all functions in a namespace though, like
+	util functions for the sim
+	"""
+	# If any arg is a Ref → return FunctionRef
+	if hasattr(fn, "_traceThrough"):
+		# Inline expansion
+		return inlineFunction(fn, cctx, args, kwargs)
+	else:
+		return FunctionRef(fn, args, kwargs)
+	# # Else: normal call
+	# return fn(*args, **kwargs)
+
+IGNORE_CALLS = {
+	"getMeasuredValue",
+	"Ref",
+	"ensure_ref",
+	"wrapFunctionRefCall",
+	# also ignore builtin constructors,
+	# find a way to update with Ref known functions
+	# and functions in a namespace (like jax)
+	"tuple", "list", "dict"
+}
+
+class CallWrappingTransformer(ast.NodeTransformer):
+	"""wrap all calls outside of ignore_calls set with FunctionRefs
+	"""
+	def __init__(self, ignoreNames: set[str]):
+		self.ignoreNames = ignoreNames
+		super().__init__()
+
+	def visit_Call(self, node: ast.Call):
+		# First transform children (arguments may themselves contain calls)
+		self.generic_visit(node)
+
+		# Only wrap normal calls: f(...)
+		# Ignore:
+		#  - attribute calls whose base is ignored (optional)
+		#  - calls to whitelisted names
+		calleeName = self._getCalleeName(node.func)
+
+		if calleeName is None:
+			# dynamic calls like (f())() –
+			# TODO: probably do some jank stuff to trace this back to
+			#  variable assignment but ONLY this,
+			return node
+
+		if calleeName in self.ignoreNames:
+			return node
+
+		# Rewrite f(a, b, ...) → wrapFunctionRefCall(f, a, b, ...)
+		return ast.Call(
+			func=ast.Name(id="wrapFunctionRefCall", ctx=ast.Load()),
+			args=[node.func, *node.args],
+			keywords=node.keywords,
+		)
+
+	def _getCalleeName(self, func):
+		"""
+		Returns function name if statically identifiable, else None.
+		"""
+		if isinstance(func, ast.Name):
+			return func.id
+
+		if isinstance(func, ast.Attribute):
+			# foo.bar(...)
+			return func.attr
+
+		return None
+
+
 
 @dataclass
 class Ref:
@@ -164,6 +260,87 @@ class Ref:
 	def __neg__(self):
 		return Ref("neg", (self,))
 
+	@classmethod
+	def transform(cls,
+	              ref:Ref,
+	              cctx:CompileContext,
+	              cache:dict,
+	              delegatedCache:dict,
+	              lowerRefOpFn: LowerRefOpFn = None,
+	              ):
+		if ref in cache:
+			return cache[ref]
+
+		if isinstance(ref, FunctionRef):
+			fn = ref.fn
+			# lowered_args = [cls.transform(
+			# 	a, cctx, cache, delegatedCache, lowerRefOpFn
+			# ) for a in ref.args]
+			def lowered(rctx):
+				args = [f(rctx) for f in lowered_args]
+				kwargs = [(k, f(rctx)) for k, f in ref.kwargs]
+				return fn(*args, **kwargs)
+			return lowered
+
+		# Built-in leaves
+		if ref.op == "const":
+			fn = lambda rctx: ref.value
+
+		elif ref.op == "measure":
+			i = ref.index
+			fn = lambda rctx, i=i: rctx[i]
+
+		# Built-in arithmetic
+		elif ref.op in {"add", "sub", "mul", "div", "neg", "abs", "min"}:
+			lowered = [cls.transform(
+				a, cctx, cache, delegatedCache, lowerRefOpFn
+			) for a in ref.args]
+
+			if ref.op == "add":
+				fn = lambda rctx: lowered[0](rctx) + lowered[1](rctx)
+			elif ref.op == "sub":
+				fn = lambda rctx: lowered[0](rctx) - lowered[1](rctx)
+			elif ref.op == "mul":
+				fn = lambda rctx: lowered[0](rctx) * lowered[1](rctx)
+			elif ref.op == "div":
+				fn = lambda rctx: lowered[0](rctx) / lowered[1](rctx)
+			elif ref.op == "neg":
+				fn = lambda rctx: -lowered[0](rctx)
+			# elif ref.op == "abs":
+			# 	fn = lambda rctx: jnp.abs(lowered[0](rctx))
+			# elif ref.op == "min":
+			# 	fn = lambda rctx: jnp.minimum(lowered[0](rctx), lowered[1](rctx))
+			else:
+				raise NotImplementedError
+
+		# elif isinstance(ref, FunctionRef):
+		# 	fn = ref.fn
+		# 	def lowered(rctx):
+		# 		args = [f(rctx) for f in lowered_args]
+		# 		kwargs = [(k, f(rctx)) for k, f in ref.kwargs]
+		# 		return fn(*args, **kwargs)
+		# 	return lowered
+
+		# Everything else: delegate
+		else:
+			assert LowerRefOpFn, ("Cannot delegate arbitrary behaviour "
+			                      "without passing a LowerRefOpFn object")
+			lowered_args = [cls.transform(
+				a, cctx, cache, delegatedCache, lowerRefOpFn
+			) for a in ref.args]
+			ref._delegatedFn = lowerRefOpFn.lower(ref, lowered_args, cctx)
+			# lambda looks up attribute on ref object - if need to recompile
+			# the delegated fn, should just update
+			fn = lambda : ref._delegatedFn
+			# i THINK it's ok to cache the outer function here against the ref
+			cache[ref] = fn
+			delegatedCache[ref] = fn
+			return fn
+
+		cache[ref] = fn
+		return fn
+
+
 def ensureRef(x):
 	if isinstance(x, Ref):
 		return x
@@ -234,30 +411,10 @@ class CompileContext:
 	def ref(self, value):
 		return Ref("const", value=value)
 
-class JaxCompileContext(CompileContext):
-
-	def __init__(self):
-		super().__init__()
-		self.keys = {}
-
-	def getMeasuredValue(self, name):
-		assert self._compileOnlyBlockDepth == 0, "wrapper functions not to be used in compile-time blocks"
-		if name not in keys:
-			index = len(self.keys)
-			self.keys[name] = Ref(op="get", index=index)
-		return self.keys[name]
 
 class RuntimeContext:
 	"""object passed to leaf ref functions to resolve final values set up by
 	compile time hooks """
-
-# @jdc.pytree_dataclass(frozen=True)
-# class JaxRuntimeContext(RuntimeContext):
-# 	"""
-# 	keep tuple of buffer types passed in
-# 	we should actually just have a flat map of all buffers across sim
-# 	"""
-# 	buffers : tuple[FixedLengthBuffer|SpanBuffer, ...]
 
 
 class LowerRefOpFn:
@@ -293,65 +450,8 @@ def lowerRef(root: Ref,
 	cache = {}  # Ref -> lowered callable (CSE)
 	delegatedCache = {} #
 
-	def transform(ref: Ref):
-		if ref in cache:
-			return cache[ref]
-
-		# Built-in leaves
-		if ref.op == "const":
-			fn = lambda rctx: ref.value
-
-		elif ref.op == "measure":
-			i = ref.index
-			fn = lambda rctx, i=i: rctx[i]
-
-		# Built-in arithmetic
-		elif ref.op in {"add", "sub", "mul", "div", "neg", "abs", "min"}:
-			lowered = [transform(a) for a in ref.args]
-
-			if ref.op == "add":
-				fn = lambda rctx: lowered[0](rctx) + lowered[1](rctx)
-			elif ref.op == "sub":
-				fn = lambda rctx: lowered[0](rctx) - lowered[1](rctx)
-			elif ref.op == "mul":
-				fn = lambda rctx: lowered[0](rctx) * lowered[1](rctx)
-			elif ref.op == "div":
-				fn = lambda rctx: lowered[0](rctx) / lowered[1](rctx)
-			elif ref.op == "neg":
-				fn = lambda rctx: -lowered[0](rctx)
-			elif ref.op == "abs":
-				fn = lambda rctx: jnp.abs(lowered[0](rctx))
-			elif ref.op == "min":
-				fn = lambda rctx: jnp.minimum(lowered[0](rctx), lowered[1](rctx))
-			else:
-				raise NotImplementedError
-
-		elif isinstance(ref, FunctionRef):
-			fn = ref.fn
-			def lowered(rctx):
-				args = [f(rctx) for f in lowered_args]
-				kwargs = [(k, f(rctx)) for k, f in ref.kwargs]
-				return fn(*args, **kwargs)
-			return lowered
-
-		# Everything else: delegate
-		else:
-			assert LowerRefOpFn, ("Cannot delegate arbitrary behaviour "
-			                      "without passing a LowerRefOpFn object")
-			lowered_args = [transform(a) for a in ref.args]
-			ref._delegatedFn = lowerRefOpFn.lower(ref, lowered_args, cctx)
-			# lambda looks up attribute on ref object - if need to recompile
-			# the delegated fn, should just update
-			fn = lambda : ref._delegatedFn
-			# i THINK it's ok to cache the outer function here against the ref
-			cache[ref] = fn
-			delegatedCache[ref] = fn
-			return fn
-
-		cache[ref] = fn
-		return fn
-
-	loweredRoot = transform(root)
+	loweredRoot = root.transform(
+		root, cctx, cache, delegatedCache, lowerRefOpFn)
 	cctx.cseCache.update(cache)
 	cctx.delegatedFnCache.update(delegatedCache)
 	return loweredRoot
@@ -385,102 +485,17 @@ class TraceError(Exception):
 # 	def visit_Assign(self, node):
 # 		if is_nonlocal_target(node): raise TraceError("jit functions must not have side effects, don't modify outside state")
 
-IGNORE_CALLS = {
-	"getMeasuredValue",
-	"Ref",
-	"ensure_ref",
-	"wrapFunctionRefCall",
-	# also ignore builtin constructors,
-	# find a way to update with Ref known functions
-	# and functions in a namespace (like jax)
-	"tuple", "list", "dict"
-}
-
-class CallWrappingTransformer(ast.NodeTransformer):
-	"""wrap all calls outside of ignore_calls set with FunctionRefs
-	"""
-	def __init__(self, ignoreNames: set[str]):
-		self.ignoreNames = ignoreNames
-		super().__init__()
-
-	def visit_Call(self, node: ast.Call):
-		# First transform children (arguments may themselves contain calls)
-		self.generic_visit(node)
-
-		# Only wrap normal calls: f(...)
-		# Ignore:
-		#  - attribute calls whose base is ignored (optional)
-		#  - calls to whitelisted names
-		calleeName = self._getCalleeName(node.func)
-
-		if calleeName is None:
-			# dynamic calls like (f())() –
-			# TODO: probably do some jank stuff to trace this back to
-			#  variable assignment but ONLY
-			#   this,
-			return node
-
-		if calleeName in self.ignoreNames:
-			return node
-
-		# Rewrite f(a, b, ...) → wrapFunctionRefCall(f, a, b, ...)
-		return ast.Call(
-			func=ast.Name(id="wrapFunctionRefCall", ctx=ast.Load()),
-			args=[node.func, *node.args],
-			keywords=node.keywords,
-		)
-
-	def _getCalleeName(self, func):
-		"""
-		Returns function name if statically identifiable, else None.
-		"""
-		if isinstance(func, ast.Name):
-			return func.id
-
-		if isinstance(func, ast.Attribute):
-			# foo.bar(...)
-			return func.attr
-
-		return None
-
-def inline(fn:T.Callable):
-	"""explicit decorator to effectively inline further functions,
-	continuing tracing process through them"""
-	fn._traceThrough = True
-	return fn
-
-def inlineFunction(fn, cctx, args, kwargs):
-	# Substitute args into symbolic scope
-	def boundFn():
-		return fn(*args, **kwargs)
-
-	rootRef = boundFn()   # build DAG for function body
-	return rootRef
 
 
-def wrapFunctionRefCall(fn, cctx, *args, **kwargs):
-	"""
-	hooked up by AST processing above:
-	only recursively follow through functions explicitly decorated
-	with @inline - defaulting to tracing through everything gets
-	dodgy if something somewhere happens to call open() or print() for
-	example.
-	should be fine to run over all functions in a namespace though, like
-	util functions for the sim
-	"""
-	# If any arg is a Ref → return FunctionRef
-	if hasattr(fn, "_traceThrough"):
-		# Inline expansion
-		return inlineFunction(fn, cctx, args, kwargs)
-	else:
-		return FunctionRef(fn, args, kwargs)
-	# # Else: normal call
-	# return fn(*args, **kwargs)
 
 
 def transformFunction(fn, ignoreNames):
 	"""transforms any function calls to FunctionRefs,
 	and also adds wrapFunctionRefCall() to namespace
+
+	parsing function source turns it back into frozen representation -
+	we insert wrapping hooks and return a lifted, frozen version.
+	call that to instantiate the dag
 	"""
 	# Get source
 	source = inspect.getsource(fn)
@@ -504,27 +519,29 @@ def transformFunction(fn, ignoreNames):
 
 
 def buildGraph(fn, cctx:CompileContext):
-	wrapped = transformFunction(fn, IGNORE_CALLS)
+	wrapped = transformFunction(fn, IGNORE_CALLS) # lifts fn
 	root = wrapped()   # author-time execution → Ref DAG
+	# lowers fn
 	return root
 
 def userCurve(x):
 	return x * x + 1.0
-def userMap(rctx:JaxRuntimeContext=None, cctx:JaxCompileContext=None):
+def userMap(*args, cctx:CompileContext=None, **kwargs, ):
 	a = cctx.getMeasuredValue("a")
 	b = cctx.getMeasuredValue("b")
 	c = userCurve(a)
 	return c + b
 
 if __name__ == '__main__':
-	cctx = JaxCompileContext()
+	cctx = CompileContext()
 	root, keys = buildGraph(userMap, cctx)
 	print("Measured keys:", keys)
 	print("Root Ref:", root)
 	fn = lowerRef(root, cctx)
 
 	# measurementBuffer matches keys order: ['a', 'b']
-	measurementBuffer = jnp.array([3.0, 5.0])
+	#measurementBuffer = jnp.array([3.0, 5.0])
+	measurementBuffer = [3.0, 5.0]
 
 	result = fn(measurementBuffer)
 	print("Result:", result)

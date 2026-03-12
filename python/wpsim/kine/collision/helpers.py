@@ -8,7 +8,7 @@ from wpsim.kine.collision.common import CollisionQueryData
 
 
 def buildCollisionSurfaceTrisFromMeshes(
-		bs: state.SubstepBoundData,
+		bs: state.BodyState,
 		metadata: state.BodyMetadata,
 		meshes: state.MeshBuffers,
 		useDynamicOnly: bool = True
@@ -138,7 +138,7 @@ def buildCollisionSpatialData(
 
 
 def buildCollisionQueryDataFromMeshes(
-		bs: state.SubstepBoundData,
+		bs: state.BodyState,
 		metadata: state.BodyMetadata,
 		meshes: state.MeshBuffers,
 		gridData: spatial.SpatialGridData | spatial.BVHData,

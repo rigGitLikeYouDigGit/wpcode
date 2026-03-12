@@ -45,7 +45,7 @@ def smoothRelu(x: jnp.ndarray, eps: jnp.ndarray) -> jnp.ndarray:
 
 
 def contactKinematics(
-		bs: state.SubstepBoundData,
+		bs: state.BodyState,
 		contacts: CollisionContacts
 ) -> tuple[
 	jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray,

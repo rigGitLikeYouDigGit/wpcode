@@ -8,7 +8,7 @@ from wpsim.kine.collision.common import CollisionContacts, CollisionQueryData
 
 
 def buildContactsFromSpatial(
-		bs: state.SubstepBoundData,
+		bs: state.BodyState,
 		queryData: CollisionQueryData,
 		config: spatial.SpatialConfig,
 		strategy: spatial.SpatialStrategy,

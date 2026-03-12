@@ -13,7 +13,16 @@ reload(forcefield)
 
 
 """combined plugin system for various simulation systems
-in wpsim
+in wpsim.
+
+we allow users to define their own functions for use in constraint building -
+
+simResource node loads set of python modules, runs user-defined functions
+for constraints and measurements - that node connects to each sim node
+using its functions? might be a lot of connections but it's fine.
+resource node namespaces overridden in order their connections are specified
+ 
+
 """
 
 

@@ -14,6 +14,84 @@ from wpsim.kine.builder import (BuilderBody, BuilderMesh,
 # from the node mesh data
 #from wpm.core.numpymaya import rawPointsFromMeshObj
 
+def makeGenericInputAttribute(gFn:om.MFnGenericAttribute, name:str)->om.MObject:
+	""""""
+	aParamValue = gFn.create(name, name )
+	gFn.addNumericType(om.MFnNumericData.kInt)
+	gFn.addNumericType(om.MFnNumericData.k3Int)
+	gFn.addNumericType(om.MFnNumericData.kBoolean)
+	gFn.addNumericType(om.MFnNumericData.kShort)
+	gFn.addNumericType(om.MFnNumericData.k3Short)
+	gFn.addNumericType(om.MFnNumericData.kFloat)
+	gFn.addNumericType(om.MFnNumericData.k3Float)
+	gFn.addNumericType(om.MFnNumericData.kDouble)
+	gFn.addNumericType(om.MFnNumericData.k3Double)
+	gFn.addNumericType(om.MFnNumericData.kFloatArray)
+	gFn.addNumericType(om.MFnNumericData.kDoubleArray)
+	gFn.addNumericType(om.MFnNumericData.kIntArray)
+
+	gFn.addDataType(om.MFnData.kString)
+	gFn.addDataType(om.MFnData.kStringArray)
+	gFn.addDataType(om.MFnData.kMatrix)
+	gFn.addDataType(om.MFnData.kMatrixArray)
+	gFn.addDataType(om.MFnData.kPointArray)
+	gFn.addDataType(om.MFnData.kVectorArray)
+	# gFn.addDataType(om.MFnData.kMesh)
+	# gFn.addDataType(om.MFnData.kNurbsCurve)
+	# gFn.addDataType(om.MFnData.kNurbsSurface)
+	return aParamValue
+
+
+def arrayFromGenericInput(pDH:om.MDataHandle)->jnp.ndarray|str|list[str]:
+	"""extract array data from a generic input attribute"""
+	if pDH.isNumeric():
+		if(pDH.numericType() == om.MFnNumericData.kDouble):
+			return jnp.array([pDH.asDouble()])
+		elif(pDH.numericType() == om.MFnNumericData.kFloat):
+			return jnp.array([pDH.asFloat()])
+		elif(pDH.numericType() == om.MFnNumericData.kInt):
+			return jnp.array([pDH.asInt()])
+		elif(pDH.numericType() == om.MFnNumericData.k3Double):
+			return jnp.array(pDH.asDouble3())
+		elif(pDH.numericType() == om.MFnNumericData.k3Float):
+			return jnp.array(pDH.asFloat3())
+	if pDH.type() == om.MFnData.kString:
+		return pDH.asString()
+	if pDH.type() == om.MFnData.kStringArray:
+		return list(om.MFnStringArrayData(pDH.data()).array())
+	if pDH.type() == om.MFnData.kMatrix:
+		return jnp.array(om.MFnMatrixData(pDH.data()).matrix())
+	if pDH.type() == om.MFnData.kMatrixArray:
+		return jnp.array(om.MFnMatrixArrayData(pDH.data()).array())
+	if pDH.type() == om.MFnData.kPointArray:
+		return jnp.array(om.MFnPointArrayData(pDH.data()).array())
+	if pDH.type() == om.MFnData.kVectorArray:
+		return jnp.array(om.MFnVectorArrayData(pDH.data()).array())
+	raise TypeError(f"Unsupported data type for generic input: "
+	                f"{pDH.type(), pDH.typeId()}")
+
+def makeValueOrStrAttributes(name, tFn, gFn)->tuple[om.MObject, om.MObject]:
+	"""make a pair of attributes - one for a direct value, and one for a string input
+	that can be used to reference other attributes. The node will use the value attribute
+	if the string attribute is empty, otherwise it will try to resolve the string as an
+	attribute path and use that value instead.
+	"""
+	aStr = tFn.create(f"{name}Str", f"{name}Str", om.MFnData.kString)
+	aValue = makeGenericInputAttribute(gFn, name + "Val")
+	return aValue, aStr
+
+
+def makeFloatOrStrAttributes(name, tFn, nFn)->tuple[om.MObject, om.MObject]:
+	"""make a pair of attributes - one for a direct value, and one for a string input
+	that can be used to reference other attributes. The node will use the value attribute
+	if the string attribute is empty, otherwise it will try to resolve the string as an
+	attribute path and use that value instead.
+	"""
+	aStr = tFn.create(f"{name}Str", f"{name}Str", om.MFnData.kString)
+	aValue = nFn.create(f"{name}Val", f"{name}Val",
+	                    om.MFnNumericData.kDouble, 0.0)
+	return aValue, aStr
+
 def makeBodyAttributes(cls):
 	"""create consistent set of static MObjects to represent rigid
 	body attributes.

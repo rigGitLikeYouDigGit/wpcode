@@ -12,14 +12,14 @@ def makeIdentityQuat(n: int, dtype=jnp.float32) -> jnp.ndarray:
 	return q.at[:, 3].set(1.0)
 
 
-def makeTestStatePointConstraint() -> tuple[SubstepBoundData, ConstraintState,
+def makeTestStatePointConstraint() -> tuple[BodyState, ConstraintState,
 ConstraintPlan]:
 	# Two bodies
 	n = 2
 	dtype = jnp.float32
 
 	# Body 0 at origin, Body 1 offset in x
-	bs = SubstepBoundData(
+	bs = BodyState(
 		position=jnp.array([[0.0, 0.0, 0.0],
 							[1.0, 0.0, 0.0]], dtype),
 		orientation=makeIdentityQuat(n, dtype),
@@ -77,7 +77,7 @@ ConstraintPlan]:
 	return bs, cs, plan
 
 
-def pointError(bs: SubstepBoundData, cs: ConstraintState) -> jnp.ndarray:
+def pointError(bs: BodyState, cs: ConstraintState) -> jnp.ndarray:
 	# Computes ||pB - pA|| for the first point constraint
 	iA = cs.point.bodyA[0]
 	iB = cs.point.bodyB[0]
@@ -107,7 +107,7 @@ def runPointConstraintSmokeTest():
 
 
 def makeTestStateHingeAxisOnly() -> tuple[
-	SubstepBoundData, ConstraintState, ConstraintPlan]:
+	BodyState, ConstraintState, ConstraintPlan]:
 	n = 2
 	dtype = jnp.float32
 
@@ -116,7 +116,7 @@ def makeTestStateHingeAxisOnly() -> tuple[
 	qRot = makeQuatFromAxisAngle(jnp.array([0.0, 0.0, 1.0], dtype), jnp.pi * 0.5)
 	q0 = q0.at[1].set(qRot)
 
-	bs = SubstepBoundData(
+	bs = BodyState(
 		position=jnp.zeros((n, 3), dtype),
 		orientation=q0,
 		linearVelocity=jnp.zeros((n, 3), dtype),
@@ -166,7 +166,7 @@ def makeTestStateHingeAxisOnly() -> tuple[
 	)
 	return bs, cs, plan
 
-def hingeAxisDot(bs: SubstepBoundData, cs: ConstraintState) -> jnp.ndarray:
+def hingeAxisDot(bs: BodyState, cs: ConstraintState) -> jnp.ndarray:
 	iA = cs.hingeAxis.bodyA[0]
 	iB = cs.hingeAxis.bodyB[0]
 	aW = quatRotate(bs.orientation[iA][None, :], cs.hingeAxis.localHingeAxisA)[0]

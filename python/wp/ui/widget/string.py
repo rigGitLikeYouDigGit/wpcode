@@ -6,7 +6,7 @@ from PySide2 import QtWidgets, QtCore
 from wp.constant import Status
 from wp.object import PostInitBase, postInitWrap
 from wp.ui.widget.base import WpWidgetBase
-from wplib.validation import Rule, RuleSet, ValidationError
+from wplib.validation import ValidationRule, RuleSet, ValidationError
 
 class StringTranslator:
 	"""in future we could use this to pass rich path objects
@@ -147,7 +147,7 @@ if __name__ == '__main__':
 	import sys, re
 	from PySide2.QtWidgets import QApplication as QApp
 
-	class NodeNameValidCharactersRule(Rule):
+	class NodeNameValidCharactersRule(ValidationRule):
 		"""check that input does not contain invalid characters"""
 		invalidPattern = re.compile(r"[^a-zA-Z0-9_|:]")
 
