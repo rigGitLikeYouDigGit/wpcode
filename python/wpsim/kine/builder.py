@@ -546,7 +546,13 @@ class SimBuilder:
 		)
 		return str(fnDef)
 
-	def compileVarExpString(self, expStr:str, fnGlobals:dict):
+	def compileVarExpString(self, expStr:str, fnGlobals:dict,
+	                        fnModules:T.Sequence[types.ModuleType]=()):
+		"""modules are imported into var exps"""
+		baseGlobals = {}
+		for i in fnModules:
+			baseGlobals[i.__name__] = i
+			baseGlobals.update({attrName : getattr(i, attrName) for attrName in dir(i)})
 		fn = wptrace.compileCodeToFunction(expStr, fnGlobals,
 		                                   "runVars")
 		compFn = jax.jit(

@@ -1,7 +1,12 @@
 from __future__ import annotations
 import typing as T
 
-from ..gen.skinCluster import SkinCluster as GenSkinCluster
+
+from ..gen.skinCluster import SkinCluster
+
+if T.TYPE_CHECKING:
+	from ..author import Catalogue
+	SkinCluster = Catalogue.SkinCluster
 
 import numpy as np
 
@@ -15,7 +20,7 @@ if T.TYPE_CHECKING:
 	from ...node.base import Plug
 
 
-class SkinCluster(GenSkinCluster):
+class SkinCluster(SkinCluster):
 	""" builtin methods for getting history, future ,
 	origshapes etc
 	"""

@@ -1,10 +1,15 @@
 from __future__ import annotations
 import typing as T
 
-from ..gen.transform import Transform as GenTransform
 import numpy as np
 from wpm import cmds, om, WN, arr, Plug
 from wplib.totype import to, coerce
+
+from ..gen.transform import Transform as GenTransform
+
+if T.TYPE_CHECKING:
+	from ..author import Catalogue
+	GenTransform = Catalogue.Transform
 
 
 class Transform(GenTransform):

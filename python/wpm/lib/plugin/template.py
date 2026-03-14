@@ -246,6 +246,59 @@ class PluginDrawOverrideTemplate:
 		newNode = cls(obj)
 		return newNode
 
+class PluginMPxDictData(om.MPxData):
+	clsName: str = ""
+	kTypeId: om.MTypeId = None
+
+	def setData(self, data:dict):
+		"""set internal data from given dataclass instance"""
+		self._data = data
+
+	def data(self) -> dict:
+		"""return internal dataclass instance"""
+		return self._data
+
+	def typeId(self) -> om.MTypeId:
+		"""return unique type id for this MPxData type"""
+		return self.kTypeId
+
+	def name(self) -> str:
+		"""return name of this MPxData type"""
+		return self.__class__.__name__
+
+	def writeASCII(self) -> str:
+		"""write data to ascii file stream"""
+		if self._data is None:
+			return ""
+		return repr(dataclasses.asdict(self._data))
+
+	def writeBinary(self) -> bytearray:
+		"""write data to binary file stream"""
+		if self._data is None:
+			return bytearray()
+		return bytearray(pickle.dumps(self._data))
+
+	def readBinary(self, binaryIn, length) -> int:
+		"""read data from binary file stream"""
+		data = bytes(binaryIn[:length])
+		self._data = pickle.loads(data)
+		return length
+
+	def readASCII(self, argList, endOfTheLastParsedElement) -> int:
+		"""read data from ascii file stream"""
+		if len(argList) > endOfTheLastParsedElement:
+			self._data = ast.literal_eval(argList[endOfTheLastParsedElement])
+			return endOfTheLastParsedElement + 1
+		return endOfTheLastParsedElement
+
+	def copy(self, other: PluginMPxDictData):
+		"""copy data from another instance of this MPxData type"""
+		self._data = copy.deepcopy(other._data)
+
+	@classmethod
+	def creator(cls):
+		"""required creator method for maya plugin registration"""
+		return cls()
 
 class PluginMPxData(om.MPxData):
 	"""mixin for custom MPxData types, accepting
@@ -264,7 +317,7 @@ class PluginMPxData(om.MPxData):
 	# 	om.MPxData.__init__(self)
 	# 	self._data = data
 
-	def setData(self, data:dataClsT):
+	def setDataCls(self, data:dataClsT):
 		"""set internal data from given dataclass instance"""
 		self._data = data
 

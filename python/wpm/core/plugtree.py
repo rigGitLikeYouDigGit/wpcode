@@ -306,7 +306,7 @@ class Plug(PlugBase, # this base class list will beat you up
 		return om.MMatrix(self.getValue())
 
 	###### REGION ACCESS & SYNTAX ####
-	def __call__(self, *args, **kwargs):
+	def __call__(self:TreeType, *args, **kwargs)->TreeType|T.Any:
 		""" allow calling with no args to get value of the plug
 		"""
 		if not args and not kwargs:
@@ -391,8 +391,8 @@ class Plug(PlugBase, # this base class list will beat you up
 		return []
 
 
-	def __getitem__(self, *address:(str, tuple),
-	                )->T:
+	def __getitem__(self:TreeType, *address:(str, tuple),
+	                )->TreeType|T.Any:
 		""" returns direct value of lookup branch
 		:rtype T
 		"""

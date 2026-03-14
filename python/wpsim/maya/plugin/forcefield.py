@@ -11,7 +11,7 @@ from wpsim import force
 from wpsim.kine.builder import BuilderForceField
 
 def maya_useNewAPI():
-    pass
+	pass
 class WpSimForceFieldMPxData(PluginMPxData):
 	"""data container for force field info"""
 	clsName = "wpSimForceFieldMPxData"
@@ -180,7 +180,7 @@ class WpSimForceFieldDrawOverride(omr.MPxDrawOverride, PluginDrawOverrideTemplat
 		return True
 
 	def addUIDrawables(self, objPath, drawManager, frameContext,
-	                   data: WpSimForceFieldDrawData):
+					   data: WpSimForceFieldDrawData):
 		if data is None:
 			return
 		drawManager.beginDrawable(
@@ -212,7 +212,7 @@ class WpSimForceFieldDrawOverride(omr.MPxDrawOverride, PluginDrawOverrideTemplat
 		return oldData
 
 	def drawCircle(self, drawManager, axis: str, radius: float,
-	               yOffset: float = 0.0, segments: int = 24):
+				   yOffset: float = 0.0, segments: int = 24):
 		for i in range(segments):
 			angle0 = (2.0 * math.pi) * (i / float(segments))
 			angle1 = (2.0 * math.pi) * ((i + 1) / float(segments))
@@ -221,7 +221,7 @@ class WpSimForceFieldDrawOverride(omr.MPxDrawOverride, PluginDrawOverrideTemplat
 			drawManager.line(point0, point1)
 
 	def circlePoint(self, axis: str, radius: float, angle: float,
-	                yOffset: float) -> om.MPoint:
+					yOffset: float) -> om.MPoint:
 		cosT = math.cos(angle)
 		sinT = math.sin(angle)
 		if axis == "xy":
@@ -243,13 +243,13 @@ class WpSimForceFieldDrawOverride(omr.MPxDrawOverride, PluginDrawOverrideTemplat
 		self.drawCircle(drawManager, "yz", radius)
 
 		self.drawLine(drawManager, (radius, halfHeight, 0.0),
-		              (radius, -halfHeight, 0.0))
+					  (radius, -halfHeight, 0.0))
 		self.drawLine(drawManager, (-radius, halfHeight, 0.0),
-		              (-radius, -halfHeight, 0.0))
+					  (-radius, -halfHeight, 0.0))
 		self.drawLine(drawManager, (0.0, halfHeight, radius),
-		              (0.0, -halfHeight, radius))
+					  (0.0, -halfHeight, radius))
 		self.drawLine(drawManager, (0.0, halfHeight, -radius),
-		              (0.0, -halfHeight, -radius))
+					  (0.0, -halfHeight, -radius))
 
 	def drawBox(self, drawManager, halfExtents: tuple[float, float, float]):
 		hx, hy, hz = halfExtents
@@ -266,5 +266,5 @@ class WpSimForceFieldDrawOverride(omr.MPxDrawOverride, PluginDrawOverrideTemplat
 			self.drawLine(drawManager, corners[start], corners[end])
 
 	def drawLine(self, drawManager, start: tuple[float, float, float],
-	             end: tuple[float, float, float]):
+				 end: tuple[float, float, float]):
 		drawManager.line(om.MPoint(*start), om.MPoint(*end))

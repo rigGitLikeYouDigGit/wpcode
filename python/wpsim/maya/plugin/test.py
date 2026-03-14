@@ -32,7 +32,8 @@ def runTest():
 	WN.syncWrappersForPlugin(plugin.wpSimPlugin.name)
 	body = WN.createNode("wpSimRigidBody")
 
-	WN.Mesh.antialiasingLevel_
+
+
 	print(body, type(body))
 
 

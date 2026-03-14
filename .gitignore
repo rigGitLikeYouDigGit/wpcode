@@ -378,3 +378,7 @@ python/wpm/core/node/gen/*
 pystubs/*
 rust/**/*.exe
 rust/**/target/**/*
+cpp/usd/**/*
+cpp/usd_dl/**/*
+python/wpm/core/node/codegen/nodeData.json
+python/wpm/core/node/codegen/pluginNodeData.json

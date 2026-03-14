@@ -282,13 +282,13 @@ class MayaPyPluginAid(MayaPluginAid):
 		This of course will not touch any classes under node/author
 		"""
 		import tempfile
-		from wpm.core.node._codegen import gather, generate
+		from wpm.core.node.codegen import gather, generate
 		outputPath = gather.TARGET_NODE_DATA_PATH.parent / "pluginNodeData.json"
 		nodeClassNames = self.pluginNodeTypeNames()
 		if not nodeClassNames:
 			log("no node classes to update wrappers for plugin " + self.name)
 			return
-		nodeTypes = gather.gatherNodeData(nodeClassNames, outputPath)
+		nodeTypes = gather._gatherNodeData(nodeClassNames, outputPath)
 		#log("classes to update:")
 		#pprint.pprint(nodeTypes)
 		generate.genNodes(jsonPath=outputPath,
