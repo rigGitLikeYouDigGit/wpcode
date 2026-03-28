@@ -4,6 +4,7 @@ from __future__ import annotations
 import typing as T
 from wplib.inheritance import SuperClassLookupMap
 
+ThisT = T.TypeVar("ThisT", bound="Adaptor")
 class Adaptor:
 	"""Abstract-abstract class for registering "companion" objects
 	to types, for type-specific behaviour without subclassing.
@@ -53,7 +54,7 @@ class Adaptor:
 	# def __prepare__(self, *args, **kwargs):
 	# 	log("adaptor class prepare", args, kwargs)
 
-	adaptorTypeMap : SuperClassLookupMap = None
+	adaptorTypeMap : SuperClassLookupMap | dict[T.Any, type[Adaptor]] = None
 
 	@classmethod
 	def makeNewTypeMap(cls):
@@ -62,6 +63,8 @@ class Adaptor:
 
 	# if T.TYPE_CHECKING:
 	forTypes : tuple[type, ...] = () # no active impact, just helps type hinting
+
+	forValues = ()
 
 	@classmethod
 	def checkIsValidAdaptor(cls)->bool:
@@ -75,22 +78,32 @@ class Adaptor:
 		"""
 		#log("registerAdaptor", adaptor, forTypes)
 		#log(adaptor.adaptorTypeMap)
-		assert isinstance(cls.adaptorTypeMap, SuperClassLookupMap), "Must declare empty adaptorTypeMap on Adaptor superclass of {}".format(adaptor)
+		assert isinstance(cls.adaptorTypeMap, (SuperClassLookupMap, dict)), (
+			"Must declare empty adaptorTypeMap on Adaptor superclass of {}".format(adaptor))
 		assert cls.checkIsValidAdaptor(), f"Adaptor {cls} failed valid check on registration"
-		adaptor.adaptorTypeMap.updateClassMap({tuple((set(forTypes))) : adaptor})
+		if isinstance(cls.adaptorTypeMap, SuperClassLookupMap):
+			adaptor.adaptorTypeMap.updateClassMap(
+				{tuple((set(forTypes))): adaptor})
+		else:
+			cls.adaptorTypeMap.update({tuple((set(forTypes))): adaptor})
 
 	@classmethod
-	def adaptorForType(cls, forType:type)->[Adaptor]:
+	def adaptorForType(cls:T.Type[ThisT], forType:type)->T.Type[ThisT]:
 		"""Get the adaptor for the given type.
 		"""
 		#return superClassLookup(cls.adaptorTypeMap.classMap, forType, default=None)
 		return cls.adaptorTypeMap.lookup(forType, default=None)
 
 	@classmethod
-	def adaptorForObject(cls, forObj:T.Any)->type[Adaptor]:
+	def adaptorForObject(cls:T.Type[ThisT], forObj:T.Any)->T.Type[ThisT]:
 		"""Get the adaptor for the given object.
 		"""
 		return cls.adaptorForType(type(forObj))
+
+	@classmethod
+	def adaptorFor(cls:T.Type[ThisT], forVal:T.Any)->T.Type[ThisT]:
+		"""retrieving adaptor for arbitrary value? """
+		return cls.adaptorTypeMap[forVal]
 
 	@classmethod
 	def __init_subclass__(cls, **kwargs):
@@ -98,7 +111,7 @@ class Adaptor:
 		super().__init_subclass__(**kwargs)
 		if cls.forTypes:
 			assert isinstance(cls.forTypes, (tuple, set, list)), f"forTypes must be an iterable of types, not {cls.forTypes}"
-			cls.registerAdaptor(cls, cls.forTypes)
+			cls.registerAdaptor(cls, cls.forTypes or cls.forValues)
 
 
 	# region init shorthand
@@ -145,6 +158,8 @@ class Adaptor:
 			dynamically dispatch to a sibling type
 			but even to do that, it should be issubclass, not isinstance?
 			fool 
+			
+			I think this was specifically some unwise proxy class stuff
 			"""
 
 			adaptorType = cls.adaptorForType(type(args[0]))
