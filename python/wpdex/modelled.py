@@ -45,7 +45,9 @@ class Modelled(#Visitable,
 
 	def __init__(self, data:dataT()):
 		#log("new modelled", data)
-		self.data : self.dataT() = WpDexProxy(data)
+		self._proxy = WpDexProxy()
+		#self.data : self.dataT() = WpDexProxy(data)
+		self._proxy._setProxyTarget(data)
 
 	def __str__(self):
 		try:

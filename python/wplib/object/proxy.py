@@ -45,6 +45,7 @@ also avoids polluting proxy namespace too much
 
 
 probably the most complex thing I've ever done, but with hindsight I think it's actually pretty cool
+with even more hindsight this thing rules, young ed was coding out of his mind
 
 
 """

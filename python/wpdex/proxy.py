@@ -8,25 +8,69 @@ import typing as T
 from collections import defaultdict
 from pathlib import Path
 
+import orjson
+
 from wpdex.wx import WX, Wreactive_ops
 from wpdex.context import ReentrantContext
 
 from wplib import log
 from wplib.object import Adaptor, Proxy, ProxyData, ProxyMeta
+from wplib.monad import Monad, MonadDriveData
 from wplib.serial import serialise, deserialise
 from wpdex.base import WpDex
 
-from param import rx
-import param
+# from param import rx
+# import param
 
-#import json as _json
-# try:
-# 	import orjson as _json
-# except ImportError:
-	#pass
-import orjson
+#setattr(param.reactive, "reactive_ops", Wreactive_ops)
 
-setattr(param.reactive, "reactive_ops", Wreactive_ops)
+"""rx is too complicated for net gain, and the performance slowdown it costs
+is unbelievable.
+
+reasons we brought in rx:
+	- observing dex and values changing passively, and updating UIs when they do
+	- easy function syntax for making pipelines
+difficulties met in using rx:
+	- had to subclass and change rx anyway to integrate with dex
+	- printing rx by default can't be done
+	- massive quantities of rx calls made (maybe skill issue but still 
+	difficult to control)
+	- pipeline syntax wasn't that great anyway
+	- rx code itself is very cool, but VERY complicated
+		- I can do cool and complicated code myself, no library needed 
+required features to replace RX:
+	- .watch() on specific objects - restrict it to dex wrappers, that way
+		it can be somewhat sane. also lets us switch between push and pull as needed
+	- potentially the WRITE() signal, but still trying to figure what that 
+	was about
+	
+	
+new reactive pipeline has to target functions as an endpoint, like qt signals
+
+so
+
+record = dex.ref("root", "trunk", "leaf").valMethod(a=b).map_(lambda x : 
+	x*2).firstOrNone_().drive( widget.onValueChanged, mode="push")
+
+what do we think of that
+.ref() still returns our new reactive johnsense
+
+use the same trailing underscores as we use for maya node plugs?
+this sadly precludes using maya plug attributes in reactive systems - it's a
+joke but that might actually be possible sometime
+ 
+.drive_( fn, mode="push" or mode="pull" ) creates the connection - I think
+we have to store it mainly on the source dex object.
+push mode forces dex to update slot whenever value changed, with delta passed
+to function
+
+pull mode stores deltas until read ( i think we're going with pull for ui),
+then passes list of deltas to function
+
+the result of drive_ might just be a static record object, to allow 
+disconnecting when needed - like callbacks in maya returning their id
+
+"""
 
 
 class WpDexProxyData(ProxyData):
@@ -283,8 +327,8 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 
 					if deltaMap:
 						#todo: an easy way in dex to just compare all child dex objects for combined deltas
-						log("deltaMap")
-						pprint.pprint(deltaMap)
+						# log("deltaMap")
+						# pprint.pprint(deltaMap)
 						event = {"type":"deltas",
 						         "paths" : deltaMap}
 						self.dex().sendEvent(event)
@@ -294,7 +338,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 	def _beforeProxySetAttr(self, attrName:str, attrVal:T.Any,
 	                     targetInstance:object
 	                     ) ->tuple[str, T.Any, object, dict]:
-		"""in general we assume setting an attribute will usually 
+		"""in general we assume setting an attribute will
 		mutate an object"""
 		self._proxyData["externalCallDepth"] += 1
 		self._openDelta()
@@ -347,71 +391,68 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		#proxy._linkDexProxyChildren()
 
 	#region reactive referencing
-	def ref(self, *path:WpDex.pathT)-> WX:
-		"""unsure if this should return a wx on the TARGET object,
-		or on the FUNCTION to GET the target object
-		hmmmmmmm
+	def ref(self, *path:WpDex.pathT, getDex=False)-> Monad:
+		"""return reactive pipeline where the first step is to look up
+		the given path on this dex.
+		For a ui, extending this should check if the pipeline is reversible
 
-		test returning a lifted call, on the method to get the target.
-		every time we recompute the rx expression result, we have to start
-		by retrieving the live value of the structure at this path.
-		wew lad
+		later try using lens here instead? easier to define and check for
+		reversibility
 		"""
-		#TODO: factor this out properly, MAYBE as a classmethod on WX?
-
-
-		#TODO: couldn't get rx.when() to work for gating eval,
-		# it would always return an rx() instance, not WX(),
-		# so for this case I use a dummy argument to the function itself
 		path = WpDex.toPath(path)
 		#log("get ref", self, path)
-		if self._proxyData["wxRefs"].get(path) is None:
 
-			dirtyKwarg = rx(1)
+		return Monad(lambda : self.dex().access(
+			self.dex(), path, values=not getDex
+		))
 
-			def _resolveRef(**kwargs):
-				rootDex = self.dex()
-				foundDex : WpDex = rootDex.access(rootDex, path, values=False)
-
-				return foundDex.getValueProxy()
-
-				pass
-
-			ref = WX(_resolveRef, _dexPath=path, _dex=self.dex())(dirtyKwarg=dirtyKwarg)
-
-			assert isinstance(ref, WX)
-			assert isinstance(ref.rx._reactive, WX)
-
-			self._proxyData["wxRefs"][path] = ref
-			# flag that it should dirty whenever this proxy's
-			# value changes (on delta)
-			def _setDirtyRxValue(*_, **__):
-				"""need to make a temp closure because we can't
-				easily set values as a function call"""
-				#log("set dirty value")
-				dirtyKwarg.rx.value += 1
-
-			self.dex().getEventSignal("main").connect(_setDirtyRxValue)
-
-			# allow writing back by "WRITE" method on WX
-			# TODO: maybe move more of this into WX, pass in reference to wpdex root?
-
-			def _onRefWrite(path, value):
-				#log("start dex", self.dex(), self.dex().parent, self.dex().branchMap())
-				#log(self.dex().branchMap()["@N"].parent)
-				dex = self.dex()
-				#log("path", path, self.dex().toPath(path))
-				targetDex : WpDex = dex.access(dex, self.dex().toPath(path), values=False)
-				#log("targetDex", targetDex, targetDex.parent)
-				#log(targetDex.branchMap())
-				assert isinstance(targetDex, WpDex)
-				if targetDex.parent is not None:
-					assert isinstance(targetDex.parent, WpDex)
-				targetDex.write(value)
-				#log("after write", self.dex(), value, type(value), self.dex().branchMap())
-			ref._kwargs["_writeSignal"].connect(_onRefWrite)
-
-		return self._proxyData["wxRefs"][path]
+		# if self._proxyData["wxRefs"].get(path) is None:
+		#
+		# 	dirtyKwarg = rx(1)
+		#
+		# 	def _resolveRef(**kwargs):
+		# 		rootDex = self.dex()
+		# 		foundDex : WpDex = rootDex.access(rootDex, path, values=False)
+		#
+		# 		return foundDex.getValueProxy()
+		#
+		# 		pass
+		#
+		# 	ref = WX(_resolveRef, _dexPath=path, _dex=self.dex())(dirtyKwarg=dirtyKwarg)
+		#
+		# 	assert isinstance(ref, WX)
+		# 	assert isinstance(ref.rx._reactive, WX)
+		#
+		# 	self._proxyData["wxRefs"][path] = ref
+		# 	# flag that it should dirty whenever this proxy's
+		# 	# value changes (on delta)
+		# 	def _setDirtyRxValue(*_, **__):
+		# 		"""need to make a temp closure because we can't
+		# 		easily set values as a function call"""
+		# 		#log("set dirty value")
+		# 		dirtyKwarg.rx.value += 1
+		#
+		# 	self.dex().getEventSignal("main").connect(_setDirtyRxValue)
+		#
+		# 	# allow writing back by "WRITE" method on WX
+		# 	# TODO: maybe move more of this into WX, pass in reference to wpdex root?
+		#
+		# 	def _onRefWrite(path, value):
+		# 		#log("start dex", self.dex(), self.dex().parent, self.dex().branchMap())
+		# 		#log(self.dex().branchMap()["@N"].parent)
+		# 		dex = self.dex()
+		# 		#log("path", path, self.dex().toPath(path))
+		# 		targetDex : WpDex = dex.access(dex, self.dex().toPath(path), values=False)
+		# 		#log("targetDex", targetDex, targetDex.parent)
+		# 		#log(targetDex.branchMap())
+		# 		assert isinstance(targetDex, WpDex)
+		# 		if targetDex.parent is not None:
+		# 			assert isinstance(targetDex.parent, WpDex)
+		# 		targetDex.write(value)
+		# 		#log("after write", self.dex(), value, type(value), self.dex().branchMap())
+		# 	ref._kwargs["_writeSignal"].connect(_onRefWrite)
+		#
+		# return self._proxyData["wxRefs"][path]
 
 
 	#endregion
