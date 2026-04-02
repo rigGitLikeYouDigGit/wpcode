@@ -38,20 +38,26 @@ class MonadDriveData(TypedDict):
 class Monad:
 	"""i wonder if other languages have specific names for these
 	like rust, c, go
+
+	unsure if methods on this object should be module-level functions instead,
+	would remove danger of collision entirely
+
+	this might also overlap with exp system
 	"""
-	def __init__(self, v):
+	def __init__(self, *args, **kwargs) -> None:
 		"""v is any seed object for the monad, either static value or
 		callable"""
-		self.v = v
+		self.args = args
+		self.kwargs = kwargs
 
 	def __getattr__(self, item):
 		"""getattr is the main way to build up the monad, it returns a new
 		monad with the new value being the result of calling the previous
 		value with the new attribute as a method"""
-		return Monad(lambda : getattr(EVALR(self.v), item))
+		return Monad(lambda : getattr(EVALR(self.args[0]), item))
 
 	def __call__(self, *args, **kwargs):
-		return Monad(lambda : self.v(*args, **kwargs))
+		return Monad(lambda : self.args[0](*args, **kwargs))
 
 	def drive_(self, fn:typing.Callable):
 		"""create a record connecting this end monad to the target callable -
@@ -62,3 +68,25 @@ class Monad:
 			monad=self, target=fn
 		)
 
+
+def chainIsReversible_(self):
+	pass
+
+
+class Each(Monad):
+	"""iterate over only flat values for now, items for lists,
+	(k v) tuples for dicts
+	"""
+
+"""for ui, we need a way to explicitly define reversible
+operations. lenses is a cool library but I'm gonna say it's a bit complex for
+now
+"""
+
+#
+# presOp = Iso(forwards=modifyFn, backwards=restoreFn)
+#
+#
+# reverseMap = {
+# 	str.upper: str.lower,
+# }

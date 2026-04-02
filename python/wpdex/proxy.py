@@ -391,7 +391,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		#proxy._linkDexProxyChildren()
 
 	#region reactive referencing
-	def ref(self, *path:WpDex.pathT, getDex=False)-> Monad:
+	def ref(self, *path:WpDex.pathT, getDex=False, create=True)-> Monad:
 		"""return reactive pipeline where the first step is to look up
 		the given path on this dex.
 		For a ui, extending this should check if the pipeline is reversible
@@ -399,12 +399,7 @@ class WpDexProxy(Proxy, metaclass=WpDexProxyMeta):
 		later try using lens here instead? easier to define and check for
 		reversibility
 		"""
-		path = WpDex.toPath(path)
-		#log("get ref", self, path)
-
-		return Monad(lambda : self.dex().access(
-			self.dex(), path, values=not getDex
-		))
+		return self.dex().ref(*path, getDex=getDex, create=create)
 
 		# if self._proxyData["wxRefs"].get(path) is None:
 		#

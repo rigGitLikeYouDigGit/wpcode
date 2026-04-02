@@ -49,7 +49,7 @@ namespace strata {
 	struct EvalGraph;
 
 	// ============================================================================
-	// DirtyNode - Now templated on graph type
+	// DirtyNode
 	// ============================================================================
 	struct DirtyNode {
 		int index = -1;
@@ -150,7 +150,7 @@ namespace strata {
 		/* TRANSIENT MEMBERS */
 		bool graphChanged = true; // if true, needs full rebuild of topo generations
 		// topo maps
-		std::vector<std::vector<int>> generations = { {} };
+		SmallList<SmallList<int>> generations = { {} };
 		// transient map for topology
 		std::unordered_map<int, std::vector<int>> nodeDirectDependentsMap;
 		std::unordered_map<int, std::vector<int>> nodeAllDependentsMap;
@@ -181,30 +181,18 @@ namespace strata {
 			}
 		}
 
-		Status setNodeName(NodeT* nodePtr, std::string newName) {
+		Status setNodeName(NodeT* nodePtr, StrataName& newName) {
 			// the one concession to mutable state for now in graphs
 			Status s;
 			int index = nameIndexMap[nodePtr->name];
 			nameIndexMap.erase(nodePtr->name);
 			//nameIndexMap[newName] = index;
-			nameIndexMap.insert({ std::string(newName), index });
+			nameIndexMap.insert({ newName, index });
 			nodePtr->name = newName;
 			return s;
 		}
 
-
-		/*template <typename NodeT = DirtyNode>*/
-		NodeT* addNode(const std::string& name, bool _callPostConstructor = true) {
-			/* create new node object,
-			returns a new pointer to it.
-
-			callPostConstructor true by default -
-			if a derived graph type calls this, set to false to call post
-			only at the end of the overridden function
-
-			should we convert all this to return status code?
-			*/
-			//if (nameIndexMap.count(name) != 0) {
+		NodeT* addNode(const StrataName& name, bool _callPostConstructor = true) {
 			if (nameIndexMap.find(name) != nameIndexMap.end()) {
 				Status s;
 				CWMSG(s, "Name " + name + " already found in dirty graph, returning nullptr");
@@ -212,13 +200,10 @@ namespace strata {
 			}
 
 			const int newIndex = static_cast<int>(nodes.size());
-			/*auto nodePtr = std::make_unique<NodeT>(newIndex, name);
-			nodes.push_back(std::move(nodePtr));*/
-			nodes.push_back(NodeT(newIndex, name));
 
+			nodes.emplace_back(newIndex, name);  // Changed to emplace_back
 
 			NodeT* newNodePtr = &nodes[newIndex];
-			//nameIndexMap[std::string(newNodePtr->name)] = newIndex;
 			nameIndexMap.insert({ newNodePtr->name, newIndex });
 
 			newNodePtr->graphPtr = this;
@@ -227,44 +212,42 @@ namespace strata {
 			if (_callPostConstructor) {
 				Status s = newNodePtr->postConstructor();
 				CWMSG(s, "post-constructor on node " + newNodePtr->name + " failed!")
-
 			}
 			return newNodePtr;
 		}
 
-		inline NodeT* getNode(DirtyNode*& node) const {
+		/* const casts here imply the graph won't be modified by getting a node*/
+		inline NodeT* getNode(NodeT* node) const {
 			// included here for similar syntax to get op pointer, no matter the input
 			// not sure if this is actually useful in c++
 			return node;
 		}
-		inline NodeT* getNode(const int& index) const {
-			//DEBUGSL("get node by index " + std::to_string(index));
-			//DEBUGSL("nodes size: " + std::to_string(nodes.size()));
+		inline NodeT* getNode(int& index) const {
+			if (nodes.size() <= index) {
+				return nullptr;
+			}
+			return const_cast<NodeT*>(&nodes[index]);
+		}
+		inline NodeT* getNode(StrataName& nodeName) const {
+
+			auto check = nameIndexMap.find(nodeName);
+			if (check == nameIndexMap.end()) { return nullptr; }
+			return const_cast<NodeT*>(&nodes[check->second]);
+		}
+
+		inline const NodeT* getNode(const int& index) const {
 			if (nodes.size() <= index) {
 				return nullptr;
 			}
 			return &nodes[index];
 		}
-		inline NodeT* getNode(const std::string& nodeName) const {
+		inline const NodeT* getNode(const StrataName& nodeName) const {
 
 			auto check = nameIndexMap.find(nodeName);
 			if (check == nameIndexMap.end()) { return nullptr; }
 			return &nodes[check->second];
 		}
-
-		//template<typename NodeT>
-		//inline NodeT* getNode(DirtyNode*& node) const {
-		//	return dynamic_cast<NodeT*>(getNode(node));
-		//}
-		//template<typename NodeT>
-		//inline NodeT* getNode(const int& index) const {
-		//	return dynamic_cast<NodeT*>(getNode(index));
-		//}
-		////template<typename NodeT>
-		//inline NodeT* getNode(const std::string& nodeName) const {
-		//	return dynamic_cast<NodeT*>(getNode(nodeName));
-		//}
-
+		
 		template<typename argT, unsigned int N=16>
 		inline SmallList<NodeT*, N> getNodes(argT* start, argT* end) {
 			/* iterator compatibility*/
@@ -331,13 +314,13 @@ namespace strata {
 		}
 
 
-		Status getTopologicalGenerations(std::vector<std::vector<int>>& result, Status& s) {
+		Status& getTopologicalGenerations(SmallList<SmallList<int>>& result, Status& s) {
 			/* get sets of nodes guaranteed not to depend on each other
 			// use for priority in scheduling work, but too restrictive to rely
 			// on totally for execution
 			( eval-ing generations one-by-one means each will always be waiting on the last node in that generation, which might not be useful)
 			*/
-			std::vector<int> zeroDegree;
+			SmallList<int> zeroDegree;
 			nodeDirectDependentsMap.clear();
 			nodeAllDependentsMap.clear();
 			LOG("gather nodes no inputs, n nodes:" + str(nodes.size()));
@@ -375,10 +358,10 @@ namespace strata {
 				// check over all direct children of current generation
 				for (auto nodeId : result[seqIndex(-1, result.size())]) {
 					// can parallelise this
-					DirtyNode* node = getNode(nodeId);
+					NodeT* node = getNode(nodeId);
 					// all outputs of this node - decrement their inDegree by 1
 					for (int dependentId : nodeDirectDependentsMap[node->index]) {
-						DirtyNode* dependent = getNode(dependentId);
+						NodeT* dependent = getNode(dependentId);
 						dependent->temp_inDegree -= 1;
 						// if no in_degree left, add this node to the next generation
 						if (dependent->temp_inDegree < 1) {
@@ -392,7 +375,7 @@ namespace strata {
 			int i = 0;
 			for (auto& nodeIdSet : result) {
 				for (auto& nodeId : nodeIdSet) {
-					DirtyNode* node = getNode(nodeId);
+					NodeT* node = getNode(nodeId);
 					node->temp_generation = i;
 				}
 				i += 1;
@@ -420,10 +403,10 @@ namespace strata {
 			//int nodesSize = static_cast<int>(nodes.size());
 			//nameIndexMap.reserve(nodesSize);
 			for (size_t i = 0; i < nodes.size(); i++) {
-				std::string nodeName(nodes[i].name);
+				StrataName nodeName(nodes[i].name);
 				nameIndexMap[nodeName] = static_cast<int>(i);
 			}
-			std::vector<std::vector<int>> result;
+			SmallList<SmallList<int>> result;
 			s = getTopologicalGenerations(result, s);
 			graphChanged = false;
 			return s;
@@ -431,6 +414,7 @@ namespace strata {
 
 
 		inline void syncGraphStructure() {
+			/* forces structure to be correct, call before/after iteration*/
 			if (graphChanged) {
 				Status s;
 				rebuildGraphStructure(s);
@@ -438,10 +422,6 @@ namespace strata {
 		}
 
 		inline std::vector<int>* nodeOutputs(const int opIndex) {
-			if (graphChanged) {
-				Status s;
-				rebuildGraphStructure(s);
-			}
 			return &nodeDirectDependentsMap[opIndex];
 		}
 
@@ -721,7 +701,7 @@ namespace strata {
 
 				// do one iteration of the dfs sketch above
 
-				DirtyNode* ptr = nodeStack.top();
+				NodeT* ptr = nodeStack.top();
 				nodeStack.pop();
 
 				//if (!discoveredSet.count(ptr)) {
@@ -828,7 +808,7 @@ namespace strata {
 			}
 			return 0;
 		};
-
+		
 
 		struct NodeDelta {
 			/* given base graph and target graph,
