@@ -1,0 +1,245 @@
+#pragma once
+
+#include "types.h"
+#include "element.h"
+#include "pointData.h"
+#include "edgeData.h"
+
+namespace strata {
+
+	/* TODO:
+	probably unite all settings constants in a constexpr map?
+	*/
+	constexpr const int ST_FACE_CORNER_SQUARE = 0; /* close faces with rounded boundary curves*/
+	constexpr const int ST_FACE_CORNER_ROUND = 1; /* close faces by adding a new point, maintaining a square corner*/
+
+	struct SFaceAnchorData {
+		int index = -1; // index of anchor component
+		std::array<Vector3f, 2> uvns = { // full uvn vectors likely unnecessary
+			Vector3f{0.0f, 0.0f, 0.0f},
+			Vector3f{0.0f, 0.0f, 0.0f},
+		};
+
+	};
+
+	
+	/* TODO: it would certainly be convenient here to hold pointers to other types -
+	obviously those break when we copy the manifold object.
+	is it worth having a "repair()" function to go and replace them all after copy?
+	*/
+
+
+	struct SFaceSpaceData {
+
+	};
+
+	struct SubdivLevel {
+		int level = 0;
+		int nPoints = 0;
+		/* topology for points, faces running clockwise - 
+		* it's a shame that we need this
+		*/
+		std::vector<std::array<int, 4>> topo;
+		std::vector<Vector2f> uvCoords; // SAMPLE COORDS. if level then relative from subdivision uv
+
+		/* offset from LINEAR SUBDIV POS to CURVED SURFACE POS.
+		applied BEFORE uvns, such that points of each subdivision follow initial curved surface,
+		absent any deltas
+		*/
+		std::vector<Vector3f> vecsFromPolyToSurface; 
+
+		/* offsets in subdiv matrix space, to match FINAL MESH SHAPE.
+		* for now we just add it to vec from poly to surface
+		*/
+		std::vector<Vector3f> finalOffsets;
+	};
+
+	struct SubPatchData {
+		/* save data for single subpatch - subpatches guaranteed to be
+		* 4-sided patch, with arbitrary paths as borders
+		* 
+		* single subpatch has 4 "simple" 4-point bezier splines for borders, with offsets to 
+		* the more complex full paths saved there?
+		* 
+		* need subpaths for each half of each original edge, probably held at fData level
+		*/
+		int subIndex = -1;
+		int faceIndex = -1;
+		int fBorderIndex = -1;
+
+		/* final worldspace borders
+		* 0 is u, 1 is v
+		*/
+		std::array<bez::CubicBezierPath, 2> worldMidPaths;
+		std::array<bez::BezierSubPath, 2> worldEdgePaths; //2 subpatch edges always taken from original edge curves
+
+		/* keep separate edge resolutions for later when we can upres
+		parts selectively? */
+		std::array<int, 2> uRes = { 8, 8 };
+		std::array<int, 2> vRes = { 8, 8 };
+
+		inline bool isQuadFace() { // if face uses simple quad topology, no triangles or changes in resolution
+			return ((uRes[0] == uRes[1]) && (vRes[0] == vRes[1]));
+		}
+		inline bool isSquareFace() {
+			/* if face resolutions totally match, simple regular squares*/
+			return (isQuadFace() && (uRes[0] == vRes[0]));
+		}
+
+		/* DENSE SAMPLING SETUP
+		ok absolutely no idea what we should do here, sing along, so we're
+		gonna do something dumb and work from there
+		
+		we have LEVELS of subdivision, denoted I, II, III etc as shorthand
+		I : intitial poly mesh points - here is where we resolve differences in edge resolution
+		II : first subdivision - normal loop division, guaranteed to be a quadrilateral mesh
+		III : so on
+
+		still indexed in vector as 0, 1, 2 etc
+		*/
+		std::vector<SubdivLevel> subdivs;
+
+		/* probably need some rules on where to place points on borders,
+		so they match up across patches
+		*/
+
+		SElement* fEl(StrataManifold& man);
+		SFaceData& fData(StrataManifold& man);
+		//SFaceData& fData(StrataManifold& man);
+		void syncConnections(StrataManifold& man);
+
+		int subdivLevelForPoint(int ptIndex) {
+			int npts = 0;
+			int i = 0;
+			for (auto& s : subdivs) {
+				npts += s.nPoints;
+				if (npts <= ptIndex) {
+					return i;
+				}
+				i += 1;
+			}
+			return -1;
+		}
+
+		/* functions working on smooth surface defined by curves
+		*/
+		Eigen::Vector3f evalUVSmooth(Eigen::Vector3f& uvn);
+		Eigen::Vector3f evalUVSmooth(float u, float v);
+
+		/* later need same support for dense result mesh - 
+		consider how we might handle different resolutions of that mesh too
+
+		surface construction done through layers of interpolated points in UV - 
+		basic level is borders, points having UV bounds and positions -
+		then maybe try and account for tangents of those points? 
+		*/
+
+	};
+
+	struct SFaceCreationParams {
+		/* save options used to create a face/ face group
+		*/
+		std::string faceName;
+		std::string creationStr; // source expression
+		
+		int cornerMode = ST_FACE_CORNER_ROUND;
+	};
+
+	struct SFaceData : SElData {
+		/* NAMING:
+		
+		edge : first-class Strata element
+		border : section of edge contributing to face
+
+
+		currently don't have any kind of SubCurve object decided,
+		so sampling border sections of edges will be verbose
+		*/
+
+
+		//std::string name; // probably generated, but still needed for semantics?
+		std::vector<SFaceAnchorData> anchorDatas; // anchors of this edge
+		std::vector<SFaceSpaceData> spaceDatas; // curves in space of each anchor
+
+		Affine3f centre; /* 
+		x axis U
+		y axis V
+		z axis N
+		(where applicable for quad faces)
+		*/
+
+		/* vector of corner vertex indices */
+		//std::vector<std::vector<int>> vertices;
+		std::vector<int> vertices;
+
+		///* copying curves here so this struct is self contained
+		//with everything we need to draw face.
+		//might be excessive, change later if it helps
+		//*/
+		std::vector<bez::BezierSubPath> borderCurves = {};
+
+		/* 
+		save simple bezier splines to each half of each border, so we interpolate between 
+		complex paths in curve space
+		*/
+		std::vector<std::array<bez::CubicBezierSpline, 2>> borderHalfSplines = {};
+		/* control points in curve space, with their params along a simple cubic spline
+		*/
+		std::vector<std::array<Eigen::MatrixX3f, 2>> borderHalfLocalControlPoints = {};
+		std::vector<std::array<Eigen::VectorXf, 2>> borderHalfLocalControlPointParams = {};
+
+
+		/* mid curves of each edge, connecting at face centre*/
+		std::vector<bez::CubicBezierPath> borderMidCurves = {};
+
+		/* tangent vectors at midpoints of anchor edges
+		multiply and average to find centrePos
+		multiply by how far?
+		good question
+
+		should rely separately on original frames along borders, 
+		scaling frames by edge/face crease value
+		*/
+		std::vector<Affine3f> midEdgeFrames;
+
+		std::vector<SubPatchData> subPatchdatas;
+
+		aabb::AABB getAABB();
+
+		int nBorderEdges() {
+			return static_cast<int>(vertices.size());
+		}
+
+		inline Vector3f centreNormal() {
+			/* return normal direction vector*/
+			return centre.rotation() * Vector3f(0, 1, 0);
+		}
+
+		std::tuple<int, float, float> edgeSpan(StrataManifold& manifold, int borderIndex);
+
+		std::pair<Vertex*, Vertex*> vtxPair(StrataManifold& man, int borderIndex);
+
+		SEdgeData& eDataForBorder(StrataManifold& man, int borderIndex);
+
+		float map01UCoordToEdge(StrataManifold& man, float u, int vtxA, int vtxB);
+		float map01UCoordToEdge(StrataManifold& man, float u, int borderIndex);
+
+
+		void syncConnections(StrataManifold& man);
+	};
+
+	
+	/* consider how we might store displacement - 
+	* a regular grid for values would probably work, but could we just store "important"
+	* details as individual data points?
+	*/
+	template<typename T>
+	struct FacePrimVar {
+		std::string name;
+
+		Eigen::MatrixX2f coordPoints;
+
+		std::vector<T> pointVals;
+	};
+
+}
