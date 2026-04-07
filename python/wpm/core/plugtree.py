@@ -8,7 +8,7 @@ import numpy as np
 
 from wptree import TreeInterface
 from wplib.sequence import flatten
-from wplib.object import UnHashableDict, Sentinel, MultiObject
+from wplib.object import UnHashableDict, Sentinel, WrapList
 from wplib import log, Pathable
 
 #from setFnMap
@@ -608,7 +608,7 @@ class Plug(PlugBase, # this base class list will beat you up
 
 
 
-class PlugSelection(MultiObject):
+class PlugSelection(WrapList):
 	"""don't know yet how best to integrate this with
 	Pathable, so trying to work backwards
 	"""

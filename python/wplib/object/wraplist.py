@@ -15,10 +15,32 @@ goes hand in hand with broadcast
 
 """
 
+class WrapAccessor:
+	"""holds operator functions for wrap objects, without
+	going through their attribute access every time"""
+	def __init__(self, obj:WrapList):
+		self.obj = obj
 
-#class MultiObject(list):
-class MultiObject:
-	"""wunky little test that grew from broadcasting/slicing maya plugs:
+	def __getitem__(self, key):
+		return list(self.obj).__getitem__(key)
+
+	def __call__(self, *args, **kwargs):
+		return list(self.obj)
+
+l = [1, 2, 3]
+r = l[:] # compatible with both wrapper and normal list
+l[::] # flatten recursively? seems silly
+
+class WrapList(list):
+	"""
+
+	flatten to normal list by
+	>>>multi[:]
+	?
+	get exact list attr by
+	>>>multi._[3]
+
+	wunky little test that grew from broadcasting/slicing maya plugs:
 	when you run a filter operation on plugs/pathables,
 	you get a selection of objects matching that filter.
 	this allows further operations to be run, splitting in a more readable way
@@ -55,41 +77,64 @@ class MultiObject:
 	IMMEDIATE access on this object should ALWAYS DISTRIBUTE
 	access list and selection itself by .toList() ?
 	by list(multiObj) ?
+
+	override logic operators here to use this for intersections,
+	filters
+
+	obj._.unwrap() -> access an actual operator method on this list
+
+	__iter__ goes through all contents
+
 	"""
 
-	def __init__(self, objs: T.Iterable[object]):
-		self.objs = list(objs)
+	def __init__(self, *args, distributeGetAttr=True, distributeGetItem=True):
+		super().__init__(*args)
+		self._distributeGetAttr = distributeGetAttr
+		self._distributeGetItem = distributeGetItem
+
+
+	def _(self):
+		"""MAYBE TEMP - just use this for now, rename if a better idea
+		occurs"""
+		return WrapAccessor(self)
+
+	def _makeChildWrapList(self, objs)->WrapList:
+		return type(self)(objs, distributeGetAttr=self._distributeGetAttr,
+		                  distributeGetItem=self._distributeGetItem)
+
 
 	def __str__(self):
-		return f"<{type(self).__name__}({self.objs})>"
+		return f"<{type(self).__name__}({list(self)})>"
 
 	# steal callables of all objects in list?
 	# nah way too slow
 
 	def __getattr__(self, item):
-		return MultiObject(filter(
+		return self._makeChildWrapList(filter(
 			lambda x: x is not Sentinel.FailToFind,
-			(getattr(i, item, Sentinel.FailToFind) for i in self.objs)
+			(getattr(i, item, Sentinel.FailToFind) for i in self)
 		))
 
 
-	def __tryGetItem(self, obj, key):
+	def __tryGetItem(self, obj, *key):
 		try:
-			return obj.__getitem__(key)
+			return obj.__getitem__(*key)
 		except TypeError as e:
 			return Sentinel.FailToFind
 
-	def __getitem__(self, key):
+	def __getitem__(self, *key):
 		"""run filter over this MultiObject, return matching elements
 		multiObj[:] -> return a list copy
+
+		logic here of whether to return a new list of this exact type, or
+		just a vanilla WrapList - seen this before, consider a base for it
 		"""
-		for i in self.objs:
-			MultiObject(
-				filter(
-					lambda x: x is not Sentinel.FailToFind,
-					(self.__tryGetItem(i, key) for i in self.objs)
-				)
-			)
+		if key[0] == slice(None):
+			return list(self)
+		return self._makeChildWrapList(filter(
+			lambda x: x is not Sentinel.FailToFind,
+			(self.__tryGetItem(i, *key) for i in self)
+		))
 
 	def __tryCall(self, obj, *args, **kwargs):
 		try:
@@ -101,16 +146,16 @@ class MultiObject:
 		"""if you try and call a non-callable object, just strip out result
 		"""
 
-		return MultiObject(
+		return self._makeChildWrapList(
 			filter(
 				lambda x: x is not Sentinel.FailToFind,
-				(self.__tryCall(i, *args, **kwargs) for i in self.objs)
+				(self.__tryCall(i, *args, **kwargs) for i in self)
 			)
 		)
 
 	def __multiSet(self, key, value):
 		"""OVERRIDE THIS for logic setting multiple items at once"""
-		for i in self.objs:
+		for i in self:
 			try:
 				i.__setitem__(key, value)
 			except TypeError as e:

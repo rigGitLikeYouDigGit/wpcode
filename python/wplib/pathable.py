@@ -9,7 +9,7 @@ from copy import deepcopy
 import fnmatch
 from pathlib import Path
 
-from wplib.object import Adaptor, MultiObject
+from wplib.object import Adaptor, WrapList
 from wplib.log import log
 from wplib.object import DeepVisitor, VisitAdaptor
 from wplib.typelib import isImmutable
@@ -673,7 +673,7 @@ class Pathable(#Adaptor
 keyT = Pathable.keyT
 pathT = Pathable.pathT
 
-class PathableSelection(MultiObject):
+class PathableSelection(WrapList):
 	"""test for returning filter / search from branches of pathable
 	"""
 

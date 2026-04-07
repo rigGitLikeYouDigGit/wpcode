@@ -24,7 +24,7 @@ from .hashable import HashableMixin, UnHashableDict, UnHashableSet, HashFunction
 from .indexscope import IndexScope, IndexScopeGroup
 
 from .metamagicdelegator import ClassMagicMethodMixin
-from .multiobject import MultiObject
+from .wraplist import WrapList
 
 from .override import OverrideProvider
 
