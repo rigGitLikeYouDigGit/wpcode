@@ -614,7 +614,7 @@ Status& strata::makeNewFaceData( /* */
 
 	/* copy all edge paths and normal vectors */
 	for (int i = 0; i < fData.nBorderEdges(); i++) {
-		SEdgeData& eData = fData.eDataForBorder(man, i);
+		SEdge& eData = fData.eDataForBorder(man, i);
 		fData.borderCurves.push_back(bez::BezierSubPath(eData.finalCurve));
 		Vertex* vtxA = man.getVertex(fData.vertices[i]);
 		Vertex* vtxB = man.getVertex(fData.vertices[iNext(i, fData.nBorderEdges())]);

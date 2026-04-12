@@ -208,7 +208,7 @@ public:
     // Buffer sizes
     unsigned int fNumVertices;
     unsigned int fNumInfluences;
-    
+
     bool fBuffersInitialized;
 
     // Helper methods

@@ -1,5 +1,6 @@
 #include "wpSkinCluster.h"
 #include "../macro.h"
+#include "../lib.h"
 
 #include <maya/MFnMatrixData.h>
 #include <maya/MFnNumericData.h>
@@ -145,7 +146,8 @@ MStatus WpSkinCluster::initialize() {
     // Linearized weights array
     aLinearizedWeights = tAttr.create(
         "linearWeight", "linW",
-        MFnData::kFloatArray, &status);
+        MFnData::kFloatArray,
+        MObject::kNullObj, &status);
     MCHECK(status, "create linearizedWeights");
     tAttr.setStorable(true);
     tAttr.setKeyable(false);
@@ -155,7 +157,9 @@ MStatus WpSkinCluster::initialize() {
     // Linear index array
     aLinearizedIndices = tAttr.create(
         "linearIndices", "linI",
-        MFnData::kIntArray, &status);
+        MFnData::kIntArray, 
+		MObject::kNullObj,
+        &status);
     MCHECK(status, "create linearIndices");
     tAttr.setStorable(true);
     tAttr.setKeyable(false);
@@ -165,7 +169,7 @@ MStatus WpSkinCluster::initialize() {
     // Linearized rest matrices array
     aLinearizedMatrices = tAttr.create(
         "linearRestMatrix", "linRM",
-        MFnData::kFloatArray, &status);
+        MFnData::kFloatArray, MObject::kNullObj, &status);
     MCHECK(status, "create linearizedMatrices");
     tAttr.setStorable(true);
     tAttr.setKeyable(false);
@@ -175,7 +179,7 @@ MStatus WpSkinCluster::initialize() {
     // Linear active matrix array
     aLinearizedActiveMatrices = tAttr.create(
         "linearActiveMatrix", "linAM",
-        MFnData::kFloatArray, &status);
+        MFnData::kFloatArray, MObject::kNullObj, &status);
     MCHECK(status, "create linearizedActiveMatrices");
     tAttr.setStorable(true);
     tAttr.setKeyable(false);
@@ -185,7 +189,7 @@ MStatus WpSkinCluster::initialize() {
 	// ref mesh to save positions (and maybe normals later)
     aRefMesh = tAttr.create(
         "refMesh", "refm",
-		MFnData::kMesh, &status);
+		MFnData::kMesh, MObject::kNullObj, &status);
 	tAttr.setStorable(false);
 	tAttr.setKeyable(false);
 	tAttr.setReadable(false);
@@ -353,7 +357,7 @@ MStatus WpSkinCluster::deformCPU(MDataBlock& block,
         MDataHandle weightsHandle = weightListHandle.inputValue(&status).child(weights);
         MArrayDataHandle weightsArray(weightsHandle, &status);
         
-        Vector4f originalPos(pt.x, pt.y, pt.z, 1.0f);
+        Vector4f originalPos(float(pt.x), float(pt.y), float(pt.z), 1.0f);
         Vector4f finalPos = Vector4f::Zero();
         
         float totalWeight = 0.0f;
@@ -383,7 +387,7 @@ MStatus WpSkinCluster::deformCPU(MDataBlock& block,
             Matrix4f eigenMat;
             for (int row = 0; row < 4; ++row) {
                 for (int col = 0; col < 4; ++col) {
-                    eigenMat(row, col) = fullMatrix(row, col);
+                    eigenMat(row, col) = static_cast<float>(fullMatrix(row, col));
                 }
             }
             
@@ -540,7 +544,7 @@ MStatus getSkinWeightArrays(
 
     MArrayDataHandle weightListHandle = block.inputArrayValue(WpSkinCluster::weightList, &status);
 
-    for (int vtx = 0; vtx < nVertices; ++vtx) {
+    for (uint vtx = 0; vtx < nVertices; ++vtx) {
      
         MCHECK(status, "get weightList");
         
@@ -597,7 +601,7 @@ std::vector<float> WpSkinCluster::updateLinearizedMatrices(
     MMatrixArray& matrixArr = MFnMatrixArrayData(
         block.inputValue(matrixAttr).data()).array(&status);
 	std::vector<float> result(matrixArr.length() * 16);
-    for (int i = 0; i < matrixArr.length(); ++i) {
+    for (uint i = 0; i < matrixArr.length(); ++i) {
         const MMatrix& mat = matrixArr[i];
         for(int row = 0; row < 4; ++row) {
             for(int col = 0; col < 4; ++col) {

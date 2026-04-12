@@ -60,9 +60,9 @@ namespace strata {
 
 		// tangents inline, unless continuity is not 1
 
-		Eigen::Vector3f prevTan = { -1, 0, 0 }; // tangent leading to point
-		Eigen::Vector3f postTan = { 1, 0, 0 }; // tangent after point
-		float normal[3] = { NAN, 0, 1 }; // normal of curve at this point - if left NAN is unused
+		Vector3f prevTan = { -1, 0, 0 }; // tangent leading to point
+		Vector3f postTan = { 1, 0, 0 }; // tangent after point
+		Vector3f normal = { NAN, 0, 1 }; // normal of curve at this point - if left NAN is unused
 		float orientWeight = 0.0; // how strongly matrix should contribute to curve tangent, vs auto behaviour
 		float continuity = 1.0; // how sharply to break tangents - maybe just use this to scale tangents in?
 		float twist = 0.0; // how much extra twist to add to point, on top of default curve frame
@@ -123,7 +123,7 @@ namespace strata {
 		Eigen::Vector3f pos; /* should we duplicate / save positions here?*/
 	};
 
-	struct SEdge : SElement
+	struct SEdge : public SElement
 	{
 		/* need dense final result to pick up large changes in
 		domain space.
@@ -136,7 +136,7 @@ namespace strata {
 		*/
 		using thisT = SEdge;
 		using T = SEdge;
-		std::vector<SEdgeAnchorData> anchorDatas; // anchors of this edge
+		SmallList<SEdgeAnchorData> anchorDatas; // anchors of this edge
 		std::vector<SEdgeSpaceData> spaceDatas; // curves in space of each anchor
 
 
@@ -155,7 +155,8 @@ namespace strata {
 		// surrender to ancestors
 		// become caveman
 
-		Eigen::MatrixX3f finalPoints = {}; // densely sampled final points in worldspace - use for querying
+		Eigen::ArrayX3f finalPositions = {}; // densely sampled final points in worldspace
+		Eigen::ArrayX3f finalNormals = {}; // densely sampled final normals in worldspace
 
 		std::vector<int> vertices = {}; 
 		bool _verticesSorted = false;
@@ -183,8 +184,8 @@ namespace strata {
 			if (!anchorDatas.size()) {
 				return false;
 			}
-			return anchors[0].finalMat.translation().isApprox(
-				anchors.end()->finalMat.translation());
+			return anchorMats[0].translation().isApprox(
+				anchorMats.back().translation());
 		}
 
 		inline Eigen::Vector3f samplePos(const float t) {
@@ -230,21 +231,21 @@ namespace strata {
 			return static_cast<int>((anchorDatas.size() - 1) * 3 + 2);
 		}
 
-		inline void rawBezierCVs(Eigen::Array3Xf& arr) {
-			// ARRAY MUST BE CORRECTLY SIZED FIRST from nBezierCVs()
+		//inline void rawBezierCVs(Eigen::Array3Xf& arr) {
+		//	// ARRAY MUST BE CORRECTLY SIZED FIRST from nBezierCVs()
 
-			//arr.resize(nBezierCVs());
-			for (int i = 0; i < anchorDatas.size(); i++) {
-				if (i != 0) {
-					arr.row(i * 3 - 1) = anchorDatas[i].pos() + anchorDatas[i].prevTan;
-				}
-				arr.row(i * 3) = anchorDatas[i].pos();
+		//	//arr.resize(nBezierCVs());
+		//	for (int i = 0; i < anchorDatas.size(); i++) {
+		//		if (i != 0) {
+		//			arr.row(i * 3 - 1) = anchorDatas[i].pos() + anchorDatas[i].prevTan;
+		//		}
+		//		arr.row(i * 3) = anchorDatas[i].pos();
 
-				if (i != anchorDatas.size() - 1) {
-					arr.row(i * 3 + 1) = anchorDatas[i].pos() + anchorDatas[i].postTan;
-				}
-			}
-		}
+		//		if (i != anchorDatas.size() - 1) {
+		//			arr.row(i * 3 + 1) = anchorDatas[i].pos() + anchorDatas[i].postTan;
+		//		}
+		//	}
+		//}
 
 		inline void anchorsForSpan(const int spanIndex, SEdgeAnchorData& lower, SEdgeAnchorData& upper) {
 			lower = anchorDatas[spanIndex];

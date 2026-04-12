@@ -1,0 +1,1355 @@
+
+
+#pragma once
+#ifndef ED_LIB_EIGEN
+
+#include <cstdint>
+#include <chrono>
+#include <thread>
+#include <algorithm>
+#include <vector>
+#include <math.h>
+
+#include <Eigen/Dense>
+#include <Eigen/Geometry>
+#include <unsupported/Eigen/MatrixFunctions>
+#include <unsupported/Eigen/Splines>
+
+#include "macro.h"
+#include "libEigen.h"
+#include "bezier/bezier.h"
+
+using namespace strata;
+
+template <typename T>
+//inline void rotateVector(const Eigen::Matrix4<T>& lhs, const Eigen::Vector3<T>& in,
+void rotateVector(const Eigen::Matrix4<T>& lhs, const Eigen::Vector3<T>& in,
+	Eigen::Vector3<T>& out)
+{
+	//FEASSERT(N > 2);
+	/*fe::set(out, in[0] * lhs(0, 0) + in[1] * lhs(0, 1) + in[2] * lhs(0, 2),
+		in[0] * lhs(1, 0) + in[1] * lhs(1, 1) + in[2] * lhs(1, 2),
+		in[0] * lhs(2, 0) + in[1] * lhs(2, 1) + in[2] * lhs(2, 2));*/
+	//out(0) = in[0] * lhs[0][0] + in[1] * lhs[0][1] + in[2] * lhs[0][2];
+	//out(1) = in[0] * lhs[1][0] + in[1] * lhs[1][1] + in[2] * lhs[1][2];
+	//out(2) = in[0] * lhs[2][0] + in[1] * lhs[2][1] + in[2] * lhs[2][2];
+	out(0) = in(0) * lhs(0, 0) + in(1) * lhs(0, 1) + in(2) * lhs(0, 2);
+	out(1) = in(0) * lhs(1, 0) + in(1) * lhs(1, 1) + in(2) * lhs(1, 2);
+	out(2) = in(0) * lhs(2, 0) + in(1) * lhs(2, 1) + in(2) * lhs(2, 2);
+	//return out;
+}
+
+template <typename T>
+//inline Eigen::Matrix4<T> & translate(
+Eigen::Matrix4<T>& translate(
+	Eigen::Matrix4<T>& lhs,
+	const Eigen::Vector3<T>& translation)
+{
+	//FEASSERT(N > 2);
+	//Vector<N, T> rotated;
+	Eigen::Vector3<T> rotated;
+	rotateVector<T>(lhs, translation, rotated);
+
+	//lhs.translation() += rotated;
+	//lhs[3] += rotated;
+	lhs.block<1, 3>(3, 0, 1, 3) += rotated;
+	return lhs;
+}
+
+inline Status& strata::splineUVN(
+	Status& s,
+	//Eigen::Matrix4f& outMat,
+	Eigen::Affine3f& outMat,
+	const Eigen::Spline3f& posSpline,
+	const Eigen::Spline3f& normalSpline,
+	float uvw[3]
+) {
+	/* polar-like coords around spline
+	u is parametre
+	v is rotation
+	w is distance
+	*/
+	uvw[0] = std::min(std::max(uvw[0], 0.0f), 1.0f);
+
+	Eigen::Vector3f pos = posSpline(uvw[0]).matrix(); // we assume that normal is actually normal, no need to redo double cross here
+	//auto derivatives = posSpline.derivatives<1>(uvw[0], 1);
+	Eigen::Vector3f tan = posSpline.derivatives(uvw[0], 1).col(1).matrix();
+	//Eigen::Array3d n = posSpline(uvw[1]);
+	Eigen::Vector3f n = normalSpline(uvw[1]).matrix();
+
+	
+	s = makeFrame<float>(s, 
+		outMat, pos, tan, n);
+	if (!EQ(uvw[1], 0.0f)) {
+		/* rotate n times clockwise about tangent*/
+		Eigen::AngleAxisf orient(uvw[1], tan);
+		outMat *= orient;
+	}
+	if (!EQ(uvw[2], 0.0f)) {
+		/* rotate n times clockwise about tangent*/
+		outMat.translate(Eigen::Vector3f{ 0.0, 0.0, uvw[2] });
+	}
+
+	return s;
+}
+
+Eigen::ArrayXf strata::arcLengthToParamMapping(const Eigen::Spline3f& sp, const int npoints) {
+	// return an array of equally-spaced points giving the 0-1 arc length to each point
+	Eigen::ArrayXf result = Eigen::ArrayXf::Constant(npoints, 0.0f);
+	Eigen::Vector3f prevpt = sp(0.0f);
+	Eigen::Vector3f thispt;
+	for (int i = 1; i < npoints; i++) {
+		float u = 1.0f / float(npoints - 1) * i;
+		thispt = sp(u);
+		result[i] = result[i - 1] + (thispt - prevpt).norm();
+		prevpt = thispt;
+	}
+	return result;
+}
+
+Eigen::ArrayXf strata::arcLengthToParamMapping(const bez::CubicBezierSpline& sp, const int npoints) {
+	// return an array of equally-spaced points giving the 0-1 arc length to each point
+	Eigen::ArrayXf result = Eigen::ArrayXf::Constant(npoints, 0.0f);
+	Eigen::Vector3f prevpt = sp.eval(0.0f);
+	Eigen::Vector3f thispt;
+	for (int i = 1; i < npoints; i++) {
+		float u = 1.0f / float(npoints - 1) * i;
+		thispt = sp.eval(u);
+		result[i] = result[i - 1] + (thispt - prevpt).norm();
+		prevpt = thispt;
+	}
+	return result;
+}
+
+Eigen::ArrayXf strata::arcLengthToParamMapping(const bez::CubicBezierPath& sp, const int npoints) {
+	// return an array of equally-spaced points giving the 0-1 arc length to each point
+	Eigen::ArrayXf result = Eigen::ArrayXf::Constant(npoints, 0.0f);
+	Eigen::Vector3f prevpt = sp.eval(0.0f);
+	Eigen::Vector3f thispt;
+	for (int i = 1; i < npoints; i++) {
+		float u = 1.0f / float(npoints - 1) * i;
+		thispt = sp.eval(u);
+		result[i] = result[i - 1] + (thispt - prevpt).norm();
+		prevpt = thispt;
+	}
+	return result;
+}
+
+
+
+
+#define FE_MSQ_METHOD 0
+
+template <typename MATRIX>
+class MatrixSqrt
+{
+public:
+	typedef typename MATRIX::Scalar ScalT;
+	//using QuatT = Eigen::Quaternion<MATRIX::Scalar>;
+	//typedef typename Eigen::Quaternion<MATRIX::Scalar> QuatT;
+	typedef typename Eigen::Quaternion<ScalT> QuatT;
+	//using AAxisT = Eigen::AngleAxis<MATRIX::Scalar>;
+	//typedef typename Eigen::AngleAxis<MATRIX::Scalar> AAxisT;
+	typedef typename Eigen::AngleAxis<ScalT> AAxisT;
+	MatrixSqrt(void) :
+		m_iterations(1)
+	{}
+
+	void	solve(MATRIX& B, const MATRIX& A) const;
+
+	//void	setIterations(U32 iterations) { m_iterations = iterations; }
+	void	setIterations(UINT32 iterations) { m_iterations = iterations; }
+
+private:
+	UINT32		m_iterations;
+};
+
+template <typename MATRIX>
+inline void MatrixSqrt<MATRIX>::solve(MATRIX& B, const MATRIX& A) const
+{
+#if FE_MSQ_DEBUG
+	feLog("\nA\n%s\n", c_print(A));
+#endif
+	DEBUGSL("sqrt solve")
+	MATRIX AA = A;
+	MATRIX correction;
+	correction.setIdentity();
+
+	//* cancellation protection
+	const bool fix0 = (fabs(AA(0, 0) + 1) < 1e-3);
+	const bool fix1 = (fabs(AA(1, 1) + 1) < 1e-3);
+	const bool fix2 = (fabs(AA(2, 2) + 1) < 1e-3);
+	const bool fix = (fix0 || fix1 || fix2);
+
+	DEBUGS("fix:" + std::to_string(fix));
+	if (fix)
+	{
+		//Matrix<3, 4, F64> doubleY = AA;
+		//Eigen::Matrix<double, 3, 4> doubleY = AA;
+		Eigen::Matrix4f doubleY = AA;
+
+		//Quaternion<F64> quat = doubleY;
+		//Eigen::Quaternion<double> quat = doubleY;
+		//Eigen::Quaternion<double> quat(Eigen::AngleAxisd(doubleY));
+		//Eigen::Quaternion<double> quat(doubleY.);
+		//Eigen::Matrix3d doubleYRot(doubleY.reshaped(3, 3));
+		Eigen::Matrix3f doubleYRot(doubleY.block<3, 3>(0,0, 3, 3));
+		QuatT quat(doubleYRot);
+
+		//F64 radians;
+		ScalT radians;
+		//Vector<3, F64> axis;
+		Eigen::Vector3f axis;
+		//quat.computeAngleAxis(radians, axis);
+		//Eigen::AngleAxisd angleAxis(quat);
+		//Eigen::AngleAxisd angleAxis{ quat };
+		AAxisT angleAxis;
+		angleAxis = quat;
+		
+		//quat.computeAngleAxis(radians, axis);
+		radians = angleAxis.angle();
+		axis = angleAxis.axis();
+
+		const ScalT tiny = 0.03f;
+		const ScalT tinyAngle = tiny * radians;
+
+		//Quaternion<F64> forward(0.5 * tinyAngle, axis);
+		QuatT forward(AAxisT(0.5f * tinyAngle, axis));
+		//const Matrix<3, 4, F64> correct64(forward);
+		//const Eigen::Matrix<double, 3, 4> correct64(forward);
+		//correction = forward.toRotationMatrix();
+		DEBUGQuat("forward", forward.coeffs());
+		Eigen::Matrix4f correction;
+		correction.setIdentity();
+		correction.block<3,3>(0, 0, 3, 3) = forward.toRotationMatrix();
+
+		DEBUGMMAT("correction rot", toMMatrix(correction));
+		//correction = correct64;
+		//const SpatialVector forwardT = 0.5 * tiny * doubleY.translation();
+		Eigen::Vector3f forwardT;
+		forwardT = 0.5f * tiny * doubleY.block<1, 3>(3, 0, 1, 3);
+		//forwardT = 0.5 * tiny * doubleY.block<3,3>(0, 3, 3, 1);
+		DEBUGS("forwardT");
+		DEBUGMV(forwardT);
+
+		translate<ScalT>(correction, forwardT);
+		DEBUGMMAT("correction end", toMMatrix(correction));
+
+		//Quaternion<F64> reverse(-tinyAngle, axis);
+		QuatT reverse(AAxisT(-tinyAngle, axis));
+		//const Matrix<3, 4, F64> tweak64(reverse);
+		//const Eigen::Matrix4f tweak64(reverse);
+		//MATRIX tweak = tweak64;
+		MATRIX tweak;
+		tweak.setIdentity();
+		tweak.block<3,3>(0, 0, 3, 3) = reverse.toRotationMatrix();
+		DEBUGMMAT("tweak:", toMMatrix(tweak));
+		//const SpatialVector reverseT = -tiny * doubleY.translation();
+		//const Eigen::Vector3f reverseT = -tiny * Eigen::Vector3f(doubleY.row(3));
+		//Eigen::Vector3f reverseT;
+		//reverseT.block<1, 3>(0, 0, 1, 3) = (doubleY.block<1, 3>(3, 0, 1, 3));
+		Eigen::Vector3f reverseT(
+			doubleY(3, 0),
+			doubleY(3, 1),
+			doubleY(3, 2)
+		);
+		reverseT *= -tiny;
+		translate<ScalT>(tweak, reverseT);
+
+#if FE_MSQ_METHOD!=0
+		correction(3, 3) = 1;
+		tweak(3, 3) = 1;
+#endif
+
+		//		feLog("ty\n%s\nyt\n%s\n",
+		//				c_print(tweak*AA),
+		//				c_print(AA*tweak));
+
+		AA = tweak * AA;
+
+
+#if FE_MSQ_DEBUG
+		feLog("\ntweak\n%s\n", c_print(tweak));
+		feLog("\ncorrection\n%s\n", c_print(correction));
+#endif
+	}
+
+	MATRIX Y[2];
+	MATRIX Z[2];
+	//U32 current = 0;
+	UINT32 current = 0;
+
+	Y[0] = AA;
+	Y[1].setIdentity();
+	DEBUGMMAT("Y[0]:", toMMatrix(Y[0]));
+	//setIdentity(Z[0]);
+	Z[0] = MATRIX::Identity();
+	Z[1].setIdentity();
+	
+
+#if FE_MSQ_METHOD==0
+	//* Denman-Beavers
+	MATRIX invY;
+	invY.setIdentity();
+	MATRIX invZ;
+	invZ.setIdentity();
+#elif FE_MSQ_METHOD==1
+	//* Meini
+	Y[1] = Y[0];
+	Y[0] = Z[0] - Y[1];		//* I-A'
+	Z[0] = 2 * (Z[0] + Y[1]);	//* 2(I+A')
+
+	MATRIX invZ;
+#else
+	//* Schulz
+
+	MATRIX I3;
+	setIdentity(I3);
+	I3 *= 3;
+#endif
+
+	//U32 iteration;
+	UINT32 iteration;
+	for (iteration = 0; iteration < m_iterations; iteration++)
+	{
+		//U32 last = current;
+		UINT32 last = current;
+		//current = !current;
+		current = ~current;
+
+#if FE_MSQ_DEBUG
+		feLog("\n>>>> iteration %d\nY\n%s\nZ\n%s\n", iteration,
+			c_print(Y[last]),
+			c_print(Z[last]));
+		feLog("Y*Y\n%s\nZ*Z\n%s\n",
+			c_print(Y[last] * Y[last]),
+			c_print(Z[last] * Z[last]));
+#endif
+
+#if FE_MSQ_METHOD==0
+
+		//* Denman-Beavers (1976)
+
+		/*invert(invY, Y[last]);
+		invert(invZ, Z[last]);*/
+		invY = Y[last].inverse();
+		invZ = Z[last].inverse();
+
+#if FE_MSQ_DEBUG
+		feLog("invY\n%s\n",
+			c_print(invY));
+		feLog("invZ\n%s\n",
+			c_print(invZ));
+		feLog("Y+invZ\n%s\nZ+invY\n%s\n",
+			c_print(Y[last] + invZ),
+			c_print(Z[last] + invY));
+#endif
+
+		Y[current] = 0.5 * (Y[last] + invZ);
+		Z[current] = 0.5 * (Z[last] + invY);
+
+#elif FE_MSQ_METHOD==1
+
+		//* Meini (2004)
+
+		invert(invZ, Z[last]);
+
+#if FE_MSQ_DEBUG
+		feLog("invZ\n%s\n",
+			c_print(invZ));
+#endif
+
+		Y[current] = -1 * Y[last] * invZ * Y[last];
+		Z[current] = Z[last] + 2 * Y[current];
+
+#else
+
+		//* Schulz
+
+		MATRIX I3ZY = I3 - Z[last] * Y[last];
+
+		Y[current] = 0.5 * Y[last] * I3ZY;
+		Z[current] = 0.5 * I3ZY * Z[last];
+
+#endif
+	}
+
+#if FE_MSQ_METHOD==0
+	//* Denman-Beavers
+	MATRIX& R = Y[current];
+#elif FE_MSQ_METHOD==1
+	//* Meini
+	MATRIX R = 0.25 * Z[current];
+	R(3, 3) = 1;
+#else
+	//* Schulz
+	MATRIX& R = Y[current];
+	R(3, 3) = 1;
+#endif
+
+#if FE_MSQ_DEBUG
+	feLog("\nA\n%s\n", c_print(A));
+	if (fix)
+	{
+		feLog("\nA'\n%s\n", c_print(AA));
+	}
+	feLog("\nB'\n%s\nB'*B'\n%s\n", c_print(R), c_print(R * R));
+#endif
+
+	if (fix)
+	{
+		B = correction * R;
+
+#if FE_MSQ_DEBUG
+		feLog("\ncorrection\n%s\n", c_print(correction));
+		feLog("\ncorrected\n%s\n", c_print(B));
+		feLog("\nsquared\n%s\n", c_print(B * B));
+#endif
+	}
+	else
+	{
+		B = R;
+	}
+
+#if FE_MSQ_VERIFY
+	bool invalid = FALSE;
+	MATRIX diff = AA - R * R;
+	F32 sumR = 0.0f;
+	F32 sumT = 0.0f;
+	for (U32 m = 0; m < width(diff); m++)
+	{
+		U32 n;
+		for (n = 0; n < height(diff) - 1; n++)
+		{
+			if (FE_INVALID_SCALAR(diff(m, n)))
+			{
+				invalid = TRUE;
+			}
+			sumR += fabs(diff(m, n));
+		}
+		if (FE_INVALID_SCALAR(diff(m, n)))
+		{
+			invalid = TRUE;
+		}
+		sumT += fabs(diff(m, n));
+	}
+#endif
+#if FE_MSQ_VERIFY && FE_MSQ_DEBUG
+	feLog("\ndiff\n%s\ncomponent sumR=%.6G\n", c_print(diff), sumR);
+#endif
+#if FE_MSQ_VERIFY
+	if (invalid || sumR > FE_MSQ_MAX_ERROR_R || sumT > FE_MSQ_MAX_ERROR_T)
+	{
+		feLog("MatrixSqrt< %s >::solve"
+			" error of %.6G,%.6G exceeded limit of %.6G,%.6G\n",
+			FE_TYPESTRING(MATRIX).c_str(),
+			sumR, sumT, FE_MSQ_MAX_ERROR_R, FE_MSQ_MAX_ERROR_T);
+		feLog("\nA'\n%s\n", c_print(AA));
+		feLog("\nB'\n%s\nB'*B'\n%s\n", c_print(R), c_print(R * R));
+
+		feX("MatrixSqrt<>::solve", "failed to converge");
+	}
+#endif
+}
+
+// NOTE fraction: 23 bits for single and 52 for double
+/**************************************************************************//**
+	@brief solve B = A^^power, where A is a matrix
+
+	@ingroup geometry
+
+	The power can be any arbitrary real number.
+
+	Execution time is roughly proportional to the number of set bits in
+	the integer portion of the floating point power and a fixed number
+	of iterations for the fractional part.
+
+	The number of iterations used to compute of the fractional portion
+	of the power can be changed.  The maximum error after each iteration
+	is half of the previous iteration, starting with one half.  The entire
+	integer portion of the power is always computed.
+*//***************************************************************************/
+template <typename MATRIX>
+class FEMatrixPower
+{
+public:
+	FEMatrixPower(void) :
+		m_iterations(16) {}
+
+	template <typename T>
+	void	solve(MATRIX& B, const MATRIX& A, T a_power) const;
+
+	void	setIterations(UINT32 iterations) { m_iterations = iterations; }
+
+private:
+	MatrixSqrt<MATRIX>	m_matrixSqrt;
+	UINT32					m_iterations;
+};
+
+template <typename MATRIX>
+template <typename T>
+inline void FEMatrixPower<MATRIX>::solve(MATRIX& B, const MATRIX& A,
+	T a_power) const
+{
+	T absolute = a_power;
+
+#if MRP_DEBUG
+	feLog("\nA\n%s\npower=%.6G\n", print(A).c_str(), absolute);
+#endif
+
+	const bool inverted = (absolute < 0.0);
+	if (inverted)
+	{
+		absolute = -absolute;
+	}
+
+	UINT32 whole = UINT32(absolute);
+	T fraction = absolute - whole;
+
+#if MRP_DEBUG
+	feLog("\nwhole=%d\nfraction=%.6G\n", whole, fraction);
+#endif
+
+	MATRIX R;
+	//setIdentity(R);
+
+	MATRIX partial = A;
+	float contribution = 1.0;
+	UINT32 iteration;
+	for (iteration = 0; iteration < m_iterations; iteration++)
+	{
+		m_matrixSqrt.solve(partial, partial);
+		contribution *= 0.5;
+#if MRP_DEBUG
+		feLog("\ncontribution=%.6G\nfraction=%.6G\n", contribution, fraction);
+#endif
+		if (fraction >= contribution)
+		{
+			R *= partial;
+			fraction -= contribution;
+		}
+	}
+
+	partial = A;
+	while (whole)
+	{
+#if MRP_DEBUG
+		feLog("\nwhole=%d\n", whole);
+#endif
+		if (whole & 1)
+		{
+			R *= partial;
+		}
+		whole >>= 1;
+		if (whole)
+		{
+			partial *= partial;
+		}
+	}
+
+#if MRP_VALIDATE
+	bool invalid = FALSE;
+	for (U32 m = 0; m < width(R); m++)
+	{
+		for (U32 n = 0; n < height(R); n++)
+		{
+			if (FE_INVALID_SCALAR(R(m, n)))
+			{
+				invalid = TRUE;
+			}
+		}
+	}
+	if (invalid)
+	{
+		feLog("MatrixPower< %s >::solve invalid results power=%.6G\n",
+			FE_TYPESTRING(MATRIX).c_str(), a_power);
+		feLog("\nA\n%s\n", print(A).c_str());
+		feLog("\nB\n%s\n", print(R).c_str());
+
+		feX("MatrixPower<>::solve", "invalid result");
+	}
+#endif
+
+	if (inverted)
+	{
+		//invert(B, R);
+		B = R.inverse();
+	}
+	else
+	{
+		B = R;
+	}
+}
+
+MMatrixArray strata::curveMatricesFromAnchorDatas(
+	MMatrixArray controlMats, int segmentPointCount,
+	int rootIterations
+	) {
+	/* interpolate rational-root matrices between anchors, and then add anchors and interpolated mats to result*/
+	MMatrixArray result;
+	//result.reserve(controlMats.length() + segmentPointCount * (controlMats.length() - 1));
+
+	/* TODO: parallelise segments here if matrix roots are costly*/
+	rootIterations = std::min(rootIterations, 1);
+	for (unsigned int i = 0; i < (controlMats.length() - 1); i++) {
+		result.append(controlMats[i]);
+
+		DEBUGMMAT("ctlMat:", controlMats[i]);
+
+		// get relative matrix from this point to the next
+		Eigen::Matrix4f relMat = toEigen(controlMats[i].inverse() * controlMats[i + 1]);
+
+
+		// get square root of matrix, for single midpoint; cubic for 2, etc
+		/*Eigen::MatrixPower<Eigen::Matrix4f> relMatPower(relMat);
+
+		result.append(toMMatrix(relMatPower(2)));*/
+
+		//auto matRoot = relMat.sqrt();
+
+		/*result.append(toMMatrix(matRoot));
+		continue;*/
+
+		//Eigen::Matrix4f sqrtResult;
+		//sqr.solve(sqrtResult, relMat);
+		//result.append(controlMats[i] * toMMatrix<Eigen::Matrix4f>(sqrtResult));
+		
+		//continue;
+
+		//Eigen::MatrixPower<Eigen::Matrix4f> relMatPower(relMat);
+		////auto step = relMatPower(1.0 / float(segmentPointCount + 1));
+		//auto step = 0.5;
+		//Eigen::Matrix4f sqrtResult = relMatPower(step);
+		//
+		//MMatrix sqrtMMat = toMMatrix(sqrtResult);
+		//sqrtMMat = controlMats[i] * sqrtMMat * MMatrix::identity;
+
+		//result.append(sqrtMMat);
+
+
+		MatrixSqrt<Eigen::Matrix4f> sq;
+		sq.setIterations(rootIterations);
+		auto matResult = toEigen(MMatrix(controlMats[i]));	
+		sq.solve(matResult, relMat);
+
+		result.append(toMMatrix(matResult));
+
+
+		DEBUGMMAT("mid mat:", result[result.length() - 1]); // NANs :(
+		continue;
+
+		
+
+		// raise that root matrix to the same power as its segment point index
+		segmentPointCount = 1;
+		for (size_t n = 0; n < segmentPointCount; n++) {
+
+			//result.push_back(controlMats[i] * toMMatrix<Eigen::Matrix4f>(
+			/*result.append(controlMats[i] * toMMatrix<Eigen::Matrix4f>(
+				relMatPower(float(n + 1) / float(segmentPointCount + 1))
+			));*/
+
+			//MatrixSqrt<Eigen::Matrix4f> sq;
+			//sq.setIterations(rootIterations);
+			//auto matResult = toEigen(MMatrix(controlMats[i]));
+			//
+			////sq.solve(matResult, toEigen(relMat));
+			//sq.solve(matResult, relMat);
+
+			//result.append(toMMatrix(matResult));
+			//DEBUGMMAT("mid mat:", toMMatrix(matResult)); // NANs :(
+			//continue;
+
+
+
+			//Eigen::Matrix4f matResult;
+			//MatrixPower<Eigen::Matrix4f> mp;
+			//double ratio = float(n + 1) / float(segmentPointCount + 1);
+			//mp.solve<double>(matResult, relMat, ratio);
+			//result.append(controlMats[i] * toMMatrix<Eigen::Matrix4f>(
+			//	matResult
+			//));
+
+		}
+
+	}
+	DEBUGMMAT("endMat", controlMats[controlMats.length() - 1]);
+	//result.push_back(controlMats.back());
+	result.append(controlMats[controlMats.length() - 1]);
+	return result;
+}
+
+
+MPointArray strata::curvePointsFromEditPoints(
+	MMatrixArray controlMats, int segmentPointCount
+	//int rootIterations
+) {
+	return MPointArray();
+}
+
+MPointArray strata::curvePointsFromEditPointsAndTangents(
+	MMatrixArray controlMats, int segmentPointCount
+	//int rootIterations
+) {
+	return MPointArray();
+}
+
+template<typename T>
+inline Eigen::MatrixX3<T> strata::cubicTangentPointsForBezPoints(
+	const Eigen::MatrixX3<T>& inPoints,
+	const bool closed,
+	float* inContinuities// = nullptr
+)
+{
+	/* build 'clever' auto-tangent scaling setup -
+	TODO: check if some anchors define a specific tangent or normal plane
+	*/
+	// treat open and closed the same, just discount final span if not closed
+
+	Eigen::MatrixX3<T> result(inPoints.rows() * 3, 3);
+	int nPoints = static_cast<int>(inPoints.rows());
+	int nOutPoints = nPoints * 3;
+
+	// set tangent vectors for each one (scaling done later)
+	// also includes start and end, as if it were closed
+	int nextInI, prevInI; // next and prev anchor points
+	int outI, nextOutI, prevOutI; // this out point, and out tangents to next and previous out points
+	for (int i = 0; i < nPoints; i++) {
+		nextInI = (i + 1) % nPoints;
+		prevInI = (i - 1 + nPoints) % nPoints;
+		Vector3<T> thisPos = inPoints.row(i);
+		Vector3<T> nextPos = inPoints.row(nextInI);
+		Vector3<T> prevPos = inPoints.row(prevInI);
+
+		// set simple in-outs for ends of open curves
+		// continuity should avoid s-curves later in function
+		if ((i == 0) && (!closed)) {
+			prevPos = thisPos + (thisPos - nextPos) * T(0.1);
+		}
+		if ((i == (nPoints - 1)) && (!closed)) {
+			nextPos = thisPos + (nextPos - thisPos) * T(0.1);
+		}
+
+
+		outI = i * 3;
+		nextOutI = (i * 3 + 1) % nOutPoints;
+		prevOutI = (i * 3 - 1 + nOutPoints) % nOutPoints;
+
+
+		// set start point from originals
+		result.row(outI) = thisPos;
+		Vector3<T> tanVec;
+		if (nPoints == 2) {
+			if (nextInI == 0 && !closed) { // this is the last point, need prev tangent pointing straight back at start
+				tanVec = (nextPos - thisPos) * T(0.3);
+				result.row(nextOutI) = thisPos - tanVec;
+				result.row(prevOutI) = thisPos + tanVec;
+				continue;
+			}
+			tanVec = (nextPos - thisPos) * T(0.3);
+			result.row(nextOutI) = thisPos + tanVec;
+			result.row(prevOutI) = thisPos - tanVec;
+			continue;
+		}
+
+		// vector from prev ctl pt to next
+		tanVec = nextPos - prevPos;
+		Vector3<T> tanDir = tanVec.normalized();
+		//thisAnchor.baseTan = tanVec;
+
+		/* if only 2 points, the normal tangent idea breaks down -
+		* we just take the vector between them here
+		*/
+		//if ((i == 0) && (!closed)) {
+		//	tanVec = nextPos - thisPos;
+		//}
+		//if ((i == (nPoints - 1)) && (!closed)) {
+		//	tanVec = thisPos - prevPos;
+		//} 
+
+
+		Vector3<T> toThisVec = thisPos - prevPos;
+		// vector from this ctl pt to next
+		Vector3<T> toNextVec = nextPos - thisPos;
+		//auto toPrevVec = nextPos - thisPos;
+
+		////// DEFAULTS - still testing here, maybe we allow this to be set by primvar or something
+		T defaultTanScaleFactor = T(1.5);
+		T defaultTanSmoothMinFactor = T(0.2);
+		T defaultTanMinScale = T(0.2);
+
+		T tanLength(tanVec.norm());
+
+		// forwards tan scale factor
+		//T nextTanScale = (tanDir.dot(toNextVec) - (tanDir.dot(toThisVec))) / defaultTanScaleFactor;
+		T nextTanScale = (tanDir.dot(toNextVec)) / defaultTanScaleFactor;
+		nextTanScale = -sminQ<T>(-nextTanScale, -defaultTanMinScale, defaultTanSmoothMinFactor);
+
+		// back tan scale factor
+		//T prevTanScale = (tanDir.dot(-toThisVec) - (tanDir.dot(toThisVec))) / defaultTanScaleFactor;
+		T prevTanScale = tanDir.dot(toThisVec) / defaultTanScaleFactor;
+		prevTanScale = -sminQ<T>(-prevTanScale, -defaultTanMinScale, defaultTanSmoothMinFactor);
+		// later use continuity here for min tangent length
+
+		result.row(nextOutI) = thisPos + tanDir * nextTanScale;
+		result.row(prevOutI) = thisPos + -tanDir * prevTanScale;
+	}
+
+	//return result;
+
+	// if only 2 points, continuities don't matter
+	if (nPoints == 2) {
+		return result;
+	}
+
+	// if open, special-case end tangents before continuities?
+	if (!closed && (nPoints != 2)) {
+		result.row(1) = result.row(0) + (result.row(2) - result.row(1)) / 3.0;
+		result.row((nPoints - 1) * 3 - 1) = result.row((nPoints - 1) * 3 + 1) + 
+			( result.row((nPoints - 1) * 3 - 1) - result.row((nPoints - 1) * 3 + 1)) / 3.0;
+	}
+	return result;
+	// if we don't care about continuities, return
+	if (inContinuities == nullptr) {
+		return result;
+	}
+
+
+	// set ends if not continuous
+	// if not closed, ends are not continuous
+	if (!closed) {
+		inContinuities[0] = T(0.0);
+		inContinuities[nPoints - 1] = T(0.0);
+	}
+
+	// check continuity
+	for (int i = 0; i < nPoints; i++) {
+		nextInI = (i + 1) % nPoints;
+		prevInI = (i - 1 + nPoints) % nPoints;
+
+		outI = i * 3;
+		nextOutI = (i * 3 + 1) % nOutPoints;
+		prevOutI = (i * 3 - 1 + nOutPoints) % nOutPoints;
+
+		int nextPtI = ((i + 1) * 3) % nOutPoints;
+		int nextPtPrevTanI = ((i + 1) * 3 - 1 + nOutPoints) % nOutPoints;
+		int nextPtNextTanI = ((i + 1) * 3 + 1) % nOutPoints;
+
+		int prevPtI = ((i - 1) * 3 + nOutPoints) % nOutPoints;
+		int prevPtPrevTanI = ((i - 1) * 3 - 1 + nOutPoints) % nOutPoints;
+		int prevPtNextTanI = ((i - 1) * 3 + 1 + nOutPoints) % nOutPoints;
+
+
+		// blend between next tangent point and next point, based on continuity
+		//double postTanLen = thisAnchor.postTan.norm();
+		auto postTanLen = result.row(nextOutI).norm();
+		Eigen::Vector3<T> nextOutV(result.row(nextOutI)); 
+		Eigen::Vector3<T> nextPtV(result.row(nextPtI));
+		Eigen::Vector3<T> nextPtPlusPrevTanV(result.row(nextPtI) + result.row(nextPtPrevTanI));
+		Eigen::Vector3<T> outV(result.row(outI));
+
+		// use continuity of next point to check where sharp target should be
+		Eigen::Vector3<T> targetLerpV = lerp(
+			nextPtV, nextPtPlusPrevTanV,
+			static_cast<T>(inContinuities[nextInI])
+		);
+		// use continuity of this point to check how strongly tangent should lerp to that target
+
+		result.row(nextOutI) = lerp(
+			nextOutV,
+			targetLerpV,
+			static_cast<T>(inContinuities[i])
+		);
+
+		//result.row(nextOutI) = lerp(
+		//	Eigen::Vector3<T>(result.row(nextOutI)),
+		//	Eigen::Vector3<T>(lerp(
+		//			//nextAnchor.pos(),
+		//			Eigen::Vector3<T>(result.row(nextPtI)),
+		//			//Eigen::Vector3f(nextAnchor.pos() + nextAnchor.prevTan),
+		//			Eigen::Vector3<T>(result.row(nextPtI) + result.row(nextPtPrevTanI)),
+		//			//Eigen::Vector3f(nextAnchor.pos() + nextAnchor.preTan).matrix(),
+		//			//nextAnchor.continuity
+		//			T(inContinuities[nextInI])
+		//		) - Eigen::Vector3<T>(result.row(outI))),
+		//		T(inContinuities[i])
+		//);
+
+		//thisAnchor.postTan = thisAnchor.postTan.normalized() * postTanLen;
+		result.row(nextOutI) = result.row(nextOutI).normalized() * postTanLen;
+
+		// prev tan
+		//double prevTanLen = thisAnchor.prevTan.norm();
+		//thisAnchor.prevTan = lerp(
+		//	thisAnchor.postTan,
+		//	(lerp(
+		//		prevAnchor.pos(),
+		//		Eigen::Vector3f(prevAnchor.pos() + prevAnchor.postTan),
+		//		prevAnchor.continuity
+		//	) - thisAnchor.pos()).eval(),
+		//	thisAnchor.continuity
+		//);
+		//thisAnchor.prevTan = thisAnchor.prevTan.normalized() * prevTanLen;
+
+		T prevTanLen = T(result.row(prevOutI).norm());
+		result.row(prevOutI) = lerp(
+			Eigen::Vector3<T>(result.row(prevOutI)),
+			Eigen::Vector3<T>(
+				lerp(
+
+					Eigen::Vector3<T>(result.row(prevPtI)),
+					Eigen::Vector3<T>(result.row(prevPtI) + result.row(prevPtNextTanI)),
+					T(inContinuities[prevInI])
+
+				) - Eigen::Vector3<T>(result.row(outI))),
+			T(inContinuities[i])
+
+		);
+
+	}
+
+	return result;
+
+}
+
+template Eigen::MatrixX3<float> strata::cubicTangentPointsForBezPoints<float>(
+	const Eigen::MatrixX3<float>& inPoints,
+	const bool closed,
+	float* inContinuities
+);
+template Eigen::MatrixX3<double> strata::cubicTangentPointsForBezPoints<double>(
+	const Eigen::MatrixX3<double>& inPoints,
+	const bool closed,
+	float* inContinuities
+);
+
+//template<typename T>
+//inline Eigen::MatrixX3<T> resampleVectorArray(
+//	const Eigen::MatrixX3<T>& inVs,
+//	float start, float end,
+//	int nSamples,
+//	bool normalise = true
+//) {
+//
+//}
+
+Eigen::MatrixX3f strata::makeRMFNormals(
+	Eigen::MatrixX3f& positions,
+	Eigen::MatrixX3f& tangents,
+	const Eigen::MatrixX3f& targetNormals,
+	const int nSamples
+) {/*
+	as above, but working on only positions and tangents
+	*/
+
+	Eigen::MatrixX3f resultNs(nSamples, 3);
+
+	//Eigen::Vector3f ri = targetNormals.row(0);
+	resultNs.row(0) = targetNormals.row(0);
+
+	for (int i = 0; i < nSamples - 1; i++) {
+		Vector3f xi = positions.row(i);
+		Vector3f ti = tangents.row(i).normalized();
+
+		Vector3f xiPlus1 = positions.row(i + 1);
+		Vector3f v1 = xiPlus1 - xi;
+		float c1 = v1.dot(v1);
+		float ttf = (v1.dot(resultNs.row(i)));
+		Vector3f ttv = v1 * (2.0 / c1) * ttf;
+		Vector3f ttr = Vector3f(resultNs.row(i)) - ttv;
+		//Vector3f rLi = resultNs.row(i) - v1 * (2.0 / c1) * (v1.dot(resultNs.row(i)));
+		Vector3f rLi = ttr;
+		Vector3f tLi = ti - (2.0 / c1) * (v1.dot(ti)) * v1;
+
+		Vector3f tiPlus1 = tangents.row(i + 1).normalized(); // next point's tangent
+		Vector3f v2 = tiPlus1 - tLi;
+		float c2 = v2.dot(v2);
+		Vector3f riPlus1 = rLi - (2.0 / c2) * (v2.dot(rLi)) * v2; // final reflected normal
+		resultNs.row(i + 1) = riPlus1.normalized();
+	}
+	return resultNs;
+}
+
+Eigen::MatrixX3f strata::makeRMFNormals(
+	bez::CubicBezierPath& crv,
+	const Eigen::MatrixX3f& targetNormals,
+	const Eigen::VectorXf& targetNormalsParams,
+	const int nSamples
+) {/*
+	as above, but working on only positions and tangents
+	*/
+
+	Eigen::MatrixX3f resultNs(nSamples, 3);
+
+	//Eigen::Vector3f ri = targetNormals.row(0);
+	resultNs.row(0) = targetNormals.row(0);
+	
+	float u, nextU;
+	float step = 1.0f / (nSamples - 1);
+	for (int i = 0; i < nSamples - 1; i++) {
+		u = step * i;
+		nextU = step * (i + 1);
+		/*Vector3f xi = positions.row(i);
+		Vector3f ti = tangents.row(i).normalized();*/
+		Vector3f xi = crv.eval(u);
+		Vector3f ti = crv.tangentAt(u, xi).normalized();
+
+		//Vector3f xiPlus1 = positions.row(i + 1);
+		Vector3f xiPlus1 = crv.eval(nextU);
+		Vector3f v1 = xiPlus1 - xi;
+		float c1 = v1.dot(v1);
+		float ttf = (v1.dot(resultNs.row(i)));
+		Vector3f ttv = v1 * (2.0 / c1) * ttf;
+		Vector3f ttr = Vector3f(resultNs.row(i)) - ttv;
+		//Vector3f rLi = resultNs.row(i) - v1 * (2.0 / c1) * (v1.dot(resultNs.row(i)));
+		Vector3f rLi = ttr;
+		Vector3f tLi = ti - (2.0 / c1) * (v1.dot(ti)) * v1;
+
+		//Vector3f tiPlus1 = tangents.row(i + 1).normalized(); // next point's tangent
+		Vector3f tiPlus1 = crv.tangentAt(nextU, xiPlus1).normalized(); // next point's tangent
+		Vector3f v2 = tiPlus1 - tLi;
+		float c2 = v2.dot(v2);
+		Vector3f riPlus1 = rLi - (2.0 / c2) * (v2.dot(rLi)) * v2; // final reflected normal
+		resultNs.row(i + 1) = riPlus1.normalized();
+	}
+	return resultNs;
+}
+
+
+ArrayX3f makeRMFNormals(
+	const ArrayX3f& positions,
+	const ArrayX3f& targetNormals,
+	const ArrayXf& normalParams,
+	const ArrayXf& twistValues,
+	const ArrayXf& normalWeights
+) {
+	/* normal params: U along whole array
+	* twist values : scalar twist at that u param compared to normal frame
+	* normal weights: scalar weight for each normal. 1.0 everywhere gives linear interp
+	*/
+	auto nSamples = positions.rows();
+	ArrayX3f resultNs(nSamples, 3);
+	// Early exit for degenerate cases
+	if (nSamples == 0 || targetNormals.rows() == 0) {
+		return resultNs;
+	}
+
+	// Compute tangents from positions (central differencing with clamped ends)
+	ArrayX3f tangents(nSamples, 3);
+	tangents.row(0) = Vector3f(positions.row(1) - positions.row(0)).normalized();
+	for (int i = 1; i < nSamples - 1; ++i) {
+		tangents.row(i) = Vector3f(positions.row(i + 1) - positions.row(i - 1)).normalized();
+	}
+	tangents.row(nSamples - 1) = Vector3f(positions.row(nSamples - 1) - positions.row(nSamples - 2)).normalized();
+
+	// Build index mapping from sample indices to target normal spans
+	// normalParams are expected to be in [0,1] and strictly increasing
+	std::vector<int> sampleToSpan(nSamples);
+	std::vector<SampleIndices> targetIndices(nSamples);
+
+	for (int i = 0; i < nSamples; ++i) {
+		float u = static_cast<float>(i) / static_cast<float>(nSamples - 1);
+		targetIndices[i] = getIndicesTForU(normalParams, u);
+		sampleToSpan[i] = int(targetIndices[i].lower);
+	}
+
+	// Process each span independently (between consecutive target normals)
+	auto nSpans = targetNormals.rows() - 1;
+
+	for (int spanIdx = 0; spanIdx < nSpans; ++spanIdx) {
+		// Find sample range for this span
+		int spanStart = -1, spanEnd = -1;
+
+		for (int i = 0; i < nSamples; ++i) {
+			if (sampleToSpan[i] == spanIdx) {
+				if (spanStart == -1) spanStart = i;
+				spanEnd = i;
+			}
+		}
+
+		// Handle edge case: no samples in this span
+		if (spanStart == -1) continue;
+
+		// Get boundary target normals for this span
+		Vector3f startTargetNormal = targetNormals.row(spanIdx);
+		Vector3f endTargetNormal = targetNormals.row(spanIdx + 1);
+
+		// Get boundary twist values (interpolate if needed)
+		float startTwist = sampleArray(targetIndices[spanStart], twistValues);
+		float endTwist = sampleArray(targetIndices[spanEnd], twistValues);
+
+		// Get boundary weights
+		float startWeight = sampleArray(targetIndices[spanStart], normalWeights);
+		float endWeight = sampleArray(targetIndices[spanEnd], normalWeights);
+
+		// Apply twist to target normals
+		Vector3f startTangent = tangents.row(spanStart);
+		Vector3f endTangent = tangents.row(spanEnd);
+
+		// Rotate start normal by twist around tangent
+		if (!EQ(startTwist, 0.0f)) {
+			Eigen::AngleAxisf startRot(startTwist, startTangent);
+			startTargetNormal = startRot * startTargetNormal;
+		}
+
+		// Rotate end normal by twist around tangent
+		if (!EQ(endTwist, 0.0f)) {
+			Eigen::AngleAxisf endRot(endTwist, endTangent);
+			endTargetNormal = endRot * endTargetNormal;
+		}
+
+		// Initialize first normal of span
+		resultNs.row(spanStart) = startTargetNormal.normalized();
+
+		// Propagate normals using double-reflection method
+		for (int i = spanStart; i < spanEnd; ++i) {
+			Vector3f xi = positions.row(i);
+			Vector3f ti = tangents.row(i);
+			Vector3f ri = resultNs.row(i);
+
+			Vector3f xiPlus1 = positions.row(i + 1);
+			Vector3f tiPlus1 = tangents.row(i + 1);
+
+			// First reflection: reflect ri about the bisector of (xiPlus1 - xi)
+			Vector3f v1 = xiPlus1 - xi;
+			float c1 = v1.dot(v1);
+
+			Vector3f rLi;
+			if (c1 > 1e-8f) {
+				rLi = ri - v1 * (2.0f / c1) * v1.dot(ri);
+			}
+			else {
+				rLi = ri;  // Degenerate case: points coincident
+			}
+
+			// Also reflect tangent for consistency
+			Vector3f tLi;
+			if (c1 > 1e-8f) {
+				tLi = ti - v1 * (2.0f / c1) * v1.dot(ti);
+			}
+			else {
+				tLi = ti;
+			}
+
+			// Second reflection: reflect about the bisector of (tiPlus1 - tLi)
+			Vector3f v2 = tiPlus1 - tLi;
+			float c2 = v2.dot(v2);
+
+			Vector3f riPlus1;
+			if (c2 > 1e-8f) {
+				riPlus1 = rLi - v2 * (2.0f / c2) * v2.dot(rLi);
+			}
+			else {
+				riPlus1 = rLi;  // Degenerate case: tangents aligned
+			}
+
+			resultNs.row(i + 1) = riPlus1.normalized();
+		}
+
+		// Blend end of span toward target normal using weight
+		if (spanEnd > spanStart) {
+			Vector3f propagatedNormal = resultNs.row(spanEnd);
+			float blendFactor = sampleArray(targetIndices[spanEnd], normalWeights);
+
+			// Slerp between propagated and target normal
+			Vector3f blended = propagatedNormal.normalized();
+			if (blendFactor > 1e-6f) {
+				float cosAngle = propagatedNormal.dot(endTargetNormal);
+				cosAngle = clamp(cosAngle, -1.0f, 1.0f);
+				float angle = std::acos(cosAngle);
+
+				if (angle > 1e-6f) {
+					float sinAngle = std::sin(angle);
+					blended = (propagatedNormal * std::sin((1.0f - blendFactor) * angle) +
+						endTargetNormal * std::sin(blendFactor * angle)) / sinAngle;
+				}
+				else {
+					// Vectors nearly aligned, use linear interpolation
+					blended = lerp(propagatedNormal, endTargetNormal, blendFactor);
+				}
+			}
+
+			resultNs.row(spanEnd) = blended.normalized();
+		}
+	}
+
+	// Handle final span (if last sample is beyond last target normal)
+	if (nSamples > 0 && sampleToSpan[nSamples - 1] >= nSpans) {
+		// Find where the final span starts
+		int finalSpanStart = int(nSamples) - 1;
+		for (int i = int(nSamples) - 2; i >= 0; --i) {
+			if (sampleToSpan[i] == nSpans - 1) {
+				finalSpanStart = i + 1;
+				break;
+			}
+		}
+
+		// Propagate from last valid normal
+		Vector3f lastTargetNormal = targetNormals.row(targetNormals.rows() - 1);
+		float lastTwist = twistValues[twistValues.rows() - 1];
+
+		if (finalSpanStart > 0) {
+			// Apply twist to last target normal
+			Vector3f lastTangent = tangents.row(finalSpanStart - 1);
+			if (!EQ(lastTwist, 0.0f)) {
+				Eigen::AngleAxisf rot(lastTwist, lastTangent);
+				lastTargetNormal = rot * lastTargetNormal;
+			}
+
+			resultNs.row(finalSpanStart - 1) = lastTargetNormal.normalized();
+
+			// Propagate to end
+			for (int i = finalSpanStart - 1; i < nSamples - 1; ++i) {
+				Vector3f xi = positions.row(i);
+				Vector3f ti = tangents.row(i);
+				Vector3f ri = resultNs.row(i);
+
+				Vector3f xiPlus1 = positions.row(i + 1);
+				Vector3f tiPlus1 = tangents.row(i + 1);
+
+				// Double reflection
+				Vector3f v1 = xiPlus1 - xi;
+				float c1 = v1.dot(v1);
+				Vector3f rLi = (c1 > 1e-8f) ? ri - v1 * (2.0f / c1) * v1.dot(ri) : ri;
+				Vector3f tLi = (c1 > 1e-8f) ? ti - v1 * (2.0f / c1) * v1.dot(ti) : ti;
+
+				Vector3f v2 = tiPlus1 - tLi;
+				float c2 = v2.dot(v2);
+				Vector3f riPlus1 = (c2 > 1e-8f) ? rLi - v2 * (2.0f / c2) * v2.dot(rLi) : rLi;
+
+				resultNs.row(i + 1) = riPlus1.normalized();
+			}
+		}
+	}
+
+	return resultNs;
+}
+
+
+
+
+
+
+
+bez::CubicBezierPath strata::splitBezPath(bez::CubicBezierPath& crv, float lowT, float highT) {
+	/* return new bez path split at the given param(s)
+	* only split twice if we need to
+	*/
+	if (EQ(lowT, 0) && EQ(highT, 1.0)) {
+		// you just want a copy of the curve? kinda weird but you do you
+		return bez::CubicBezierPath(crv);
+	}
+	// can't work out how to declare vars in higher scope like this
+	//bez::CubicBezierPath& newCrv = crv;
+	// so for now this function is ugly and not factored
+	if (!EQ(highT, 0)) { // return first half
+		auto idParam = crv.globalToLocalParam(highT);
+		auto res = splitBezSpline(crv.splines_[idParam.first].pointsAsMatrix(), idParam.second);
+		//std::vector<bez::CubicBezierSpline> subcrvs(idParam.first + 1);
+		int i = 0;
+		bez::CubicBezierPath newCrv;
+		newCrv.splines_.resize(idParam.first + 1);
+		for (i = 0; i < idParam.first; i++) {
+			//subcrvs[i] = crv.splines_[i];
+			newCrv.splines_[i] = crv.splines_[i];
+		}
+		newCrv.splines_[i] = bez::CubicBezierSpline(
+			res.aPts.row(0),
+			res.aPts.row(1),
+			res.aPts.row(2),
+			res.aPts.row(3)
+		);
+		//newCrv = bez::CubicBezierPath(subcrvs);
+		if (EQ(lowT, 0.0)) { // if start at 0, just return
+			newCrv.Initialize();
+			return newCrv;
+		}
+		newCrv.splines_[i].Initialize();
+		// split lower half
+		lowT = lowT * idParam.second; // multiply to remap into new, shorter curve
+		idParam = newCrv.globalToLocalParam(lowT);
+		res = splitBezSpline(newCrv.splines_[idParam.first].pointsAsMatrix(), idParam.second);
+		bez::CubicBezierPath nnewCrv;
+		nnewCrv.splines_.resize(newCrv.splines_.size() - idParam.first);
+		//std::vector<bez::CubicBezierSpline> newSubcrvs(newCrv.splines_.size() - idParam.first);
+
+		i = 0;
+		for (i = 1; i < (newCrv.splines_.size() - idParam.first); i++) {
+			nnewCrv.splines_[i] = newCrv.splines_[i + idParam.first];
+		}
+		nnewCrv.splines_[0] = bez::CubicBezierSpline(
+			res.bPts.row(0),
+			res.bPts.row(1),
+			res.bPts.row(2),
+			res.bPts.row(3)
+		);
+		nnewCrv.Initialize();
+		return nnewCrv;
+	}
+
+	// only trim low part
+	auto idParam = crv.globalToLocalParam(lowT);
+	auto res = splitBezSpline(crv.splines_[idParam.first].pointsAsMatrix(), idParam.second);
+	bez::CubicBezierPath nnewCrv;
+	nnewCrv.splines_.resize(crv.splines_.size() - idParam.first);
+	//std::vector<bez::CubicBezierSpline> newSubcrvs(newCrv.splines_.size() - idParam.first);
+
+	int i = 0;
+	for (i = 1; i < (crv.splines_.size() - idParam.first); i++) {
+		nnewCrv.splines_[i] = crv.splines_[i + idParam.first];
+	}
+	nnewCrv.splines_[0] = bez::CubicBezierSpline(
+		res.bPts.row(0),
+		res.bPts.row(1),
+		res.bPts.row(2),
+		res.bPts.row(3)
+	);
+	nnewCrv.Initialize();
+	return nnewCrv;
+}
+
+std::tuple<float, Vector3f, float, Vector3f> strata::closestBezPointToRay(bez::CubicBezierPath& crv, Vector3f rayO, Vector3f raySpan,
+	int initRaySamples, int mutualIters) {
+	/* return curve param, closest bez point, line param, closest line point*/
+	//Vector3f rayDir = raySpan.normalized();
+	float d = std::numeric_limits<float>::max();
+	float bezU = 0;
+	float rayU = 0;
+	float checkD; //z
+
+	Vector3f rayPos;
+	Vector3f bezPos;
+
+	// is there a way to do this without copying results to check here? I guess copy only the distance and the iteration
+	float minBezU = 0;
+	float minRayU = 0;
+
+	Vector3f minRayPos;
+	Vector3f minBezPos;
+	for (int i = 0; i < initRaySamples; i++) {
+		 rayU = 1.0f / (initRaySamples - 1) * i;
+		 bezPos = crv.getClosestPoint(rayO + raySpan * rayU, crv.getSolver(), bezU);
+		 checkD = (bezPos - (rayO + raySpan * rayU)).squaredNorm();
+		 if (checkD < d) {
+			 minBezU = bezU;
+			 minBezPos = bezPos;
+			 minRayU = rayU;
+			 minRayPos = rayO + raySpan * rayU;
+			 d = checkD;
+		 }
+	}
+
+	/* iterative mutual closest point from found positions*/
+	for (int i = 0; i < mutualIters; i++) {
+		minBezPos = crv.getClosestPoint(rayO + raySpan * minRayU, crv.getSolver(), minBezU);
+		minRayU = closestTAlongRay(raySpan, rayO, minBezPos) / raySpan.norm();
+		minRayU = clamp01(minRayU);
+	}
+
+	return std::make_tuple(minBezU, minBezPos, minRayU, rayPos);
+
+}
+
+
+
+#endif // !ED_LIB_EIGEN

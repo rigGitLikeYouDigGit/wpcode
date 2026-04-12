@@ -15,7 +15,7 @@ SFaceData& SubPatchData::fData(StrataManifold& man) {
 std::tuple<int, float, float> SFaceData::edgeSpan(StrataManifold& manifold, int borderIndex) {
 	Vertex& startV = manifold.vertices[borderIndex];
 	Vertex& endV = manifold.vertices[(borderIndex + 1) % nBorderEdges()];
-	SEdgeData& eData = manifold.eDataMap[manifold.getEl(startV.edgeIds[1])->name];
+	SEdge& eData = manifold.eDataMap[manifold.getEl(startV.edgeIds[1])->name];
 	if (startV.edgeDirs[1]) {
 		return std::make_tuple(eData.index, startV.edgeUs[1], endV.edgeUs[0]);
 	}
@@ -33,7 +33,7 @@ std::pair<Vertex*, Vertex*> SFaceData::vtxPair(StrataManifold& man, int borderIn
 	);
 }
 
-SEdgeData& SFaceData::eDataForBorder(StrataManifold& man, int borderIndex) {
+SEdge& SFaceData::eDataForBorder(StrataManifold& man, int borderIndex) {
 	return man.eDataMap[
 		man.getEl(
 			man.getVertex(

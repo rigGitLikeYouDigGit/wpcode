@@ -100,12 +100,12 @@ void IntersectionRecord::_sortElMap() {
 
 }
 
-std::string strata::SPointSpaceData::strInfo() {
-	return "<PSData " + name + " w:" + str(weight) + " uvn:" + str(uvn) + " offset:" + str(offset) + ">";
-}
+//std::string strata::SPoint::strInfo() {
+//	return "<PSData " + name + " w:" + str(weight) + " uvn:" + str(uvn) + " offset:" + str(offset) + ">";
+//}
 
-std::string strata::SPointData::strInfo() {
-	std::string result = "<PData anchor:" + str(anchorData.index) + " ";
+std::string strata::SPoint::strInfo() {
+	std::string result = "<PData anchor:" + str(globalIndex) + " ";
 	for (auto& i : spaceDatas) {
 		result += i.strInfo() + " ";
 	}
@@ -123,35 +123,36 @@ Status& StrataManifold::mergeOther(StrataManifold& other, int mergeMode, Status&
 	*/
 
 	// add any elements not already known by name
-	//LOG("graph MERGE OTHER");
-	//l("this graph: " + printInfo());
-	//l("other graph: " + other.printInfo());
-	for (auto& otherEl : other.elements) {
-		SElement* newEl;
-		// if element not found, add it and copy over its data directly
-		if (nameGlobalIndexMap.find(otherEl.name) == nameGlobalIndexMap.end()) {
-			addElement(otherEl, newEl);
-			setElData(newEl, other.elData(otherEl));
-			continue;
+	for(auto& otherElTie : other.nameGlobalIdMap) {
+		SElement* otherEl = other.getEl(otherElTie.first);
+		SElement* outEl = nullptr;
+		switch (otherEl->elType) {
+		case SElType::point: {
+			addElement(*otherEl, outEl);
+			break;
 		}
-		// element found already - do we overwrite?
-		newEl = getEl(otherEl.name);
-		if (mergeMode == MERGE_OVERWRITE) {
-			setElData(newEl, other.elData(otherEl));
+		case SElType::edge: {
+			addElement(*otherEl, outEl);
+			break;
+		}
+		/*case SElType::face: {
+			addElement(other.faces[elIdx], nullptr);
+			break;
+		}*/
 		}
 	}
-	//l("after merge, this graph: " + printInfo());
+
 	return s;
 }
 
 /* groups */
-SGroup* StrataManifold::addGroup(std::string& groupName, SElType elType=SElType::point) {
+SGroup* StrataManifold::addGroup(StrataName& groupName, SElType elType=SElType::point) {
 	SGroup* result = &groupMap[groupName];
 	result->elT = elType;
 	return result;
 }
 
-SGroup* StrataManifold::getGroup(std::string& groupName) {
+SGroup* StrataManifold::getGroup(StrataName& groupName) {
 	auto found = groupMap.find(groupName);
 	if (found == groupMap.end()) {
 		return nullptr;
@@ -160,75 +161,216 @@ SGroup* StrataManifold::getGroup(std::string& groupName) {
 }
 
 /* should groups hold a set of strings? */
-void StrataManifold::addToGroup(SGroup* grp, SElement* el) {
-	grp->elNames.insert(el->name);
-	el->groups.insert(grp->name);
-}
-void StrataManifold::removeFromGroup(SGroup* grp, SElement* el) {
-	grp->elNames.erase(el->name);
-	el->groups.erase(grp->name);
-}
+//void StrataManifold::addToGroup(SGroup* grp, SElement* el) {
+//	grp->elNames.insert(el->name);
+//	el->groups.insert(grp->name);
+//}
+//void StrataManifold::removeFromGroup(SGroup* grp, SElement* el) {
+//	grp->elNames.erase(el->name);
+//	el->groups.erase(grp->name);
+//}
 
 
-Status& StrataManifold::deleteGroup(Status& s, std::string& groupName) {
-	auto found = groupMap.find(groupName);
-	if (found == groupMap.end()) {
+//Status& StrataManifold::deleteGroup(Status& s, std::string& groupName) {
+//	auto found = groupMap.find(groupName);
+//	if (found == groupMap.end()) {
+//		return s;
+//	}
+//	for (auto& elName : found->second.elNames) {
+//		SElement* el = getEl(elName);
+//		//el->groups.erase(std::find(el->groups.begin(), el->groups.end(), groupName));
+//		el->groups.erase(groupName);
+//	}
+//	groupMap.erase(groupName);
+//	return s;
+//}
+
+
+//Status& StrataManifold::renameGroup(Status& s, std::string& startName, std::string& newName, int mergeMode=MERGE_UNION) {
+//	/* look for group name in map - 
+//	if mode is union, elements are merged into original group */
+//	auto found = groupMap.find(startName);
+//	if (found == groupMap.end()) {
+//		STAT_ERROR(s, "no base group found with name " + startName);
+//	}
+//	auto foundNew = groupMap.find(newName);
+//	if (foundNew != groupMap.end()) {
+//		switch (mergeMode) {
+//		case MERGE_LEAVE: { /* don't overwrite anything, delete group we're trying to rename?*/
+//			s = deleteGroup(s, startName);
+//			return s;
+//		}
+//		case MERGE_OVERWRITE: { /* remove original group*/
+//			s = deleteGroup(s, newName );
+//			break;
+//		}
+//		case MERGE_UNION: { /* merge elements with original group */
+//			for (auto& elName : found->second.elNames) {
+//				SElement* el = getEl(elName);
+//				//*(std::find(el->groups.begin(), el->groups.end(), startName)) = newName;
+//				el->groups.erase(startName);
+//				el->groups.insert(newName);
+//			}
+//			groupMap.erase(startName);
+//			return s;
+//		}
+//		}
+//	}
+//	for (auto& elName : found->second.elNames) {
+//		SElement* el = getEl(elName);
+//		//*(std::find(el->groups.begin(), el->groups.end(), startName)) = newName;
+//		el->groups.insert(newName);
+//	}
+//	found->second.name = newName;
+//	groupMap.insert({ newName, found->second });
+//	groupMap.erase(startName);
+//	return s;
+//}
+
+
+static Status& pointPosAt(Status& s, Eigen::Vector3f& out, const SPoint& d, const Eigen::Vector3f& uvn) {
+	out = d.finalMatrix * Eigen::Vector3f(uvn);
+	return s;
+}
+static Status& edgePosAt(Status& s, Eigen::Vector3f& out, const SEdge& d, const Eigen::Vector3f& uvn) {
+	/* as above, but just return position -
+	may allow faster sampling in future
+
+	UVN is (curve param, rotation from normal, distance from curve)
+	*/
+
+	// check if we need full matrix
+	if (EQ(uvn[1], 0.0f) && EQ(uvn[2], 0.0f)) {
+		if (d.spaceDatas.size()) {
+			out = d.spaceDatas[0].domainCurve.eval(uvn[0]);
+			return s;
+		}
+		out = d.finalCurve.eval(uvn[0]);
 		return s;
 	}
-	for (auto& elName : found->second.elNames) {
-		SElement* el = getEl(elName);
-		//el->groups.erase(std::find(el->groups.begin(), el->groups.end(), groupName));
-		el->groups.erase(groupName);
-	}
-	groupMap.erase(groupName);
+	Eigen::Affine3f curveMat;
+	s = edgeDataMatrixAt(s, curveMat, d, uvn);
+	out = curveMat.translation();
 	return s;
 }
 
-
-Status& StrataManifold::renameGroup(Status& s, std::string& startName, std::string& newName, int mergeMode=MERGE_UNION) {
-	/* look for group name in map - 
-	if mode is union, elements are merged into original group */
-	auto found = groupMap.find(startName);
-	if (found == groupMap.end()) {
-		STAT_ERROR(s, "no base group found with name " + startName);
+Status& posAt(Status& s, Eigen::Vector3f& out, int globalIndex, Eigen::Vector3f& uvn) {
+	/* as above, but just return position -
+	may allow faster sampling in future*/
+	SElement* el = getEl(globalIndex);
+	switch (el->elType) {
+	case SElType::point: {
+		//SPointData& d = pointDatas.at(el->elIndex);
+		SPoint& d = pDataMap.at(el->name);
+		return pointPosAt(s, out, d, uvn);
+		break;
 	}
-	auto foundNew = groupMap.find(newName);
-	if (foundNew != groupMap.end()) {
-		switch (mergeMode) {
-		case MERGE_LEAVE: { /* don't overwrite anything, delete group we're trying to rename?*/
-			s = deleteGroup(s, startName);
-			return s;
-		}
-		case MERGE_OVERWRITE: { /* remove original group*/
-			s = deleteGroup(s, newName );
-			break;
-		}
-		case MERGE_UNION: { /* merge elements with original group */
-			for (auto& elName : found->second.elNames) {
-				SElement* el = getEl(elName);
-				//*(std::find(el->groups.begin(), el->groups.end(), startName)) = newName;
-				el->groups.erase(startName);
-				el->groups.insert(newName);
-			}
-			groupMap.erase(startName);
-			return s;
-		}
-		}
+	case SElType::edge: {
+		SEdge& d = eDataMap.at(el->name);
+		return edgePosAt(s, out, d, uvn);
+		break;
 	}
-	for (auto& elName : found->second.elNames) {
-		SElement* el = getEl(elName);
-		//*(std::find(el->groups.begin(), el->groups.end(), startName)) = newName;
-		el->groups.insert(newName);
 	}
-	found->second.name = newName;
-	groupMap.insert({ newName, found->second });
-	groupMap.erase(startName);
 	return s;
 }
 
+static Status& pointMatrixAt(Status& s, Eigen::Affine3f& out, const SPoint& d, const Eigen::Vector3f& uvn) {
+	LOG("pointMatrixAt: ");
+	out = d.finalMatrix;
+	//out.translate(uvn);
+	out.translation() = out * uvn;
+	return s;
+}
+static inline Status& edgeDataMatrixAt(Status& s, Eigen::Affine3f& out, const SEdge& d, const Eigen::Vector3f& uvn
+) {/* if we don't cache a final dense curve for edge data,
+	we would have to eval all domains here, then blend between them.
 
+	we could also output the exact curve position? to save a sample?
+	*/
 
-Status& StrataManifold::pointGetUVN(Status& s, Eigen::Vector3f& outUVN, SPointData& d, const Eigen::Vector3f worldPos) {
+	// first make frame
+	Vector3f pos = d.finalCurve.eval(uvn(0));
+	Vector3f tan = d.finalCurve.tangentAt(uvn(0), pos);
+
+	// get normals
+	int a; int b;
+	float t = getArrayIndicesTForU(static_cast<int>(d.finalNormals.rows()), uvn(0), a, b);
+	Vector3f normal = lerp<Vector3f>(d.finalNormals.row(a), d.finalNormals.row(b), smoothstepCubic(t));
+
+	// make base frame
+	s = makeFrame(s, out, pos,
+		tan.normalized(),
+		normal.normalized()
+	);
+	out.translation() = pos;
+
+	// make angle axis describing twist around X
+	AngleAxisf baseAA(uvn(1), Vector3f::UnitX());
+	out.rotate(baseAA);
+	// translate out along twisted normal in Z
+	out.translate(Vector3f::UnitZ() * uvn(2));
+
+	return s;
+}
+Status& matrixAt(Status& s, Eigen::Affine3f& outMat, SElement* el, Eigen::Vector3f uvn) {
+	/* interpolate a spatial element to get a matrix in world space -
+	look up UVN on given element, return that matrix
+	*/
+	LOG("matrixAt: " + el->name + " " + str(uvn));
+	if (el == nullptr) {
+		l("el is null");
+		outMat = Affine3f::Identity();
+		return s;
+	}
+	//SElement* el = getEl(globalIndex);
+	switch (el->elType) {
+	case (SElType::point): {
+		//SPointData& d = pointDatas[el->elIndex];
+		SPoint& d = pDataMap.at(el->name);
+		return pointMatrixAt(s, outMat, d, uvn);
+	}
+	case (SElType::edge): {
+		SEdge& d = eDataMap[el->name];
+		//return edgeMatrixAt(s, out, el->elIndex, uvn);
+		return edgeDataMatrixAt(s, outMat, d, uvn);
+	}
+	default: STAT_ERROR(s, "Cannot eval matrix at UVN for type " + std::to_string(el->elType));
+	}
+	return s;
+}
+Status& pointClosestMatrix(Status& s, Eigen::Affine3f& outMat, SPoint& d, const Eigen::Vector3f& worldVec) {
+	//outMat = pointDatas[elIndex].finalMatrix;
+	outMat = d.finalMatrix;
+
+	return s;
+}
+Status& edgeClosestMatrix(Status& s, Eigen::Affine3f& outMat, SElement* el, const Eigen::Vector3f& worldVec) {
+	/* localise matrix by point domain -
+	how do we handle local rotations?
+	get nearest point to curve
+	*/
+	//SEdgeData& d = edgeDatas[elIndex];
+	SEdge& d = eDataMap[el->name];
+
+	float u;
+	Eigen::Vector3f tan;
+	Eigen::Vector3f pos = d.finalCurve.getClosestPoint(
+		worldVec,
+		d.finalCurve.getSolver(), u,
+		tan)
+		;
+
+	Eigen::Vector3f normal = lerpSampleMatrix<float, 3>(d.finalNormals, u);
+
+	s = makeFrame<float>(s, outMat, pos, tan, normal);
+
+	return s;
+}
+Status& edgeClosestMatrix(Status& s, Eigen::Affine3f& outMat, SElement* el, const Eigen::Affine3f& worldMat) {
+	return edgeClosestMatrix(s, outMat, el, worldMat.translation());
+}
+
+Status& StrataManifold::pointGetUVN(Status& s, Eigen::Vector3f& outUVN, SPoint& d, const Eigen::Vector3f worldPos) {
 	/* return UVN displacement from point matrix
 	*/
 	//LOG("pointGetUVN");
@@ -249,7 +391,7 @@ Status& StrataManifold::edgeGetUVN(Status& s, Eigen::Vector3f& uvn, SElement* el
 	s = edgeClosestMatrix(s, curveMat, el, worldVec);
 
 	//SEdgeData& d = edgeDatas[elIndex];
-	SEdgeData& d = eDataMap[el->name];
+	SEdge& d = eDataMap[el->name];
 
 	float u;
 	Eigen::Vector3f tan;
@@ -273,7 +415,49 @@ Status& StrataManifold::edgeGetUVN(Status& s, Eigen::Vector3f& uvn, SElement* el
 	return s;
 }
 
+Status& closestMatrix(Status& s, Eigen::Affine3f& outMat, SElement* el, const Eigen::Vector3f closePos) {
+	// localise a world transform into UVN coordinates in the space of given domain
+	// make another function to return a full transform, for point domains
+	if (el == nullptr) {
+		outMat = Affine3f::Identity();
+		return s;
+	}
+	//SElement* el = getEl(globalIndex);
+	switch (el->elType) {
+	case (SElType::point): {
+		return pointClosestMatrix(s, outMat, pDataMap.at(el->name), closePos);
+	}
+	case (SElType::edge): {
+		return edgeClosestMatrix(s, outMat, el, closePos);
+	}
+	default: STAT_ERROR(s, "Cannot eval matrix at UVN for type " + std::to_string(el->elType));
+	}
+	return s;
+}
 
+
+
+Status& pointGetUVN(Status& s, Eigen::Vector3f& outUVN, SPoint& d, const Eigen::Vector3f worldPos);
+
+
+Status& edgeGetUVN(Status& s, Eigen::Vector3f& uvn, SElement* el, const Eigen::Vector3f& worldVec);
+
+
+Status& getUVN(Status& s, Eigen::Vector3f& uvn, SElement* el, const Eigen::Vector3f closePos) {
+	// localise a world transform into UVN coordinates in the space of given domain
+	// make another function to return a full transform, for point domains
+
+	switch (el->elType) {
+	case (SElType::point): {
+		return pointGetUVN(s, uvn, pDataMap.at(el->name), closePos);
+	}
+	case (SElType::edge): {
+		return edgeGetUVN(s, uvn, el, closePos);
+	}
+	default: STAT_ERROR(s, "Cannot get UVN for type " + std::to_string(el->elType));
+	}
+	return s;
+}
 
 
 Float3Array strata::StrataManifold::getWireframePointGnomonVertexPositionArray(Status& s) {
@@ -330,7 +514,7 @@ IndexList strata::StrataManifold::getWireframePointIndexArray(Status& s) {
 Status& strata::StrataManifold::getWireframeSingleEdgeGnomonVertexPositionArray(Status& s, Float3Array& outArr, SElement* el, int arrStartIndex) {
 	/* TODO: cache this ffs, shouldn't sample every subcurve while drawing
 	*/
-	SEdgeData& d = eDataMap[el->name];
+	SEdge& d = eDataMap[el->name];
 	int n;
 	float u;
 	Eigen::Affine3f aff;
@@ -364,7 +548,7 @@ Float3Array strata::StrataManifold::getWireframeEdgeGnomonVertexPositionArray(St
 	int totalPositionEntries = 0;
 	int totalIndexEntries = 0;
 	for (auto& p : eDataMap) {
-		SEdgeData& edata = p.second;
+		SEdge& edata = p.second;
 		totalPositionEntries += edata.densePointCount();
 		totalIndexEntries += edata.densePointCount() * 4;
 	}
@@ -372,7 +556,7 @@ Float3Array strata::StrataManifold::getWireframeEdgeGnomonVertexPositionArray(St
 	IndexList indexResult(totalIndexEntries);
 	int posStartIndex = 0;
 	for (auto& p : eDataMap) {
-		SEdgeData& edata = p.second;
+		SEdge& edata = p.second;
 		SElement& el = elements[edata.index];
 		getWireframeSingleEdgeGnomonVertexPositionArray(
 			s,
@@ -389,13 +573,13 @@ Float3Array strata::StrataManifold::getWireframeEdgeGnomonVertexPositionArray(St
 IndexList strata::StrataManifold::getWireframeEdgeGnomonVertexIndexList(Status& s) {
 	int totalIndexEntries = 0;
 	for (auto& p : eDataMap) {
-		SEdgeData& edata = p.second;
+		SEdge& edata = p.second;
 		totalIndexEntries += edata.densePointCount() * 4;
 	}
 	IndexList indexResult(totalIndexEntries);
 	int posStartIndex = 0;
 	for (auto& p : eDataMap) {
-		SEdgeData& edata = p.second;
+		SEdge& edata = p.second;
 		SElement& el = elements[edata.index];
 		for (unsigned int n = 0; n < static_cast<unsigned int>(edata.densePointCount()); n++) {
 			setGnomonIndexList(indexResult.data(), posStartIndex);
@@ -413,7 +597,7 @@ Float3Array strata::StrataManifold::getWireframeEdgeVertexPositionArray(Status& 
 	*/
 	int totalIndexEntries = 0;
 	for (auto& p : eDataMap) {
-		SEdgeData& edata = p.second;
+		SEdge& edata = p.second;
 		edata._bufferStartIndex = totalIndexEntries;
 		totalIndexEntries += edata.densePointCount();
 	}
@@ -432,7 +616,7 @@ Float3Array strata::StrataManifold::getWireframeEdgeVertexPositionArray(Status& 
 	// TODO: parallel this
 	for (int i = 0; i < static_cast<int>(eDataMap.size()); i++) {
 		/* get all positions for single edge*/
-		const SEdgeData& eData = eDataMap.at(indexMap[i]);
+		const SEdge& eData = eDataMap.at(indexMap[i]);
 		//const int arrStartIndex = i * eData.densePointCount();
 		const int arrStartIndex = eData._bufferStartIndex;
 		for (int pt = 0; pt < eData.densePointCount(); pt++) { // could also parallel this by curve segment
@@ -454,7 +638,7 @@ Status& strata::StrataManifold::getWireframeEdgeVertexPositionArray(Status& s, F
 	int edgeStartIndex = 0;
 	int i = 0;
 	for (auto& p : eDataMap) {
-		SEdgeData& edata = p.second;
+		SEdge& edata = p.second;
 		edata._bufferStartIndex = edgeStartIndex + startIndex; // store start index on data for later index list
 		indexStartMap[i] = edgeStartIndex; 
 		edgeStartIndex += edata.densePointCount();
@@ -473,7 +657,7 @@ Status& strata::StrataManifold::getWireframeEdgeVertexPositionArray(Status& s, F
 	//i = 0;
 	for (auto& p : eDataMap){
 		/* get all positions for single edge*/
-		const SEdgeData& eData = p.second;
+		const SEdge& eData = p.second;
 		SElement* el = getEl(eData.index);
 
 		const int thisEdgeStartIndex = indexStartMap[el->elIndex];
@@ -508,7 +692,7 @@ IndexList strata::StrataManifold::getWireframeEdgeVertexIndexList(Status& s) {
 	IndexList result(_nEdgeVertexBufferEntries);
 	int i = 0;
 	for (auto& p : eDataMap) {
-		SEdgeData& eData = p.second;
+		SEdge& eData = p.second;
 		int n = 0;
 		for (n; n < eData.densePointCount(); n++) {
 			//result[eData._bufferStartIndex - _edgeVertexBufferEntryStart + n + i] = eData._bufferStartIndex + n;
@@ -520,7 +704,7 @@ IndexList strata::StrataManifold::getWireframeEdgeVertexIndexList(Status& s) {
 	return result;
 }
 
-IndexList strata::StrataManifold::getWireframeEdgeVertexIndexList(Status& s, SEdgeData& eData) {
+IndexList strata::StrataManifold::getWireframeEdgeVertexIndexList(Status& s, SEdge& eData) {
 	/*separate buffer for each edge - 
 	* seems super wasteful
 	*/
@@ -570,7 +754,7 @@ IndexList strata::StrataManifold::getWireframeEdgeVertexIndexListPATCH(Status& s
 	return result;
 }
 
-Status& strata::StrataManifold::pointSpaceMatrix(Status& s, Affine3f& outMat, SPointData& data) {
+Status& strata::StrataManifold::pointSpaceMatrix(Status& s, Affine3f& outMat, SPoint& data) {
 	/* get space matrix for point space datas
 	if space data EXISTS, it means something
 
@@ -604,7 +788,7 @@ Status& strata::StrataManifold::pointSpaceMatrix(Status& s, Affine3f& outMat, SP
 	return s;
 }
 
-Status& strata::StrataManifold::computePointData(Status& s, SPointData& data//, bool doProjectToAnchors=false
+Status& strata::StrataManifold::computePointData(Status& s, SPoint& data//, bool doProjectToAnchors=false
 ) {
 	/* given all space data is built, find final matrix
 	*
@@ -642,7 +826,7 @@ Status& strata::StrataManifold::pointProjectToAnchors(Status& s, Affine3f& mat, 
 	}
 	switch (anchorEl->elType) {
 	case SElType::point: {
-		SPointData& anchorData = pDataMap[anchorEl->name];
+		SPoint& anchorData = pDataMap[anchorEl->name];
 		mat.translation() = anchorData.finalMatrix.translation();
 		break;
 
@@ -652,7 +836,7 @@ Status& strata::StrataManifold::pointProjectToAnchors(Status& s, Affine3f& mat, 
 
 }
 
-Status& strata::StrataManifold::edgeDomainDataFromAnchors(Status& s, SEdgeData& eData, SEdgeSpaceData& pData)
+Status& strata::StrataManifold::edgeDomainDataFromAnchors(Status& s, SEdge& eData, SEdgeSpaceData& pData)
 {
 	/*Assumes edge data already has final anchors set up
 	*
@@ -670,7 +854,7 @@ Status& strata::StrataManifold::edgeDomainDataFromAnchors(Status& s, SEdgeData& 
 
 }
 
-Status& strata::StrataManifold::buildEdgeAnchors(Status& s, SEdgeData& eData) {
+Status& strata::StrataManifold::buildEdgeAnchors(Status& s, SEdge& eData) {
 	/* build anchor matrices for this edge -
 	* sample anchor elements, get worldspace matrices
 	* DO NOT sample into domain space, that will be done when curve is eval'd
@@ -714,7 +898,7 @@ Status& strata::StrataManifold::buildEdgeAnchors(Status& s, SEdgeData& eData) {
 	return s;
 }
 
-Status& strata::StrataManifold::buildEdgeData(Status& s, SEdgeData& eData) {
+Status& strata::StrataManifold::buildEdgeData(Status& s, SEdge& eData) {
 	/* construct final dense array for data, assuming all domains and anchor indices are set in data
 
 	build base curve matrices in worldspace,

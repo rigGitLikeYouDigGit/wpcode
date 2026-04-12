@@ -74,7 +74,7 @@ namespace strata {
 		Eigen::Vector3f mode = { 0, 0, 0 }; // metadata for modes of operation (length, normalisation, direction etc)
 		
 		// no idea if final matrix should go here
-		AffineCompact3f finalMat = AffineCompact3f::Identity(); // final matrix for this coord, 
+		//AffineCompact3f finalMat = AffineCompact3f::Identity(); // final matrix for this coord, 
 		// independent of subsequent elements
 	};
 
@@ -92,6 +92,7 @@ namespace strata {
 		int subIndex = -1; // only for subfaces for now
 
 		SmallList<SCoord> anchors; // topological anchors, not domain spaces
+		SmallList<AffineCompact3f> anchorMats; // anchor mats in worldspace
 		
 		SmallList<SCoord> domains; // domain parent space
 

@@ -69,7 +69,7 @@ int getAnyVertex(
 
 	vertices should be built at the same time we update intersections, I know this now
 	*/
-	SEdgeData& eData = manifold.eDataMap[manifold.getEl(edgeId)->name];
+	SEdge& eData = manifold.eDataMap[manifold.getEl(edgeId)->name];
 	if (!eData.vertices.size()) {
 		return -1;
 	}
@@ -109,7 +109,7 @@ struct EdgePathNextIdsPred : NextIdsPred {
 		bool outEdgeDir = vertex.edgeDirs[1];
 		/* u coord on current edge of origin vertex*/
 		float origU = vertex.edgeUs[1];
-		SEdgeData& eData = manifold.eDataMap[manifold.getEl(outEdge)->name];
+		SEdge& eData = manifold.eDataMap[manifold.getEl(outEdge)->name];
 		if (!eData._verticesSorted) {
 			eData.sortVertices(manifold);
 		}

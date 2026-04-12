@@ -18,7 +18,7 @@ namespace strata {
 
 	struct SPoint : SElement {
 
-		SmallList<SPointSpaceData> spaceDatas = {}; // datas for each anchor
+		SmallList<SPointSpaceData, 1> spaceDatas = {}; // datas for each anchor
 		AffineCompact3f finalMatrix = AffineCompact3f::Identity(); // final evaluated matrix in world space
 
 		std::string strInfo();

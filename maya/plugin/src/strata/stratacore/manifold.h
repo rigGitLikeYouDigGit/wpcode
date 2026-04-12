@@ -81,12 +81,6 @@ for interaction through maya, consider setting up attributes in a map, and enter
 namespace strata {
 
 
-	struct SSampleData { //?
-		int index = -1;
-		float uvn[3] = { 0, 0, 0 };
-	};
-
-
 	struct SEdgeSubspaceData {
 		/* test subspace as actual element type?
 		* should we put in inheritance to base class
@@ -168,23 +162,17 @@ namespace strata {
 		also lets you set direct atomic deltas against el names, regardless of 
 		whether they exist at that moment or not - probably quite good
 
-		memory coherence?
-		no. we don't do that here
-
-		could use topo connections to mark elements in manifold dirty, but not sure of the point, for now
-		
 		*/
 
-		std::vector<SElement> elements;
+		std::vector<SPoint> points;
+		std::vector<SEdge> edges;
+		std::vector<std::pair<SElType, int>> globalIdMap = {}; // global index to element type and element index
 
-		std::unordered_map<StrataName, int> nameGlobalIndexMap = {}; // everyone point and laugh 
-		std::map<int, int> pointIndexGlobalIndexMap = {};
-		std::map<int, int> edgeIndexGlobalIndexMap = {};
-		std::map<int, int> faceIndexGlobalIndexMap = {};
+		std::unordered_map<StrataName, int> nameGlobalIdMap = {};
 
-		std::unordered_map<StrataName, SPointData> pDataMap = {};
-		std::unordered_map<StrataName, SEdgeData> eDataMap = {};
-		std::unordered_map<StrataName, SFaceData> fDataMap = {};
+		//std::unordered_map<StrataName, SPoint> pDataMap = {};
+		//std::unordered_map<StrataName, SEdge> eDataMap = {};
+		//std::unordered_map<StrataName, SFaceData> fDataMap = {};
 
 		std::vector<Vertex> vertices;
 		std::vector<HEdge> hedges;
@@ -255,10 +243,10 @@ namespace strata {
 			};
 			vertices.push_back(newVtx);
 			vertexMap[eA][eB].push_back(newIdx);
-			SEdgeData& eDataA = eDataMap[getEl(eA)->name];
-			SEdgeData& eDataB = eDataMap[getEl(eB)->name];
-			eDataA.vertices.push_back(newIdx);
-			eDataB.vertices.push_back(newIdx);
+			SEdge* eDataA = getEdge(eA);
+			SEdge* eDataB = getEdge(eB);
+			eDataA->vertices.push_back(newIdx);
+			eDataB->vertices.push_back(newIdx);
 
 			return &vertices[newIdx];
 		}
@@ -281,63 +269,63 @@ namespace strata {
 		int _nEdgeVertexBufferEntries = -1;
 		int _edgeVertexBufferEntryStart = -1;
 
-		inline SElShapeData* elData(int globalElId, SElType elT) {
-			switch (elT) {
-			//case SElType::point: return &pointDatas[pointIndexGlobalIndexMap[globalElId]];
-			case SElType::point: {
-				//return &pointDatas[el.elIndex];
-				auto ptr = pDataMap.find(getEl(globalElId)->name);
-				if (ptr == pDataMap.end()) { return nullptr; }
-				return &(ptr->second);
-				break;
-			}
-			//case SElType::edge: return &edgeDatas[edgeIndexGlobalIndexMap[globalElId]];
-			case SElType::edge: {
-				auto ptr = eDataMap.find(getEl(globalElId)->name);
-				if (ptr == eDataMap.end()) { return nullptr; }
-				return &(ptr->second);
-				break;
-			}
-			case SElType::face: {
-				auto ptr = fDataMap.find(getEl(globalElId)->name);
-				if (ptr == fDataMap.end()) { return nullptr; }
-				return &(ptr->second);
-				break;
-			}
-			default: return nullptr;
-			}
-		}
-		inline SElShapeData* elData(int globalElId) {
-			return elData(globalElId, elements[globalElId].elType);
-		}
-		//inline SElData* elData(StrataName elName) {
+		//inline SElement* elData(int globalElId) {
+		//	switch (elT) {
+		//	//case SElType::point: return &pointDatas[pointIndexGlobalIndexMap[globalElId]];
+		//	case SElType::point: {
+		//		//return &pointDatas[el.elIndex];
+		//		auto ptr = pDataMap.find(getEl(globalElId)->name);
+		//		if (ptr == pDataMap.end()) { return nullptr; }
+		//		return &(ptr->second);
+		//		break;
+		//	}
+		//	//case SElType::edge: return &edgeDatas[edgeIndexGlobalIndexMap[globalElId]];
+		//	case SElType::edge: {
+		//		auto ptr = eDataMap.find(getEl(globalElId)->name);
+		//		if (ptr == eDataMap.end()) { return nullptr; }
+		//		return &(ptr->second);
+		//		break;
+		//	}
+		//	case SElType::face: {
+		//		auto ptr = fDataMap.find(getEl(globalElId)->name);
+		//		if (ptr == fDataMap.end()) { return nullptr; }
+		//		return &(ptr->second);
+		//		break;
+		//	}
+		//	default: return nullptr;
+		//	}
+		//}
+		//inline SElShapeData* elData(int globalElId) {
 		//	return elData(globalElId, elements[globalElId].elType);
 		//}
-		inline SElShapeData* elData(SElement& el) {
-			switch (el.elType) {
-			case SElType::point: {
-				//return &pointDatas[el.elIndex];
-				auto ptr = pDataMap.find(el.name);
-				if (ptr == pDataMap.end()) {return nullptr;	}
-				return &(ptr->second);
-				break;
-			}
-			//case SElType::edge: return &edgeDatas[el.elIndex];
-			case SElType::edge: {
-				auto ptr = eDataMap.find(el.name);
-				if (ptr == eDataMap.end()) { return nullptr; }
-				return &(ptr->second);
-				break;
-			}
-			case SElType::face: {
-				auto ptr = fDataMap.find(el.name);
-				if (ptr == fDataMap.end()) { return nullptr; }
-				return &(ptr->second);
-				break;
-			}
-			default: return nullptr;
-			}
-		}
+		////inline SElData* elData(StrataName elName) {
+		////	return elData(globalElId, elements[globalElId].elType);
+		////}
+		//inline SElShapeData* elData(SElement& el) {
+		//	switch (el.elType) {
+		//	case SElType::point: {
+		//		//return &pointDatas[el.elIndex];
+		//		auto ptr = pDataMap.find(el.name);
+		//		if (ptr == pDataMap.end()) {return nullptr;	}
+		//		return &(ptr->second);
+		//		break;
+		//	}
+		//	//case SElType::edge: return &edgeDatas[el.elIndex];
+		//	case SElType::edge: {
+		//		auto ptr = eDataMap.find(el.name);
+		//		if (ptr == eDataMap.end()) { return nullptr; }
+		//		return &(ptr->second);
+		//		break;
+		//	}
+		//	case SElType::face: {
+		//		auto ptr = fDataMap.find(el.name);
+		//		if (ptr == fDataMap.end()) { return nullptr; }
+		//		return &(ptr->second);
+		//		break;
+		//	}
+		//	default: return nullptr;
+		//	}
+		//}
 
 		// ATTRIBUTES 
 		// unsure if wrapping this is useful - for now EVERYTHING explicit
@@ -348,12 +336,12 @@ namespace strata {
 		void clear() {
 			// is it better to just make a new object?
 
-			elements.clear();
-			nameGlobalIndexMap.clear();
-			//pointDatas.clear();
-			pDataMap.clear();
-			eDataMap.clear();
-			fDataMap.clear();
+			//elements.clear();
+			//nameGlobalIdMap.clear();
+			////pointDatas.clear();
+			//pDataMap.clear();
+			//eDataMap.clear();
+			//fDataMap.clear();
 
 			attrs.clear();
 			groups.clear();
@@ -382,43 +370,59 @@ namespace strata {
 		//	return elements.at(globalId);
 		//}
 
-		inline const SElement* getElC(const SElement* el) const {
+		inline const SElement* getEl(const SElement* el) const {
 			return el;
 		}
 
-		inline const SElement* getElC(const int& globalId) const {
-			if (globalId >= elements.size()) {
+		inline const SElement* getEl(const int& globalId) const {
+			if (globalId >= globalIdMap.size()) {
 				return nullptr;
 			}
-			//return &elements.at(globalId);
-			return elements.data() + globalId;
+			auto [elT, elIdx] = globalIdMap[globalId];
+			switch (elT) {
+				case SElType::point: return &points[elIdx];
+				case SElType::edge: return &edges[elIdx];
+				//case SElType::face: return &faces[elIdx];
+			}
 		}
 		inline SElement* getEl(SElement* el) {
 			return el;
 		}
 		inline SElement* getEl(const int& globalId) {
-			if (globalId >= elements.size()) {
-				return nullptr;
+			if (globalId >= globalIdMap.size()) {return nullptr;}
+			auto [elT, elIdx] = globalIdMap[globalId];
+			switch (elT) {
+			case SElType::point: return &points[elIdx];
+			case SElType::edge: return &edges[elIdx];
+				//case SElType::face: return &faces[elIdx];
 			}
-			//return &elements.at(globalId);
-			return elements.data() + globalId;
+		}
+		inline SEdge* getEdge(const int& globalId) {
+			auto [elT, elIdx] = globalIdMap[globalId];
+			return &edges[elIdx];
 		}
 
 		inline SElement* getEl(const StrataName& name) {
-			if (!nameGlobalIndexMap.count(name)) {
+			if (!nameGlobalIdMap.count(name)) {
 				return nullptr;
 			}
-			return &elements[nameGlobalIndexMap[name]];
+			int globalId = nameGlobalIdMap[name];
+			auto [elT, elIdx] = globalIdMap[globalId];
+			switch (elT) {
+			case SElType::point: return &points[elIdx];
+			case SElType::edge: return &edges[elIdx];
+				//case SElType::face: return &faces[elIdx];
+			}
 		}
 
-		inline const SElement* getElC(const StrataName name) const {
-			if (!nameGlobalIndexMap.count(name)) {
-				return nullptr;
-			}
-			//return &elements[nameGlobalIndexMap[name]];
-			return &elements.at(nameGlobalIndexMap.at(name));
-			//return &elements[nameGlobalIndexMap[name]];
-		}
+		//inline const SElement* getElC(const StrataName name) const {
+		//	if (!nameGlobalIdMap.count(name)) {
+		//		return nullptr;
+		//	}
+		//	//return &elements[nameGlobalIndexMap[name]];
+		//	return &elements.at(nameGlobalIdMap.at(name));
+		//	//return &elements[nameGlobalIndexMap[name]];
+		//}
 
 
 		SmallList<SElement*> getEls(SmallList<int>& globalIds) {
@@ -470,27 +474,27 @@ namespace strata {
 		//}
 
 		
-		SElShapeData* setElData(SElement* el, SElShapeData* data) {
-			/* absolutely no idea on how best to do these uniform interfaces for #
-			setting data of different types*/
-			switch (el->elType) {
-			case SElType::point: {
-				//pointDatas[el->elIndex] = *static_cast<SPointData*>(data);
-				pDataMap[el->name] = *static_cast<SPointData*>(data);
-				//return &pointDatas[el->elIndex];
-				return &pDataMap.at(el->name);
-			}
-			case SElType::edge: {
-				eDataMap[el->name] = *static_cast<SEdgeData*>(data);
-				return &eDataMap.at(el->name);
-			}
-			case SElType::face: {
-				fDataMap[el->name] = *static_cast<SFaceData*>(data);
-				return &fDataMap[el->name];
-			}
-			default: return nullptr;
-			}
-		}
+		//SElShapeData* setElData(SElement* el, SElShapeData* data) {
+		//	/* absolutely no idea on how best to do these uniform interfaces for #
+		//	setting data of different types*/
+		//	switch (el->elType) {
+		//	case SElType::point: {
+		//		//pointDatas[el->elIndex] = *static_cast<SPointData*>(data);
+		//		pDataMap[el->name] = *static_cast<SPoint*>(data);
+		//		//return &pointDatas[el->elIndex];
+		//		return &pDataMap.at(el->name);
+		//	}
+		//	case SElType::edge: {
+		//		eDataMap[el->name] = *static_cast<SEdge*>(data);
+		//		return &eDataMap.at(el->name);
+		//	}
+		//	case SElType::face: {
+		//		fDataMap[el->name] = *static_cast<SFaceData*>(data);
+		//		return &fDataMap[el->name];
+		//	}
+		//	default: return nullptr;
+		//	}
+		//}
 
 		Status addElement(
 			SElement& el,
@@ -499,7 +503,7 @@ namespace strata {
 		) {
 			LOG("addElement from other");
 			Status s;
-			if (nameGlobalIndexMap.find(el.name) != nameGlobalIndexMap.end()) {
+			if (nameGlobalIdMap.find(el.name) != nameGlobalIdMap.end()) {
 				if (!allowOverride) {
 					l("laready exists, erroring");
 					outPtr = nullptr;
@@ -519,38 +523,33 @@ namespace strata {
 					return s;
 				}
 			}
-			int globalIndex = static_cast<int>(elements.size());
-			elements.push_back(el);
-			SElement* elP = &(elements[globalIndex]);
-			elP->globalIndex = globalIndex;
-			nameGlobalIndexMap[el.name] = globalIndex;
-
-			// get element-specific index map, add element data
+			int globalIndex = static_cast<int>(globalIdMap.size());
+			int elementIndex;
+			el.globalIndex = globalIndex;
 			switch (el.elType) {
-				case SElType::point: {
-					//pointDatas.push_back(SPointData());
-					pDataMap.insert({ el.name, SPointData() });
-					int elementIndex = static_cast<int>(pointIndexGlobalIndexMap.size()); // get current max key of element set
-					elP->elIndex = elementIndex;
-					pointIndexGlobalIndexMap[elementIndex] = globalIndex;
-					break;
-				}
-				case SElType::edge: {
-					//edgeDatas.push_back(SEdgeData());
-					eDataMap.insert({ el.name, SEdgeData() });
-					int elementIndex = static_cast<int>(edgeIndexGlobalIndexMap.size());
-					elP->elIndex = elementIndex;
-					edgeIndexGlobalIndexMap[elementIndex] = globalIndex;
-					break;
-				}
-				case SElType::face: { 
-					fDataMap.insert({ el.name, SFaceData() });
-					int elementIndex = static_cast<int>(faceIndexGlobalIndexMap.size());
-					elP->elIndex = elementIndex;
-					faceIndexGlobalIndexMap[elementIndex] = globalIndex;
-					break;
-				}
+			case SElType::point: {
+				elementIndex = static_cast<int>(points.size());
+				el.elIndex = elementIndex;
+				points.push_back(static_cast<SPoint&>(el)); 
+				break;
 			}
+			case SElType::edge: {
+				elementIndex = static_cast<int>(edges.size());
+				el.elIndex = elementIndex;
+				edges.push_back(static_cast<SEdge&>(el)); 
+				break;
+			}
+			/*case SElType::face: {
+				int elementIndex = static_cast<int>(faces.size());
+				el.elIndex = elementIndex;
+				faces.push_back(static_cast<SFace&>(el)); 
+				break;
+			}*/
+			}
+			globalIdMap.push_back({ el.elType, elementIndex });
+			SElement* elP = getEl(globalIndex);
+			nameGlobalIdMap[el.name] = globalIndex;
+
 			outPtr = elP;
 			return s;
 		}
@@ -569,21 +568,8 @@ namespace strata {
 			/* USE WITH EXTREME CAUTION - ideally only for assigning a name to a constructed element
 			* won't try and rename name references in dependents - use this only on a new element
 			*/
-			switch (el->elType) {
-			case SElType::point: {
-				pDataMap[newName] = pDataMap[el->name];
-				pDataMap.erase(el->name);
-				break;
-			}
-			case SElType::edge: {
-				eDataMap[newName] = eDataMap[el->name];
-				eDataMap.erase(el->name);
-			}
-			case SElType::face:{
-				fDataMap[newName] = fDataMap[el->name];
-				fDataMap.erase(el->name);
-			}
-			}
+			nameGlobalIdMap.erase(el->name);
+			nameGlobalIdMap[newName] = el->globalIndex;
 			el->name = newName;
 		}
 
@@ -686,29 +672,29 @@ namespace strata {
 		//	}
 		//}
 
-		bool edgesAreContiguousRing(std::vector<int>& edgeIds) {
-			/* might be more c++ to have this more composable -
-			maybe have a general check to see if any elements are contiguous between them?
-			then some way to filter that it should only check edges, and only move via edges?
+		//bool edgesAreContiguousRing(std::vector<int>& edgeIds) {
+		//	/* might be more c++ to have this more composable -
+		//	maybe have a general check to see if any elements are contiguous between them?
+		//	then some way to filter that it should only check edges, and only move via edges?
 
-			check that each edge contains the next in sequence in its neighbours
+		//	check that each edge contains the next in sequence in its neighbours
 
-			this is quite a loose check actually, if you try and fool it, I guess you can?
+		//	this is quite a loose check actually, if you try and fool it, I guess you can?
 
-			*/
-			for (size_t i = 0; i < edgeIds.size(); i++) {
-				size_t nextI = seqIndex(i + 1, edgeIds.size());
-				int nextEdgeId = edgeIds[nextI];
-				SElement* thisEdge = getEl(edgeIds[i]);
+		//	*/
+		//	for (size_t i = 0; i < edgeIds.size(); i++) {
+		//		size_t nextI = seqIndex(i + 1, edgeIds.size());
+		//		int nextEdgeId = edgeIds[nextI];
+		//		SElement* thisEdge = getEl(edgeIds[i]);
 
-				// if next edge is not contained in neighbours, return false
-				if (!seqContains(thisEdge->otherNeighbourEdges(*this), nextEdgeId)) {
-					return false;
-				}
-			}
-			return true;
+		//		// if next edge is not contained in neighbours, return false
+		//		if (!seqContains(thisEdge->otherNeighbourEdges(*this), nextEdgeId)) {
+		//			return false;
+		//		}
+		//	}
+		//	return true;
 
-		}
+		//}
 
 
 		StrataAttr* getAttr(StrataName& name) {
@@ -770,235 +756,48 @@ namespace strata {
 			Strata is immutable, EXCEPT for this
 			special-case it, and invert transform during backpropagation, wherever it's applied
 			*/
-			for (auto& el : elements) {
-				//if (el.anchors.size()) { // skip elements with anchors
-				//	continue;
-				//}
-				switch (el.elType) {
-				case SElType::point: {
-					SPointData& data = pDataMap[el.name];
-					data.finalMatrix = mat * data.finalMatrix;
-					break;
+			for (auto& el : points) {
+				el.finalMatrix = mat * el.finalMatrix;
+			}
+			for (auto& el : edges) {
+				
+				for (int i = 0; i < static_cast<int>(el.finalPositions.rows()); i++) {
+					el.finalPositions.row(i) = mat * el.finalPositions.row(i);
 				}
-				case SElType::edge: {
-					SEdgeData& data = eDataMap[el.name];
-					data.finalCurve.transform(mat);
-					for (int i = 0; i < static_cast<int>(data.finalNormals.rows()); i++) {
-						data.finalNormals.row(i) = mat * Vector3f(data.finalNormals.row(i));
-					}
-					//data.finalNormals = mat * data.finalNormals;
-					break;
-				}
-				}
-
+				//el.finalNormals = mat * el.finalNormals;
 			}
-		
 		}
 
-		static Status& pointPosAt(Status& s, Eigen::Vector3f& out, const SPointData& d, const Eigen::Vector3f& uvn) {
-			out = d.finalMatrix * Eigen::Vector3f(uvn);
-			return s;
-		}
-		static Status& edgePosAt(Status& s, Eigen::Vector3f& out, const SEdgeData& d, const Eigen::Vector3f& uvn) {
-			/* as above, but just return position -
-			may allow faster sampling in future
-			
-			UVN is (curve param, rotation from normal, distance from curve)
-			*/
-
-			// check if we need full matrix
-			if (EQ(uvn[1], 0.0f) && EQ(uvn[2], 0.0f)) {
-				if (d.spaceDatas.size()) {
-					out = d.spaceDatas[0].domainCurve.eval(uvn[0]);
-					return s;
-				}
-				out = d.finalCurve.eval(uvn[0]);
-				return s;
-			}
-			Eigen::Affine3f curveMat;
-			s = edgeDataMatrixAt(s, curveMat, d, uvn);
-			out = curveMat.translation();
-			return s;
-		}
-
-		Status& posAt(Status& s, Eigen::Vector3f& out, int globalIndex, Eigen::Vector3f& uvn)  {
-			/* as above, but just return position -
-			may allow faster sampling in future*/
-			SElement* el = getEl(globalIndex);
-			switch (el->elType) {
-			case SElType::point: {
-				//SPointData& d = pointDatas.at(el->elIndex);
-				SPointData& d = pDataMap.at(el->name);
-				return pointPosAt(s, out, d, uvn);
-				break;
-			}
-			case SElType::edge: {
-				SEdgeData& d = eDataMap.at(el->name);
-				return edgePosAt( s, out, d, uvn);
-				break;
-			}
-			}
-			return s;
-		}
-		
-		static Status& pointMatrixAt(Status& s, Eigen::Affine3f& out, const SPointData& d, const Eigen::Vector3f& uvn){
-			LOG("pointMatrixAt: ");
-			out = d.finalMatrix;
-			//out.translate(uvn);
-			out.translation() = out * uvn;
-			return s;
-		}
-		static inline Status& edgeDataMatrixAt(Status& s, Eigen::Affine3f& out, const SEdgeData& d, const Eigen::Vector3f& uvn
-		) {/* if we don't cache a final dense curve for edge data,
-			we would have to eval all domains here, then blend between them.
-
-			we could also output the exact curve position? to save a sample?
-			*/
-
-			// first make frame
-			Vector3f pos = d.finalCurve.eval(uvn(0));
-			Vector3f tan = d.finalCurve.tangentAt(uvn(0), pos);
-		
-			// get normals
-			int a; int b; 
-			float t = getArrayIndicesTForU(static_cast<int>(d.finalNormals.rows()), uvn(0), a, b);
-			Vector3f normal = lerp<Vector3f>(d.finalNormals.row(a), d.finalNormals.row(b), smoothstepCubic(t));
-
-			// make base frame
-			s = makeFrame(s, out, pos, 
-				tan.normalized(), 
-				normal.normalized()
-			);
-			out.translation() = pos;
-
-			// make angle axis describing twist around X
-			AngleAxisf baseAA(uvn(1), Vector3f::UnitX());
-			out.rotate(baseAA);
-			// translate out along twisted normal in Z
-			out.translate(Vector3f::UnitZ() * uvn(2));
-			
-			return s;
-		}
-		Status& matrixAt(Status& s, Eigen::Affine3f& outMat, SElement* el, Eigen::Vector3f uvn) {
-			/* interpolate a spatial element to get a matrix in world space - 
-			look up UVN on given element, return that matrix
-			*/
-			LOG("matrixAt: " + el->name +" " + str(uvn));
-			if (el == nullptr) {
-				l("el is null");
-				outMat = Affine3f::Identity();
-				return s;
-			}
-			//SElement* el = getEl(globalIndex);
-			switch (el->elType) {
-				case (SElType::point): {
-					//SPointData& d = pointDatas[el->elIndex];
-					SPointData& d = pDataMap.at(el->name);
-					return pointMatrixAt(s, outMat, d, uvn);
-				}
-				case (SElType::edge): {
-					SEdgeData& d = eDataMap[el->name];
-					//return edgeMatrixAt(s, out, el->elIndex, uvn);
-					return edgeDataMatrixAt(s, outMat, d, uvn);
-				}
-				default: STAT_ERROR(s, "Cannot eval matrix at UVN for type " + std::to_string(el->elType));
-			}
-			return s;
-		}
-		// am i overdoing the copium, or is this way of dispatching by type quite good?
-
-		Status& pointClosestMatrix(Status& s, Eigen::Affine3f& outMat, SPointData& d, const Eigen::Vector3f& worldVec) {
-			//outMat = pointDatas[elIndex].finalMatrix;
-			outMat = d.finalMatrix;
-
-			return s;
-		}
-		Status& edgeClosestMatrix(Status& s, Eigen::Affine3f& outMat, SElement* el, const Eigen::Vector3f& worldVec) {
-			/* localise matrix by point domain -
-			how do we handle local rotations?
-			get nearest point to curve
-			*/
-			//SEdgeData& d = edgeDatas[elIndex];
-			SEdgeData& d = eDataMap[ el->name ];
-
-			float u;
-			Eigen::Vector3f tan;
-			Eigen::Vector3f pos = d.finalCurve.getClosestPoint(
-				worldVec,
-				d.finalCurve.getSolver(), u,
-				tan)
-				;
-			
-			Eigen::Vector3f normal = lerpSampleMatrix<float, 3>(d.finalNormals, u);
-
-			s = makeFrame<float>(s, outMat, pos, tan, normal);
-			
-			return s;
-		}
-		Status& edgeClosestMatrix(Status& s, Eigen::Affine3f& outMat, SElement* el, const Eigen::Affine3f& worldMat) {
-			return edgeClosestMatrix(s, outMat, el, worldMat.translation());
-		}
-		Status& closestMatrix(Status& s, Eigen::Affine3f& outMat, SElement* el, const Eigen::Vector3f closePos) {
-			// localise a world transform into UVN coordinates in the space of given domain
-			// make another function to return a full transform, for point domains
-			if (el == nullptr) {
-				outMat = Affine3f::Identity();
-				return s;
-			}
-			//SElement* el = getEl(globalIndex);
-			switch (el->elType) {
-			case (SElType::point): {
-				return pointClosestMatrix(s, outMat, pDataMap.at(el->name), closePos);
-			}
-			case (SElType::edge): {
-				return edgeClosestMatrix(s, outMat, el, closePos);
-			}
-			default: STAT_ERROR(s, "Cannot eval matrix at UVN for type " + std::to_string(el->elType));
-			}
-			return s;
-		}
-
-		Status& pointGetUVN(Status& s, Eigen::Vector3f& outUVN, SPointData& d, const Eigen::Vector3f worldPos);
-
-		
-		Status& edgeGetUVN(Status& s, Eigen::Vector3f& uvn, SElement* el, const Eigen::Vector3f& worldVec);
+		//static Status& matrixAt(Status& s, Eigen::Affine3f& outMat, int globalIndex, const Vector3f& uvn, const Vector3f& mode = {0, 0, 0});
+		static Status& matrixAt(Status& s, Eigen::Affine3f& outMat, SElement* el , const Vector3f& uvn, const Vector3f& mode = { 0, 0, 0 });
+		//static Status& posAt(Status& s, Eigen::Affine3f& outMat, int globalIndex, const SCoord& uvn, );
+		static Status& posAt(Status& s, Eigen::Affine3f& outMat, SElement* el, const Vector3f& uvn, const Vector3f& mode = { 0, 0, 0 });
 
 
-		Status& getUVN(Status& s, Eigen::Vector3f& uvn, SElement* el, const Eigen::Vector3f closePos) {
-			// localise a world transform into UVN coordinates in the space of given domain
-			// make another function to return a full transform, for point domains
-			
-			switch (el->elType) {
-			case (SElType::point): {
-				return pointGetUVN(s, uvn, pDataMap.at(el->name), closePos);
-			}
-			case (SElType::edge): {
-				return edgeGetUVN(s, uvn, el, closePos);
-			}
-			default: STAT_ERROR(s, "Cannot get UVN for type " + std::to_string(el->elType));
-			}
-			return s;
-		}
 
-		Status& pointSpaceMatrix(Status& s, Affine3f& outMat, SPointData& data);
+		Status& closestMatrix(Status& s, Eigen::Affine3f& outMat, SElement* el, const Eigen::Vector3f closePos);
 
-		Status& computePointData(Status& s, SPointData& data//, bool doProjectToAnchors=false
+		Status& getUVN(Status& s, Eigen::Vector3f& uvn, SElement* el, const Eigen::Vector3f& closePos);
+
+		Status& pointSpaceMatrix(Status& s, Affine3f& outMat, SPoint& data);
+
+		Status& computePointData(Status& s, SPoint& data//, bool doProjectToAnchors=false
 		);
 
 		Status& pointProjectToAnchors(Status& s, Affine3f& mat, SElement* el);
 
-		Status& edgeDomainDataFromAnchors(Status& s, SEdgeData& eData, SEdgeSpaceData& pData);
+		Status& edgeDomainDataFromAnchors(Status& s, SEdge& eData, SEdgeSpaceData& pData);
 
-		Status& buildEdgeAnchors(Status& s, SEdgeData& eData);
+		Status& buildEdgeAnchors(Status& s, SEdge& eData);
 
-		Status& buildEdgeData(Status& s, SEdgeData& eData);
+		Status& buildEdgeData(Status& s, SEdge& eData);
 
 		Status& buildFaceAnchors(Status& s, SFaceData& fData);
 
 		Status& buildFaceData(Status& s, SFaceData& fData);
 
 
-		Status& buildPointData(Status& s, SPointData& eData) {
+		Status& buildPointData(Status& s, SPoint& eData) {
 			/* construct final dense array for data, assuming all domains and anchor indices are set in data
 
 			build base curve matrices in worldspace,
@@ -1084,7 +883,7 @@ namespace strata {
 
 
 		IndexList getWireframeEdgeVertexIndexList(Status& s);
-		IndexList getWireframeEdgeVertexIndexList(Status& s, SEdgeData& eData);
+		IndexList getWireframeEdgeVertexIndexList(Status& s, SEdge& eData);
 		IndexList getWireframeEdgeVertexIndexListPATCH(Status& s);
 
 		void setGnomonIndexList(unsigned int* result, unsigned int i);

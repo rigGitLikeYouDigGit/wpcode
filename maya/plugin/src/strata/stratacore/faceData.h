@@ -145,7 +145,7 @@ namespace strata {
 		int cornerMode = ST_FACE_CORNER_ROUND;
 	};
 
-	struct SFaceData : SElData {
+	struct SFaceData : SElShapeData {
 		/* NAMING:
 		
 		edge : first-class Strata element
@@ -219,7 +219,7 @@ namespace strata {
 
 		std::pair<Vertex*, Vertex*> vtxPair(StrataManifold& man, int borderIndex);
 
-		SEdgeData& eDataForBorder(StrataManifold& man, int borderIndex);
+		SEdge& eDataForBorder(StrataManifold& man, int borderIndex);
 
 		float map01UCoordToEdge(StrataManifold& man, float u, int vtxA, int vtxB);
 		float map01UCoordToEdge(StrataManifold& man, float u, int borderIndex);
