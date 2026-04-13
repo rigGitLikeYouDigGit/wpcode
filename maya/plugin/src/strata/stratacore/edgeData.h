@@ -1,5 +1,7 @@
 #pragma once
 
+#include <type_traits>
+
 #include "element.h"
 #include "pointData.h"
 #include "../AABB.h"
@@ -70,6 +72,8 @@ namespace strata {
 		float uOnEdge = 0.0; // u-value of this anchor along output edge -
 		/* can't always be inferred if one of the anchors is a surface*/
 
+		SEdgeAnchorData() = default;
+
 	};
 
 	// ANCHOR datas are in space of the ANCHOR
@@ -95,12 +99,14 @@ namespace strata {
 		using thisT = SEdgeSpaceData;
 		using T = SEdgeSpaceData;
 
-		ArrayXf weights; // per-dense-point weights for this domain
+		ArrayXf weights = ArrayXf(0); // per-dense-point weights for this domain
 		//Eigen::ArrayX3f cvs; // UVN bezier control points - ordered {pt, tanOut, tanIn, pt, tanOut...} etc
 		bez::CubicBezierPath domainCurve; // curve in UVN space of domain, used for final interpolation
 		// sampling path 
-		ArrayX3f positions; // UVN bezier control points - ordered {pt, tanOut, tanIn, pt, tanOut...} etc
-		ArrayX3f normals; // worldspace normals // hopefully smoothstep interpolation is good enough
+		ArrayX3f positions = ArrayX3f(0, 3); // UVN bezier control points - ordered {pt, tanOut, tanIn, pt, tanOut...} etc
+		ArrayX3f normals = ArrayX3f(0, 3); // worldspace normals // hopefully smoothstep interpolation is good enough
+
+		SEdgeSpaceData() = default;
 
 		inline bez::ClosestPointSolver* closestSolver() {
 			return domainCurve.getSolver();
@@ -134,10 +140,11 @@ namespace strata {
 		this tea is just hot leaf juice?
 
 		*/
+		using SElement::SElement; // inherit constructors
 		using thisT = SEdge;
 		using T = SEdge;
 		SmallList<SEdgeAnchorData> anchorDatas; // anchors of this edge
-		std::vector<SEdgeSpaceData> spaceDatas; // curves in space of each anchor
+		SmallList<SEdgeSpaceData, 2> spaceDatas; // curves in space of each anchor
 
 
 
@@ -147,7 +154,7 @@ namespace strata {
 		posSpline is FINAL spline of all points on this edge
 		*/
 
-		ArrayX3f uvnOffsets = {}; // final dense offsets should only be in space of final built curve?
+		ArrayX3f uvnOffsets = ArrayX3f(0, 3); // final dense offsets should only be in space of final built curve?
 		// maybe???? 
 
 		//// IGNORE FOR NOW
@@ -155,8 +162,8 @@ namespace strata {
 		// surrender to ancestors
 		// become caveman
 
-		Eigen::ArrayX3f finalPositions = {}; // densely sampled final points in worldspace
-		Eigen::ArrayX3f finalNormals = {}; // densely sampled final normals in worldspace
+		Eigen::ArrayX3f finalPositions = ArrayX3f(0, 3); // densely sampled final points in worldspace
+		Eigen::ArrayX3f finalNormals = ArrayX3f(0, 3); // densely sampled final normals in worldspace
 
 		std::vector<int> vertices = {}; 
 		bool _verticesSorted = false;
@@ -172,10 +179,10 @@ namespace strata {
 		std::vector<DiscreteEdgePoint> discretePoints;
 		bool discretePointsSorted = false;
 
-
 		int subspaceAnchor = -1;
-
 		int _bufferStartIndex = -1;
+
+		//SEdge() = default;
 
 		/* space datas need direct access to scoords
 		*/
@@ -185,7 +192,7 @@ namespace strata {
 				return false;
 			}
 			return anchorMats[0].translation().isApprox(
-				anchorMats.back().translation());
+				anchorMats[anchorMats.size() - 1].translation());
 		}
 
 		inline Eigen::Vector3f samplePos(const float t) {
@@ -201,7 +208,7 @@ namespace strata {
 			if (isClosed()) {
 				return static_cast<int>(ST_EDGE_DENSE_NPOINTS * (anchorDatas.size()));
 			}
-			return static_cast<int>(ST_EDGE_DENSE_NPOINTS * (anchorDatas.size() - 1));
+			return static_cast<int>(ST_EDGE_DENSE_NPOINTS * (anchorDatas.size() - 1) + 1);
 		}
 
 		inline int densePointCount() const {
@@ -257,8 +264,10 @@ namespace strata {
 
 		void sortVertices(StrataManifold& manifold);
 
-		aabb::AABB getAABB();
+		aabb::AABB<3, float> getAABB();
 	};
 
-
+	static_assert(std::is_default_constructible_v<SEdge>, "SEdge must be default-constructible");
+	static_assert(std::is_copy_constructible_v<SEdge>, "SEdge must be copy-constructible");
+	static_assert(std::is_move_constructible_v<SEdge>, "SEdge must be move-constructible");
 }

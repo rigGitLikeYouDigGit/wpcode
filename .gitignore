@@ -385,3 +385,4 @@ python/wpm/core/node/codegen/nodeData.json
 python/wpm/core/node/codegen/pluginNodeData.json
 /maya/plugin/include
 /maya/plugin/src/strata/.vs
+.vs/wpcode/v17/workspaceFileList.bin

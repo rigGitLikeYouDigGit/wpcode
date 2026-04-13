@@ -117,6 +117,7 @@ namespace strata {
 		//std::vector<bool> edgeOrients; // SURELY vector<bool> is cringe
 		// derive this instead from coords
 		// true for forwards, false for backwards
+		SElement() = default;
 
 		SElement(StrataName elName, const SElType t = SElType::point) : name(elName), elType(t) {
 			//name = elName;

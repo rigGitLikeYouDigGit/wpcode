@@ -2,7 +2,7 @@
 
 #include "../types.h"
 #include "../edgeData.h"
-#include "../faceData.h"
+//#include "../faceData.h"
 namespace strata {
 
 	Status& makeNewFaceData( /* */

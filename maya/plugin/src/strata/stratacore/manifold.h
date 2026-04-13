@@ -35,7 +35,7 @@
 #include "element.h"
 #include "pointData.h"
 #include "edgeData.h"
-#include "faceData.h"
+//#include "faceData.h"
 #include "vertexData.h"
 #include "intersection.h"
 #include "group.h"
@@ -760,11 +760,11 @@ namespace strata {
 				el.finalMatrix = mat * el.finalMatrix;
 			}
 			for (auto& el : edges) {
-				
 				for (int i = 0; i < static_cast<int>(el.finalPositions.rows()); i++) {
-					el.finalPositions.row(i) = mat * el.finalPositions.row(i);
+					// Convert row to Vector3f, transform, assign back
+					Eigen::Vector3f pos = el.finalPositions.row(i);
+					el.finalPositions.row(i) = mat * pos;
 				}
-				//el.finalNormals = mat * el.finalNormals;
 			}
 		}
 
@@ -826,10 +826,10 @@ namespace strata {
 			I suppose this would be where struct of arrays wins over struct of arrays
 			TODO: struct of arrays
 			*/
-			Float3Array result(static_cast<int>(pDataMap.size()));
+			Float3Array result(static_cast<int>(points.size()));
 			int i = 0;
-			for (auto& p : pointIndexGlobalIndexMap) {
-				result[i] = pDataMap.at(getEl(p.second)->name).finalMatrix.translation().data();
+			for (auto& p : points) {
+				result[i] = p.finalMatrix.translation().data();
 				i += 1;
 			}
 			return result;
@@ -860,7 +860,7 @@ namespace strata {
 		//	*/
 
 		int getWireframePointGnomonVertexPositionLength() {
-			return static_cast<int>(pDataMap.size()) * 4;
+			return static_cast<int>(points.size()) * 4;
 		}
 		Float3Array getWireframePointGnomonVertexPositionArray(Status& s);
 		Status& getWireframePointGnomonVertexPositionArray(Status& s, Float3* outArr, int startIndex);
@@ -872,8 +872,8 @@ namespace strata {
 
 		int getWireframeEdgeVertexPositionLength() {
 			int result = 0;
-			for (auto& p : eDataMap) {
-				result += p.second.densePointCount();
+			for (auto& e : edges) {
+				result += e.densePointCount();
 			}
 			return result;
 
@@ -894,7 +894,7 @@ namespace strata {
 
 
 		StrataName printInfo() {
-			StrataName result = "<manifold - nPts: " + str(pDataMap.size()) + ", nEdges: " + str(eDataMap.size()) + " >";
+			StrataName result = "<manifold - nPts: " + str(points.size()) + ", nEdges: " + str(edges.size()) + " >";
 			return result;
 		}
 		/*TODO: proper dump for everything - every anchor of every element.
