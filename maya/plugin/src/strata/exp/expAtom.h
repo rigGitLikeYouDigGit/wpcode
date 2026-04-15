@@ -74,67 +74,76 @@ namespace strata {
 			static constexpr int CALL = 8;
 		}; // do we add in another level for 'pattern'? filters on element names etc
 
-		struct ExpAtom {
+		struct ExpAtom : EvalLogic {
 			/* struct to define an operation as part of an expression
 			*/
 			int startIndex = -1; // where does this atom start (main index of this atom in the expression)
 			std::string srcString = ""; // what text in the expression created this atom (inclusive for function calls)
 			static constexpr const char* OpName = "base";
 
+			//void copyOther(const ExpAtom& other) {
+			//	startIndex = other.startIndex;
+			//	srcString = other.srcString;
+			//}
 
-			void copyOther(const ExpAtom& other) {
-				startIndex = other.startIndex;
-				srcString = other.srcString;
-			}
+			//auto clone() const { return std::unique_ptr<ExpAtom>(clone_impl()); }
+			//template < typename pT>
+			//auto clone() const { return std::unique_ptr<pT>(static_cast<pT*>(clone_impl())); }
+			//virtual ExpAtom* clone_impl() const = 0;
 
-			auto clone() const { return std::unique_ptr<ExpAtom>(clone_impl()); }
-			template < typename pT>
-			auto clone() const { return std::unique_ptr<pT>(static_cast<pT*>(clone_impl())); }
-			virtual ExpAtom* clone_impl() const = 0;
-
-			ExpAtom() {}
-			virtual ~ExpAtom() = default;
-			ExpAtom(ExpAtom const& other) {
-				copyOther(other);
-			}
-			ExpAtom(ExpAtom&& other) = default;
-			ExpAtom& operator=(ExpAtom const& other) {
-				copyOther(other);
-			}
-			ExpAtom& operator=(ExpAtom&& other) = default;
+			//ExpAtom() {}
+			//virtual ~ExpAtom() = default;
+			//ExpAtom(ExpAtom const& other) {
+			//	copyOther(other);
+			//}
+			//ExpAtom(ExpAtom&& other) = default;
+			//ExpAtom& operator=(ExpAtom const& other) {
+			//	copyOther(other);
+			//}
+			//ExpAtom& operator=(ExpAtom&& other) = default;
 
 			// function to run live in op graph
-			virtual Status eval(std::vector<ExpValue>& argList, ExpAuxData* auxData,
-				std::vector<ExpValue>& result,
-				Status& s);
+			//virtual Status eval(std::vector<ExpValue>& argList, ExpAuxData* auxData,
+			//	std::vector<ExpValue>& result,
+			//	Status& s);
 
-			// function to insert this op in graph
-			virtual Status parse(
-				ExpGraph& graph,
-				ExpParser& parser,
-				Token token,
-				int& outNodeIndex,
-				Status& s
-			);
+			//// function to insert this op in graph
+			//virtual Status parse(
+			//	ExpGraph& graph,
+			//	ExpParser& parser,
+			//	Token token,
+			//	int& outNodeIndex,
+			//	Status& s
+			//);
 
-			virtual int getPrecedence() {
+			//virtual int getPrecedence() {
+			//	return 0;
+			//}
+
+			Status& eval(void* nodePtr, void* valuePtr, void* auxData, Status& s);
+			/* do:
+			auto* value = static_cast<Manifold*>(valuePtr);
+			auto* node = static_cast<EvalNode<Manifold, EvalLogicVariant>*>(nodePtr);
+			*/
+			Status& parse(
+					ExpGraph& graph,
+					ExpParser& parser,
+					Token token,
+					int& outNodeIndex,
+					Status& s
+				);
+			int getPrecedence() {
 				return 0;
 			}
+
 		};
 
 
 		struct PrefixParselet : ExpAtom {
-			PrefixParselet() {}
-			//virtual ~PrefixParselet() = default;
-			void copyOther(const PrefixParselet& other) {
-				ExpAtom::copyOther(other);
-			}
-			virtual PrefixParselet* clone_impl() const override { return new PrefixParselet(*this); };
-
-			MAKE_COPY_FNS(PrefixParselet)
-
-
-				virtual Status parse(
+		
+			using ExpAtom::ExpAtom;
+		
+			Status& parse(
 					ExpGraph& graph,
 					ExpParser& parser,
 					Token token,
@@ -145,24 +154,13 @@ namespace strata {
 		struct InfixParselet : ExpAtom
 		{
 
-			InfixParselet() {}
-			virtual int getPrecedence() {
+			using ExpAtom::ExpAtom;
+
+			int getPrecedence() {
 				return Precedence::SUM;
 			}
 
-			/* for some reason I couldn't get these to work in maps
-			without explicitly defining every single copy function by hand
-			great
-			love it
-			*/
-			void copyOther(const InfixParselet& other) {
-				ExpAtom::copyOther(other);
-			}
-			virtual InfixParselet* clone_impl() const override { return new InfixParselet(*this); };
-
-			MAKE_COPY_FNS(InfixParselet)
-
-				virtual Status parse(
+				Status& parse(
 					ExpGraph& graph,
 					ExpParser& parser,
 					Token token,

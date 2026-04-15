@@ -12,17 +12,17 @@ namespace strata {
 			* first in arg list is name of function to call
 			*/
 			static constexpr const char* OpName = "call";
-			CallAtom() {}
+			//CallAtom() {}
 
-			virtual CallAtom* clone_impl() const override { return new CallAtom(*this); };
+			//virtual CallAtom* clone_impl() const override { return new CallAtom(*this); };
 
-			void copyOther(const CallAtom& other) {
-				InfixParselet::copyOther(other);
-			}
+			//void copyOther(const CallAtom& other) {
+			//	InfixParselet::copyOther(other);
+			//}
 
-			MAKE_COPY_FNS(CallAtom)
+			//MAKE_COPY_FNS(CallAtom)
 
-				virtual Status parse(
+			Status& parse(
 					ExpGraph& graph,
 					ExpParser& parser,
 					Token token,
@@ -31,9 +31,9 @@ namespace strata {
 					Status& s
 				);
 
-			virtual Status eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, std::vector<ExpValue>& result, Status& s);
+			Status eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, std::vector<ExpValue>& result, Status& s);
 
-			virtual int getPrecedence() {
+			int getPrecedence() {
 				return Precedence::CALL;
 			}
 		};

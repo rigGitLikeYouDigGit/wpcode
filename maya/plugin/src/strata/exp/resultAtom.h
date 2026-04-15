@@ -15,7 +15,7 @@ namespace strata {
 			* everything by assigning to an '_OUT' variable by default
 			*/
 			static constexpr const char* OpName = "result"; // class name of the operation
-			ResultAtom() {}
+			/*ResultAtom() {}
 
 			virtual ResultAtom* clone_impl() const override { return new ResultAtom(*this); };
 
@@ -23,9 +23,9 @@ namespace strata {
 				InfixParselet::copyOther(other);
 			}
 
-			MAKE_COPY_FNS(ResultAtom)
+			MAKE_COPY_FNS(ResultAtom)*/
 
-			virtual Status eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, 
+			Status& eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, 
 				std::vector<ExpValue>& result, Status& s);
 		};
 

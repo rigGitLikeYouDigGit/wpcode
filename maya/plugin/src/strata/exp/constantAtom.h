@@ -12,12 +12,13 @@ namespace strata {
 		struct ConstantAtom : PrefixParselet {
 			/* atom to represent a constant numeric value or string
 			*/
-			ConstantAtom() {}
 			static constexpr const char* OpName = "constant";
+
+			//ConstantAtom() {}
 			float literalVal = 0.0;
 			std::string literalStr;
 
-			virtual ConstantAtom* clone_impl() const override { return new ConstantAtom(*this); };
+			/*virtual ConstantAtom* clone_impl() const override { return new ConstantAtom(*this); };
 
 			void copyOther(const ConstantAtom& other) {
 				PrefixParselet::copyOther(other);
@@ -25,9 +26,9 @@ namespace strata {
 				literalStr = other.literalStr;
 			}
 
-			MAKE_COPY_FNS(ConstantAtom);
+			MAKE_COPY_FNS(ConstantAtom);*/
 
-			virtual Status parse(
+			Status& parse(
 				ExpGraph& graph,
 				ExpParser& parser,
 				Token token,
@@ -35,7 +36,7 @@ namespace strata {
 				Status& s
 			);
 
-			virtual Status eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, 
+			Status& eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, 
 				std::vector<ExpValue>& result, Status& s);
 		};
 	}

@@ -8,20 +8,21 @@ namespace strata{
 		struct GreaterThanAtom : InfixParselet {
 			/* atom to create sub element(s) greater than one or more conditions
 			*/
-			GreaterThanAtom() {}
 			static constexpr const char* OpName = "greaterThan";
 
-			virtual GreaterThanAtom* clone_impl() const override { return new GreaterThanAtom(*this); };
+			//GreaterThanAtom() {}
 
-			void copyOther(const GreaterThanAtom& other) {
-				InfixParselet::copyOther(other);
-			}
-			MAKE_COPY_FNS(GreaterThanAtom)
+			//virtual GreaterThanAtom* clone_impl() const override { return new GreaterThanAtom(*this); };
 
-				virtual int getPrecedence() {
+			//void copyOther(const GreaterThanAtom& other) {
+			//	InfixParselet::copyOther(other);
+			//}
+			//MAKE_COPY_FNS(GreaterThanAtom)
+
+			int getPrecedence() {
 				return Precedence::CONDITIONAL;
 			}
-			virtual Status parse(
+			Status& parse(
 				ExpGraph& graph,
 				ExpParser& parser,
 				Token token,
@@ -30,28 +31,28 @@ namespace strata{
 				Status& s
 			);
 
-			virtual Status eval(
+			Status& eval(
 				std::vector<ExpValue>& argList,
 				ExpAuxData* auxData,
 				std::vector<ExpValue>& result, Status& s);
 		};
 
 		struct LessThanAtom : InfixParselet {
-
-			LessThanAtom() {}
 			static constexpr const char* OpName = "lessThan";
+
+			/*LessThanAtom() {}
 
 			virtual LessThanAtom* clone_impl() const override { return new LessThanAtom(*this); };
 
 			void copyOther(const LessThanAtom& other) {
 				InfixParselet::copyOther(other);
 			}
-			MAKE_COPY_FNS(LessThanAtom)
+			MAKE_COPY_FNS(LessThanAtom)*/
 
-				virtual int getPrecedence() {
+			int getPrecedence() {
 				return Precedence::CONDITIONAL;
 			}
-			virtual Status parse(
+			Status& parse(
 				ExpGraph& graph,
 				ExpParser& parser,
 				Token token,
@@ -60,7 +61,7 @@ namespace strata{
 				Status& s
 			);
 
-			virtual Status eval(
+			Status& eval(
 				std::vector<ExpValue>& argList,
 				ExpAuxData* auxData,
 				std::vector<ExpValue>& result, Status& s);

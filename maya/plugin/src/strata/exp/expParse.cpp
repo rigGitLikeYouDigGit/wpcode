@@ -1,4 +1,7 @@
 
+
+#include <variant>
+
 #include "expParse.h"
 #include "expValue.h"
 
@@ -6,7 +9,7 @@
 
 #include "../logger.h"
 
-#include "expElCompare.h"
+#include "expElCompare.h" 
 
 #include "assignAtom.h"
 #include "callAtom.h"
@@ -19,9 +22,6 @@
 
 using namespace strata;
 using namespace strata::expns;
-
-
-const std::string test::tag("hello");
 
 
 /* largely copied from https://github.com/jwurzer/bantam-cpp
@@ -129,20 +129,6 @@ Status validateAndParseStrings(std::string srcStr, std::vector<Token>& parsedTok
 }
 
 
-
-
-
-
-ExpParser::ExpParser() {
-	registerParselet(Token::Kind::Identifier, std::make_unique<NameAtom>());
-	registerParselet(Token::Kind::String, std::make_unique<ConstantAtom>());
-	registerParselet(Token::Kind::Number, std::make_unique<ConstantAtom>());
-	registerParselet(Token::Kind::LeftParen, std::make_unique<GroupAtom>());
-	registerParselet(Token::Kind::LessThan, std::make_unique<LessThanAtom>());
-	registerParselet(Token::Kind::GreaterThan, std::make_unique<GreaterThanAtom>());
-
-}
-
 Status ExpParser::parseExpression(
 	ExpGraph& graph,
 	int& outNodeIndex,
@@ -212,6 +198,118 @@ Status ExpParser::parseExpression(
 
 	return s;
 }
+
+void ExpParser::copyOther(const ExpParser& other) {
+	//index = other.index;
+	//parsedTokens = other.parsedTokens;
+	//readTokens = other.readTokens;
+	//mRead = other.mRead;
+	//// deep copy of parselet maps
+	//// eventually see about making some kind of "clonable" base or interface for this sort of thing
+	//mPrefixParselets.clear();
+	//mPrefixParselets.reserve(other.mPrefixParselets.size());
+	//for (auto& p : other.mPrefixParselets) {
+	//	//std::unique_ptr<InfixParselet> ptr = p.second.get()->clone();  //NB - cannot implicitly cast up to container of derived, from pointer of base
+	//	mPrefixParselets.insert(
+	//		std::make_pair(p.first,
+	//			(p.second->clone<PrefixParselet>())
+	//		)
+	//	);
+	//}
+	//for (auto& p : other.mInfixParselets) {
+	//	//std::unique_ptr<InfixParselet> ptr = p.second.get()->clone();  //NB - cannot implicitly cast up to container of derived, from pointer of base
+	//	mInfixParselets.insert(
+	//		std::make_pair(p.first,
+	//			(p.second->clone<InfixParselet>())
+	//		)
+	//	);
+	//}
+}
+
+//void ExpParser::registerParselet(Token::Kind token, std::unique_ptr<PrefixParselet> parselet) {
+//	mPrefixParselets.insert(std::make_pair(token, std::move(parselet)));
+//}
+//
+//void ExpParser::registerParselet(Token::Kind token, std::unique_ptr<InfixParselet> parselet) {
+//	mInfixParselets.insert(std::make_pair(token, std::move(parselet)));
+//}
+
+
+//ExpParser::ExpParser() {
+//	registerParselet(Token::Kind::Identifier, std::make_unique<NameAtom>());
+//	registerParselet(Token::Kind::String, std::make_unique<ConstantAtom>());
+//	registerParselet(Token::Kind::Number, std::make_unique<ConstantAtom>());
+//	registerParselet(Token::Kind::LeftParen, std::make_unique<GroupAtom>());
+//	registerParselet(Token::Kind::LessThan, std::make_unique<LessThanAtom>());
+//	registerParselet(Token::Kind::GreaterThan, std::make_unique<GreaterThanAtom>());
+//
+//}
+
+void ExpParser::initializeParselets() {
+	// Register prefix parselets
+	registerPrefixParselet<NameAtom>(Token::Kind::Identifier);
+	registerPrefixParselet<ConstantAtom>(Token::Kind::String);
+	registerPrefixParselet<ConstantAtom>(Token::Kind::Number);
+	registerPrefixParselet<GroupAtom>(Token::Kind::LeftParen);
+	
+	// registerPrefixParselet<LiteralAtom>(Token::Kind::Number);
+	// registerPrefixParselet<UnaryMinusAtom>(Token::Kind::Minus);
+
+	// Register infix parselets
+	registerInfixParselet<AssignAtom>(Token::Kind::Equal);
+	registerInfixParselet<AccessAtom>(Token::Kind::Dot);
+	registerInfixParselet<LessThanAtom>(Token::Kind::LessThan);
+	registerInfixParselet<GreaterThanAtom>(Token::Kind::GreaterThan);
+	//registerInfixParselet<GetItemAtom>(Token::Kind::LeftBracket);
+	// registerInfixParselet<CallAtom>(Token::Kind::LeftParen);
+	// registerInfixParselet<BinaryOpAtom>(Token::Kind::Plus);
+	// registerInfixParselet<BinaryOpAtom>(Token::Kind::Minus);
+	// ... etc
+}
+
+Status ExpParser::parseExpression(
+	ExpGraph& graph,
+	int& outNodeIndex,
+	int precedence
+) {
+	Status s;
+
+	Token token = consume();
+
+	// Look up prefix parselet
+	auto maybePrefixParselet = registry.findPrefix(token.getKind());
+	if (!maybePrefixParselet) {
+		STAT_ERROR(s, "Could not parse \"" + token.kindStr() + "\".");
+		return s;
+	}
+
+	// Parse prefix expression
+	int left = -1;
+	s = std::visit(PrefixParseVisitor{ graph, *this, token, left, s },
+		*maybePrefixParselet);
+	if (s) return s;
+
+	// Parse infix expressions
+	while (precedence < getPrecedence()) {
+		token = consume();
+
+		auto maybeInfixParselet = registry.findInfix(token.getKind());
+		if (!maybeInfixParselet) {
+			STAT_ERROR(s, "No infix parselet for token");
+			return s;
+		}
+
+		s = std::visit(InfixParseVisitor{ graph, *this, token, left, left, s },
+			*maybeInfixParselet);
+		if (s) return s;
+	}
+
+	outNodeIndex = left;
+	return s;
+}
+
+
+
 
 ExpOpNode* ExpGraph::addResultNode() {
 	return addNode<ResultAtom, ExpOpNode>(resultCallName);

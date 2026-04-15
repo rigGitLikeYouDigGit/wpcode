@@ -12,17 +12,17 @@ namespace strata {
 			* arguments should be { variable name , variable value }
 			*/
 			std::string opName = "plus"; // class name of the operation
-			PlusAtom() {}
+			/*PlusAtom() {}
 			virtual PlusAtom* clone_impl() const override { return new PlusAtom(*this); };
 
 			void copyOther(const PlusAtom& other) {
 				InfixParselet::copyOther(other);
 			}
-			MAKE_COPY_FNS(PlusAtom);
-				virtual Status eval(std::vector<ExpValue>& argList, 
+			MAKE_COPY_FNS(PlusAtom);*/
+			Status& eval(std::vector<ExpValue>& argList, 
 					ExpAuxData* auxData, std::vector<ExpValue>& result, Status& s);
 
-			virtual int getPrecedence() {
+			int getPrecedence() {
 				return Precedence::SUM;
 			}
 		};

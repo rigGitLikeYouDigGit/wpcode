@@ -20,6 +20,9 @@
 #include <typeindex>
 #include <cassert>
 
+#include <variant>
+#include <optional>
+
 #include <enum.h>
 #include "../../containers.h"
 #include "../status.h"
@@ -32,6 +35,9 @@
 
 #include "expAtom.h"
 #include "expGraph.h"
+
+#include "atomVariant.h"
+
 
 /*
 dead, dead simple way of parsing a string expression into
@@ -103,19 +109,6 @@ namespace strata {
 
 	namespace expns {
 
-
-		struct test {
-			static const std::string tag;
-			//const static std::string name = "ada";
-		};
-
-		static void test() {
-			//span<const char> strView;
-		}
-
-
-
-
 		struct ExpStatus {
 			/*constant state of overall expression -
 			mainly tracking variables*/
@@ -165,21 +158,21 @@ namespace strata {
 			*/
 			
 			static constexpr const char* OpName = "access";
-			AccessAtom() {}
+			//AccessAtom() {}
 
-			virtual AccessAtom* clone_impl() const override { return new AccessAtom(*this); };
+			//virtual AccessAtom* clone_impl() const override { return new AccessAtom(*this); };
 
-			void copyOther(const AccessAtom& other) {
-				InfixParselet::copyOther(other);
-			}
+			//void copyOther(const AccessAtom& other) {
+			//	InfixParselet::copyOther(other);
+			//}
 
-			MAKE_COPY_FNS(AccessAtom)
-			virtual Status eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, std::vector<ExpValue>& result, Status& s)
+			//MAKE_COPY_FNS(AccessAtom)
+			Status& eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, std::vector<ExpValue>& result, Status& s)
 			{
 
 				return s;
 			}
-			virtual int getPrecedence() {
+			int getPrecedence() {
 				return Precedence::CALL;
 			}
 		};
@@ -190,27 +183,113 @@ namespace strata {
 			* other args are dimensions for array access
 			*/
 			static constexpr const char* OpName = "getitem";
-			GetItemAtom() {}
+			/*GetItemAtom() {}
 			virtual GetItemAtom* clone_impl() const override { return new GetItemAtom(*this); };
 
 			void copyOther(const GetItemAtom& other) {
 				InfixParselet::copyOther(other);
 			}
-			MAKE_COPY_FNS(GetItemAtom)
-			virtual Status eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, std::vector<ExpValue>& result, Status& s)
+			//MAKE_COPY_FNS(GetItemAtom)*/
+			Status& eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, std::vector<ExpValue>& result, Status& s)
 			{
 
 				return s;
 			}
 
-			virtual int getPrecedence() {
+			int getPrecedence() {
 				return Precedence::CALL;
 			}
 		};
 
 
 
+		struct ParseletRegistry {
+			std::unordered_map<Token::Kind, PrefixParseletVariant> prefixParselets;
+			std::unordered_map<Token::Kind, InfixParseletVariant> infixParselets;
 
+			// Register a prefix parselet
+			template<typename T>
+			void registerPrefix(Token::Kind token, T&& parselet) {
+				static_assert(std::is_constructible_v<PrefixParseletVariant, T>,
+					"Type must be a valid prefix parselet");
+				prefixParselets[token] = std::forward<T>(parselet);
+			}
+
+			// Register an infix parselet
+			template<typename T>
+			void registerInfix(Token::Kind token, T&& parselet) {
+				static_assert(std::is_constructible_v<InfixParseletVariant, T>,
+					"Type must be a valid infix parselet");
+				infixParselets[token] = std::forward<T>(parselet);
+			}
+
+			// Lookup methods
+			std::optional<PrefixParseletVariant> findPrefix(Token::Kind token) const {
+				auto it = prefixParselets.find(token);
+				if (it != prefixParselets.end() && !std::holds_alternative<std::monostate>(it->second)) {
+					return it->second;  
+				}
+				return std::nullopt;
+			}
+
+			std::optional<InfixParseletVariant> findInfix(Token::Kind token) const {
+				auto it = infixParselets.find(token);
+				if (it != infixParselets.end() && !std::holds_alternative<std::monostate>(it->second)) {
+					return it->second;
+				}
+				return std::nullopt;
+			}
+		};
+
+
+// precedence from any parselet
+		struct GetPrecedenceVisitor {
+			int operator()(std::monostate) const { return 0; }
+
+			template<typename T>
+			int operator()(const T& parselet) const {
+				return parselet.getPrecedence();
+			}
+		};
+
+		// Parse using prefix parselet
+		struct PrefixParseVisitor {
+			ExpGraph& graph;
+			ExpParser& parser;
+			Token token;
+			int& outNodeIndex;
+			Status& s;
+
+			Status operator()(std::monostate) {
+				STAT_ERROR(s, "No prefix parselet registered for token");
+				return s;
+			}
+
+			template<typename T>
+			Status operator()(T& parselet) {
+				return parselet.parse(graph, parser, token, outNodeIndex, s);
+			}
+		};
+
+		// Parse using infix parselet
+		struct InfixParseVisitor {
+			ExpGraph& graph;
+			ExpParser& parser;
+			Token token;
+			int leftIndex;
+			int& outNodeIndex;
+			Status& s;
+
+			Status operator()(std::monostate) {
+				STAT_ERROR(s, "No infix parselet registered for token");
+				return s;
+			}
+
+			template<typename T>
+			Status operator()(T& parselet) {
+				return parselet.parse(graph, parser, token, leftIndex, outNodeIndex, s);
+			}
+		};
 
 		struct ExpParser {
 			/* holds intermediate list of tokens and index for current position
@@ -224,49 +303,31 @@ namespace strata {
 			std::vector<Token> mRead = {};
 			std::unordered_map<Token::Kind, std::unique_ptr<InfixParselet>> mInfixParselets = {};
 			std::unordered_map<Token::Kind, std::unique_ptr<PrefixParselet>> mPrefixParselets = {};
-
+			ParseletRegistry registry;
 
 			//virtual ~ExpParser() = default;
 
 
-			void copyOther(const ExpParser& other) {
-				index = other.index;
-				parsedTokens = other.parsedTokens;
-				readTokens = other.readTokens;
-				mRead = other.mRead;
-				// deep copy of parselet maps
-				// eventually see about making some kind of "clonable" base or interface for this sort of thing
-				mPrefixParselets.clear();
-				mPrefixParselets.reserve(other.mPrefixParselets.size());
-				for (auto& p : other.mPrefixParselets) {
-					//std::unique_ptr<InfixParselet> ptr = p.second.get()->clone();  //NB - cannot implicitly cast up to container of derived, from pointer of base
-					mPrefixParselets.insert(
-						std::make_pair(p.first, 
-							(p.second->clone<PrefixParselet>())
-						)
-					);
-				}
-				for (auto& p : other.mInfixParselets) {
-					//std::unique_ptr<InfixParselet> ptr = p.second.get()->clone();  //NB - cannot implicitly cast up to container of derived, from pointer of base
-					mInfixParselets.insert(
-						std::make_pair(p.first,
-							(p.second->clone<InfixParselet>())
-						)
-					);
-				}
+			void copyOther(const ExpParser& other);
+
+			//ExpParser();
+
+			//MAKE_COPY_FNS(ExpParser)
+			void initializeParselets();
+
+			template<typename T>
+			void registerPrefixParselet(Token::Kind token, T parselet = T{}) {
+				registry.registerPrefix(token, std::move(parselet));
 			}
 
-			ExpParser();
-
-			MAKE_COPY_FNS(ExpParser)
-
-			void registerParselet(Token::Kind token, std::unique_ptr<PrefixParselet> parselet) {
-				mPrefixParselets.insert(std::make_pair(token, std::move(parselet)));
+			template<typename T>
+			void registerInfixParselet(Token::Kind token, T parselet = T{}) {
+				registry.registerInfix(token, std::move(parselet));
 			}
 
-			void registerParselet(Token::Kind token, std::unique_ptr<InfixParselet> parselet) {
-				mInfixParselets.insert(std::make_pair(token, std::move(parselet)));
-			}
+			//void registerParselet(Token::Kind token, std::unique_ptr<PrefixParselet> parselet);
+
+			//void registerParselet(Token::Kind token, std::unique_ptr<InfixParselet> parselet);
 
 			void resetTokens(std::vector<Token>& aParsedTokens) {
 				/* restart parser to work on a new set of tokens*/

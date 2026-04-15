@@ -22,7 +22,7 @@ Status AssignAtom::parse(
 	Status& s
 ) {
 	int right;
-	s = parser.parseExpression(graph, right, Precedence::ASSGIGNMENT - 1);
+	s = parser.parseExpression(graph, right, Precedence::ASSIGNMENT - 1);
 	CWRSTAT(s, "error parsing right side of assignment: " + token.lexeme());
 	DirtyNode* newNode = graph.addNode<AssignAtom>();
 

@@ -2,8 +2,18 @@
 
 #include "../dirtyGraph.h"
 #include "../evalGraph.h"
-#include "expAtom.h"
+
 #include "expValue.h"
+#include "expElCompare.h"
+
+// include all exp ops for variant
+#include "assignAtom.h"
+#include "callAtom.h"
+#include "expAtom.h"
+#include "groupAtom.h"
+#include "nameAtom.h"
+#include "plusAtom.h"
+#include "resultAtom.h"
 
 namespace strata {
 	struct StrataManifold;
@@ -38,49 +48,74 @@ namespace strata {
 
 		using ExpVT = std::vector<ExpValue>;
 
+		using ExpAtomVariant = std::variant<
+			AssignAtom,
+			CallAtom,
+			ExpAtom,
+			GroupAtom,
+			NameAtom,
+			PlusAtom,
+			ResultAtom
+		>;
 
-		struct ExpOpNode : EvalNode<ExpVT> {
+		struct ExpOpNode : EvalNode<
+			ExpVT,
+			ExpAtomVariant
+		> {
 			// delegate eval function to expAtom, pulling in ExpValue arguments from input nodes
 			//ExpGraph* graphPtr;
 
-			std::unique_ptr<ExpAtom> expAtomPtr;
+			/*std::unique_ptr<ExpAtom> expAtomPtr;
 			using EvalFnT = Status(*)(ExpOpNode*, std::vector<ExpValue>&, Status&);
-			typedef EvalFnT EvalFnT;
+			typedef EvalFnT EvalFnT;*/
 			//static Status evalMain(ExpOpNode* node, std::vector<ExpValue>& value, Status& s);
 			//EvalFnT evalFnPtr = evalMain; // pointer to op function - if passed, easier than defining custom classes for everything?
 
 			//static Status eval(ExpOpNode* node, std::vector<ExpValue>& value, EvalAuxData* auxData, Status& s);
-			virtual Status eval(
-				std::vector<ExpValue>& value,
-				EvalAuxData* auxData,
-				Status& s
-			);
-
-			virtual ExpGraph* graph() {
-				if (graphPtr == nullptr) {
-					return nullptr;
-				}
-				return static_cast<ExpGraph*>(graphPtr);
-			}
-
-			virtual EvalNode* clone_impl() const {
-				// deepcopy expAtomPtr
-				auto newPtr = static_cast<ExpOpNode*>(EvalNode::clone_impl());
-				newPtr->expAtomPtr = expAtomPtr->clone();
-				return newPtr;
-			};
+			//virtual Status eval(
+			//	std::vector<ExpValue>& value,
+			//	EvalAuxData* auxData,
+			//	Status& s
+			//);
 
 			using EvalNode::EvalNode;
+
+			using EvalLogicVariant = ExpAtomVariant;
+			//EvalLogicVariant logic;
+
+			Status eval(ExpVT& value, EvalAuxData* auxData, Status& s) {
+				return std::visit([&](auto& logicImpl) {
+					// Cast here, logic types never see void*
+					return logicImpl.eval(this, static_cast<void*>(&value), auxData, s);
+					}, logic);
+			}
+
+			//virtual ExpGraph* graph() {
+			//	if (graphPtr == nullptr) {
+			//		return nullptr;
+			//	}
+			//	return static_cast<ExpGraph*>(graphPtr);
+			//}
+
+			//virtual EvalNode* clone_impl() const {
+			//	// deepcopy expAtomPtr
+			//	auto newPtr = static_cast<ExpOpNode*>(EvalNode::clone_impl());
+			//	newPtr->expAtomPtr = expAtomPtr->clone();
+			//	return newPtr;
+			//};
+
+			
 			//ExpOpNode(const int index, const std::string name) : index(index), name(name) {}
 		};
 
 
 		struct ExpGraph : EvalGraphBase<
 			ExpVT,
-
+			ExpOpNode,
+			ExpGraph
 		> {
 
-			using EvalGraph::EvalGraph;
+			using EvalGraphBase::EvalGraphBase;
 
 			using VT = std::vector<ExpValue>;
 
