@@ -4,16 +4,19 @@
 #include "../evalGraph.h"
 
 #include "expValue.h"
-#include "expElCompare.h"
+//#include "expElCompare.h"
+#include "expAtom.h"
 
 // include all exp ops for variant
-#include "assignAtom.h"
-#include "callAtom.h"
-#include "expAtom.h"
-#include "groupAtom.h"
-#include "nameAtom.h"
-#include "plusAtom.h"
-#include "resultAtom.h"
+//#include "assignAtom.h"
+//#include "callAtom.h"
+
+//#include "groupAtom.h"
+//#include "nameAtom.h"
+//#include "plusAtom.h"
+//#include "resultAtom.h"
+
+#include "atomVariant.h"
 
 namespace strata {
 	struct StrataManifold;
@@ -23,6 +26,14 @@ namespace strata {
 
 		struct Expression;
 
+		/* expressions obviously need knowledge of existing state of manifold,
+		ie for closest-point or ray operations
+
+		if we wanted to make it general, have a base layer of just the atoms, then CRTP those on
+		derived classes that each override eval()? 
+
+		at that point just duplicate the whole thing, probably less hassle
+		*/
 		struct ExpAuxData : EvalAuxData {
 			StrataManifold* manifold = nullptr;
 			ExpStatus* expStatus = nullptr;
@@ -37,26 +48,15 @@ namespace strata {
 		};
 
 
-
-		/* using VECTORS of expValues as value types to support unpacking, slicing more easily -
-		feels insane, but also sensible
-		otherwise each operator can only produce a single discrete result
-
-		register functions in global scope dict, pull copies of of the
-		"compiled" master graph into each node that calls it
-		*/
-
-		using ExpVT = std::vector<ExpValue>;
-
-		using ExpAtomVariant = std::variant<
-			AssignAtom,
-			CallAtom,
-			ExpAtom,
-			GroupAtom,
-			NameAtom,
-			PlusAtom,
-			ResultAtom
-		>;
+		//using ExpAtomVariant = std::variant<
+		//	AssignAtom,
+		//	CallAtom,
+		//	ExpAtom,
+		//	GroupAtom,
+		//	NameAtom,
+		//	PlusAtom,
+		//	ResultAtom
+		//>;
 
 		struct ExpOpNode : EvalNode<
 			ExpVT,
@@ -83,10 +83,14 @@ namespace strata {
 			using EvalLogicVariant = ExpAtomVariant;
 			//EvalLogicVariant logic;
 
-			Status eval(ExpVT& value, EvalAuxData* auxData, Status& s) {
+			Status eval(ExpVT& value, ExpAuxData* auxData, Status& s) {
 				return std::visit([&](auto& logicImpl) {
 					// Cast here, logic types never see void*
-					return logicImpl.eval(this, static_cast<void*>(&value), auxData, s);
+					return logicImpl.eval(
+						value.first,
+						auxData,
+						value.second,
+						s);
 					}, logic);
 			}
 

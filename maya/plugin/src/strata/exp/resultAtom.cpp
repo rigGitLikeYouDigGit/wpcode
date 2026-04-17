@@ -7,7 +7,7 @@
 using namespace strata;
 using namespace expns;
 
-Status ResultAtom::eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, std::vector<ExpValue>& result, Status& s)
+Status& ResultAtom::eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, std::vector<ExpValue>& result, Status& s)
 {
 	if (argList.size() == 0) { // nothing to do
 		return s;

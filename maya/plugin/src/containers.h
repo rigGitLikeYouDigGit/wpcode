@@ -292,7 +292,90 @@ namespace strata {
 		int first_free;
 	};
 
+	template<typename T>
+	struct CPair {
+		/* pair storing 2 spans of the same type contiguously */
+		T* data = nullptr;
+		size_t first_size = 0;
+		size_t second_size = 0;
 
+		// Default constructor
+		CPair() = default;
+
+		// Constructor with allocation
+		CPair(size_t first_count, size_t second_count) {
+			allocate(first_count, second_count);
+		}
+
+		// Copy constructor
+		CPair(const CPair& other) {
+			if (other.data) {
+				allocate(other.first_size, other.second_size);
+				std::memcpy(data, other.data, (first_size + second_size) * sizeof(T));
+			}
+		}
+
+		// Copy assignment
+		CPair& operator=(const CPair& other) {
+			if (this != &other) {
+				if (other.data) {
+					allocate(other.first_size, other.second_size);
+					std::memcpy(data, other.data, (first_size + second_size) * sizeof(T));
+				}
+				else {
+					delete[] data;
+					data = nullptr;
+					first_size = 0;
+					second_size = 0;
+				}
+			}
+			return *this;
+		}
+
+		// Move constructor
+		CPair(CPair&& other) noexcept
+			: data(other.data)
+			, first_size(other.first_size)
+			, second_size(other.second_size)
+		{
+			other.data = nullptr;
+			other.first_size = 0;
+			other.second_size = 0;
+		}
+
+		// Move assignment
+		CPair& operator=(CPair&& other) noexcept {
+			if (this != &other) {
+				delete[] data;
+
+				data = other.data;
+				first_size = other.first_size;
+				second_size = other.second_size;
+
+				other.data = nullptr;
+				other.first_size = 0;
+				other.second_size = 0;
+			}
+			return *this;
+		}
+
+		void allocate(size_t first_count, size_t second_count) {
+			delete[] data;
+			first_size = first_count;
+			second_size = second_count;
+			data = new T[first_size + second_size];
+		}
+
+		T* first() { return data; }
+		T* second() { return data + first_size; }
+
+		const T* first() const { return data; }
+		const T* second() const { return data + first_size; }
+
+		size_t total_size() const { return first_size + second_size; }
+
+		~CPair() { delete[] data; }
+	};
 
 } // /strata
 

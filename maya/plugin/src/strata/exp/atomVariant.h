@@ -1,16 +1,26 @@
 
+#pragma once
 #include <variant>
 
-//#include "assignAtom.h"
-//#include "callAtom.h"
-//#include "constantAtom.h"
-//#include "expAtom.h"
-//#include "groupAtom.h"
-//#include "nameAtom.h"
-
+// Base atom types
+#include "expAtom.h"
 
 /* collect together all variant types for atom system
 */
+
+// Prefix parselet atoms
+//#include "constantAtom.h"
+//#include "groupAtom.h"
+//#include "nameAtom.h"
+//
+//// Infix parselet atoms
+//#include "assignAtom.h"
+//#include "callAtom.h"
+//#include "plusAtom.h"
+//#include "resultAtom.h"
+//#include "expElCompare.h"  // For GreaterThanAtom, LessThanAtom
+//#include "accessAtom.h"
+//#include "getItemAtom.h"
 
 namespace strata
 {
@@ -20,7 +30,7 @@ namespace strata
 		struct PrefixParselet;
 		struct InfixParselet;
 
-		struct AssignAtom;
+	/*	struct AssignAtom;
 		struct AccessAtom;
 		struct CallAtom;
 		struct ConstantAtom;
@@ -30,20 +40,20 @@ namespace strata
 		struct LessThanAtom;
 		struct PlusAtom;
 		struct NameAtom;
-		struct ResultAtom;
+		struct ResultAtom;*/
 
 		using PrefixParseletVariant = std::variant<
-			PrefixParselet,
-			ConstantAtom,
+			PrefixParselet
+			/*ConstantAtom,
 			GroupAtom,
-			NameAtom,
+			NameAtom,*/
 
-			std::monostate
+			//std::monostate
 		>;
 
 		using InfixParseletVariant = std::variant<
-			InfixParselet,
-			AccessAtom,
+			InfixParselet
+			/*AccessAtom,
 			AssignAtom,
 			CallAtom,
 			GetItemAtom,
@@ -51,8 +61,25 @@ namespace strata
 			
 			LessThanAtom,
 			PlusAtom,
-			ResultAtom,
-			std::monostate
+			ResultAtom,*/
+
+			//std::monostate
+		>;
+
+		using ExpAtomVariant = std::variant<
+			ExpAtom
+			/*AssignAtom,
+			AccessAtom,
+			CallAtom,
+			ConstantAtom,
+			GetItemAtom,
+			GreaterThanAtom,
+			GroupAtom,
+			LessThanAtom,
+			PlusAtom,
+			NameAtom,
+			ResultAtom,*/
+			//std::monostate
 		>;
 
 	}

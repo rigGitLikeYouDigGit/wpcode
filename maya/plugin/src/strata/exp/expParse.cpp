@@ -9,14 +9,9 @@
 
 #include "../logger.h"
 
-#include "expElCompare.h" 
+//#include "expElCompare.h" 
 
-#include "assignAtom.h"
-#include "callAtom.h"
-#include "constantAtom.h"
-#include "groupAtom.h"
-#include "nameAtom.h"
-#include "resultAtom.h"
+#include "atomVariant.h"
 
 
 
@@ -247,19 +242,22 @@ void ExpParser::copyOther(const ExpParser& other) {
 
 void ExpParser::initializeParselets() {
 	// Register prefix parselets
-	registerPrefixParselet<NameAtom>(Token::Kind::Identifier);
+	/*registerPrefixParselet<NameAtom>(Token::Kind::Identifier);
 	registerPrefixParselet<ConstantAtom>(Token::Kind::String);
 	registerPrefixParselet<ConstantAtom>(Token::Kind::Number);
 	registerPrefixParselet<GroupAtom>(Token::Kind::LeftParen);
-	
+	*/
+
 	// registerPrefixParselet<LiteralAtom>(Token::Kind::Number);
 	// registerPrefixParselet<UnaryMinusAtom>(Token::Kind::Minus);
 
 	// Register infix parselets
-	registerInfixParselet<AssignAtom>(Token::Kind::Equal);
+	/*registerInfixParselet<AssignAtom>(Token::Kind::Equal);
 	registerInfixParselet<AccessAtom>(Token::Kind::Dot);
 	registerInfixParselet<LessThanAtom>(Token::Kind::LessThan);
-	registerInfixParselet<GreaterThanAtom>(Token::Kind::GreaterThan);
+	registerInfixParselet<GreaterThanAtom>(Token::Kind::GreaterThan);*/
+
+
 	//registerInfixParselet<GetItemAtom>(Token::Kind::LeftBracket);
 	// registerInfixParselet<CallAtom>(Token::Kind::LeftParen);
 	// registerInfixParselet<BinaryOpAtom>(Token::Kind::Plus);
@@ -453,8 +451,10 @@ Status Expression::result(
 		//return s;
 	}
 	//l("eval-ing graph");
+	
 	//graph.evalGraph(s, graph.getResultNode()->index, auxData);
-	graph.evalGraphSerial(s, graph.getResultNode()->index, auxData);
+	//graph.evalGraphSerial(s, graph.getResultNode()->index, auxData);
+	
 	CWRSTAT(s, "error evaluating expression: " + srcStr + " , halting");
 	outResult = &graph.results[graph.getResultNode()->index];
 	return s;

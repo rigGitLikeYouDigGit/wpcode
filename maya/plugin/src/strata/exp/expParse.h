@@ -150,59 +150,6 @@ namespace strata {
 
 		};
 
-
-
-		struct AccessAtom : InfixParselet {
-			/* access an object attribute by name, dot operator - eg
-			obj.attribute
-			*/
-			
-			static constexpr const char* OpName = "access";
-			//AccessAtom() {}
-
-			//virtual AccessAtom* clone_impl() const override { return new AccessAtom(*this); };
-
-			//void copyOther(const AccessAtom& other) {
-			//	InfixParselet::copyOther(other);
-			//}
-
-			//MAKE_COPY_FNS(AccessAtom)
-			Status& eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, std::vector<ExpValue>& result, Status& s)
-			{
-
-				return s;
-			}
-			int getPrecedence() {
-				return Precedence::CALL;
-			}
-		};
-
-		struct GetItemAtom : InfixParselet {
-			/* access an item by square brackets
-			* arg 1 is object to access
-			* other args are dimensions for array access
-			*/
-			static constexpr const char* OpName = "getitem";
-			/*GetItemAtom() {}
-			virtual GetItemAtom* clone_impl() const override { return new GetItemAtom(*this); };
-
-			void copyOther(const GetItemAtom& other) {
-				InfixParselet::copyOther(other);
-			}
-			//MAKE_COPY_FNS(GetItemAtom)*/
-			Status& eval(std::vector<ExpValue>& argList, ExpAuxData* auxData, std::vector<ExpValue>& result, Status& s)
-			{
-
-				return s;
-			}
-
-			int getPrecedence() {
-				return Precedence::CALL;
-			}
-		};
-
-
-
 		struct ParseletRegistry {
 			std::unordered_map<Token::Kind, PrefixParseletVariant> prefixParselets;
 			std::unordered_map<Token::Kind, InfixParseletVariant> infixParselets;

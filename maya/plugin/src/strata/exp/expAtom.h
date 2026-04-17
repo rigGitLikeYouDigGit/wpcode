@@ -25,6 +25,7 @@
 #include "../status.h"
 #include "../macro.h"
 #include "../dirtyGraph.h"
+#include "../evalGraph.h"
 //#include "../stratacore/manifold.h"
 
 #include "../factory.h"
@@ -49,20 +50,6 @@ namespace strata {
 		}
 
 
-
-#define MAKE_COPY_FNS(classT)\
-		~classT() = default;\
-		classT(classT const& other) {\
-			copyOther(other);\
-		}\
-		classT(classT&& other) = default;\
-		classT& operator=(classT const& other) {\
-			copyOther(other);\
-			return *this;\
-		}\
-		classT& operator=(classT&& other) = default;\
-
-
 		struct Precedence {
 			static constexpr int ASSIGNMENT = 1;
 			static constexpr int CONDITIONAL = 2;
@@ -74,6 +61,20 @@ namespace strata {
 			static constexpr int CALL = 8;
 		}; // do we add in another level for 'pattern'? filters on element names etc
 
+
+
+		/* using VECTORS of expValues as value types to support unpacking, slicing more easily -
+		feels insane, but also sensible
+		otherwise each operator can only produce a single discrete result
+
+		register functions in global scope dict, pull copies of of the
+		"compiled" master graph into each node that calls it
+		*/
+
+		// arg values, out values
+		using ExpVT = std::pair<std::vector<ExpValue>, std::vector<ExpValue>>;
+
+
 		struct ExpAtom : EvalLogic {
 			/* struct to define an operation as part of an expression
 			*/
@@ -81,46 +82,16 @@ namespace strata {
 			std::string srcString = ""; // what text in the expression created this atom (inclusive for function calls)
 			static constexpr const char* OpName = "base";
 
-			//void copyOther(const ExpAtom& other) {
-			//	startIndex = other.startIndex;
-			//	srcString = other.srcString;
-			//}
+			int getPrecedence() {
+				return 0;
+			}
 
-			//auto clone() const { return std::unique_ptr<ExpAtom>(clone_impl()); }
-			//template < typename pT>
-			//auto clone() const { return std::unique_ptr<pT>(static_cast<pT*>(clone_impl())); }
-			//virtual ExpAtom* clone_impl() const = 0;
+			//Status& eval(
+			//	void* nodePtr, void* valuePtr, void* auxData, Status& s);
 
-			//ExpAtom() {}
-			//virtual ~ExpAtom() = default;
-			//ExpAtom(ExpAtom const& other) {
-			//	copyOther(other);
-			//}
-			//ExpAtom(ExpAtom&& other) = default;
-			//ExpAtom& operator=(ExpAtom const& other) {
-			//	copyOther(other);
-			//}
-			//ExpAtom& operator=(ExpAtom&& other) = default;
+			Status& eval(std::vector<ExpValue>& argList, ExpAuxData* auxData,
+				std::vector<ExpValue>& result, Status& s);
 
-			// function to run live in op graph
-			//virtual Status eval(std::vector<ExpValue>& argList, ExpAuxData* auxData,
-			//	std::vector<ExpValue>& result,
-			//	Status& s);
-
-			//// function to insert this op in graph
-			//virtual Status parse(
-			//	ExpGraph& graph,
-			//	ExpParser& parser,
-			//	Token token,
-			//	int& outNodeIndex,
-			//	Status& s
-			//);
-
-			//virtual int getPrecedence() {
-			//	return 0;
-			//}
-
-			Status& eval(void* nodePtr, void* valuePtr, void* auxData, Status& s);
 			/* do:
 			auto* value = static_cast<Manifold*>(valuePtr);
 			auto* node = static_cast<EvalNode<Manifold, EvalLogicVariant>*>(nodePtr);
@@ -132,9 +103,6 @@ namespace strata {
 					int& outNodeIndex,
 					Status& s
 				);
-			int getPrecedence() {
-				return 0;
-			}
 
 		};
 

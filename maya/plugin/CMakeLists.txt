@@ -79,7 +79,7 @@ file(GLOB_RECURSE SOURCE_FILES CONFIGURE_DEPENDS
 # Remove strata plugin.cpp from main plugin sources
 list(FILTER SOURCE_FILES EXCLUDE REGEX "src/strata/plugin\\.cpp$")
 
-add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES} "src/strata/evalGraph.h" "src/strata/exp/atomVariant.h")
+add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES} "src/strata/evalGraph.h" "src/strata/exp/atomVariant.h" "src/strata/exp/getItemAtom.h" "src/strata/exp/accessAtom.h" "src/span.h")
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     "src"
@@ -135,7 +135,7 @@ set(STRATA_PLUGIN_SOURCES
 )
 
 # Create strata plugin library
-add_library(strata SHARED ${STRATA_PLUGIN_SOURCES} "src/strata/evalGraph.h" "src/strata/exp/atomVariant.h")
+add_library(strata SHARED ${STRATA_PLUGIN_SOURCES} "src/strata/evalGraph.h" "src/strata/exp/atomVariant.h" "src/strata/exp/getItemAtom.h" "src/strata/exp/accessAtom.h" "src/span.h")
 
 # Set output name to strata.mll
 set_target_properties(strata PROPERTIES
