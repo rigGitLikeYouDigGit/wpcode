@@ -1,9 +1,43 @@
 from __future__ import annotations
 import types, typing as T
-import pprint
+import pprint, traceback
+from collections import defaultdict
+
 from wplib import log
 
 import time
+
+
+class CallbackOwner:
+	"""holds callables against keys
+	callbacks assumed to be of form either
+
+	fn( callbackArgsKwargs )
+	or
+	fn( callbackArgsKwargs, userData )
+
+	where callbackArgsKwargs is the exact shape and content of args passed in
+	on call
+
+	"""
+
+	def __init__(self):
+		self.callbacks : dict[T.Any, T.Callable] = {}
+		self.callbackArgs = {}
+
+	def addCallback(self, fn:T.Callable, userData:dict=None, key=None)->T.Any:
+		if key is None:
+			key = id(fn)
+		self.callbacks[key] = fn
+		self.callbackArgs[key] = userData or {}
+		return key
+
+	def fireCallbacks(self, args):
+		for k, v in self.callbacks.items():
+			if k in self.callbackArgs:
+				v(args, self.callbackArgs[k])
+			else:
+				v(args)
 
 class WpCallback:
 	"""base class for event-triggered callbacks in DCCs -
@@ -33,6 +67,20 @@ class WpCallback:
 		self.callbackMetaData = {}
 		#self.userData = userData or {}
 
+
+		# if a callback fires every frame, no point spamming log -
+	    # keep map of error message : number times that error occurrs
+		self.errorMap : dict[str, list[Exception]] = defaultdict(list)
+
+	def _handleError(self, e:Exception):
+		"""if it's the first time the error has been raised, raise it
+		properly in log, else just append it
+		"""
+		k = str(e)
+		if k not in self.errorMap:
+			traceback.print_exc()
+		self.errorMap[k].append(e)
+
 	def __call__(self, *args, **kwargs):
 		"""point of entry for DCC event call -
 		"""
@@ -43,11 +91,20 @@ class WpCallback:
 		assert self.callbackID is not None, f"ATTACH A CALLBACK ID to callback object {self} RIGHT NOW"
 		if self.stayAliveFn is not None:
 			# staying alive
-			if not self.stayAliveFn(self, *args, **kwargs):
-				log("stayAliveFn returned false, removing callback")
-				# not staying alive
+			try:
+				if not self.stayAliveFn(self, *args, **kwargs):
+					log(f"stayAliveFn {self.stayAliveFn} returned false, "
+					    f"removing "
+				    f"callback {self}")
+					# not staying alive
+					self.remove()
+					return
+			except Exception as e:
+				self._handleError(e)
+				# definitely not staying alive
+				log(f"stayAliveFn {self.stayAliveFn} errored, removing "
+				    f"callback {self}")
 				self.remove()
-				return
 		self.t = t
 		self.dt = dt
 		if not self.isPaused:
